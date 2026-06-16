@@ -25,6 +25,7 @@ PRD 采用「一个主文档 + 每个 feature 一个文档」结构：
   - [F5 · Agent 编排与工具](./docs/prd/features/F5-agent-orchestration.md)（融合粘合层）
   - [F6 · 日记 / 速记 / 任务](./docs/prd/features/F6-journal-notes-tasks.md)（来自 Odysseus + 新增日记）
   - [F7 · 邮件 / 日历](./docs/prd/features/F7-email-calendar.md)（来自 Odysseus，P2）
+  - [F8 · 工作台布局与导航](./docs/prd/features/F8-workspace-layout-navigation.md)（统一入口 / IA：⌘K 命令面板 + 模式栏 + Today 主页）
 
 ## 核心决策速览
 

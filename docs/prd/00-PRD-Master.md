@@ -26,6 +26,7 @@
 | F5 | Agent 编排与工具（融合粘合层） | 新（融合） | P0 | [F5-agent-orchestration.md](./features/F5-agent-orchestration.md) |
 | F6 | 日记 / 速记 / 任务（个人记录） | Odysseus + 新增日记 | P1 | [F6-journal-notes-tasks.md](./features/F6-journal-notes-tasks.md) |
 | F7 | 邮件 / 日历 | Odysseus | P2 | [F7-email-calendar.md](./features/F7-email-calendar.md) |
+| F8 | 工作台布局与导航（统一入口 / IA） | 新（融合 UX） | P0 | [F8-workspace-layout-navigation.md](./features/F8-workspace-layout-navigation.md) |
 
 > P0 = MVP 必须；P1 = 紧随其后的第一批增量。
 
@@ -77,6 +78,7 @@
   2. **零配置起步**：双击即用；模型、搜索、密钥都在设置里渐进配置。
   3. **一个窗口**：驾驶舱 + 大脑同窗，不再来回切。
   4. **可观测**：agent 干的每件事（改文件、调工具、跑研究）都看得见、可回放、可接管。
+  5. **一两步够到一切**：所有功能经「命令面板 ⌘K + 精简模式栏 + Today 主页」最多两步可达，详见 [F8 工作台布局与导航](./features/F8-workspace-layout-navigation.md)。
 
 ### 成功标准（个人版，务实口径）
 - 能在 Helm 一个窗口里：找到任意本地项目 → 内嵌终端跑 Claude Code → 实时看它改了哪些文件并 diff。
@@ -155,6 +157,7 @@
 
 ### MVP（第一个能日常用的版本）
 - F0 平台外壳（窗口、终端、文件监听、本地存储、设置）
+- F8 工作台布局与导航（三栏外壳 + ⌘K 命令面板 + 模式栏 + 全局速记）
 - F1 驾驶舱（文件浏览/预览、内嵌终端、跟随模式、git diff —— 核心子集）
 - F2 Chat + 至少 1 个模型 provider（OpenAI 兼容 / Ollama）
 - F5 Agent 编排基础（终端跑外部 CLI + MCP client 接通 F4 的能力）
@@ -179,8 +182,8 @@
 
 | 里程碑 | 内容 | 产出 |
 |--------|------|------|
-| **M0 地基** | 以 Odysseus 为底座跑起来；加桌面外壳（webview）；驾驶舱前端骨架接入 | 能启动的桌面壳 + 现有大脑 |
-| **M1 驾驶舱** | F1 核心：文件浏览/预览 + Python pty 终端 + 跟随 + git diff（前端搬入 + 后端管道） | 可指挥 agent 并看改动 |
+| **M0 地基** | 以 Odysseus 为底座跑起来；加桌面外壳（webview）；F8 外壳骨架（三栏 + 模式栏 + ⌘K 命令面板雏形） | 能启动的桌面壳 + 现有大脑 |
+| **M1 驾驶舱** | F1 核心：文件浏览/预览 + Python pty 终端 + 跟随 + git diff（前端搬入 + 后端管道）；F8 全局速记 + Today 主页雏形 | 可指挥 agent 并看改动 |
 | **M2 大脑·Chat** | F2：整合 Odysseus 既有模型连接 + Chat UI 进新壳 | 同窗口能 Chat |
 | **M3 大脑·记忆/RAG** | F4：复用 Odysseus 记忆/RAG（ChromaDB）+ 既有 MCP server 接通终端 agent | 终端 agent 能调记忆/RAG |
 | **M4 大脑·研究** | F3：整合 Odysseus Deep Research 引擎 + 报告视图 | 一键深度研究 |
