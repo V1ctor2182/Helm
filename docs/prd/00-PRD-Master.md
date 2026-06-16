@@ -29,6 +29,17 @@
 
 > P0 = MVP 必须；P1 = 紧随其后的第一批增量。
 
+### 参考代码（本地）
+
+两个来源项目的**完整源码**作为只读参考放在本仓库的 `reference/` 下（**不纳入 git**，见 `.gitignore`，仅本地存在）：
+
+| 项目 | 路径 | 角色 |
+|------|------|------|
+| **Odysseus** | `reference/odysseus-dev/` | 大脑底座（FastAPI / Python） |
+| **FanBox** | `reference/fanbox-master/` | 驾驶舱（Electron / Node） |
+
+> 各 feature 文档里提到的源文件——Odysseus 的 `deep_research.py`、`rag_*`、`memory*`、`mcp_servers/`、`note_routes.py`、`task_scheduler.py`、`email_routes.py`、`calendar_routes.py` 等；FanBox 的 `server.js`、`electron/main.js` 等——均位于上述参考目录下：Odysseus 路径相对 `reference/odysseus-dev/`，FanBox 路径相对 `reference/fanbox-master/`。
+
 ---
 
 ## 1. 愿景与问题

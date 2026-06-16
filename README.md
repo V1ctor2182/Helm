@@ -37,7 +37,9 @@ PRD 采用「一个主文档 + 每个 feature 一个文档」结构：
 | 定位 | 个人日常用、本地优先、零配置 |
 | 平台 | macOS（Apple Silicon）首发 |
 
-## 来源项目
+## 来源项目（参考代码）
 
-- **FanBox** —— Coding Agent 驾驶舱（Electron / Node，MIT）。
-- **Odysseus** —— 自托管 AI 工作台（Python / FastAPI）。
+两个来源项目的**完整源码**作为只读参考放在 `reference/` 下（**不纳入 git**，仅本地存在）：
+
+- **Odysseus** —— 自托管 AI 工作台（Python / FastAPI）。大脑底座。路径：`reference/odysseus-dev/`
+- **FanBox** —— Coding Agent 驾驶舱（Electron / Node，MIT）。路径：`reference/fanbox-master/`
