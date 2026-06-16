@@ -21,7 +21,8 @@
 
 ### 3.1 Provider 管理（P0）
 - 统一的 provider 模型：`{ type, base_url, api_key?, models[] }`。
-- 内置预设：Ollama（`http://localhost:11434`）、OpenAI、OpenRouter、通用 OpenAI 兼容。
+- **默认 provider = Claude（Anthropic）**，与 agent 路线（F5 用 Claude Code）保持一致；其余为可选。
+- 内置预设：Claude（Anthropic，默认）、Ollama（`http://localhost:11434`）、OpenAI、OpenRouter、通用 OpenAI 兼容。
 - **密钥安全**：API key 经系统钥匙串/`safeStorage` 加密存储（见 F0），不明文落库。
 - 连通性测试：保存时一键 ping，列出可用模型。
 

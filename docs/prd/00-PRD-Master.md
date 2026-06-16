@@ -13,6 +13,7 @@
 - 本文件是**总目录**：愿景、定位、用户、范围、架构决策、feature 索引、路线图、风险。
 - 每个 feature 的细节（用户故事、交互、数据模型、接口、验收标准）放在 [`features/`](./features/) 下独立文档。
 - 改动原则：feature 的细节变更只改对应 feature 文档；只有跨 feature 的结构性变更才改本文档。
+- 归档：被取代的旧版设计移到 [`_archive/`](./_archive/) 保留、不删除（如 F5 v1 的"双 agent"方案）。
 
 ### Feature 索引
 
@@ -23,7 +24,7 @@
 | F2 | Chat 与多模型 | Odysseus | P0 | [F2-chat-multimodel.md](./features/F2-chat-multimodel.md) |
 | F3 | Deep Research | Odysseus | P1 | [F3-deep-research.md](./features/F3-deep-research.md) |
 | F4 | 记忆 / RAG / Skills（含 MCP 能力层） | Odysseus | P1 | [F4-memory-rag-skills.md](./features/F4-memory-rag-skills.md) |
-| F5 | Agent 编排与工具（融合粘合层） | 新（融合） | P0 | [F5-agent-orchestration.md](./features/F5-agent-orchestration.md) |
+| F5 | Agent 编排与工具（Claude Code 优先） | 新（融合） | P0 | [F5-agent-orchestration.md](./features/F5-agent-orchestration.md) |
 | F6 | 日记 / 速记 / 任务（个人记录） | Odysseus + 新增日记 | P1 | [F6-journal-notes-tasks.md](./features/F6-journal-notes-tasks.md) |
 | F7 | 邮件 / 日历 | Odysseus | P2 | [F7-email-calendar.md](./features/F7-email-calendar.md) |
 | F8 | 工作台布局与导航（统一入口 / IA） | 新（融合 UX） | P0 | [F8-workspace-layout-navigation.md](./features/F8-workspace-layout-navigation.md) |
@@ -160,7 +161,7 @@
 - F8 工作台布局与导航（三栏外壳 + ⌘K 命令面板 + 模式栏 + 全局速记）
 - F1 驾驶舱（文件浏览/预览、内嵌终端、跟随模式、git diff —— 核心子集）
 - F2 Chat + 至少 1 个模型 provider（OpenAI 兼容 / Ollama）
-- F5 Agent 编排基础（终端跑外部 CLI + MCP client 接通 F4 的能力）
+- F5 Agent 编排基础（终端跑 Claude Code + MCP 接通 F4 能力；内置 agent 暂缓）
 
 ### 紧随其后（P1）
 - F3 Deep Research（含可视化报告）
