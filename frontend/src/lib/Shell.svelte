@@ -1,6 +1,8 @@
 <script lang="ts">
   import Rail from './Rail.svelte'
   import CommandPalette from './CommandPalette.svelte'
+  import QuickCapture from './QuickCapture.svelte'
+  import { applyShortcut } from './keymap'
   import { layout, MODES } from './layout.svelte'
 
   let { backendStatus = 'connecting…' }: { backendStatus?: string } = $props()
@@ -10,10 +12,7 @@
   )
 
   function onGlobalKey(e: KeyboardEvent) {
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-      e.preventDefault()
-      layout.togglePalette()
-    }
+    if (applyShortcut(e, layout)) e.preventDefault()
   }
 </script>
 
@@ -77,10 +76,12 @@
     <button onclick={() => layout.toggleContext()}>⟨ 上下文</button>
     <button onclick={() => layout.toggleTerminal()}>终端 ⟩</button>
     <button onclick={() => layout.openPalette()}>⌘K</button>
+    <button onclick={() => layout.openCapture()}>⌘N 速记</button>
     <span class="status">{backendStatus}</span>
   </footer>
 
   <CommandPalette />
+  <QuickCapture />
 </div>
 
 <style>

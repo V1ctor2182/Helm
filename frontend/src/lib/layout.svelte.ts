@@ -43,6 +43,7 @@ export class LayoutStore {
   tabs = $state<Tab[]>([])
   activeTabId = $state<string | null>(null)
   paletteOpen = $state(false)
+  captureOpen = $state(false)
 
   #seq = 0
 
@@ -69,6 +70,14 @@ export class LayoutStore {
 
   togglePalette(): void {
     this.paletteOpen = !this.paletteOpen
+  }
+
+  openCapture(): void {
+    this.captureOpen = true
+  }
+
+  closeCapture(): void {
+    this.captureOpen = false
   }
 
   toggleContext(): void {
