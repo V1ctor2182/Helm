@@ -2,6 +2,7 @@
   import Rail from './Rail.svelte'
   import CommandPalette from './CommandPalette.svelte'
   import QuickCapture from './QuickCapture.svelte'
+  import Today from './Today.svelte'
   import { applyShortcut } from './keymap'
   import { layout, MODES } from './layout.svelte'
 
@@ -32,7 +33,10 @@
   {/if}
 
   <main class="center" aria-label="Workspace">
-    <div class="tabbar" role="tablist">
+    {#if layout.mode === 'today'}
+      <Today />
+    {:else}
+      <div class="tabbar" role="tablist">
       {#each layout.tabs as tab (tab.id)}
         <div class="tab" class:active={tab.id === layout.activeTabId}>
           <button
@@ -65,7 +69,8 @@
       {:else}
         <p class="empty">没有打开的 Tab — 从左侧面板打开一个。</p>
       {/if}
-    </div>
+      </div>
+    {/if}
   </main>
 
   {#if !layout.terminalCollapsed}
