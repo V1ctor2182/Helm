@@ -7,9 +7,35 @@
   "scripts": {
     "start": "electron .",
     "test": "node --test",
-    "check": "node --check main.js && node --check backend.js"
+    "check": "node --check main.js && node --check backend.js",
+    "dist": "electron-builder --mac dir"
   },
   "devDependencies": {
-    "electron": "latest"
+    "electron": "latest",
+    "electron-builder": "latest"
+  },
+  "build": {
+    "appId": "dev.helm.app",
+    "productName": "Helm",
+    "directories": {
+      "output": "../dist/desktop"
+    },
+    "files": [
+      "main.js",
+      "backend.js",
+      "loading.html",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../dist/backend/helm-backend",
+        "to": "helm-backend"
+      }
+    ],
+    "mac": {
+      "target": "dir",
+      "identity": null,
+      "category": "public.app-category.developer-tools"
+    }
   }
 }

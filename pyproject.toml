@@ -15,6 +15,9 @@ dev = [
     "pytest",
     "httpx",  # required by Starlette's TestClient
 ]
+packaging = [
+    "pyinstaller",  # builds the self-contained backend sidecar (m6)
+]
 
 [project.scripts]
 helm = "helm.server:run"

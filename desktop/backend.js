@@ -42,20 +42,33 @@ async function waitForHealth(
 }
 
 /**
- * Spawn the Python backend. In dev this runs the module via an interpreter;
- * packaging (m6) sets HELM_BACKEND_CMD to the bundled PyInstaller sidecar so
- * no system Python is required.
+ * Decide how to launch the backend, as a {command, args} pair (argv array — no
+ * shell, no space-splitting hazards):
+ *   - packaged app  → the bundled PyInstaller sidecar under resourcesPath
+ *   - dev           → `python -m helm` (HELM_PYTHON overrides the interpreter)
  */
-function spawnBackend(env = process.env) {
-  const repoRoot = path.resolve(__dirname, "..");
-  if (env.HELM_BACKEND_CMD) {
-    // TODO(m6): the packaged sidecar path may contain spaces; switch to passing
-    // argv as a JSON array (HELM_BACKEND_ARGV) instead of split-on-space.
-    const [cmd, ...args] = env.HELM_BACKEND_CMD.split(" ");
-    return spawn(cmd, args, { cwd: repoRoot, stdio: "inherit", env });
+function resolveBackend({
+  isPackaged = false,
+  resourcesPath = "",
+  env = process.env,
+} = {}) {
+  if (isPackaged) {
+    return {
+      command: path.join(resourcesPath, "helm-backend", "helm-backend"),
+      args: [],
+    };
   }
-  const python = env.HELM_PYTHON || "python3";
-  return spawn(python, ["-m", "helm"], { cwd: repoRoot, stdio: "inherit", env });
+  return { command: env.HELM_PYTHON || "python3", args: ["-m", "helm"] };
+}
+
+/** Spawn the backend process. See :func:`resolveBackend` for command selection. */
+function spawnBackend(opts = {}) {
+  const { command, args } = resolveBackend(opts);
+  const env = opts.env || process.env;
+  // Dev runs the module from the repo root; the packaged sidecar is
+  // self-contained and indifferent to cwd (it uses HELM_DATA_DIR).
+  const cwd = opts.isPackaged ? undefined : path.resolve(__dirname, "..");
+  return spawn(command, args, { cwd, stdio: "inherit", env });
 }
 
 module.exports = {
@@ -63,5 +76,6 @@ module.exports = {
   DEFAULT_PORT,
   backendUrl,
   waitForHealth,
+  resolveBackend,
   spawnBackend,
 };

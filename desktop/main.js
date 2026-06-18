@@ -63,7 +63,10 @@ async function boot() {
   // it; otherwise spawn one unless explicitly told not to.
   const alreadyUp = await waitForHealth(url, { retries: 1, intervalMs: 0 });
   if (!alreadyUp && process.env.HELM_NO_SPAWN !== "1") {
-    backendProc = spawnBackend();
+    backendProc = spawnBackend({
+      isPackaged: app.isPackaged,
+      resourcesPath: process.resourcesPath,
+    });
     backendProc.on("exit", (code) => {
       backendProc = null;
       console.error(`[helm] backend exited (code ${code})`);
