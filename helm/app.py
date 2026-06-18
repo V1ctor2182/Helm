@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from helm import __version__
 from helm.config import HelmConfig
+from helm.crypto import SecretBox
 from helm.db import Database
 
 
@@ -31,11 +32,21 @@ def create_app(config: HelmConfig | None = None) -> FastAPI:
     db.create_all()
     app.state.db = db
 
+    # Encrypted-at-rest secrets (API keys). Lazy: the key file is only read on
+    # first encrypt/decrypt, so constructing it here is free.
+    app.state.secret_box = SecretBox.from_data_dir(config.data_dir)
+
     @app.get("/healthz")
     def healthz() -> dict:
         """Liveness probe — used by the desktop shell (m5) to know when the
         backend is ready before loading the UI, and by the smoke tests."""
         return {"status": "ok", "version": __version__}
+
+    # Routers are imported here (not at module top) to avoid a circular import:
+    # routes depend on the dependencies defined below in this module.
+    from helm.routes.settings import router as settings_router
+
+    app.include_router(settings_router)
 
     return app
 
@@ -43,6 +54,11 @@ def create_app(config: HelmConfig | None = None) -> FastAPI:
 def get_db(request: Request) -> Database:
     """FastAPI dependency: the app-wide :class:`Database`."""
     return request.app.state.db
+
+
+def get_secret_box(request: Request) -> SecretBox:
+    """FastAPI dependency: the app-wide :class:`SecretBox`."""
+    return request.app.state.secret_box
 
 
 def db_session(request: Request) -> Iterator[Session]:
