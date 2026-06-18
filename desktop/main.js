@@ -7,7 +7,7 @@
 
 const path = require("node:path");
 const { app, BrowserWindow } = require("electron");
-const { backendUrl, waitForHealth, spawnBackend } = require("./backend");
+const { backendUrl, appUrl, waitForHealth, spawnBackend } = require("./backend");
 
 const LOADING = path.join(__dirname, "loading.html");
 
@@ -34,7 +34,8 @@ function createWindow() {
   const wc = mainWindow.webContents;
   wc.setWindowOpenHandler(() => ({ action: "deny" }));
   wc.on("will-navigate", (event, url) => {
-    if (!url.startsWith(backendUrl()) && !url.startsWith("file://")) {
+    const allowed = [backendUrl(), appUrl(), "file://"];
+    if (!allowed.some((p) => url.startsWith(p))) {
       event.preventDefault();
     }
   });
@@ -47,7 +48,7 @@ function createWindow() {
     reconnecting = true;
     try {
       if (await waitForHealth(backendUrl(), { retries: 20, intervalMs: 500 })) {
-        if (mainWindow) await mainWindow.loadURL(backendUrl());
+        if (mainWindow) await mainWindow.loadURL(appUrl());
       }
     } finally {
       reconnecting = false;
@@ -74,7 +75,7 @@ async function boot() {
   }
 
   if (await waitForHealth(url, { retries: 120, intervalMs: 500 })) {
-    if (mainWindow) await mainWindow.loadURL(url);
+    if (mainWindow) await mainWindow.loadURL(appUrl());
   } else {
     console.error("[helm] backend never became healthy");
   }
