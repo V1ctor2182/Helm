@@ -13,6 +13,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 
 from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from helm import __version__
@@ -48,6 +49,14 @@ def create_app(config: HelmConfig | None = None) -> FastAPI:
         backend is ready before loading the UI, and by the smoke tests."""
         return {"status": "ok", "version": __version__}
 
+    @app.get("/", response_class=HTMLResponse)
+    def index() -> str:
+        """Placeholder boot page the Electron shell loads once the backend is
+        healthy. The real three-pane workspace UI replaces this in the
+        workspace-layout room; platform-shell only ships a minimal status page
+        so the shell has something to render."""
+        return _BOOT_PAGE
+
     # Routers are imported here (not at module top) to avoid a circular import:
     # routes depend on the dependencies defined below in this module.
     from helm.routes.settings import router as settings_router
@@ -55,6 +64,30 @@ def create_app(config: HelmConfig | None = None) -> FastAPI:
     app.include_router(settings_router)
 
     return app
+
+
+_BOOT_PAGE = f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Helm</title>
+  <style>
+    html,body{{height:100%;margin:0}}
+    body{{display:flex;align-items:center;justify-content:center;
+      font:16px -apple-system,system-ui,sans-serif;color:#222;background:#fafafa}}
+    .box{{text-align:center}}
+    h1{{font-weight:600;letter-spacing:.02em;margin:0 0 .25em}}
+    .v{{color:#888;font-size:.85em}}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Helm</h1>
+    <div class="v">backend running · v{__version__}</div>
+  </div>
+</body>
+</html>"""
 
 
 def get_db(request: Request) -> Database:

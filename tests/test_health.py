@@ -20,3 +20,12 @@ def test_healthz_ok(config):
 def test_config_attached_to_app_state(config):
     app = create_app(config)
     assert app.state.config is config
+
+
+def test_root_boot_page(config):
+    app = create_app(config)
+    client = TestClient(app)
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert "text/html" in resp.headers["content-type"]
+    assert "Helm" in resp.text

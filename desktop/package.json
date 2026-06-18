@@ -1,0 +1,15 @@
+{
+  "name": "helm-desktop",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Helm thin Electron shell — spawns and loads the local Python backend.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test",
+    "check": "node --check main.js && node --check backend.js"
+  },
+  "devDependencies": {
+    "electron": "latest"
+  }
+}
