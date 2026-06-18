@@ -8,6 +8,7 @@ dependencies = [
     "uvicorn[standard]",
     "SQLAlchemy>=2.0",
     "cryptography",
+    "python-multipart",
 ]
 
 [project.optional-dependencies]

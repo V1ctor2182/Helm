@@ -60,8 +60,10 @@ def create_app(config: HelmConfig | None = None) -> FastAPI:
     # Routers are imported here (not at module top) to avoid a circular import:
     # routes depend on the dependencies defined below in this module.
     from helm.routes.settings import router as settings_router
+    from helm.routes.setup import router as setup_router
 
     app.include_router(settings_router)
+    app.include_router(setup_router)
 
     return app
 
