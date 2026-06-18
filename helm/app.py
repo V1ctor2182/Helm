@@ -19,12 +19,18 @@ from helm import __version__
 from helm.config import HelmConfig
 from helm.crypto import SecretBox
 from helm.db import Database
+from helm.middleware import SecurityHeadersMiddleware
 
 
 def create_app(config: HelmConfig | None = None) -> FastAPI:
     config = config or HelmConfig.from_env()
     app = FastAPI(title="Helm", version=__version__)
     app.state.config = config
+
+    # Single-user, local-first: no auth layer. The trust boundary is the
+    # loopback bind (helm.config). This middleware is browser/WebView
+    # defense-in-depth (security headers + per-request CSP nonce).
+    app.add_middleware(SecurityHeadersMiddleware)
 
     # Local storage: open the SQLite DB under the data dir and ensure the
     # schema exists before any request is served.
