@@ -12,9 +12,10 @@ describe('App', () => {
     )
   })
 
-  it('renders the Helm title', () => {
+  it('renders the shell with the mode rail', () => {
     render(App)
-    expect(screen.getByRole('heading', { name: 'Helm' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Today' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Chat' })).toBeInTheDocument()
   })
 
   it('shows backend status from /healthz', async () => {
