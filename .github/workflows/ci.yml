@@ -1,0 +1,44 @@
+name: CI
+
+# Validation gate (CONVENTIONS.md §4): backend pytest + desktop node tests.
+# Runs on PRs to main (the gate before a Room merges) and on main post-merge.
+# Tests are OS-agnostic so they run on ubuntu (fast/cheap); macOS-specific
+# packaging (the .app build) is deferred to a separate job — see m6 / TODO.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: backend (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install (editable + dev extras)
+        run: pip install -e ".[dev]"
+      - name: pytest
+        run: pytest -q
+
+  desktop:
+    name: desktop (node)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: syntax check
+        working-directory: desktop
+        run: node --check main.js && node --check backend.js
+      - name: node --test
+        working-directory: desktop
+        run: node --test
