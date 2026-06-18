@@ -194,12 +194,15 @@
 
 ---
 
-## 7. 开放问题（待确认）
-1. 前端：沿用 **vanilla JS（FanBox / Odysseus 现风格，无构建）** 还是为新驾驶舱 UI 引入轻框架（Vite + Svelte）？（建议：大脑侧复用现有 vanilla 页面，新驾驶舱可酌情上轻框架；待定）
-2. 桌面外壳选型：**pywebview（纯 Python）** vs **极薄 Electron 壳加载本地 Python 服务**？（影响打包与"原生感"，见 F0）
-3. 打包工具：py2app vs PyInstaller（产出自带 Python 的 `.app`，双击即用）。
+## 7. 技术选型决策（原开放问题已全部关闭）
 
-> **已定**：①后端单一技术栈 = **Python**（以 Odysseus 为底座，原样复用大脑）；②不保留 FanBox 三套皮肤，单一干净主题。
+> 原「开放问题」已在 **dev-infra** Room 定稿（2026-06-18），决策留痕见 VibeHub。
+
+1. **前端构建栈 = Vite + Svelte**（新驾驶舱 / 工作台 UI）。大脑侧复用的 Odysseus vanilla 页面如何与 Svelte 壳共存，属 `workspace-layout` 的内部细节。〔dev-infra〕
+2. **桌面外壳 = 极薄 Electron 壳**加载本地 Python 服务（替代 pywebview 方案）。〔platform-shell〕
+3. **打包 = PyInstaller（后端 sidecar，自带 Python）+ electron-builder（产出 `.app`）**（替代 py2app）。代码签名 / 公证需 Apple Developer 证书，后续再做。〔platform-shell m6〕
+
+> **其余已定**：①后端单一技术栈 = **Python**（以 Odysseus 为底座，原样复用大脑）；②不保留 FanBox 三套皮肤，单一干净主题。
 
 ---
 
