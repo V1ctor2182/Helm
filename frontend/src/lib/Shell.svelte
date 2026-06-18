@@ -1,5 +1,6 @@
 <script lang="ts">
   import Rail from './Rail.svelte'
+  import CommandPalette from './CommandPalette.svelte'
   import { layout, MODES } from './layout.svelte'
 
   let { backendStatus = 'connecting…' }: { backendStatus?: string } = $props()
@@ -7,7 +8,16 @@
   const modeLabel = $derived(
     MODES.find((m) => m.id === layout.mode)?.label ?? layout.mode,
   )
+
+  function onGlobalKey(e: KeyboardEvent) {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault()
+      layout.togglePalette()
+    }
+  }
 </script>
+
+<svelte:window onkeydown={onGlobalKey} />
 
 <div class="shell" class:immersive={layout.immersive}>
   <Rail {layout} />
@@ -66,8 +76,11 @@
   <footer class="statusbar">
     <button onclick={() => layout.toggleContext()}>⟨ 上下文</button>
     <button onclick={() => layout.toggleTerminal()}>终端 ⟩</button>
+    <button onclick={() => layout.openPalette()}>⌘K</button>
     <span class="status">{backendStatus}</span>
   </footer>
+
+  <CommandPalette />
 </div>
 
 <style>

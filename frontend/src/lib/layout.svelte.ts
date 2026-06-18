@@ -42,6 +42,7 @@ export class LayoutStore {
   terminalCollapsed = $state(true) // terminal hidden until a cockpit/agent needs it
   tabs = $state<Tab[]>([])
   activeTabId = $state<string | null>(null)
+  paletteOpen = $state(false)
 
   #seq = 0
 
@@ -56,6 +57,18 @@ export class LayoutStore {
 
   setMode(id: ModeId): void {
     this.mode = id
+  }
+
+  openPalette(): void {
+    this.paletteOpen = true
+  }
+
+  closePalette(): void {
+    this.paletteOpen = false
+  }
+
+  togglePalette(): void {
+    this.paletteOpen = !this.paletteOpen
   }
 
   toggleContext(): void {
