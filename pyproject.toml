@@ -1,0 +1,28 @@
+[project]
+name = "helm"
+version = "0.0.1"
+description = "Helm — local-first personal AI workspace (coding cockpit + AI brain)."
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "httpx",  # required by Starlette's TestClient
+]
+
+[project.scripts]
+helm = "helm.server:run"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["helm*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

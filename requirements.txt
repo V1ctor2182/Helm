@@ -1,0 +1,4 @@
+# Helm backend runtime dependencies (platform-shell foundation).
+# Pulled-in Odysseus modules will add their own deps per feature room.
+fastapi
+uvicorn[standard]

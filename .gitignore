@@ -1,3 +1,15 @@
 # 来源项目的完整源码：本地只读参考，不纳入 Helm 仓库
 # （含各自的 venv / node_modules / 数据，体积大且非 Helm 自身代码）
 reference/
+
+# VibeHub — contain secret tokens, do not commit
+.vibehub/config.json
+.mcp.json
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+
