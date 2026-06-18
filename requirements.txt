@@ -2,3 +2,4 @@
 # Pulled-in Odysseus modules will add their own deps per feature room.
 fastapi
 uvicorn[standard]
+SQLAlchemy>=2.0

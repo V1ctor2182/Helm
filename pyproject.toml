@@ -6,6 +6,7 @@ requires-python = ">=3.11"
 dependencies = [
     "fastapi",
     "uvicorn[standard]",
+    "SQLAlchemy>=2.0",
 ]
 
 [project.optional-dependencies]

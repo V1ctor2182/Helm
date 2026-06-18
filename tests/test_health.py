@@ -4,11 +4,10 @@ from fastapi.testclient import TestClient
 
 from helm import __version__
 from helm.app import create_app
-from helm.config import HelmConfig
 
 
-def test_healthz_ok():
-    app = create_app(HelmConfig())
+def test_healthz_ok(config):
+    app = create_app(config)
     client = TestClient(app)
     resp = client.get("/healthz")
 
@@ -18,7 +17,6 @@ def test_healthz_ok():
     assert body["version"] == __version__
 
 
-def test_config_attached_to_app_state():
-    config = HelmConfig()
+def test_config_attached_to_app_state(config):
     app = create_app(config)
     assert app.state.config is config
