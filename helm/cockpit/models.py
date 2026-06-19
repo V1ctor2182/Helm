@@ -1,0 +1,33 @@
+"""Cockpit ORM models. m1 ships `projects`; `terminal_sessions` (m4) and
+`file_changes` (m5) land with their milestones — their schemas are recorded in
+the m1 decision (F0 §5) but not created until used, to avoid empty tables.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime
+
+from sqlalchemy import DateTime, String, func
+from sqlalchemy.orm import Mapped, mapped_column
+
+from helm.db import Base
+
+
+class Project(Base):
+    """A local project folder the user has opened in the cockpit.
+
+    Keyed by absolute path. ``badges`` is a comma-separated set of detected
+    type tags (node/py/web/rs/go) so the file browser can label folders.
+    """
+
+    __tablename__ = "projects"
+
+    path: Mapped[str] = mapped_column(String, primary_key=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    badges: Mapped[str] = mapped_column(String, nullable=False, default="")
+    last_opened: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    def badge_list(self) -> list[str]:
+        return [b for b in self.badges.split(",") if b]

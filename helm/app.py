@@ -36,10 +36,9 @@ def create_app(config: HelmConfig | None = None) -> FastAPI:
     # defense-in-depth (security headers + per-request CSP nonce).
     app.add_middleware(SecurityHeadersMiddleware)
 
-    # Local storage: open the SQLite DB under the data dir and ensure the
-    # schema exists before any request is served.
+    # Local storage: open the SQLite DB under the data dir. Tables are created
+    # after routers import their models (see create_all below).
     db = Database.from_data_dir(config.data_dir)
-    db.create_all()
     app.state.db = db
 
     # Encrypted-at-rest secrets (API keys). Lazy: the key file is only read on
@@ -53,12 +52,18 @@ def create_app(config: HelmConfig | None = None) -> FastAPI:
         return {"status": "ok", "version": __version__}
 
     # Routers are imported here (not at module top) to avoid a circular import:
-    # routes depend on the dependencies defined below in this module.
+    # routes depend on the dependencies defined below in this module. Importing
+    # them also registers each room's ORM models on Base.metadata.
+    from helm.cockpit.routes import router as cockpit_router
     from helm.routes.settings import router as settings_router
     from helm.routes.setup import router as setup_router
 
     app.include_router(settings_router)
     app.include_router(setup_router)
+    app.include_router(cockpit_router)
+
+    # Create tables now that every router module has imported its models.
+    db.create_all()
 
     # Serve the built Svelte frontend (workspace-layout) when present; until it's
     # built, fall back to the minimal boot page. Mounted LAST so /healthz and
