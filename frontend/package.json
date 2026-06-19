@@ -10,6 +10,10 @@
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
     "test": "vitest run"
   },
+  "dependencies": {
+    "dompurify": "latest",
+    "marked": "latest"
+  },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.1.2",
     "@testing-library/jest-dom": "latest",

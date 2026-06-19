@@ -4,14 +4,17 @@
 
 from __future__ import annotations
 
+import zipfile
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from helm.app import db_session
 from helm.cockpit import models  # noqa: F401  (register Project on Base.metadata)
+from helm.cockpit.preview import list_zip, read_text
 from helm.cockpit.service import ProjectService, list_dir
 
 router = APIRouter(prefix="/api/cockpit", tags=["cockpit"])
@@ -51,6 +54,36 @@ def browse(path: str, session: Session = Depends(db_session)) -> dict:
             for e in entries
         ],
     }
+
+
+@router.get("/text")
+def file_text(path: str) -> dict:
+    try:
+        content, truncated = read_text(path)
+    except (FileNotFoundError, IsADirectoryError):
+        raise HTTPException(status_code=404, detail="not a file") from None
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="permission denied") from None
+    return {"path": str(Path(path).expanduser()), "content": content, "truncated": truncated}
+
+
+@router.get("/raw")
+def file_raw(path: str) -> FileResponse:
+    p = Path(path).expanduser()
+    if not p.is_file():
+        raise HTTPException(status_code=404, detail="not a file")
+    return FileResponse(p)
+
+
+@router.get("/zip")
+def file_zip(path: str) -> dict:
+    try:
+        entries = list_zip(path)
+    except (FileNotFoundError, IsADirectoryError):
+        raise HTTPException(status_code=404, detail="not a file") from None
+    except zipfile.BadZipFile:
+        raise HTTPException(status_code=400, detail="not a zip") from None
+    return {"entries": entries}
 
 
 @router.get("/projects")

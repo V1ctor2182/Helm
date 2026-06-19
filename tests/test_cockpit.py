@@ -46,6 +46,41 @@ def test_browse_endpoint(config, tmp_path):
     assert c.get("/api/cockpit/files", params={"path": str(proj / "x")}).status_code == 404
 
 
+def test_file_text_and_truncation(config, tmp_path):
+    f = tmp_path / "a.py"
+    f.write_text("print(1)\n")
+    c = TestClient(create_app(config))
+    body = c.get("/api/cockpit/text", params={"path": str(f)}).json()
+    assert body["content"] == "print(1)\n"
+    assert body["truncated"] is False
+    # directory / missing → 404
+    assert c.get("/api/cockpit/text", params={"path": str(tmp_path)}).status_code == 404
+
+
+def test_file_raw_serves_bytes(config, tmp_path):
+    img = tmp_path / "x.bin"
+    img.write_bytes(b"\x00\x01\x02hello")
+    c = TestClient(create_app(config))
+    resp = c.get("/api/cockpit/raw", params={"path": str(img)})
+    assert resp.status_code == 200
+    assert resp.content == b"\x00\x01\x02hello"
+    assert c.get("/api/cockpit/raw", params={"path": str(tmp_path / "no")}).status_code == 404
+
+
+def test_zip_listing(config, tmp_path):
+    import zipfile
+
+    z = tmp_path / "a.zip"
+    with zipfile.ZipFile(z, "w") as zf:
+        zf.writestr("inner.txt", "hi")
+    not_zip = tmp_path / "b.zip"
+    not_zip.write_text("not a zip")
+    c = TestClient(create_app(config))
+    entries = c.get("/api/cockpit/zip", params={"path": str(z)}).json()["entries"]
+    assert entries[0]["name"] == "inner.txt"
+    assert c.get("/api/cockpit/zip", params={"path": str(not_zip)}).status_code == 400
+
+
 def test_open_and_list_projects(config, tmp_path):
     (tmp_path / "go.mod").write_text("module x")
     c = TestClient(create_app(config))
