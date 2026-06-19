@@ -3,6 +3,7 @@
   import CommandPalette from './CommandPalette.svelte'
   import QuickCapture from './QuickCapture.svelte'
   import Today from './Today.svelte'
+  import FileBrowser from './cockpit/FileBrowser.svelte'
   import { applyShortcut } from './keymap'
   import { layout, MODES } from './layout.svelte'
 
@@ -35,6 +36,8 @@
   <main class="center" aria-label="Workspace">
     {#if layout.mode === 'today'}
       <Today />
+    {:else if layout.mode === 'cockpit'}
+      <FileBrowser />
     {:else}
       <div class="tabbar" role="tablist">
       {#each layout.tabs as tab (tab.id)}
