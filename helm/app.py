@@ -10,10 +10,13 @@ vendored wholesale (recorded decision).
 
 from __future__ import annotations
 
+import os
 from collections.abc import Iterator
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
 from helm import __version__
@@ -49,14 +52,6 @@ def create_app(config: HelmConfig | None = None) -> FastAPI:
         backend is ready before loading the UI, and by the smoke tests."""
         return {"status": "ok", "version": __version__}
 
-    @app.get("/", response_class=HTMLResponse)
-    def index() -> str:
-        """Placeholder boot page the Electron shell loads once the backend is
-        healthy. The real three-pane workspace UI replaces this in the
-        workspace-layout room; platform-shell only ships a minimal status page
-        so the shell has something to render."""
-        return _BOOT_PAGE
-
     # Routers are imported here (not at module top) to avoid a circular import:
     # routes depend on the dependencies defined below in this module.
     from helm.routes.settings import router as settings_router
@@ -65,7 +60,32 @@ def create_app(config: HelmConfig | None = None) -> FastAPI:
     app.include_router(settings_router)
     app.include_router(setup_router)
 
+    # Serve the built Svelte frontend (workspace-layout) when present; until it's
+    # built, fall back to the minimal boot page. Mounted LAST so /healthz and
+    # /api/* (registered above) win over this catch-all static mount.
+    dist = _frontend_dist()
+    if dist is not None:
+        app.mount("/", StaticFiles(directory=dist, html=True), name="frontend")
+    else:
+
+        @app.get("/", response_class=HTMLResponse)
+        def index() -> str:
+            return _BOOT_PAGE
+
     return app
+
+
+def _frontend_dist() -> Path | None:
+    """Locate the built Svelte app. Defaults to ``<repo>/frontend/dist``;
+    override with ``HELM_FRONTEND_DIST`` (used by packaging). Returns None until
+    it's built, so dev/CI fall back to the boot page."""
+    override = os.getenv("HELM_FRONTEND_DIST")
+    base = (
+        Path(override)
+        if override
+        else Path(__file__).resolve().parent.parent / "frontend" / "dist"
+    )
+    return base if (base / "index.html").exists() else None
 
 
 _BOOT_PAGE = f"""<!doctype html>

@@ -18,6 +18,16 @@ function backendUrl(env = process.env) {
   return `http://${h}:${port}`;
 }
 
+/**
+ * URL the window loads. In dev (HELM_DEV=1) it's Vite's HMR server (which
+ * proxies /api & /healthz to the backend); in prod it's the backend, which
+ * serves the built app. Health checks always target the backend regardless.
+ */
+function appUrl(env = process.env) {
+  if (env.HELM_DEV === "1") return env.HELM_DEV_URL || "http://localhost:5173";
+  return backendUrl(env);
+}
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
@@ -75,6 +85,7 @@ module.exports = {
   DEFAULT_HOST,
   DEFAULT_PORT,
   backendUrl,
+  appUrl,
   waitForHealth,
   resolveBackend,
   spawnBackend,

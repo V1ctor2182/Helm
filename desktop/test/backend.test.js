@@ -3,7 +3,24 @@
 const test = require("node:test");
 const assert = require("node:assert");
 const path = require("node:path");
-const { backendUrl, waitForHealth, resolveBackend } = require("../backend");
+const {
+  backendUrl,
+  appUrl,
+  waitForHealth,
+  resolveBackend,
+} = require("../backend");
+
+test("appUrl is the backend URL in prod", () => {
+  assert.strictEqual(appUrl({}), "http://127.0.0.1:8769");
+});
+
+test("appUrl is the Vite dev server when HELM_DEV=1", () => {
+  assert.strictEqual(appUrl({ HELM_DEV: "1" }), "http://localhost:5173");
+  assert.strictEqual(
+    appUrl({ HELM_DEV: "1", HELM_DEV_URL: "http://localhost:3000" }),
+    "http://localhost:3000",
+  );
+});
 
 test("backendUrl uses loopback defaults", () => {
   assert.strictEqual(backendUrl({}), "http://127.0.0.1:8769");

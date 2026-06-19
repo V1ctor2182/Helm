@@ -42,3 +42,21 @@ jobs:
       - name: node --test
         working-directory: desktop
         run: node --test
+
+  frontend:
+    name: frontend (svelte)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: install
+        working-directory: frontend
+        run: npm ci
+      - name: vitest
+        working-directory: frontend
+        run: npm test
+      - name: build
+        working-directory: frontend
+        run: npm run build
