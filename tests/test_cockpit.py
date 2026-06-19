@@ -176,3 +176,53 @@ def test_watch_ws_streams_and_records(config, tmp_path):
         assert seen
     with app.state.db.session_scope() as s:
         assert s.execute(select(FileChange)).scalars().first() is not None
+
+
+def _git_init(repo):
+    import subprocess
+
+    def g(*a):
+        subprocess.run(["git", "-C", str(repo), *a], check=True,
+                       capture_output=True, text=True)
+    g("init", "-q")
+    g("config", "user.email", "t@t.t")
+    g("config", "user.name", "t")
+    return g
+
+
+def test_git_diff_head_vs_working(config, tmp_path):
+    repo = tmp_path / "r"
+    repo.mkdir()
+    g = _git_init(repo)
+    f = repo / "a.py"
+    f.write_text("print(1)\n")
+    g("add", "a.py")
+    g("commit", "-qm", "init")
+    f.write_text("print(2)\n")  # modify working tree
+
+    c = TestClient(create_app(config))
+    body = c.get("/api/cockpit/git/diff", params={"path": str(f)}).json()
+    assert body["head"] == "print(1)\n"
+    assert body["working"] == "print(2)\n"
+    assert body["status"] == "modified"
+    assert body["rel_path"] == "a.py"
+
+
+def test_git_diff_untracked(config, tmp_path):
+    repo = tmp_path / "r2"
+    repo.mkdir()
+    _git_init(repo)
+    f = repo / "new.txt"
+    f.write_text("hello")
+    c = TestClient(create_app(config))
+    body = c.get("/api/cockpit/git/diff", params={"path": str(f)}).json()
+    assert body["head"] == ""
+    assert body["working"] == "hello"
+    assert body["status"] == "untracked"
+
+
+def test_git_diff_not_in_repo(config, tmp_path):
+    f = tmp_path / "loose.txt"
+    f.write_text("x")
+    c = TestClient(create_app(config))
+    assert c.get("/api/cockpit/git/diff", params={"path": str(f)}).status_code == 404

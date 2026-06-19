@@ -16,6 +16,7 @@
 
   let view = $state<Loaded | null>(null)
   let loading = $state(false)
+  let showDiff = $state(false)
 
   // Monotonic token: a stale fetch (older selection) must not overwrite the
   // view of a newer selection. Each effect run bumps it; load() bails if a
@@ -24,6 +25,7 @@
 
   $effect(() => {
     const sel = cockpit.selected
+    showDiff = false // reset to preview when the selection changes
     if (!sel) {
       view = null
       return
@@ -77,7 +79,23 @@
     <header class="title" title={view.entry.path}>{view.entry.name}</header>
     {#if view.truncated}<p class="trunc">（已截断，仅显示前 1MB）</p>{/if}
 
-    {#if view.kind === 'markdown'}
+    {#if view.kind === 'markdown' || view.kind === 'code'}
+      <div class="vtabs">
+        <button class:active={!showDiff} onclick={() => (showDiff = false)}>预览</button>
+        <button class:active={showDiff} onclick={() => (showDiff = true)}>Diff</button>
+      </div>
+    {/if}
+
+    {#if showDiff && (view.kind === 'markdown' || view.kind === 'code')}
+      <!-- Monaco is heavy: load DiffView lazily so it's code-split out of the
+           main bundle and never imported in the test/jsdom module graph. -->
+      {#await import('./DiffView.svelte') then mod}
+        {@const DiffView = mod.default}
+        <DiffView path={view.entry.path} ext={view.entry.ext} />
+      {:catch}
+        <p class="error">diff 加载失败</p>
+      {/await}
+    {:else if view.kind === 'markdown'}
       <!-- sanitized via DOMPurify above -->
       <div class="md">{@html view.html}</div>
     {:else if view.kind === 'code'}
@@ -124,6 +142,24 @@
   .trunc {
     color: #c97b1f;
     font-size: 0.78rem;
+  }
+  .vtabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  .vtabs button {
+    border: 1px solid #e5e4e7;
+    background: #fff;
+    border-radius: 8px;
+    padding: 3px 12px;
+    font-size: 0.82rem;
+    cursor: pointer;
+  }
+  .vtabs button.active {
+    background: #eef1ff;
+    border-color: #4250ff;
+    color: #4250ff;
   }
   .code {
     margin: 0;

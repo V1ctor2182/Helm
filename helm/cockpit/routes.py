@@ -18,6 +18,8 @@ from sqlalchemy.orm import Session
 
 from helm.app import db_session
 from helm.cockpit import models  # noqa: F401  (register models on Base.metadata)
+from helm.cockpit.git import NotInRepo, file_diff
+from helm.cockpit.git import status as git_status
 from helm.cockpit.models import FileChange, TerminalSession
 from helm.cockpit.preview import list_zip, read_text
 from helm.cockpit.service import ProjectService, list_dir
@@ -91,6 +93,19 @@ def file_zip(path: str) -> dict:
     except zipfile.BadZipFile:
         raise HTTPException(status_code=400, detail="not a zip") from None
     return {"entries": entries}
+
+
+@router.get("/git/diff")
+def git_diff(path: str) -> dict:
+    try:
+        return file_diff(path)
+    except NotInRepo:
+        raise HTTPException(status_code=404, detail="not in a git repo") from None
+
+
+@router.get("/git/status")
+def git_status_route(path: str) -> dict:
+    return {"entries": git_status(path)}
 
 
 @router.get("/projects")
