@@ -183,3 +183,98 @@ def test_test_endpoint_reports_error(config, monkeypatch):
     body = c.post(f"/api/providers/{pj['id']}/test").json()
     assert body["ok"] is False
     assert "error" in body
+
+
+# ---- m3: sessions + streaming chat -----------------------------------------
+
+import asyncio
+import json as _json
+
+
+def _make_provider(c) -> int:
+    return c.post("/api/providers", json={"type": "ollama", "name": "O", "base_url": "u"}).json()["id"]
+
+
+def test_session_crud(config):
+    c = TestClient(create_app(config))
+    pid = _make_provider(c)
+    assert c.post("/api/sessions", json={"provider_id": 999, "model": "m"}).status_code == 404
+
+    sj = c.post(
+        "/api/sessions",
+        json={"provider_id": pid, "model": "m", "system_prompt": "sys", "title": "T"},
+    ).json()
+    assert sj["model"] == "m" and sj["system_prompt"] == "sys"
+
+    assert len(c.get("/api/sessions").json()["sessions"]) == 1
+    got = c.get(f"/api/sessions/{sj['id']}").json()
+    assert got["session"]["title"] == "T"
+    assert got["messages"] == []
+    assert c.get("/api/sessions/999").status_code == 404
+
+
+def test_chat_ws_streams_persists_restores(config, monkeypatch):
+    async def fake_stream(**kwargs):
+        for t in ["Hel", "lo"]:
+            yield t
+
+    monkeypatch.setattr(adapters, "chat_stream", fake_stream)
+    app = create_app(config)
+    c = TestClient(app)
+    pid = _make_provider(c)
+    sid = c.post("/api/sessions", json={"provider_id": pid, "model": "m"}).json()["id"]
+
+    with c.websocket_connect(f"/api/chat/ws?session_id={sid}") as ws:
+        ws.send_text(_json.dumps({"type": "message", "content": "hi"}))
+        deltas = []
+        for _ in range(20):
+            m = _json.loads(ws.receive_text())
+            if m["type"] == "delta":
+                deltas.append(m["text"])
+            elif m["type"] in ("done", "stopped", "error"):
+                assert m["type"] == "done"
+                break
+        assert "".join(deltas) == "Hello"
+
+    # restore
+    msgs = c.get(f"/api/sessions/{sid}").json()["messages"]
+    pairs = [(m["role"], m["content"]) for m in msgs]
+    assert pairs == [("user", "hi"), ("assistant", "Hello")]
+
+
+def test_chat_ws_unknown_session_closes(config):
+    c = TestClient(create_app(config))
+    import pytest as _pytest
+    from starlette.websockets import WebSocketDisconnect as _WSD
+
+    with _pytest.raises(_WSD):
+        with c.websocket_connect("/api/chat/ws?session_id=999") as ws:
+            ws.receive_text()
+
+
+def test_chat_ws_stop(config, monkeypatch):
+    async def slow_stream(**kwargs):
+        for t in ["a", "b", "c", "d", "e"]:
+            await asyncio.sleep(0)
+            yield t
+
+    monkeypatch.setattr(adapters, "chat_stream", slow_stream)
+    app = create_app(config)
+    c = TestClient(app)
+    pid = _make_provider(c)
+    sid = c.post("/api/sessions", json={"provider_id": pid, "model": "m"}).json()["id"]
+
+    with c.websocket_connect(f"/api/chat/ws?session_id={sid}") as ws:
+        ws.send_text(_json.dumps({"type": "message", "content": "go"}))
+        ws.send_text(_json.dumps({"type": "stop"}))
+        term = None
+        for _ in range(50):
+            m = _json.loads(ws.receive_text())
+            if m["type"] in ("done", "stopped", "error"):
+                term = m["type"]
+                break
+        assert term in ("done", "stopped")  # best-effort stop; either is acceptable
+
+    # an assistant turn was persisted (partial or full)
+    msgs = c.get(f"/api/sessions/{sid}").json()["messages"]
+    assert any(m["role"] == "assistant" for m in msgs)

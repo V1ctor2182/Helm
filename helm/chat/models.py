@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from helm.db import Base
@@ -25,5 +25,38 @@ class Provider(Base):
     api_key_enc: Mapped[str | None] = mapped_column(Text, nullable=True)
     models_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
     created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class ChatSession(Base):
+    """A chat conversation, pinned to a provider + model + system prompt so it
+    restores faithfully (constraint e9ddc41a). `presets` (reusable prompts) is
+    deferred to m4 with the UI."""
+
+    __tablename__ = "sessions"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    kind: Mapped[str] = mapped_column(String(20), nullable=False, default="chat")
+    title: Mapped[str | None] = mapped_column(String, nullable=True)
+    project_path: Mapped[str | None] = mapped_column(String, nullable=True)
+    provider_id: Mapped[int] = mapped_column(ForeignKey("providers.id"), nullable=False)
+    model: Mapped[str] = mapped_column(String, nullable=False)
+    system_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    session_id: Mapped[int] = mapped_column(
+        ForeignKey("sessions.id"), nullable=False, index=True
+    )
+    role: Mapped[str] = mapped_column(String(20), nullable=False)  # user|assistant
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    ts: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
