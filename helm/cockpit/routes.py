@@ -4,18 +4,24 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
+import os
+import shutil
 import zipfile
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from helm.app import db_session
-from helm.cockpit import models  # noqa: F401  (register Project on Base.metadata)
+from helm.cockpit import models  # noqa: F401  (register models on Base.metadata)
+from helm.cockpit.models import TerminalSession
 from helm.cockpit.preview import list_zip, read_text
 from helm.cockpit.service import ProjectService, list_dir
+from helm.cockpit.terminal import PtyProcess
 
 router = APIRouter(prefix="/api/cockpit", tags=["cockpit"])
 
@@ -89,6 +95,69 @@ def file_zip(path: str) -> dict:
 @router.get("/projects")
 def list_projects(session: Session = Depends(db_session)) -> dict:
     return {"projects": [_project_dict(p) for p in ProjectService(session).list()]}
+
+
+def _record_session(ws: WebSocket, cwd: str | None) -> None:
+    db = ws.app.state.db
+    with db.session_scope() as s:
+        s.add(TerminalSession(project_path=cwd))
+
+
+@router.websocket("/terminal/ws")
+async def terminal_ws(
+    ws: WebSocket, path: str | None = None, cols: int = 80, rows: int = 24
+) -> None:
+    """Bridge a pty shell ↔ xterm.js. Protocol (JSON both ways):
+    client → {type:'input',data} / {type:'resize',cols,rows};
+    server → {type:'output',data} / {type:'exit',code}."""
+    await ws.accept()
+    cwd = path if path and os.path.isdir(path) else None
+    shell = os.environ.get("SHELL") or shutil.which("bash") or "/bin/sh"
+    pty_proc = PtyProcess([shell], cwd=cwd, cols=cols, rows=rows)
+    _record_session(ws, cwd)
+
+    loop = asyncio.get_running_loop()
+    out_q: asyncio.Queue[bytes | None] = asyncio.Queue()
+
+    def on_readable() -> None:
+        data = pty_proc.read()
+        if data:
+            out_q.put_nowait(data)
+        elif data == b"":  # EOF — child exited
+            loop.remove_reader(pty_proc.master)
+            out_q.put_nowait(None)
+
+    loop.add_reader(pty_proc.master, on_readable)
+
+    async def pump_output() -> None:
+        # A send failure here (client vanished) is non-fatal: the receive loop's
+        # finally owns teardown (remove_reader + close).
+        while True:
+            data = await out_q.get()
+            if data is None:
+                await ws.send_text(json.dumps({"type": "exit", "code": pty_proc.poll()}))
+                return
+            await ws.send_text(
+                json.dumps({"type": "output", "data": data.decode("utf-8", "replace")})
+            )
+
+    out_task = asyncio.create_task(pump_output())
+    try:
+        while True:
+            msg = json.loads(await ws.receive_text())
+            if msg.get("type") == "input":
+                pty_proc.write(msg["data"])
+            elif msg.get("type") == "resize":
+                pty_proc.resize(int(msg["cols"]), int(msg["rows"]))
+    except (WebSocketDisconnect, KeyError, ValueError):
+        pass
+    finally:
+        try:
+            loop.remove_reader(pty_proc.master)
+        except (ValueError, OSError):
+            pass
+        out_task.cancel()
+        pty_proc.close()
 
 
 @router.post("/projects")

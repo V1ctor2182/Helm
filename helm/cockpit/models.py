@@ -31,3 +31,17 @@ class Project(Base):
 
     def badge_list(self) -> list[str]:
         return [b for b in self.badges.split(",") if b]
+
+
+class TerminalSession(Base):
+    """One embedded-terminal session. ``agent`` is set when an agent (Claude
+    Code / Codex) is launched in it (F5); null for a plain shell."""
+
+    __tablename__ = "terminal_sessions"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    project_path: Mapped[str | None] = mapped_column(String, nullable=True)
+    agent: Mapped[str | None] = mapped_column(String, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

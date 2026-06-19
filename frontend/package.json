@@ -11,6 +11,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@xterm/addon-fit": "latest",
+    "@xterm/xterm": "latest",
     "dompurify": "latest",
     "marked": "latest"
   },

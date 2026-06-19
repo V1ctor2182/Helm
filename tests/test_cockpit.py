@@ -1,10 +1,16 @@
 """m1 (cockpit): FileService dir listing + badge detection, and the project
 registry REST."""
 
+import json
+import time
+
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from helm.app import create_app
+from helm.cockpit.models import TerminalSession
 from helm.cockpit.service import detect_badges, list_dir
+from helm.cockpit.terminal import PtyProcess
 
 
 def test_detect_badges(tmp_path):
@@ -95,3 +101,42 @@ def test_open_and_list_projects(config, tmp_path):
     listed = c.get("/api/cockpit/projects").json()["projects"]
     assert len(listed) == 1
     assert listed[0]["path"] == str(tmp_path)
+
+
+def test_pty_echo_roundtrip():
+    p = PtyProcess(["/bin/sh"])
+    p.write("echo PTY_OK\n")
+    seen = b""
+    deadline = time.time() + 4
+    while time.time() < deadline and b"PTY_OK" not in seen:
+        data = p.read()
+        if data:
+            seen += data
+        else:
+            time.sleep(0.05)
+    p.close()
+    assert b"PTY_OK" in seen
+
+
+def test_terminal_ws_echo_and_records_session(config, tmp_path):
+    app = create_app(config)
+    c = TestClient(app)
+    url = f"/api/cockpit/terminal/ws?path={tmp_path}&cols=80&rows=24"
+    with c.websocket_connect(url) as ws:
+        ws.send_text(json.dumps({"type": "input", "data": "echo HELLO_TERM\n"}))
+        seen = ""
+        for _ in range(80):
+            m = json.loads(ws.receive_text())
+            if m["type"] == "output":
+                seen += m["data"]
+                if "HELLO_TERM" in seen:
+                    break
+            elif m["type"] == "exit":
+                break
+        assert "HELLO_TERM" in seen
+        ws.send_text(json.dumps({"type": "input", "data": "exit\n"}))
+
+    with app.state.db.session_scope() as s:
+        rows = s.execute(select(TerminalSession)).scalars().all()
+    assert len(rows) == 1
+    assert rows[0].project_path == str(tmp_path)

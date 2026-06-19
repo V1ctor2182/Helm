@@ -4,7 +4,9 @@
   import QuickCapture from './QuickCapture.svelte'
   import Today from './Today.svelte'
   import CockpitView from './cockpit/CockpitView.svelte'
+  import Terminal from './cockpit/terminal/Terminal.svelte'
   import { applyShortcut } from './keymap'
+  import { cockpit } from './cockpit/cockpit.svelte'
   import { layout, MODES } from './layout.svelte'
 
   let { backendStatus = 'connecting…' }: { backendStatus?: string } = $props()
@@ -77,7 +79,15 @@
   </main>
 
   {#if !layout.terminalCollapsed}
-    <aside class="terminal" aria-label="Terminal panel">终端（驾驶舱 Room 接入）</aside>
+    <aside class="terminal" aria-label="Terminal panel">
+      {#if layout.mode === 'cockpit'}
+        {#key cockpit.cwd}
+          <Terminal />
+        {/key}
+      {:else}
+        <span class="term-hint">终端在驾驶舱模式下可用</span>
+      {/if}
+    </aside>
   {/if}
 
   <footer class="statusbar">
