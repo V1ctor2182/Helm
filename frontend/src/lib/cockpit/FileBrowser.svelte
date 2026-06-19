@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onDestroy, onMount } from 'svelte'
   import { cockpit } from './cockpit.svelte'
   import { iconFor } from './fileIcons'
 
@@ -7,6 +7,10 @@
 
   onMount(() => {
     void cockpit.loadProjects()
+  })
+
+  onDestroy(() => {
+    cockpit.stopWatching()
   })
 
   function openInput(e: Event) {
@@ -38,6 +42,14 @@
         onclick={() => parent && cockpit.browse(parent)}>⬆</button
       >
       <span class="cwd" title={cockpit.cwd}>{cockpit.cwd}</span>
+      <button
+        type="button"
+        class="follow"
+        class:on={cockpit.followMode}
+        aria-pressed={cockpit.followMode}
+        title="跟随模式：自动预览 agent 正在改的文件"
+        onclick={() => cockpit.toggleFollow()}>跟随{cockpit.followMode ? ' ●' : ''}</button
+      >
     {:else}
       <input
         bind:value={pathInput}
@@ -75,6 +87,7 @@
         <button
           class="card"
           class:selected={cockpit.selected?.path === e.path}
+          class:changed={cockpit.changedPaths.has(e.path)}
           onclick={() => cockpit.select(e)}
         >
           <span class="icon" style="color:{ic.color}">{ic.glyph}</span>
@@ -161,6 +174,27 @@
   .card.selected {
     border-color: #4250ff;
     background: #f5f6ff;
+  }
+  .card.changed {
+    animation: flash 1.2s ease-out;
+  }
+  @keyframes flash {
+    0% {
+      border-color: #37b24d;
+      box-shadow: 0 0 0 2px rgba(55, 178, 77, 0.5);
+    }
+    100% {
+      border-color: #e5e4e7;
+      box-shadow: none;
+    }
+  }
+  .follow {
+    margin-left: auto;
+    font-size: 0.8rem;
+  }
+  .follow.on {
+    border-color: #37b24d;
+    color: #2b8a3e;
   }
   .icon {
     font-weight: 700;

@@ -45,3 +45,19 @@ class TerminalSession(Base):
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+class FileChange(Base):
+    """One observed filesystem change — drives the live dashboard (P0) and,
+    later, replay/inbox (P1). ``session_id`` links to a terminal session when
+    known (null for plain directory watching)."""
+
+    __tablename__ = "file_changes"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    session_id: Mapped[int | None] = mapped_column(nullable=True)
+    path: Mapped[str] = mapped_column(String, nullable=False)
+    change_kind: Mapped[str] = mapped_column(String, nullable=False)
+    ts: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

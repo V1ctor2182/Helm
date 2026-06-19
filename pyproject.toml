@@ -9,6 +9,7 @@ dependencies = [
     "SQLAlchemy>=2.0",
     "cryptography",
     "python-multipart",
+    "watchdog",
 ]
 
 [project.optional-dependencies]

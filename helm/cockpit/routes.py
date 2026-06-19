@@ -18,10 +18,11 @@ from sqlalchemy.orm import Session
 
 from helm.app import db_session
 from helm.cockpit import models  # noqa: F401  (register models on Base.metadata)
-from helm.cockpit.models import TerminalSession
+from helm.cockpit.models import FileChange, TerminalSession
 from helm.cockpit.preview import list_zip, read_text
 from helm.cockpit.service import ProjectService, list_dir
 from helm.cockpit.terminal import PtyProcess
+from helm.cockpit.watcher import DirWatcher
 
 router = APIRouter(prefix="/api/cockpit", tags=["cockpit"])
 
@@ -158,6 +159,52 @@ async def terminal_ws(
             pass
         out_task.cancel()
         pty_proc.close()
+
+
+@router.websocket("/watch/ws")
+async def watch_ws(ws: WebSocket, path: str) -> None:
+    """Stream filesystem changes under `path` to the dashboard: server →
+    {type:'change', path, kind}. Each change is also recorded (best-effort)."""
+    if not os.path.isdir(path):
+        await ws.close(code=1008)
+        return
+    await ws.accept()
+
+    loop = asyncio.get_running_loop()
+    queue: asyncio.Queue[dict] = asyncio.Queue()
+    closed = False
+
+    def on_change(event: dict) -> None:  # runs on the watchdog thread
+        # Guard the cross-thread post: an in-flight event during teardown must
+        # not call into a closing loop (RuntimeError on the observer thread).
+        if closed:
+            return
+        try:
+            loop.call_soon_threadsafe(queue.put_nowait, event)
+        except RuntimeError:
+            pass
+
+    watcher = DirWatcher(path, on_change)
+    watcher.start()
+    db = ws.app.state.db
+
+    try:
+        while True:
+            event = await queue.get()
+            # Send first (keep highlight latency low), then persist best-effort.
+            # NOTE(perf follow-up): this sync SQLite write is per-event and can
+            # block the loop under write bursts; debounce/batch when throttling.
+            await ws.send_text(json.dumps({"type": "change", **event}))
+            try:
+                with db.session_scope() as s:
+                    s.add(FileChange(path=event["path"], change_kind=event["kind"]))
+            except Exception:
+                pass
+    except (WebSocketDisconnect, RuntimeError, ConnectionError):
+        pass
+    finally:
+        closed = True
+        watcher.stop()
 
 
 @router.post("/projects")

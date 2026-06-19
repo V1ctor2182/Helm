@@ -140,3 +140,39 @@ def test_terminal_ws_echo_and_records_session(config, tmp_path):
         rows = s.execute(select(TerminalSession)).scalars().all()
     assert len(rows) == 1
     assert rows[0].project_path == str(tmp_path)
+
+
+def test_dir_watcher_detects_creation(tmp_path):
+    from helm.cockpit.watcher import DirWatcher
+
+    events = []
+    w = DirWatcher(str(tmp_path), lambda e: events.append(e))
+    w.start()
+    time.sleep(0.3)
+    (tmp_path / "new.txt").write_text("hi")
+    deadline = time.time() + 5
+    while time.time() < deadline and not any("new.txt" in e["path"] for e in events):
+        time.sleep(0.1)
+    w.stop()
+    assert any("new.txt" in e["path"] for e in events)
+
+
+def test_watch_ws_streams_and_records(config, tmp_path):
+    from helm.cockpit.models import FileChange
+
+    proj = tmp_path / "proj"
+    proj.mkdir()
+    app = create_app(config)
+    c = TestClient(app)
+    with c.websocket_connect(f"/api/cockpit/watch/ws?path={proj}") as ws:
+        time.sleep(0.3)
+        (proj / "w.txt").write_text("x")
+        seen = False
+        for _ in range(60):
+            m = json.loads(ws.receive_text())
+            if m["type"] == "change" and "w.txt" in m["path"]:
+                seen = True
+                break
+        assert seen
+    with app.state.db.session_scope() as s:
+        assert s.execute(select(FileChange)).scalars().first() is not None
