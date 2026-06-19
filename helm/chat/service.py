@@ -27,7 +27,7 @@ PROVIDER_TEMPLATES: list[dict] = [
     {
         "type": "ollama",
         "name": "Ollama",
-        "base_url": "http://localhost:11434",
+        "base_url": "http://localhost:11434/v1",  # OpenAI-compatible endpoint
         "needs_key": False,
         "models": [],
     },
@@ -101,6 +101,7 @@ class ProviderService:
         if row is None:
             return False
         self._session.delete(row)
+        self._session.flush()
         return True
 
     def api_key(self, provider_id: int) -> str | None:

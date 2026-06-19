@@ -3,14 +3,17 @@
 
 from __future__ import annotations
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from helm.app import db_session, get_secret_box
+from helm.chat import adapters
 from helm.chat import models  # noqa: F401  (register Provider on Base.metadata)
+from helm.chat.models import Provider
 from helm.chat.service import PROVIDER_TEMPLATES, ProviderService, provider_public
-from helm.crypto import SecretBox
+from helm.crypto import DecryptionError, SecretBox
 
 router = APIRouter(prefix="/api", tags=["chat"])
 
@@ -52,6 +55,27 @@ def create_provider(
         models=body.models,
     )
     return provider_public(provider)
+
+
+@router.post("/providers/{provider_id}/test")
+async def test_provider(
+    provider_id: int,
+    session: Session = Depends(db_session),
+    box: SecretBox = Depends(get_secret_box),
+) -> dict:
+    """Ping a provider for connectivity + model discovery."""
+    svc = ProviderService(session, box)
+    provider = session.get(Provider, provider_id)
+    if provider is None:
+        raise HTTPException(status_code=404, detail="provider not found")
+    try:
+        key = svc.api_key(provider_id)  # may raise DecryptionError on a lost key
+        available = await adapters.ping(
+            provider_type=provider.type, base_url=provider.base_url, api_key=key
+        )
+        return {"ok": True, "models": available}
+    except (httpx.HTTPError, DecryptionError) as exc:
+        return {"ok": False, "error": str(exc)}
 
 
 @router.delete("/providers/{provider_id}", status_code=204)
