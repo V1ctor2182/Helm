@@ -10,6 +10,7 @@ dependencies = [
     "cryptography",
     "python-multipart",
     "watchdog",
+    "httpx",
 ]
 
 [project.optional-dependencies]

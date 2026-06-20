@@ -3,6 +3,7 @@
   import CommandPalette from './CommandPalette.svelte'
   import QuickCapture from './QuickCapture.svelte'
   import Today from './Today.svelte'
+  import Chat from './chat/Chat.svelte'
   import CockpitView from './cockpit/CockpitView.svelte'
   import Terminal from './cockpit/terminal/Terminal.svelte'
   import { applyShortcut } from './keymap'
@@ -40,6 +41,8 @@
       <Today />
     {:else if layout.mode === 'cockpit'}
       <CockpitView />
+    {:else if layout.mode === 'chat'}
+      <Chat />
     {:else}
       <div class="tabbar" role="tablist">
       {#each layout.tabs as tab (tab.id)}

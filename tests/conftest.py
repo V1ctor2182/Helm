@@ -11,3 +11,9 @@ from helm.config import HelmConfig
 @pytest.fixture
 def config(tmp_path: Path) -> HelmConfig:
     return HelmConfig(data_dir=tmp_path / "helm-data")
+
+
+@pytest.fixture
+def anyio_backend() -> str:
+    # Run @pytest.mark.anyio tests on asyncio only (trio isn't installed).
+    return "asyncio"

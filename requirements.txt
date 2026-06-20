@@ -6,3 +6,4 @@ SQLAlchemy>=2.0
 cryptography
 python-multipart
 watchdog
+httpx
