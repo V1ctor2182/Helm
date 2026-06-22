@@ -46,16 +46,34 @@
 
 4. **熔断检查**:对照 [`METHODOLOGY.md`](./METHODOLOGY.md) 第三节;命中任一条就停下来给我状态摘要,不要硬继续。
 
-5. **写 report(每轮必做)**:把这一轮做了什么写成一份复盘,存到
-   `docs/reports/<YYYY-MM-DD>-<room>-<milestone>.md`(目录没有就建)。至少包含:
-   - **目标**:本轮的 `<room>` / milestone。
-   - **做了什么**:实现了哪些能力、改/加了哪些关键文件。
-   - **决策**:本轮 `record_decision` 的双向门决策(理由 + 依据)。
-   - **defer**:`add_question` / 建的 issue / 代码里留的 TODO(单向门或超范围)。
-   - **验证**:测试 / 构建结果(过没过)。
-   - **熔断状态**:有没有命中第 4 步的熔断条件。
+5. **写 report(每轮必做)**:把这一轮做了什么写成一份详细复盘,存到
+   `docs/reports/<YYYY-MM-DD>-<room>-<milestone>.md`(目录没有就建)。要写得让没看过
+   本轮过程的人也能复原"做了什么、为什么、怎么验证、和 VibeHub 怎么交互的"。**至少包含**:
+
+   - **目标**:本轮的 `<room>` / milestone,以及它在 Room 里的位置(第几个 / 是否末个)。
+   - **做了什么**:实现了哪些能力;**逐个列出改/加/删的关键文件**(路径 + 一句话职责),
+     必要时标依赖/迁移。
+   - **决策(record_decision)**:本轮自决的双向门决策,逐条写 **理由 + 依据来源(PRD/spec/
+     已有代码/约束)+ 影响范围**;若解决了某个开放单向门,注明是哪个、谁拍板。
+   - **VibeHub / MCP 交互(本轮必记)**:把这一轮调用的 **vibehub.* 及其它 MCP 工具逐条列出**,
+     作为审计链路。每条写:工具名 · 入参要点 · 结果/返回 id · 状态。分两类:
+       - **pull(读 context)**:`get_feature_context` / `query_why` / `get_team_conventions` /
+         `get_file_context` —— 读到了哪些关键 intent/constraint/已有 decision,如何影响了本轮决策。
+       - **write(留痕)**:`record_decision` / `add_question` / `add_constraint` / `create_ticket`
+         / `report_compliance` —— 标题 + 返回的 decision_id/question_id + **status(如
+         `ai_proposed` 待人确认 还是 `confirmed`)**。
+     若本轮**未调用**任何 VibeHub 工具,也明写"本轮无 VibeHub 交互"及原因(避免漏记看起来像没做)。
+   - **Hooks / 自动化**:本轮触发或受影响的 hooks 与自动化环节 —— 如 `commit-sync`(一致性检查/
+     spec 更新)、`.vibehub/vibehub-hook.mjs`、CI 工作流(是否触发、过没过)、cron/loop 本身的状态。
+   - **defer**:`add_question` / 建的 issue / 代码里留的 TODO(单向门或超范围),写清推迟理由。
+   - **验证**:跑了哪些命令、**具体测试数/结果**(如 `pytest 67 通过`、`vitest 75`、`svelte-check 0/0`、
+     `build ok`);哪些是 GUI/人工目视项(无法 headless 断言的)。
+   - **review**:本 milestone 审查发现的真问题(severity)+ 当场修了什么 / defer 了什么。
+   - **熔断状态**:有没有命中第 4 步的熔断条件;若有反复失败/打转也写明。
    - **下一步**:下一个 milestone,或该 Room 是否收尾。
-   这份 report 跟着本 milestone 的改动一起 commit(commit-sync 时带上),作为审计留痕。
+
+   这份 report 跟着本 milestone 的改动一起 commit(commit-sync 时带上),作为**审计留痕**——
+   尤其是「VibeHub / MCP 交互」一节,要能和 dashboard 上的 decision/question 对得上账。
 
 6. **Room 收尾**:若 `<room>` 全做完了,停下来提示我去开 PR 合 main——**不要自己合 main,也不要立刻跳到下一个 Room**(下一个 Room 要从合入后的 main 切分支)。等我把 PR 合进 main 后,下一轮 loop 的 step 0 会自动检测、接着做顺序里的下一个 Room。
 
