@@ -196,6 +196,39 @@ class MemoryService:
         fused.sort(key=lambda pair: pair[1], reverse=True)
         return fused[:limit]
 
+    def export_all(self) -> list[dict]:
+        """Every memory as a public dict — the JSON export payload (constraint
+        463c14ca: memories must support JSON import/export)."""
+        return [memory_public(m) for m in self.list()]
+
+    def import_entries(self, entries: list[dict], replace: bool = False) -> int:
+        """Insert memories from an export payload, re-indexing each into the
+        vector store. Incoming ids are ignored (fresh ids assigned) so importing
+        never collides with existing rows. ``replace=True`` clears the store
+        first (explicit destructive opt-in, e.g. restoring a backup). Returns
+        the number imported."""
+        if replace:
+            for m in self.list():
+                self.delete(m.id)
+            if self.vectors is not None:
+                self.vectors.reset()
+        count = 0
+        for entry in entries:
+            text = str(entry.get("text", "")).strip()
+            if not text:
+                continue  # skip malformed rows rather than fail the whole batch
+            tags = entry.get("tags")
+            self.create(
+                text=text,
+                category=entry.get("category") or "fact",
+                source=entry.get("source") or "import",
+                session_id=entry.get("session_id"),
+                tags=tags if isinstance(tags, list) else None,
+                pinned=bool(entry.get("pinned", False)),
+            )
+            count += 1
+        return count
+
     def touch(self, memory_id: int) -> Memory | None:
         """Bump the recall counter — called when a memory is surfaced to the
         brain/agent so usage can later inform pruning/ranking."""

@@ -109,6 +109,44 @@ def test_keyword_similarity_unit():
     assert abs(keyword_similarity("cat dog", "cat fish") - 1 / 3) < 1e-9
 
 
+def test_memory_export_import_roundtrip(config):
+    c = _client(config)
+    c.post("/api/memories", json={"text": "fact A", "category": "fact", "tags": ["x"]})
+    c.post(
+        "/api/memories",
+        json={"text": "pref B", "category": "preference", "pinned": True},
+    )
+
+    export = c.get("/api/memories/export").json()
+    assert export["version"] == 1
+    assert len(export["memories"]) == 2
+
+    # import into a fresh store → append (default)
+    c2 = _client(config.__class__(data_dir=config.data_dir.parent / "other"))
+    imported = c2.post("/api/memories/import", json={"memories": export["memories"]})
+    assert imported.status_code == 200
+    assert imported.json()["imported"] == 2
+    got = c2.get("/api/memories").json()["memories"]
+    assert {m["text"] for m in got} == {"fact A", "pref B"}
+    assert any(m["pinned"] and m["tags"] == [] for m in got)
+    # pinned/tags survived the round-trip
+    a = next(m for m in got if m["text"] == "fact A")
+    assert a["tags"] == ["x"]
+
+
+def test_memory_import_replace_and_skips_blank(config):
+    c = _client(config)
+    c.post("/api/memories", json={"text": "old one"})
+    # replace=True wipes existing; blank rows are skipped
+    res = c.post(
+        "/api/memories/import",
+        json={"memories": [{"text": "new one"}, {"text": "   "}], "replace": True},
+    )
+    assert res.json()["imported"] == 1
+    texts = [m["text"] for m in c.get("/api/memories").json()["memories"]]
+    assert texts == ["new one"]
+
+
 def test_memory_touch_bumps_uses(config):
     """touch() is the recall counter m2/m6 call when surfacing a memory."""
     from helm.db import Database

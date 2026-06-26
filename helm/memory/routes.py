@@ -30,6 +30,13 @@ class MemoryPatch(BaseModel):
     pinned: bool | None = None
 
 
+class ImportBody(BaseModel):
+    memories: list[dict]
+    # replace=True clears existing memories first (backup restore); default
+    # appends so an accidental import never wipes the store.
+    replace: bool = False
+
+
 def _validate_category(category: str) -> None:
     # Soft validation: the column is free-form, but a typo'd category would
     # silently break the UI filter, so reject unknown ones at the edge.
@@ -84,6 +91,23 @@ def search_memories(
             {**memory_public(m), "score": round(score, 4)} for m, score in results
         ]
     }
+
+
+@router.get("/memories/export")
+def export_memories(session: Session = Depends(db_session)) -> dict:
+    return {"version": 1, "memories": MemoryService(session).export_all()}
+
+
+@router.post("/memories/import")
+def import_memories(
+    body: ImportBody,
+    session: Session = Depends(db_session),
+    vectors=Depends(get_memory_vectors),
+) -> dict:
+    count = MemoryService(session, vectors).import_entries(
+        body.memories, replace=body.replace
+    )
+    return {"imported": count}
 
 
 @router.get("/memories/{memory_id}")
