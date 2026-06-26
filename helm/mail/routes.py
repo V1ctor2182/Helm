@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -143,6 +145,32 @@ def email_to_memory(
     if out is None:
         raise HTTPException(status_code=404, detail="email not found")
     return out
+
+
+class EmailToEventBody(BaseModel):
+    start: datetime
+    end: datetime | None = None
+
+
+@router.post("/emails/{email_id}/to-event")
+def email_to_event(
+    email_id: int, body: EmailToEventBody, session: Session = Depends(db_session)
+) -> dict:
+    """Turn an email into a calendar event (intent#3 email→日历事件): subject →
+    summary, body → description, the user-picked time → start."""
+    from helm.calendar.service import EventService, event_public
+
+    email = EmailService(session).get(email_id)
+    if email is None:
+        raise HTTPException(status_code=404, detail="email not found")
+    event = EventService(session).create(
+        summary=email.subject or "(邮件事件)",
+        description=(email.body or "")[:2000],
+        start=body.start,
+        end=body.end,
+        source="local",
+    )
+    return event_public(event)
 
 
 class EmailToTaskBody(BaseModel):

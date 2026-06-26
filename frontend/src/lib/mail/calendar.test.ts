@@ -70,3 +70,15 @@ describe('Mail calendar segment', () => {
     expect(screen.getByRole('button', { name: '导出 .ics' })).toBeInTheDocument()
   })
 })
+
+describe('MailStore.toEvent', () => {
+  it('posts the start time to the to-event endpoint', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ id: 1, summary: 'X' }) })
+    vi.stubGlobal('fetch', fetchMock)
+    const s = new MailStore()
+    await s.toEvent(4, '2026-06-29T10:00')
+    expect(fetchMock.mock.calls[0][0]).toContain('/emails/4/to-event')
+    expect(JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string)).toEqual({ start: '2026-06-29T10:00' })
+    expect(s.convertMsg).toContain('日历')
+  })
+})
