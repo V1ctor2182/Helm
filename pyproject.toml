@@ -11,6 +11,18 @@ dependencies = [
     "python-multipart",
     "watchdog",
     "httpx",
+    # memory-rag-skills: the brain's vector store + embedder (constraint
+    # 8ace2b3a — reuse Odysseus's ChromaDB + fastembed ONNX stack). fastembed
+    # downloads its ONNX model on first embed; the runtime degrades to
+    # keyword-only recall when the vector store can't initialize.
+    "chromadb",
+    "fastembed",
+    # memory-rag-skills m4: document text extraction for RAG indexing. Both are
+    # light, pure-ish Python; extraction degrades gracefully if either is absent.
+    "pypdf",
+    "python-docx",
+    # memory-rag-skills m6: MCP server exposing memory/RAG to the terminal agent.
+    "mcp",
 ]
 
 [project.optional-dependencies]
@@ -24,6 +36,8 @@ packaging = [
 
 [project.scripts]
 helm = "helm.server:run"
+# memory-rag-skills m6: stdio MCP server Claude Code launches (.mcp.json).
+helm-mcp = "helm.mcp.server:main"
 
 [build-system]
 requires = ["setuptools>=68"]
