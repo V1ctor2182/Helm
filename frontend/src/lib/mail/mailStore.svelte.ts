@@ -1,6 +1,8 @@
 // Mail store (email-calendar m3): accounts, inbox, email detail + AI triage.
 // Mirrors the resilient `#json`/`#post` pattern used elsewhere.
 
+import { jsonFetch } from '../api'
+
 export interface MailAccount {
   id: number
   name: string
@@ -48,13 +50,7 @@ export class MailStore {
   convertMsg = $state<string | null>(null)
 
   async #json(path: string, init?: RequestInit): Promise<unknown | null> {
-    try {
-      const res = await fetch(path, init)
-      if (!res.ok) return null
-      return await res.json()
-    } catch {
-      return null
-    }
+    return jsonFetch(path, init)
   }
 
   #post(path: string, body?: unknown): Promise<unknown | null> {

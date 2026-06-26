@@ -3,6 +3,8 @@
 // (unit-tested); live streaming uses an injectable global WebSocket (stubbed in
 // tests), mirroring chatStore/agentStore.
 
+import { jsonFetch } from '../api'
+
 export interface Claim {
   text: string
   sources: string[]
@@ -85,13 +87,7 @@ export class ResearchStore {
   }
 
   async #json(path: string): Promise<unknown | null> {
-    try {
-      const res = await fetch(path)
-      if (!res.ok) return null
-      return await res.json()
-    } catch {
-      return null
-    }
+    return jsonFetch(path)
   }
 
   async loadProviders(): Promise<void> {

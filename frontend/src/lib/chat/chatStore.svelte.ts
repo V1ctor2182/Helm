@@ -2,6 +2,8 @@
 // WebSocket. Server-message handling (`handle`) is split out so it's unit-
 // testable; live streaming is exercised via an injectable global WebSocket.
 
+import { jsonFetch } from '../api'
+
 export interface Provider {
   id: number
   type: string
@@ -51,13 +53,7 @@ export class ChatStore {
   #ws: WebSocket | null = null
 
   async #json(path: string, init?: RequestInit): Promise<unknown | null> {
-    try {
-      const res = await fetch(path, init)
-      if (!res.ok) return null
-      return await res.json()
-    } catch {
-      return null
-    }
+    return jsonFetch(path, init)
   }
 
   async loadTemplates(): Promise<void> {

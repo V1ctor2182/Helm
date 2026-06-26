@@ -2,6 +2,8 @@
 // health, enable/disable, and usage counts. Read-mostly; toggling persists the
 // Helm-side enabled flag. Mirrors the resilient `#json` helper used elsewhere.
 
+import { jsonFetch } from '../api'
+
 export interface Skill {
   name: string
   description: string
@@ -21,13 +23,7 @@ export class SkillsStore {
   error = $state<string | null>(null)
 
   async #json(path: string, init?: RequestInit): Promise<unknown | null> {
-    try {
-      const res = await fetch(path, init)
-      if (!res.ok) return null
-      return await res.json()
-    } catch {
-      return null
-    }
+    return jsonFetch(path, init)
   }
 
   async load(): Promise<void> {

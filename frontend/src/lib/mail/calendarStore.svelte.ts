@@ -1,5 +1,7 @@
 // Calendar store (email-calendar m5): local events + .ics import/export.
 
+import { jsonFetch } from '../api'
+
 export interface CalEvent {
   id: number
   uid: string
@@ -17,13 +19,7 @@ export class CalendarStore {
   error = $state<string | null>(null)
 
   async #json(path: string, init?: RequestInit): Promise<unknown | null> {
-    try {
-      const res = await fetch(path, init)
-      if (!res.ok) return null
-      return await res.json()
-    } catch {
-      return null
-    }
+    return jsonFetch(path, init)
   }
 
   async load(): Promise<void> {

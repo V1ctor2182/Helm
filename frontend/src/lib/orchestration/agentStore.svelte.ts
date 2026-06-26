@@ -3,6 +3,8 @@
 // reducer (`handle`) is split out so it's unit-testable; live streaming uses an
 // injectable global WebSocket (stubbed in tests), mirroring chatStore.
 
+import { jsonFetch } from '../api'
+
 export interface AcpEvent {
   type: string // status | message | tool_call | tool_result | session_end | plan | permission_request
   session_id: string | null
@@ -34,13 +36,7 @@ export class AgentStore {
   #ws: WebSocket | null = null
 
   async #json(path: string): Promise<unknown | null> {
-    try {
-      const res = await fetch(path)
-      if (!res.ok) return null
-      return await res.json()
-    } catch {
-      return null
-    }
+    return jsonFetch(path)
   }
 
   async loadRuns(): Promise<void> {
