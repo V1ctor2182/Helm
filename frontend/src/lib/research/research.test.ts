@@ -77,6 +77,23 @@ describe('ResearchStore', () => {
     expect(s.error).toContain('not found')
   })
 
+  it('exportToMemory posts and sets a success message', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ memory_id: 3 }) })
+    vi.stubGlobal('fetch', fetchMock)
+    const s = new ResearchStore()
+    await s.exportToMemory(7)
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/research/7/export/memory')
+    expect((fetchMock.mock.calls[0][1] as RequestInit).method).toBe('POST')
+    expect(s.exportMsg).toContain('记忆')
+  })
+
+  it('exportToFile reports the failure when overwrite refused', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: () => Promise.resolve({}) }))
+    const s = new ResearchStore()
+    await s.exportToFile(7, '/p/r.md')
+    expect(s.exportMsg).toContain('失败')
+  })
+
   it('stop sends a stop frame when open', () => {
     const s = new ResearchStore()
     s.providers = [{ id: 1, name: 'O', models: ['m'] }]

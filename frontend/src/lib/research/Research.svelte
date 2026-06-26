@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { research } from './researchStore.svelte'
+  import { cockpit } from '../cockpit/cockpit.svelte'
 
   let question = $state('')
 
@@ -99,6 +100,15 @@
         </ol>
       {/if}
       <p class="meta">迭代 {r.rounds} 轮 · 状态 {research.current.status}</p>
+      <div class="export">
+        <button onclick={() => research.exportToMemory(research.current!.id)}>存入记忆</button>
+        <button
+          disabled={!cockpit.cwd}
+          title={cockpit.cwd ? `写入 ${cockpit.cwd}` : '先在驾驶舱选一个项目目录'}
+          onclick={() => research.exportToFile(research.current!.id, `${cockpit.cwd}/research-${research.current!.id}.md`)}
+        >导出 Markdown 到项目</button>
+        {#if research.exportMsg}<span class="exmsg">{research.exportMsg}</span>{/if}
+      </div>
     </article>
   {:else if research.status !== 'running'}
     <p class="empty">输入问题开始一次深度研究,或从下方历史里打开一份报告。</p>
@@ -224,6 +234,29 @@
   .meta {
     color: #999;
     font-size: 0.78rem;
+  }
+  .export {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .export button {
+    padding: 4px 10px;
+    border: 1px solid #cfcdd4;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 0.8rem;
+  }
+  .export button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .exmsg {
+    font-size: 0.78rem;
+    color: #1c7a40;
   }
   .history summary {
     cursor: pointer;

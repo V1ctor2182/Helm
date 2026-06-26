@@ -14,14 +14,19 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from helm.app import db_session
+from helm.app import db_session, get_memory_vectors
 from helm.research import models  # noqa: F401  (register tables on Base)
 from helm.research.factory import build_engine
 from helm.research.service import ResearchService, session_public
 
 router = APIRouter(prefix="/api/research", tags=["research"])
+
+
+class FileExportBody(BaseModel):
+    path: str
 
 
 @router.get("")
@@ -36,6 +41,36 @@ def get_research(session_id: int, session: Session = Depends(db_session)) -> dic
     if s is None:
         raise HTTPException(status_code=404, detail="research session not found")
     return session_public(s, svc.sources(session_id))
+
+
+@router.post("/{session_id}/export/memory")
+def export_to_memory(
+    session_id: int,
+    session: Session = Depends(db_session),
+    vectors=Depends(get_memory_vectors),
+) -> dict:
+    from helm.memory.service import MemoryService
+
+    try:
+        return ResearchService(session).export_to_memory(
+            session_id, MemoryService(session, vectors)
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.post("/{session_id}/export/file")
+def export_to_file(
+    session_id: int,
+    body: FileExportBody,
+    session: Session = Depends(db_session),
+) -> dict:
+    try:
+        return {"path": ResearchService(session).write_report_file(session_id, body.path)}
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except FileExistsError as exc:
+        raise HTTPException(status_code=400, detail=f"file exists, refusing to overwrite: {exc}")
 
 
 @router.websocket("/ws")

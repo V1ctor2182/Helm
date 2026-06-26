@@ -6,11 +6,13 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
+from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from helm.research.engine import ResearchEngine
+from helm.research.export import report_to_markdown, report_to_memory_text
 from helm.research.models import ResearchSession, ResearchSource
 
 
@@ -57,6 +59,33 @@ class ResearchService:
                 .order_by(ResearchSource.round, ResearchSource.id)
             )
         )
+
+    def _completed_report(self, session_id: int) -> tuple[ResearchSession, dict]:
+        sess = self.get(session_id)
+        if sess is None or not sess.report_json:
+            raise ValueError("research session has no report to export")
+        return sess, json.loads(sess.report_json)
+
+    def export_to_memory(self, session_id: int, memory_service) -> dict:
+        """Save the report as a memory so the terminal agent recalls it via MCP
+        (intent#3). Returns the created memory's id + text."""
+        sess, report = self._completed_report(session_id)
+        text = report_to_memory_text(sess.question, report)
+        mem = memory_service.create(
+            text=text, category="fact", source="research", tags=["research"]
+        )
+        return {"memory_id": mem.id, "text": mem.text}
+
+    def write_report_file(self, session_id: int, path: str) -> str:
+        """Write the report as Markdown to ``path`` (intent#3: write into a
+        project). Refuses to overwrite an existing file — never clobber."""
+        sess, report = self._completed_report(session_id)
+        target = Path(path).expanduser()
+        if target.exists():
+            raise FileExistsError(str(target))
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(report_to_markdown(report), encoding="utf-8")
+        return str(target)
 
     def run_research(
         self,

@@ -56,8 +56,33 @@ export class ResearchStore {
   progress = $state<Progress[]>([])
   status = $state<Status>('idle')
   error = $state<string | null>(null)
+  exportMsg = $state<string | null>(null)
 
   #ws: WebSocket | null = null
+
+  async #post(path: string, body?: unknown): Promise<Record<string, unknown> | null> {
+    try {
+      const res = await fetch(path, {
+        method: 'POST',
+        headers: body ? { 'content-type': 'application/json' } : {},
+        body: body ? JSON.stringify(body) : undefined,
+      })
+      if (!res.ok) return null
+      return (await res.json()) as Record<string, unknown>
+    } catch {
+      return null
+    }
+  }
+
+  async exportToMemory(id: number): Promise<void> {
+    const r = await this.#post(`/api/research/${id}/export/memory`)
+    this.exportMsg = r ? '已存入记忆(终端 agent 可经 MCP 读到)' : '存入记忆失败'
+  }
+
+  async exportToFile(id: number, path: string): Promise<void> {
+    const r = await this.#post(`/api/research/${id}/export/file`, { path })
+    this.exportMsg = r ? `已写入 ${r.path}` : '写入失败(文件可能已存在)'
+  }
 
   async #json(path: string): Promise<unknown | null> {
     try {
