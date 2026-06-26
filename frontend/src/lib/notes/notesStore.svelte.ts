@@ -17,9 +17,18 @@ export interface Note {
   updated_at: string | null
 }
 
+export interface NoteProvider {
+  id: number
+  name: string
+  models: string[]
+}
+
 export class NotesStore {
   notes = $state<Note[]>([])
   error = $state<string | null>(null)
+  providers = $state<NoteProvider[]>([])
+  summary = $state<string | null>(null)
+  summarizing = $state(false)
 
   async #json(path: string, init?: RequestInit): Promise<unknown | null> {
     try {
@@ -88,6 +97,33 @@ export class NotesStore {
   async remove(id: number): Promise<void> {
     const ok = await this.#json(`/api/notes/${id}`, { method: 'DELETE' })
     if (ok) await this.load()
+  }
+
+  // ── AI 今日小结 (intent#2) ──────────────────────────────────────────────
+
+  async loadProviders(): Promise<void> {
+    const body = (await this.#json('/api/providers')) as { providers: NoteProvider[] } | null
+    if (body) this.providers = body.providers
+  }
+
+  async summarizeToday(date: string): Promise<void> {
+    const p = this.providers[0]
+    if (!p) {
+      this.error = '没有可用的模型 provider — 先在 Chat 里配置一个'
+      return
+    }
+    this.summarizing = true
+    this.summary = null
+    try {
+      const body = (await this.#json('/api/notes/journal/summary', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ provider_id: p.id, model: p.models[0] ?? '', journal_date: date, save: false }),
+      })) as { summary: string } | null
+      this.summary = body ? body.summary : '小结生成失败(无当天日记或 provider 不可用)'
+    } finally {
+      this.summarizing = false
+    }
   }
 }
 

@@ -98,6 +98,13 @@ def create_app(config: HelmConfig | None = None) -> FastAPI:
     # Create tables now that every router module has imported its models.
     db.create_all()
 
+    # Scheduled-task poller (journal-notes-tasks m5). Opt-in via HELM_SCHEDULER=1
+    # so neither tests nor a plain boot fire (paid) agents; the live executor
+    # runs only user-created tasks at their due time.
+    from helm.tasks.scheduler import maybe_start
+
+    maybe_start(app)
+
     # Serve the built Svelte frontend (workspace-layout) when present; until it's
     # built, fall back to the minimal boot page. Mounted LAST so /healthz and
     # /api/* (registered above) win over this catch-all static mount.

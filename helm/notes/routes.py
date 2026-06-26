@@ -7,11 +7,18 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from helm.app import db_session, get_memory_vectors
+from helm.app import db_session, get_memory_vectors, get_secret_box
+from helm.chat.models import Provider
+from helm.chat.service import ProviderService
+from helm.crypto import SecretBox
 from helm.notes import models  # noqa: F401  (register notes table on Base)
+from helm.notes.models import Note
 from helm.notes.service import KINDS, NoteService, note_public
+from helm.notes.summary import summarize_journal
+from helm.research.llm import ChatLLM  # patched in tests
 
 router = APIRouter(prefix="/api/notes", tags=["notes"])
 
@@ -123,6 +130,49 @@ def note_to_memory(
     if out is None:
         raise HTTPException(status_code=404, detail="note not found")
     return out
+
+
+class JournalSummaryBody(BaseModel):
+    provider_id: int
+    model: str
+    journal_date: date | None = None
+    save: bool = False
+
+
+@router.post("/journal/summary")
+def journal_summary(
+    body: JournalSummaryBody,
+    session: Session = Depends(db_session),
+    box: SecretBox = Depends(get_secret_box),
+) -> dict:
+    """AI 「今日小结」: summarize a day's journal entries (intent#2). The LLM
+    call is paid but user-initiated. Optionally save the summary as a note."""
+    day = body.journal_date
+    if day is not None:
+        entries = [
+            n.content
+            for n in session.scalars(
+                select(Note).where(Note.kind == "journal", Note.journal_date == day)
+            )
+        ]
+    else:
+        entries = [n.content for n in NoteService(session).list(kind="journal")]
+    if not entries:
+        raise HTTPException(status_code=404, detail="no journal entries to summarize")
+
+    provider = session.scalar(select(Provider).where(Provider.id == body.provider_id))
+    if provider is None:
+        raise HTTPException(status_code=404, detail="provider not found")
+    key = ProviderService(session, box).api_key(body.provider_id)
+    llm = ChatLLM(provider.type, provider.base_url, body.model, key)
+    summary = summarize_journal(entries, llm)
+
+    saved_id = None
+    if body.save and summary:
+        saved_id = NoteService(session).create(
+            content=summary, kind="journal", journal_date=day, source="agent"
+        ).id
+    return {"summary": summary, "saved_note_id": saved_id}
 
 
 class ToTaskBody(BaseModel):
