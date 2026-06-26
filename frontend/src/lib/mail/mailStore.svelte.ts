@@ -138,6 +138,12 @@ export class MailStore {
     })
     this.convertMsg = r ? '已转为每日定时任务(可在 日记/任务 调整)' : '转任务失败'
   }
+
+  async toEvent(id: number, start: string): Promise<void> {
+    if (!start) return
+    const r = await this.#post(`/api/mail/emails/${id}/to-event`, { start })
+    this.convertMsg = r ? '已加入日历(可在 日历 查看)' : '转日历事件失败'
+  }
 }
 
 export const mail = new MailStore()

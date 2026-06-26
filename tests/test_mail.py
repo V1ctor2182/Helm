@@ -150,3 +150,27 @@ def test_email_to_memory_and_task(config):
 
     assert c.post("/api/mail/emails/999/to-memory").status_code == 404
     assert c.post(f"/api/mail/emails/{eid}/to-task", json={"schedule_kind": "x", "schedule_value": {}}).status_code == 422
+
+
+def test_email_to_event(config):
+    from helm.crypto import SecretBox
+    import helm.mail.routes as mr
+
+    emails = [FetchedEmail(uid="1", from_addr="x@y.com", subject="Kickoff 会议", body="周一 10 点")]
+    db = _db(config)
+    box = SecretBox.from_data_dir(config.data_dir)
+    with db.session_scope() as s:
+        aid = AccountService(s, box).create(name="P", email_addr="m@x.com", imap_host="h", username="u", password="pw").id
+    c = _client(config)
+    import unittest.mock as _m
+    with _m.patch.object(mr, "default_fetcher", _FakeFetcher(emails)):
+        c.post(f"/api/mail/accounts/{aid}/sync")
+    eid = c.get("/api/mail/emails").json()["emails"][0]["id"]
+
+    res = c.post(f"/api/mail/emails/{eid}/to-event", json={"start": "2026-06-29T10:00:00+00:00"})
+    assert res.status_code == 200
+    assert res.json()["summary"] == "Kickoff 会议"
+    # the event now shows in the calendar
+    events = c.get("/api/calendar/events").json()["events"]
+    assert any(e["summary"] == "Kickoff 会议" for e in events)
+    assert c.post("/api/mail/emails/999/to-event", json={"start": "2026-06-29T10:00:00+00:00"}).status_code == 404

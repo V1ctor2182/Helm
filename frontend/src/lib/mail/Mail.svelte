@@ -28,6 +28,11 @@
     if (text) await calendar.importIcs(text)
   }
 
+  async function toEvent(id: number) {
+    const when = window.prompt?.('事件时间 (YYYY-MM-DDTHH:MM)', new Date().toISOString().slice(0, 16))
+    if (when) await mail.toEvent(id, when)
+  }
+
   async function doExport() {
     const ics = await calendar.exportIcs()
     if (ics && typeof URL.createObjectURL === 'function') {
@@ -159,6 +164,7 @@
         <div class="conv">
           <button onclick={() => mail.toMemory(e.id)}>→记忆</button>
           <button onclick={() => mail.toTask(e.id)}>→任务</button>
+          <button onclick={() => toEvent(e.id)}>→日程</button>
           {#if mail.convertMsg}<span class="cmsg">{mail.convertMsg}</span>{/if}
         </div>
         <pre class="body">{e.body}</pre>
