@@ -99,6 +99,30 @@ def build_server(client: HelmClient | None = None) -> FastMCP:
 
         return _safe(run)
 
+    @mcp.tool()
+    def helm_email_unread(limit: int = 20) -> str:
+        """List the user's unread emails (id, sender, subject) — so the agent can
+        triage or summarize the user's inbox (email-calendar email_server)."""
+        def run() -> str:
+            emails = api.email_unread(limit)
+            if not emails:
+                return "No unread emails."
+            return "\n".join(
+                f"#{e['id']} [{e['from_addr']}] {e['subject']}" for e in emails
+            )
+
+        return _safe(run)
+
+    @mcp.tool()
+    def helm_email_read(email_id: int) -> str:
+        """Read one email's full body by id (from helm_email_unread). Returns
+        sender + subject + body."""
+        def run() -> str:
+            e = api.email_read(email_id)
+            return f"From: {e.get('from_addr')}\nSubject: {e.get('subject')}\n\n{e.get('body', '')}"
+
+        return _safe(run)
+
     return mcp
 
 
