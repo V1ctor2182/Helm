@@ -1,10 +1,11 @@
-"""Memory store: CRUD + keyword recall over the SQLite `memories` table.
+"""Memory store: CRUD + hybrid (vector + keyword) recall over `memories`.
 
-m1 recall is keyword-only — a Jaccard token-overlap score ported from Odysseus
+Keyword recall is a Jaccard token-overlap score ported from Odysseus
 (`src/memory.py: tokenize` / `get_text_similarity`). m2 adds the ChromaDB +
-fastembed vector index and fuses the two into hybrid search; keeping the
-keyword path here means recall works (and is verifiable) before the embedding
-dependency is wired in, and stays as the graceful-degradation fallback.
+fastembed vector index (:class:`~helm.memory.vector.MemoryVectorStore`) and
+fuses semantic similarity with the keyword score. The keyword path stays as the
+graceful-degradation fallback: when no vector store is attached, or it's
+unhealthy, recall is keyword-only and the API behaves exactly as in m1.
 """
 
 from __future__ import annotations
@@ -15,6 +16,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from helm.memory.models import Memory
+from helm.memory.vector import MemoryVectorStore
+
+# Hybrid fusion weight: final = VECTOR_WEIGHT*semantic + (1-VECTOR_WEIGHT)*keyword.
+# Leans semantic (the point of m2) while keeping exact-token matches influential.
+VECTOR_WEIGHT = 0.7
 
 # Categories the intent calls out; not enforced (free-form column) but used to
 # validate API input softly and to seed the UI filter in m3.
@@ -62,8 +68,11 @@ def memory_public(m: Memory) -> dict:
 class MemoryService:
     """CRUD + keyword recall. One instance per request (wraps a Session)."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(
+        self, session: Session, vectors: MemoryVectorStore | None = None
+    ) -> None:
         self.session = session
+        self.vectors = vectors
 
     def list(self, category: str | None = None, pinned: bool | None = None) -> list[Memory]:
         """All memories, newest first, optionally filtered by category/pinned."""
@@ -96,6 +105,8 @@ class MemoryService:
         )
         self.session.add(memory)
         self.session.flush()  # assign id within the request transaction
+        if self.vectors is not None:
+            self.vectors.upsert(memory.id, memory.text)
         return memory
 
     def update(
@@ -110,8 +121,10 @@ class MemoryService:
         memory = self.get(memory_id)
         if memory is None:
             return None
+        text_changed = False
         if text is not None:
             memory.text = text.strip()
+            text_changed = True
         if category is not None:
             memory.category = category
         if tags is not None:
@@ -119,6 +132,10 @@ class MemoryService:
         if pinned is not None:
             memory.pinned = pinned
         self.session.flush()
+        # Re-index only when the embedded text changed (category/tags/pin don't
+        # affect the vector).
+        if text_changed and self.vectors is not None:
+            self.vectors.upsert(memory.id, memory.text)
         return memory
 
     def delete(self, memory_id: int) -> bool:
@@ -126,27 +143,58 @@ class MemoryService:
         if memory is None:
             return False
         self.session.delete(memory)
+        if self.vectors is not None:
+            self.vectors.delete(memory_id)
         return True
 
     def search(
         self, query: str, limit: int = 10, category: str | None = None
     ) -> list[tuple[Memory, float]]:
-        """Keyword recall: rank candidates by token-overlap similarity to the
-        query, drop zero-score rows, return top `limit` as (memory, score).
+        """Hybrid recall: fuse vector similarity (ChromaDB) with keyword
+        Jaccard, return top `limit` as (memory, score) best-first.
 
-        m1 scores in Python over the candidate set (single-user local store —
-        the memory table is small). m2 replaces this with a ChromaDB ANN query
-        fused with this keyword score."""
+        When no healthy vector store is attached, this is keyword-only (m1
+        behavior) — every candidate scored by token overlap. With the vector
+        store, semantic neighbours that share no tokens still surface, and the
+        two scores are blended by :data:`VECTOR_WEIGHT`.
+
+        Single-user local store, so keyword scoring runs in Python over the
+        candidate set; the vector side uses Chroma's ANN index.
+        """
         if not query.strip():
             return []
         candidates = self.list(category=category)
-        scored = [
-            (m, keyword_similarity(query, m.text))
-            for m in candidates
-        ]
-        scored = [pair for pair in scored if pair[1] > 0.0]
-        scored.sort(key=lambda pair: pair[1], reverse=True)
-        return scored[:limit]
+        by_id = {m.id: m for m in candidates}
+
+        # Keyword score for every candidate.
+        keyword: dict[int, float] = {
+            m.id: keyword_similarity(query, m.text) for m in candidates
+        }
+
+        # Vector score for semantic neighbours (filtered to the candidate set so
+        # a category filter still holds).
+        vector: dict[int, float] = {}
+        if self.vectors is not None and self.vectors.healthy:
+            for mid, sim in self.vectors.query(query, n=max(limit * 4, 20)):
+                if mid in by_id:
+                    vector[mid] = sim
+
+        if not vector:
+            # Degraded / keyword-only path: drop zero-score rows (m1 semantics).
+            scored = [(by_id[i], s) for i, s in keyword.items() if s > 0.0]
+            scored.sort(key=lambda pair: pair[1], reverse=True)
+            return scored[:limit]
+
+        # Fuse across the union of ids that scored on either signal.
+        fused: list[tuple[Memory, float]] = []
+        for mid in keyword.keys() | vector.keys():
+            score = VECTOR_WEIGHT * vector.get(mid, 0.0) + (
+                1 - VECTOR_WEIGHT
+            ) * keyword.get(mid, 0.0)
+            if score > 0.0:
+                fused.append((by_id[mid], score))
+        fused.sort(key=lambda pair: pair[1], reverse=True)
+        return fused[:limit]
 
     def touch(self, memory_id: int) -> Memory | None:
         """Bump the recall counter — called when a memory is surfaced to the

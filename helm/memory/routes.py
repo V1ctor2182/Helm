@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from helm.app import db_session
+from helm.app import db_session, get_memory_vectors
 from helm.memory import models  # noqa: F401  (register models on Base.metadata)
 from helm.memory.service import CATEGORIES, MemoryService, memory_public
 
@@ -54,11 +54,12 @@ def list_memories(
 def create_memory(
     body: MemoryBody,
     session: Session = Depends(db_session),
+    vectors=Depends(get_memory_vectors),
 ) -> dict:
     if not body.text.strip():
         raise HTTPException(status_code=422, detail="text must not be empty")
     _validate_category(body.category)
-    memory = MemoryService(session).create(
+    memory = MemoryService(session, vectors).create(
         text=body.text,
         category=body.category,
         source=body.source,
@@ -75,8 +76,9 @@ def search_memories(
     limit: int = Query(default=10, ge=1, le=100),
     category: str | None = Query(default=None),
     session: Session = Depends(db_session),
+    vectors=Depends(get_memory_vectors),
 ) -> dict:
-    results = MemoryService(session).search(q, limit=limit, category=category)
+    results = MemoryService(session, vectors).search(q, limit=limit, category=category)
     return {
         "results": [
             {**memory_public(m), "score": round(score, 4)} for m, score in results
@@ -100,10 +102,11 @@ def update_memory(
     memory_id: int,
     body: MemoryPatch,
     session: Session = Depends(db_session),
+    vectors=Depends(get_memory_vectors),
 ) -> dict:
     if body.category is not None:
         _validate_category(body.category)
-    memory = MemoryService(session).update(
+    memory = MemoryService(session, vectors).update(
         memory_id,
         text=body.text,
         category=body.category,
@@ -119,7 +122,8 @@ def update_memory(
 def delete_memory(
     memory_id: int,
     session: Session = Depends(db_session),
+    vectors=Depends(get_memory_vectors),
 ) -> dict:
-    if not MemoryService(session).delete(memory_id):
+    if not MemoryService(session, vectors).delete(memory_id):
         raise HTTPException(status_code=404, detail="memory not found")
     return {"deleted": memory_id}

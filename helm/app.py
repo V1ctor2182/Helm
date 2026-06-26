@@ -45,6 +45,20 @@ def create_app(config: HelmConfig | None = None) -> FastAPI:
     # first encrypt/decrypt, so constructing it here is free.
     app.state.secret_box = SecretBox.from_data_dir(config.data_dir)
 
+    # Memory vector index (memory-rag-skills m2). Construction is cheap — the
+    # Chroma client opens a local dir and the fastembed model loads lazily on
+    # first embed. Set HELM_MEMORY_VECTORS=0 to run keyword-only (the tests do
+    # this so the gate never downloads a model); the store also self-degrades
+    # to keyword-only if Chroma/fastembed can't initialize.
+    app.state.memory_vectors = None
+    if os.getenv("HELM_MEMORY_VECTORS", "1") != "0":
+        from helm.memory.embedding import FastEmbedEmbedder
+        from helm.memory.vector import MemoryVectorStore
+
+        app.state.memory_vectors = MemoryVectorStore(
+            config.data_dir, FastEmbedEmbedder()
+        )
+
     @app.get("/healthz")
     def healthz() -> dict:
         """Liveness probe — used by the desktop shell (m5) to know when the
@@ -129,6 +143,12 @@ def get_db(request: Request) -> Database:
 def get_secret_box(request: Request) -> SecretBox:
     """FastAPI dependency: the app-wide :class:`SecretBox`."""
     return request.app.state.secret_box
+
+
+def get_memory_vectors(request: Request):
+    """FastAPI dependency: the app-wide memory vector index, or None when
+    vector recall is disabled (keyword-only)."""
+    return request.app.state.memory_vectors
 
 
 def db_session(request: Request) -> Iterator[Session]:

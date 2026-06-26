@@ -7,3 +7,6 @@ cryptography
 python-multipart
 watchdog
 httpx
+# memory-rag-skills: vector store + embedder (constraint 8ace2b3a, Odysseus stack)
+chromadb
+fastembed
