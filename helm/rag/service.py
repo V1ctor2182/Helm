@@ -46,17 +46,32 @@ class RagService:
     def get(self, source_id: int) -> RagSource | None:
         return self.session.get(RagSource, source_id)
 
-    def add_source(self, path: str) -> RagSource:
-        """Register a directory/file and index it. Raises FileNotFoundError if
-        the path doesn't exist."""
+    def register_source(self, path: str) -> RagSource:
+        """Create the source row (status='indexing') WITHOUT indexing — the
+        route indexes in the background so a large directory doesn't block the
+        request (ticket 7842c722). Raises FileNotFoundError if path is missing."""
         p = Path(path).expanduser()
         if not p.exists():
             raise FileNotFoundError(path)
         src = RagSource(
-            path=str(p), kind="dir" if p.is_dir() else "file", status="pending"
+            path=str(p), kind="dir" if p.is_dir() else "file", status="indexing"
         )
         self.session.add(src)
         self.session.flush()
+        return src
+
+    def index_source(self, source_id: int) -> RagSource | None:
+        """Run indexing for an already-registered source (called in the
+        background)."""
+        src = self.get(source_id)
+        if src is None:
+            return None
+        self._index(src)
+        return src
+
+    def add_source(self, path: str) -> RagSource:
+        """Register + index synchronously (direct callers / tests)."""
+        src = self.register_source(path)
         self._index(src)
         return src
 

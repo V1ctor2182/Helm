@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+)
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -17,6 +24,13 @@ class SourceBody(BaseModel):
     path: str
 
 
+def _index_in_background(db, vectors, source_id: int) -> None:
+    """Index a registered source in its own session (runs after the response is
+    sent, so a large directory never blocks the request — ticket 7842c722)."""
+    with db.session_scope() as session:
+        RagService(session, vectors).index_source(source_id)
+
+
 @router.get("/sources")
 def list_sources(session: Session = Depends(db_session)) -> dict:
     return {"sources": [source_public(s) for s in RagService(session).list_sources()]}
@@ -25,14 +39,24 @@ def list_sources(session: Session = Depends(db_session)) -> dict:
 @router.post("/sources")
 def add_source(
     body: SourceBody,
-    session: Session = Depends(db_session),
+    request: Request,
+    background: BackgroundTasks,
     vectors=Depends(get_rag_vectors),
 ) -> dict:
+    # Register in its OWN committed session so the row is durable before the
+    # background task (a separate session) reads it — don't rely on the request
+    # dependency's commit ordering relative to background tasks.
+    db = request.app.state.db
     try:
-        src = RagService(session, vectors).add_source(body.path)
+        with db.session_scope() as session:
+            src = RagService(session, vectors).register_source(body.path)
+            payload = source_public(src)
+            source_id = src.id
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"path not found: {body.path}")
-    return source_public(src)
+    # Index after the response is sent (status 'indexing' → 'indexed').
+    background.add_task(_index_in_background, db, vectors, source_id)
+    return payload
 
 
 @router.post("/sources/{source_id}/reindex")
