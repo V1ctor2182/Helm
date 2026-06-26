@@ -17,6 +17,10 @@ dependencies = [
     # keyword-only recall when the vector store can't initialize.
     "chromadb",
     "fastembed",
+    # memory-rag-skills m4: document text extraction for RAG indexing. Both are
+    # light, pure-ish Python; extraction degrades gracefully if either is absent.
+    "pypdf",
+    "python-docx",
 ]
 
 [project.optional-dependencies]

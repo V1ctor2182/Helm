@@ -10,3 +10,6 @@ httpx
 # memory-rag-skills: vector store + embedder (constraint 8ace2b3a, Odysseus stack)
 chromadb
 fastembed
+# memory-rag-skills m4: RAG document extraction (graceful if absent)
+pypdf
+python-docx

@@ -45,19 +45,22 @@ def create_app(config: HelmConfig | None = None) -> FastAPI:
     # first encrypt/decrypt, so constructing it here is free.
     app.state.secret_box = SecretBox.from_data_dir(config.data_dir)
 
-    # Memory vector index (memory-rag-skills m2). Construction is cheap — the
-    # Chroma client opens a local dir and the fastembed model loads lazily on
-    # first embed. Set HELM_MEMORY_VECTORS=0 to run keyword-only (the tests do
-    # this so the gate never downloads a model); the store also self-degrades
-    # to keyword-only if Chroma/fastembed can't initialize.
+    # Vector indexes (memory-rag-skills m2/m4): memory recall + RAG retrieval.
+    # One fastembed embedder serves both (mirrors Odysseus sharing its
+    # EmbeddingClient). Construction is cheap — the Chroma clients open local
+    # dirs and the model loads lazily on first embed. Set HELM_MEMORY_VECTORS=0
+    # to disable (the tests do this so the gate never downloads a model); each
+    # store also self-degrades if Chroma/fastembed can't initialize.
     app.state.memory_vectors = None
+    app.state.rag_vectors = None
     if os.getenv("HELM_MEMORY_VECTORS", "1") != "0":
         from helm.memory.embedding import FastEmbedEmbedder
         from helm.memory.vector import MemoryVectorStore
+        from helm.rag.vector import RagVectorStore
 
-        app.state.memory_vectors = MemoryVectorStore(
-            config.data_dir, FastEmbedEmbedder()
-        )
+        embedder = FastEmbedEmbedder()
+        app.state.memory_vectors = MemoryVectorStore(config.data_dir, embedder)
+        app.state.rag_vectors = RagVectorStore(config.data_dir, embedder)
 
     @app.get("/healthz")
     def healthz() -> dict:
@@ -71,6 +74,7 @@ def create_app(config: HelmConfig | None = None) -> FastAPI:
     from helm.chat.routes import router as chat_router
     from helm.cockpit.routes import router as cockpit_router
     from helm.memory.routes import router as memory_router
+    from helm.rag.routes import router as rag_router
     from helm.routes.settings import router as settings_router
     from helm.routes.setup import router as setup_router
 
@@ -79,6 +83,7 @@ def create_app(config: HelmConfig | None = None) -> FastAPI:
     app.include_router(cockpit_router)
     app.include_router(chat_router)
     app.include_router(memory_router)
+    app.include_router(rag_router)
 
     # Create tables now that every router module has imported its models.
     db.create_all()
@@ -149,6 +154,12 @@ def get_memory_vectors(request: Request):
     """FastAPI dependency: the app-wide memory vector index, or None when
     vector recall is disabled (keyword-only)."""
     return request.app.state.memory_vectors
+
+
+def get_rag_vectors(request: Request):
+    """FastAPI dependency: the app-wide RAG vector index, or None when vectors
+    are disabled."""
+    return request.app.state.rag_vectors
 
 
 def db_session(request: Request) -> Iterator[Session]:
