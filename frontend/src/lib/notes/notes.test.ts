@@ -39,6 +39,25 @@ describe('NotesStore', () => {
     expect(s.notes).toHaveLength(1)
   })
 
+  it('toJournal posts the date and reloads', async () => {
+    const fetchMock = vi.fn((url: string, _init?: RequestInit) =>
+      Promise.resolve({ ok: true, json: () => Promise.resolve(url.includes('to-journal') ? { id: 1, kind: 'journal' } : { notes: [] }) }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const s = new NotesStore()
+    expect(await s.toJournal(3, '2026-06-27')).toBe(true)
+    const post = fetchMock.mock.calls.find((c) => String(c[0]).includes('to-journal'))
+    expect(post![0]).toContain('/api/notes/3/to-journal')
+    expect(JSON.parse((post![1] as RequestInit).body as string)).toEqual({ journal_date: '2026-06-27' })
+  })
+
+  it('toMemory posts and reports failure', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: () => Promise.resolve({}) }))
+    const s = new NotesStore()
+    expect(await s.toMemory(5)).toBe(false)
+    expect(s.error).toContain('记忆')
+  })
+
   it('surfaces an error when persist fails', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: () => Promise.resolve({}) }))
     const s = new NotesStore()

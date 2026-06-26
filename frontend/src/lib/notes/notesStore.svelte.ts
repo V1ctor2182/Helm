@@ -50,6 +50,29 @@ export class NotesStore {
     const body = (await this.#json(`/api/notes${q}`)) as { notes: Note[] } | null
     if (body) this.notes = body.notes
   }
+
+  // ── convert (intent#1: 一键转 记忆/日记) ────────────────────────────────
+
+  async toJournal(id: number, date?: string): Promise<boolean> {
+    const ok = await this.#json(`/api/notes/${id}/to-journal`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ journal_date: date ?? null }),
+    })
+    if (ok) await this.load()
+    return ok !== null
+  }
+
+  async toMemory(id: number): Promise<boolean> {
+    const ok = await this.#json(`/api/notes/${id}/to-memory`, { method: 'POST' })
+    if (!ok) this.error = '转记忆失败'
+    return ok !== null
+  }
+
+  async remove(id: number): Promise<void> {
+    const ok = await this.#json(`/api/notes/${id}`, { method: 'DELETE' })
+    if (ok) await this.load()
+  }
 }
 
 export const notes = new NotesStore()

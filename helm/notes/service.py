@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 from datetime import date as date_cls
+from datetime import datetime as _dt
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -106,3 +107,33 @@ class NoteService:
             return False
         self.session.delete(note)
         return True
+
+    # ── convert (intent#1: 速记一键转 记忆/日记) ──────────────────────────
+
+    def to_journal(
+        self, note_id: int, journal_date: date_cls | None = None
+    ) -> Note | None:
+        """Turn a quick note into a journal entry in place (kind='journal' +
+        date). Reversible — flip kind back. Defaults to the note's own day."""
+        note = self.get(note_id)
+        if note is None:
+            return None
+        note.kind = "journal"
+        note.journal_date = (
+            journal_date
+            or (note.created_at.date() if note.created_at else None)
+            or _dt.now().date()
+        )
+        self.session.flush()
+        return note
+
+    def to_memory(self, note_id: int, memory_service) -> dict | None:
+        """Save a note's content as a memory (so it joins the brain / agent
+        recall). Keeps the note — non-destructive; deleting it is a separate
+        explicit action."""
+        note = self.get(note_id)
+        if note is None:
+            return None
+        text = (note.title + ": " if note.title else "") + note.content
+        mem = memory_service.create(text=text.strip(), source="note", tags=["note"])
+        return {"memory_id": mem.id, "text": mem.text}

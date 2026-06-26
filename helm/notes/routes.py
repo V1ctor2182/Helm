@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from helm.app import db_session
+from helm.app import db_session, get_memory_vectors
 from helm.notes import models  # noqa: F401  (register notes table on Base)
 from helm.notes.service import KINDS, NoteService, note_public
 
@@ -91,3 +91,35 @@ def delete_note(note_id: int, session: Session = Depends(db_session)) -> dict:
     if not NoteService(session).delete(note_id):
         raise HTTPException(status_code=404, detail="note not found")
     return {"deleted": note_id}
+
+
+class ToJournalBody(BaseModel):
+    journal_date: date | None = None
+
+
+@router.post("/{note_id}/to-journal")
+def note_to_journal(
+    note_id: int,
+    body: ToJournalBody | None = None,
+    session: Session = Depends(db_session),
+) -> dict:
+    note = NoteService(session).to_journal(
+        note_id, body.journal_date if body else None
+    )
+    if note is None:
+        raise HTTPException(status_code=404, detail="note not found")
+    return note_public(note)
+
+
+@router.post("/{note_id}/to-memory")
+def note_to_memory(
+    note_id: int,
+    session: Session = Depends(db_session),
+    vectors=Depends(get_memory_vectors),
+) -> dict:
+    from helm.memory.service import MemoryService
+
+    out = NoteService(session).to_memory(note_id, MemoryService(session, vectors))
+    if out is None:
+        raise HTTPException(status_code=404, detail="note not found")
+    return out
