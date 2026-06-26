@@ -6,24 +6,25 @@
 
 ## 1. 决策闸门（来自 METHODOLOGY 第一、二节）
 
+> 档位 = 真·无人值守。**两道判据叠加：先看领域（技术/产品），产品再看可逆性。只有「难撤的产品决策」停下问人。**
+
 遇到 OQ，按顺序判断：
 
-1. **可逆性**：单向门（改起来贵 / 别的模块会建在其上 / commit 后难撤，三者任一）→ 默认 defer，`add_question` + 代码留显式 TODO，不写隐式假设。双向门 → 自己决。
-2. **有据可依**：决策只能来自 PRD / VibeHub spec / 已有代码 / 已记录约束。找不到依据 ≠ 猜 → 按单向门 defer。
+1. **升级边界**：技术决策 → 自己决。产品决策再分——**可逆小决定**（文案/默认排序/空状态文案…，改回来只要一次无迁移小 commit）→ 自己定 + `record_decision`；**难撤/定方向**（用户可感知数据语义 / 不可逆流程 / 功能取舍·优先级·范围 / 跨 Room 产品契约）→ `add_question` + 留显式 TODO，阻塞则熔断停。**拿不准可逆性 → 当难撤上报。**
+2. **有据可依**：决策只能来自 PRD / VibeHub spec / 已有代码 / 已记录约束。技术 + 可逆产品小决定找不到依据 → 取最安全/最易回滚解 + 写进 record；只有难撤产品决策无依据才 defer 问人。
 3. **取舍排序**：安全 > 正确/完整 > 速度。
-4. **留痕**：自决的双向门 → `record_decision`（理由 + 依据）；新硬边界 → `add_constraint`。
+4. **留痕（按可逆性分级）**：每个自决决策 → `record_decision`（理由 + 依据）；**高风险技术决策**（见下）→ 写满（+ 备选 + 为何不选）+ `add_constraint` + report 置顶；低风险技术 / 可逆产品小决定 → 一句话理由。
 5. **验证后才提交**：见 §4。
 6. **有限爆炸半径**：见 §3。
 
-### 单向门（defer / 问人）
-- 数据模型 / 本地存储 schema（会导致迁移的结构）。
-- 对外契约：暴露给 Claude Code 的 MCP 工具签名；跨 Room 契约。
-- 安全边界：凭据/密钥存储位置与加密、发往外部 provider 的数据、终端 agent 沙箱权限。
-- 核心选型：后端框架、桌面外壳、关键第三方依赖、打包方案的最终确定。
-- 跨 Room 共享的基础抽象。
+### 需要问人 —— 难撤 / 定方向的产品决策
+- 用户可感知的数据语义 / 不可逆流程 / 用户会依赖的产品方向；功能取舍 / 优先级 / 范围；跨 Room 产品契约。
 
-### 双向门（自决 + record_decision）
-- Room 内部命名、文件/目录组织、helper 实现、测试组织、日志/文案/注释、内部重构。
+### loop 自决 + 留痕
+- **一切技术决策**（高风险：数据模型·schema、对外契约·MCP 签名、安全边界、核心选型、跨 Room 抽象 → 写满 + `add_constraint` + report 置顶；低风险：命名/组织/helper/测试/文案/重构 → 一句话）。
+- **可逆的产品小决定**（纯文案/措辞、默认排序/筛选/标签页、空状态文案、占位符、非结构性 UI 默认值）→ 自己定 + `record_decision`（一句话），写进 report，你可在 dashboard 事后否决。
+
+> ⚠️ 安全边界交给 loop 自决，是以「详细留痕 + 熔断」换无人值守的明确取舍 → 这类决策**必须** `add_constraint` + report 置顶，保证 dashboard 可审、可回滚。
 
 ## 2. Commit 约定
 
@@ -35,7 +36,8 @@
 ## 3. 分支策略（来自 METHODOLOGY 原则 6）
 
 - **一个 Room = 一条分支** `feat/<room>`。**绝不在 main 上自动开发。**
-- Room 收尾 → 开 PR，**人确认后合 main**（agent 不自动合）。
+- Room 收尾 → Room 级优化扫描（前端+后端）+ 全量验证全绿 → **全自动合 main**：`git push` → `gh pr create`（留审计）→ `gh pr merge --squash --auto` → `git checkout main && git pull`。**任一门未过则停下等人，不硬合。**
+- 某 Room 验证手段不足（关键路径无法 headless 断言）→ 退回「开 PR、人确认后合」，别全自动合（见 METHODOLOGY 第四节）。
 - **下一个 Room 从合入后的最新 main 切分支**（拿到前序成果）。Room 间串行。
 
 ## 4. 验证门（来自 METHODOLOGY 原则 5）
@@ -70,3 +72,26 @@
 - 写得像周围的代码：匹配既有命名、注释密度、惯用法。
 - 注释解释"为什么"，不复述"是什么"。
 - 复用 Odysseus 成熟能力时**直接搬代码、不重写**（platform-shell 只负责地基；大脑能力按 room 引入）。
+
+## 8. 优化（前端 + 后端，两个层级）
+
+> 优化是 loop 的固定动作，不是可选项。改完的当场修 + commit-sync；触及难撤/定方向的产品决策才停下问人（可逆产品小改自己定+record），超本 Room 范围记 issue。
+
+- **每个 milestone 后（轻量，scope 限本 milestone 改动）**：
+  - 后端：数据访问/查询、IO/并发、错误处理与边界、复用去重、可读性。
+  - 前端：渲染/重绘开销、包体、状态与数据流、组件复用与一致性、可访问性。
+- **Room 收尾前（全局，跨整个 Room，合 main 前必做，前端 + 后端各一道）**：
+  - 后端：跨 milestone 重复、API/错误处理一致性、性能热点、数据访问。
+  - 前端：组件复用与一致性、状态/数据流、渲染性能、包体、可访问性。
+- 优化结果写进每轮 report 的「优化」节（前端/后端各列改了什么、为何、有无可量化收益）。
+
+## 9. Ticket / 自省 backlog（B 轨，来自 loop-procedure「B 轨」一节）
+
+> A 轨（PRD 路线图）是主干、默认最高优先级；B 轨是 loop 自己反思产生的工作队列。**产出频繁、消费有界。**
+
+- **每个 milestone 后反思**：当场顺手能改的走 §8 优化直接改；**只有"要另起一轮且真有价值"的才 `create_ticket`**（绑本 Room `feature_ids` + `file_paths`，建前 `list_tickets`(`status: open`)查重，别重复）。
+- `create_ticket` **无 type / needs-human 字段** → 用**标题前缀**编码类型：技术 `[tech-debt]`/`[perf]`/`[refactor]`/`[test-gap]`、可逆产品小改 `[product-tweak]`、难撤产品 `[needs-human][product-idea]`；`priority` 用真实枚举 `none`/`low`/`medium`/`high`/`urgent`。
+- **分诊**：技术类 + `[product-tweak]` → 进 backlog，loop 自消化；**难撤/定方向的产品点 → 标题打 `[needs-human]`，停着等人在 dashboard 批，loop 绝不自动做**（拿不准可逆性 → 当难撤标 `[needs-human]`）。
+- **消费**：A 轨优先；**Room 收尾时限额 drain**（`list_tickets` 滤掉 `[needs-human]`，剩下的按 priority 取**最多 3 条**，预算上限可调）→ 取满即止，剩余留 backlog，**不为清债拖延合并**。
+- 被 drain 的 ticket 当 mini-milestone：单独 commit + report；收口 `record_decision` 注明"ticket &lt;id&gt; 已消化"，并在 dashboard 把 ticket 置 `done`/`closed`。
+- 所有 Room 做完后进入 B 轨收尾：在 `chore/<room>-backlog` 分支清各 Room 剩余技术 ticket，直到 `list_tickets` 只剩 `[needs-human]`。
