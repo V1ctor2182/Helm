@@ -53,16 +53,19 @@ describe('Rag panel', () => {
 })
 
 describe('BrainPanel', () => {
-  it('toggles between 记忆 and 知识库', async () => {
+  it('toggles between 记忆, 知识库 and Skills', async () => {
     stubFetch({
       '/api/memories': { memories: [] },
       '/api/rag/stats': { sources: 0, files: 0, chunks: 0, vector_count: 0 },
       '/api/rag/sources': { sources: [] },
+      '/api/skills': { skills: [], total: 0, healthy: 0, unhealthy: 0 },
     })
     render(BrainPanel)
     // memory view is default
     expect(await screen.findByText(/还没有记忆/)).toBeInTheDocument()
     await fireEvent.click(screen.getByRole('tab', { name: '知识库' }))
     expect(await screen.findByText(/还没有文档源/)).toBeInTheDocument()
+    await fireEvent.click(screen.getByRole('tab', { name: 'Skills' }))
+    expect(await screen.findByText(/没有发现 skills/)).toBeInTheDocument()
   })
 })

@@ -5,8 +5,9 @@
   // mode (which belongs to the deep-research room).
   import Memory from './Memory.svelte'
   import Rag from '../rag/Rag.svelte'
+  import Skills from '../skills/Skills.svelte'
 
-  let view = $state<'memory' | 'rag'>('memory')
+  let view = $state<'memory' | 'rag' | 'skills'>('memory')
 </script>
 
 <div class="brain">
@@ -23,12 +24,20 @@
       class:active={view === 'rag'}
       onclick={() => (view = 'rag')}>知识库</button
     >
+    <button
+      role="tab"
+      aria-selected={view === 'skills'}
+      class:active={view === 'skills'}
+      onclick={() => (view = 'skills')}>Skills</button
+    >
   </div>
   <div class="panel">
     {#if view === 'memory'}
       <Memory />
-    {:else}
+    {:else if view === 'rag'}
       <Rag />
+    {:else}
+      <Skills />
     {/if}
   </div>
 </div>
