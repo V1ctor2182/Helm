@@ -74,12 +74,14 @@ def create_app(config: HelmConfig | None = None) -> FastAPI:
     from helm.chat.routes import router as chat_router
     from helm.cockpit.routes import router as cockpit_router
     from helm.memory.routes import router as memory_router
+    from helm.notes.routes import router as notes_router
     from helm.orchestration.routes import router as orchestration_router
     from helm.rag.routes import router as rag_router
     from helm.research.routes import router as research_router
     from helm.routes.settings import router as settings_router
     from helm.routes.setup import router as setup_router
     from helm.skills.routes import router as skills_router
+    from helm.tasks.routes import router as tasks_router
 
     app.include_router(settings_router)
     app.include_router(setup_router)
@@ -90,9 +92,18 @@ def create_app(config: HelmConfig | None = None) -> FastAPI:
     app.include_router(skills_router)
     app.include_router(orchestration_router)
     app.include_router(research_router)
+    app.include_router(notes_router)
+    app.include_router(tasks_router)
 
     # Create tables now that every router module has imported its models.
     db.create_all()
+
+    # Scheduled-task poller (journal-notes-tasks m5). Opt-in via HELM_SCHEDULER=1
+    # so neither tests nor a plain boot fire (paid) agents; the live executor
+    # runs only user-created tasks at their due time.
+    from helm.tasks.scheduler import maybe_start
+
+    maybe_start(app)
 
     # Serve the built Svelte frontend (workspace-layout) when present; until it's
     # built, fall back to the minimal boot page. Mounted LAST so /healthz and

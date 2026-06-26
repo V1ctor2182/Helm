@@ -23,6 +23,8 @@ dependencies = [
     "python-docx",
     # memory-rag-skills m6: MCP server exposing memory/RAG to the terminal agent.
     "mcp",
+    # journal-notes-tasks m4: cron schedule parsing for scheduled tasks.
+    "croniter",
 ]
 
 [project.optional-dependencies]
