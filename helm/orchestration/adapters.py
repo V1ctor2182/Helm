@@ -150,3 +150,13 @@ def get_adapter(name: str) -> AgentAdapter:
 
 def available_adapters() -> list[str]:
     return sorted(_ADAPTERS)
+
+
+def register_adapter(adapter: AgentAdapter) -> None:
+    """Add/replace a backend adapter (the P1 extension point; also used by
+    tests to drive the session pipeline with a canned-output stub)."""
+    _ADAPTERS[adapter.name] = adapter
+
+
+def unregister_adapter(name: str) -> None:
+    _ADAPTERS.pop(name, None)
