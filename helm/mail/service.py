@@ -118,6 +118,20 @@ class EmailService:
     def get(self, email_id: int) -> Email | None:
         return self.session.get(Email, email_id)
 
+    def triage(self, email_id: int, llm) -> dict | None:
+        """Run AI triage (intent#1) and persist the result on the email. The
+        labels are also promoted onto labels_json so the inbox can filter."""
+        from helm.mail.triage import triage_email
+
+        email = self.get(email_id)
+        if email is None:
+            return None
+        result = triage_email(email, llm)
+        email.triage_json = json.dumps(result, ensure_ascii=False)
+        email.labels_json = json.dumps(result.get("labels", []), ensure_ascii=False)
+        self.session.flush()
+        return result
+
     def sync(self, account: EmailAccount, password: str, fetcher: ImapFetcher, limit: int = 50) -> int:
         """Fetch + upsert by (account, uid). Returns count of NEW emails."""
         fetched = fetcher.fetch(account, password, limit)

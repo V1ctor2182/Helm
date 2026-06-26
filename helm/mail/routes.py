@@ -6,7 +6,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from sqlalchemy import select
+
 from helm.app import db_session, get_secret_box
+from helm.chat.models import Provider
+from helm.chat.service import ProviderService
 from helm.crypto import SecretBox
 from helm.mail import models  # noqa: F401  (register tables on Base)
 from helm.mail.imap import ImaplibFetcher
@@ -16,6 +20,7 @@ from helm.mail.service import (
     account_public,
     email_public,
 )
+from helm.research.llm import ChatLLM  # patched in tests
 
 router = APIRouter(prefix="/api/mail", tags=["mail"])
 
@@ -100,3 +105,27 @@ def get_email(email_id: int, session: Session = Depends(db_session)) -> dict:
     if email is None:
         raise HTTPException(status_code=404, detail="email not found")
     return {**email_public(email), "body": email.body}
+
+
+class TriageBody(BaseModel):
+    provider_id: int
+    model: str
+
+
+@router.post("/emails/{email_id}/triage")
+def triage_email_route(
+    email_id: int,
+    body: TriageBody,
+    session: Session = Depends(db_session),
+    box: SecretBox = Depends(get_secret_box),
+) -> dict:
+    """AI triage (intent#1): urgency / summary / labels / spam / draft reply.
+    The LLM call is paid but user-initiated."""
+    if EmailService(session).get(email_id) is None:
+        raise HTTPException(status_code=404, detail="email not found")
+    provider = session.scalar(select(Provider).where(Provider.id == body.provider_id))
+    if provider is None:
+        raise HTTPException(status_code=404, detail="provider not found")
+    key = ProviderService(session, box).api_key(body.provider_id)
+    llm = ChatLLM(provider.type, provider.base_url, body.model, key)
+    return EmailService(session).triage(email_id, llm)
