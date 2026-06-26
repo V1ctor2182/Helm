@@ -46,9 +46,12 @@
 
 ## 5. 每轮写 report（来自 loop-procedure 第 5 步）
 
-- 每轮 loop 在 `docs/reports/<YYYY-MM-DD>-<room>-<milestone>.md` 写一份复盘，
+- 每轮 loop 在 `docs/reports/<YYYY-MM-DD>-<room>-<milestone>.md` 写一份详细复盘，
   跟着该 milestone 的改动一起 commit（**纳入版本管理，不进 .gitignore**）。
-- 至少含：目标 / 做了什么 / 决策 / defer / 验证 / 熔断状态 / 下一步。
+- 至少含：目标 / 做了什么（逐个关键文件）/ 决策（理由+依据+影响）/
+  **VibeHub·MCP 交互（pull 读 context + write 留痕，逐条工具名/入参/返回 id/status）** /
+  **Hooks·自动化（commit-sync / vibehub-hook / CI / cron）** / defer / 验证（具体测试数）/
+  review 发现 / 熔断状态 / 下一步。详见 [`loop-procedure.md`](./loop-procedure.md) 第 5 步。
 
 ## 6. 项目结构约定（platform-shell 已确立，后续 Room 复用）
 
