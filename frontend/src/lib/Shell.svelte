@@ -5,6 +5,7 @@
   import Today from './Today.svelte'
   import Chat from './chat/Chat.svelte'
   import BrainPanel from './memory/BrainPanel.svelte'
+  import Research from './research/Research.svelte'
   import CockpitView from './cockpit/CockpitView.svelte'
   import Terminal from './cockpit/terminal/Terminal.svelte'
   import { applyShortcut } from './keymap'
@@ -46,6 +47,8 @@
       <Chat />
     {:else if layout.mode === 'memory'}
       <BrainPanel />
+    {:else if layout.mode === 'research'}
+      <Research />
     {:else}
       <div class="tabbar" role="tablist">
       {#each layout.tabs as tab (tab.id)}
