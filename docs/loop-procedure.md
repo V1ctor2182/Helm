@@ -11,6 +11,15 @@
 > **分级详细留痕**到 VibeHub(`record_decision` / `add_constraint`),让人能在 dashboard 上事后审计、必要时否决回滚。
 > 安全网是**验证门(测试 + 构建)** 与**熔断**,不是人工卡点。
 
+> **🌙 放手模式(整夜跑,本次档位)= 真·无人值守 + 「永不停,把停换成 ticket」。** 见 [METHODOLOGY 第四节「放手模式」](./METHODOLOGY.md#放手模式--真无人值守--永不停把停换成-ticket)。
+> 下面流程里**每一处"停下问人 / 熔断停"**,放手模式下都改成「**自己做最可逆的暂定处置 → 开 `[needs-human]` ticket 标注是哪块业务逻辑 → 继续**」:
+> - **难撤/定方向产品 OQ**:不停。取最可逆暂定解实现 + `record_decision` 写满 + `create_ticket [needs-human][product-decision]`(标题点明业务逻辑 + 暂定值 + 待确认)+ 代码留 TODO,继续。
+> - **熔断 1–6 条**(测试连败 / 打转 / defer 堆积 / 范围漂移 / 依据缺失):不停。记 `[needs-human]` ticket + 放弃卡住的工作单元、绕到下一个可推进的(本 milestone 卡→跳本 Room 下个 milestone;本 Room 全卡→切下一个 Room)。
+> - **熔断第 7 条 合并门**(唯一硬底线):CI/验证非全绿**绝不合 main**——把该 Room 留 `feat/<room>` 分支、开 `[needs-human]` ticket、**切下一个 Room 继续**。坏代码永不进主干,loop 不停。
+> - **不可逆/破坏性操作**(删数据/丢弃式迁移/发真实外部请求/花钱/不可撤副作用):**不猜不做**,skip + `[needs-human]` ticket + TODO + 继续别的工作。
+> - **唯一会让 loop 真停下的**:所有 Room 都卡在合并门 / 无任何可推进工作 → 报告并停。否则整夜跑。
+> - `[needs-human]` 业务 ticket **不挡 Room 合 main**(它是早上的 review 队列);验证全绿即照常合。
+
 > **两条轨(loop 既消费也生产)**:
 > - **A 轨 · 路线图**:PRD 的 Room→milestone,造新功能的主干。**默认最高优先级。**
 > - **B 轨 · 自省 backlog**:每个 milestone 后 loop 反思"哪里能更好",把发现用 `create_ticket` 落进 VibeHub
