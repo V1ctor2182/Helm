@@ -51,6 +51,22 @@ export class NotesStore {
     if (body) this.notes = body.notes
   }
 
+  async create(
+    content: string,
+    kind: 'note' | 'journal' = 'note',
+    journalDate: string | null = null,
+  ): Promise<boolean> {
+    if (!content.trim()) return false
+    const ok = await this.#json('/api/notes', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ content, kind, journal_date: journalDate }),
+    })
+    if (ok) await this.load()
+    else this.error = '保存失败'
+    return ok !== null
+  }
+
   // ── convert (intent#1: 一键转 记忆/日记) ────────────────────────────────
 
   async toJournal(id: number, date?: string): Promise<boolean> {
