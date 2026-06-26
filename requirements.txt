@@ -13,3 +13,5 @@ fastembed
 # memory-rag-skills m4: RAG document extraction (graceful if absent)
 pypdf
 python-docx
+# memory-rag-skills m6: MCP server (expose memory/RAG to terminal agent)
+mcp
