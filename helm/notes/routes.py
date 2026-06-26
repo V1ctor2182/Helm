@@ -123,3 +123,35 @@ def note_to_memory(
     if out is None:
         raise HTTPException(status_code=404, detail="note not found")
     return out
+
+
+class ToTaskBody(BaseModel):
+    name: str | None = None
+    schedule_kind: str  # at | every | cron
+    schedule_value: dict
+    execution_mode: str = "new_conversation"
+
+
+@router.post("/{note_id}/to-task")
+def note_to_task(
+    note_id: int, body: ToTaskBody, session: Session = Depends(db_session)
+) -> dict:
+    """Turn a quick note into a scheduled task (intent#1 note→task): the note's
+    content becomes the task prompt."""
+    from helm.tasks.service import TaskService, task_public
+
+    note = NoteService(session).get(note_id)
+    if note is None:
+        raise HTTPException(status_code=404, detail="note not found")
+    try:
+        task = TaskService(session).create(
+            body.name or (note.title or note.content[:40] or "task"),
+            note.content,
+            body.schedule_kind,
+            body.schedule_value,
+            execution_mode=body.execution_mode,
+            linked_note_id=note.id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return task_public(task)

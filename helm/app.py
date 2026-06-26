@@ -81,6 +81,7 @@ def create_app(config: HelmConfig | None = None) -> FastAPI:
     from helm.routes.settings import router as settings_router
     from helm.routes.setup import router as setup_router
     from helm.skills.routes import router as skills_router
+    from helm.tasks.routes import router as tasks_router
 
     app.include_router(settings_router)
     app.include_router(setup_router)
@@ -92,6 +93,7 @@ def create_app(config: HelmConfig | None = None) -> FastAPI:
     app.include_router(orchestration_router)
     app.include_router(research_router)
     app.include_router(notes_router)
+    app.include_router(tasks_router)
 
     # Create tables now that every router module has imported its models.
     db.create_all()
