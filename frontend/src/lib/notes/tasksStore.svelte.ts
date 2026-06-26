@@ -2,6 +2,8 @@
 // happens server-side at due time (the scheduler), so this is list/create/
 // toggle/delete only.
 
+import { jsonFetch } from '../api'
+
 export interface Task {
   id: number
   name: string
@@ -21,13 +23,7 @@ export class TasksStore {
   error = $state<string | null>(null)
 
   async #json(path: string, init?: RequestInit): Promise<unknown | null> {
-    try {
-      const res = await fetch(path, init)
-      if (!res.ok) return null
-      return await res.json()
-    } catch {
-      return null
-    }
+    return jsonFetch(path, init)
   }
 
   async load(): Promise<void> {

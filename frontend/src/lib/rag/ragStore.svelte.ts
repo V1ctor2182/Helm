@@ -3,6 +3,8 @@
 // indexes synchronously server-side, so a `busy` flag guards the UI while a
 // large directory is being indexed (background indexing is ticketed for later).
 
+import { jsonFetch } from '../api'
+
 export interface RagSource {
   id: number
   path: string
@@ -39,13 +41,7 @@ export class RagStore {
   busy = $state(false)
 
   async #json(path: string, init?: RequestInit): Promise<unknown | null> {
-    try {
-      const res = await fetch(path, init)
-      if (!res.ok) return null
-      return await res.json()
-    } catch {
-      return null
-    }
+    return jsonFetch(path, init)
   }
 
   async load(): Promise<void> {

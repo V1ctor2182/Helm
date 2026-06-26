@@ -4,6 +4,8 @@
 
 import { capture } from '../capture.svelte'
 
+import { jsonFetch } from '../api'
+
 export interface Note {
   id: number
   kind: string
@@ -31,13 +33,7 @@ export class NotesStore {
   summarizing = $state(false)
 
   async #json(path: string, init?: RequestInit): Promise<unknown | null> {
-    try {
-      const res = await fetch(path, init)
-      if (!res.ok) return null
-      return await res.json()
-    } catch {
-      return null
-    }
+    return jsonFetch(path, init)
   }
 
   async persist(text: string): Promise<void> {
