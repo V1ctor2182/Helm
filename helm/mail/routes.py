@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from sqlalchemy import select
 
-from helm.app import db_session, get_secret_box
+from helm.app import db_session, get_memory_vectors, get_secret_box
 from helm.chat.models import Provider
 from helm.chat.service import ProviderService
 from helm.crypto import SecretBox
@@ -129,3 +129,42 @@ def triage_email_route(
     key = ProviderService(session, box).api_key(body.provider_id)
     llm = ChatLLM(provider.type, provider.base_url, body.model, key)
     return EmailService(session).triage(email_id, llm)
+
+
+@router.post("/emails/{email_id}/to-memory")
+def email_to_memory(
+    email_id: int,
+    session: Session = Depends(db_session),
+    vectors=Depends(get_memory_vectors),
+) -> dict:
+    from helm.memory.service import MemoryService
+
+    out = EmailService(session).to_memory(email_id, MemoryService(session, vectors))
+    if out is None:
+        raise HTTPException(status_code=404, detail="email not found")
+    return out
+
+
+class EmailToTaskBody(BaseModel):
+    schedule_kind: str
+    schedule_value: dict
+
+
+@router.post("/emails/{email_id}/to-task")
+def email_to_task(
+    email_id: int, body: EmailToTaskBody, session: Session = Depends(db_session)
+) -> dict:
+    """Schedule an agent task to handle this email (intent#3 email→task)."""
+    from helm.tasks.service import TaskService, task_public
+
+    email = EmailService(session).get(email_id)
+    if email is None:
+        raise HTTPException(status_code=404, detail="email not found")
+    prompt = f"处理这封邮件并回复:\n主题: {email.subject}\n发件人: {email.from_addr}\n\n{email.body}"
+    try:
+        task = TaskService(session).create(
+            f"回复:{email.subject[:30]}", prompt, body.schedule_kind, body.schedule_value,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return task_public(task)

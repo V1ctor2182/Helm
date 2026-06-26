@@ -120,3 +120,33 @@ def test_inbox_list_and_get_and_sync_route(config, monkeypatch):
 
     # unread filter
     assert len(c.get("/api/mail/emails", params={"unread_only": True}).json()["emails"]) == 1
+
+
+def test_email_to_memory_and_task(config):
+    from helm.crypto import SecretBox
+    from helm.memory.service import MemoryService
+
+    emails = [FetchedEmail(uid="1", from_addr="boss@x.com", subject="Q3 plan", body="please review")]
+    import helm.mail.routes as mr
+    db = _db(config)
+    box = SecretBox.from_data_dir(config.data_dir)
+    with db.session_scope() as s:
+        aid = AccountService(s, box).create(name="P", email_addr="m@x.com", imap_host="h", username="u", password="pw").id
+    c = _client(config)
+    # sync one email in
+    import unittest.mock as _m
+    with _m.patch.object(mr, "default_fetcher", _FakeFetcher(emails)):
+        c.post(f"/api/mail/accounts/{aid}/sync")
+    eid = c.get("/api/mail/emails").json()["emails"][0]["id"]
+
+    mem = c.post(f"/api/mail/emails/{eid}/to-memory")
+    assert mem.status_code == 200 and mem.json()["memory_id"] >= 1
+    with db.session_scope() as s:
+        assert any(m.source == "email" for m in MemoryService(s).list())
+
+    task = c.post(f"/api/mail/emails/{eid}/to-task", json={"schedule_kind": "cron", "schedule_value": {"expr": "0 9 * * *"}})
+    assert task.status_code == 200
+    assert "Q3 plan" in task.json()["prompt"] and task.json()["next_run"] is not None
+
+    assert c.post("/api/mail/emails/999/to-memory").status_code == 404
+    assert c.post(f"/api/mail/emails/{eid}/to-task", json={"schedule_kind": "x", "schedule_value": {}}).status_code == 422

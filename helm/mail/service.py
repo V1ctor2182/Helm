@@ -118,6 +118,15 @@ class EmailService:
     def get(self, email_id: int) -> Email | None:
         return self.session.get(Email, email_id)
 
+    def to_memory(self, email_id: int, memory_service) -> dict | None:
+        """Save an email as a memory (intent#3 email→memory). Keeps the email."""
+        email = self.get(email_id)
+        if email is None:
+            return None
+        text = f"邮件「{email.subject}」来自 {email.from_addr}:{email.snippet}".strip()
+        mem = memory_service.create(text=text, source="email", tags=["email"])
+        return {"memory_id": mem.id, "text": mem.text}
+
     def triage(self, email_id: int, llm) -> dict | None:
         """Run AI triage (intent#1) and persist the result on the email. The
         labels are also promoted onto labels_json so the inbox can filter."""

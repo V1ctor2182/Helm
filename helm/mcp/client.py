@@ -60,3 +60,9 @@ class HelmClient:
 
     def rag_search(self, query: str, limit: int = 5) -> list[dict]:
         return self._get("/api/rag/search", q=query, limit=limit)["results"]
+
+    def email_unread(self, limit: int = 20) -> list[dict]:
+        return self._get("/api/mail/emails", unread_only=True)["emails"][:limit]
+
+    def email_read(self, email_id: int) -> dict:
+        return self._get(f"/api/mail/emails/{email_id}")

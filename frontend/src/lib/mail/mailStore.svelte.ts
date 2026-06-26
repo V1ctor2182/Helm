@@ -45,6 +45,7 @@ export class MailStore {
   syncing = $state(false)
   triaging = $state(false)
   error = $state<string | null>(null)
+  convertMsg = $state<string | null>(null)
 
   async #json(path: string, init?: RequestInit): Promise<unknown | null> {
     try {
@@ -125,6 +126,21 @@ export class MailStore {
     } finally {
       this.triaging = false
     }
+  }
+
+  // ── 联动 (intent#3: 邮件一键转 记忆/任务) ────────────────────────────────
+
+  async toMemory(id: number): Promise<void> {
+    const r = await this.#post(`/api/mail/emails/${id}/to-memory`)
+    this.convertMsg = r ? '已存入记忆' : '转记忆失败'
+  }
+
+  async toTask(id: number): Promise<void> {
+    const r = await this.#post(`/api/mail/emails/${id}/to-task`, {
+      schedule_kind: 'cron',
+      schedule_value: { expr: '0 9 * * *' },
+    })
+    this.convertMsg = r ? '已转为每日定时任务(可在 日记/任务 调整)' : '转任务失败'
   }
 }
 

@@ -1,15 +1,44 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { mail } from './mailStore.svelte'
+  import { calendar } from './calendarStore.svelte'
 
+  let panel = $state<'mail' | 'calendar'>('mail')
   let showAdd = $state(false)
   let acc = $state({ name: '', email_addr: '', imap_host: '', username: '', password: '' })
+  let evSummary = $state('')
+  let evStart = $state('')
 
   onMount(() => {
     void mail.loadAccounts()
     void mail.loadEmails()
     void mail.loadProviders()
+    void calendar.load()
   })
+
+  async function addEvent() {
+    if (await calendar.add(evSummary, evStart)) {
+      evSummary = ''
+      evStart = ''
+    }
+  }
+
+  async function doImport() {
+    const text = window.prompt?.('粘贴 .ics 内容')
+    if (text) await calendar.importIcs(text)
+  }
+
+  async function doExport() {
+    const ics = await calendar.exportIcs()
+    if (ics && typeof URL.createObjectURL === 'function') {
+      const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'helm-calendar.ics'
+      a.click()
+      URL.revokeObjectURL(url)
+    }
+  }
 
   async function addAccount() {
     const ok = await mail.addAccount(acc)
@@ -22,16 +51,47 @@
   const urgencyIcon: Record<string, string> = { high: '🔴', medium: '🟡', low: '⚪' }
 </script>
 
-<section class="mail" aria-label="邮件">
+<section class="mail" aria-label="邮件 / 日历">
   <header>
-    <h2>✉ 邮件</h2>
-    <div class="tools">
-      <button onclick={() => mail.sync()} disabled={mail.syncing || !mail.accounts.length}>
-        {mail.syncing ? '收取中…' : '收取'}
-      </button>
-      <button onclick={() => (showAdd = !showAdd)}>+ 账户</button>
+    <div class="seg" role="tablist" aria-label="邮件 / 日历">
+      <button role="tab" aria-selected={panel === 'mail'} class:active={panel === 'mail'} onclick={() => (panel = 'mail')}>✉ 邮件</button>
+      <button role="tab" aria-selected={panel === 'calendar'} class:active={panel === 'calendar'} onclick={() => (panel = 'calendar')}>📅 日历</button>
     </div>
+    {#if panel === 'mail'}
+      <div class="tools">
+        <button onclick={() => mail.sync()} disabled={mail.syncing || !mail.accounts.length}>
+          {mail.syncing ? '收取中…' : '收取'}
+        </button>
+        <button onclick={() => (showAdd = !showAdd)}>+ 账户</button>
+      </div>
+    {:else}
+      <div class="tools">
+        <button onclick={doImport}>导入 .ics</button>
+        <button onclick={doExport} disabled={!calendar.events.length}>导出 .ics</button>
+      </div>
+    {/if}
   </header>
+
+  {#if panel === 'calendar'}
+    <form class="addev" onsubmit={(e) => { e.preventDefault(); void addEvent() }}>
+      <input placeholder="事件标题" bind:value={evSummary} aria-label="事件标题" />
+      <input type="datetime-local" bind:value={evStart} aria-label="开始时间" />
+      <button type="submit" disabled={!evSummary.trim() || !evStart}>加事件</button>
+    </form>
+    {#if calendar.events.length === 0}
+      <p class="empty">还没有日程 — 加一个事件,或导入 .ics。</p>
+    {:else}
+      <ul class="events">
+        {#each calendar.events as ev (ev.id)}
+          <li class="event">
+            <span class="when">{ev.all_day ? (ev.start?.slice(0, 10) ?? '') : (ev.start?.slice(0, 16).replace('T', ' ') ?? '')}</span>
+            <span class="esum">{ev.summary}</span>
+            <button class="del" aria-label={`删除 ${ev.summary}`} onclick={() => calendar.remove(ev.id)}>🗑</button>
+          </li>
+        {/each}
+      </ul>
+    {/if}
+  {:else}
 
   {#if mail.error}<p class="err" role="alert">{mail.error}</p>{/if}
 
@@ -96,10 +156,16 @@
             {mail.triaging ? 'AI 分诊中…' : '✨ AI 分诊'}
           </button>
         {/if}
+        <div class="conv">
+          <button onclick={() => mail.toMemory(e.id)}>→记忆</button>
+          <button onclick={() => mail.toTask(e.id)}>→任务</button>
+          {#if mail.convertMsg}<span class="cmsg">{mail.convertMsg}</span>{/if}
+        </div>
         <pre class="body">{e.body}</pre>
       {/if}
     </div>
   </div>
+  {/if}
 </section>
 
 <style>
@@ -116,9 +182,75 @@
     align-items: center;
     justify-content: space-between;
   }
-  header h2 {
+  .seg {
+    display: flex;
+    gap: 4px;
+  }
+  .seg button {
+    border: 1px solid #e5e4e7;
+    background: #f4f3f5;
+    border-radius: 999px;
+    padding: 3px 12px;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+  .seg button.active {
+    background: #fff;
+    font-weight: 600;
+  }
+  .addev {
+    display: flex;
+    gap: 6px;
+  }
+  .addev input {
+    padding: 5px 8px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+  }
+  .events {
+    list-style: none;
     margin: 0;
-    font-size: 1.1rem;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow: auto;
+  }
+  .event {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 5px 8px;
+    border: 1px solid #eceaef;
+    border-radius: 8px;
+    background: #fff;
+  }
+  .when {
+    font-family: ui-monospace, monospace;
+    font-size: 0.8rem;
+    color: #777;
+    flex: none;
+  }
+  .esum {
+    flex: 1;
+  }
+  .conv {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin: 8px 0;
+  }
+  .conv button {
+    border: 1px solid #e5e4e7;
+    background: #f7f6f8;
+    border-radius: 6px;
+    padding: 3px 10px;
+    cursor: pointer;
+    font-size: 0.78rem;
+  }
+  .cmsg {
+    font-size: 0.78rem;
+    color: #1c7a40;
   }
   .tools {
     display: flex;

@@ -18,6 +18,8 @@ EXPECTED_TOOLS = {
     "helm_memory_add",
     "helm_memory_list",
     "helm_rag_search",
+    "helm_email_unread",  # added in email-calendar m5 (new tools only — contract ca4b5e64)
+    "helm_email_read",
 }
 
 
