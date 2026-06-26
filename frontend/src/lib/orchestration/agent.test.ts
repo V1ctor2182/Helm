@@ -94,3 +94,16 @@ describe('AgentStore.start', () => {
     expect(s.events).toHaveLength(1)
   })
 })
+
+describe('AgentStore tool_call → cockpit linkage', () => {
+  it('flashes the file in the cockpit when the agent edits it', async () => {
+    const { cockpit } = await import('../cockpit/cockpit.svelte')
+    cockpit.changedPaths = new Set()
+    const s = new AgentStore()
+    s.handle({ type: 'tool_call', session_id: 's', data: { name: 'Edit', input: { file_path: '/proj/a.py' } }, ts: 1 })
+    expect(cockpit.changedPaths.has('/proj/a.py')).toBe(true)
+    // a tool_call without a file path doesn't throw / mark anything new
+    s.handle({ type: 'tool_call', session_id: 's', data: { name: 'Bash', input: { command: 'ls' } }, ts: 2 })
+    expect(cockpit.changedPaths.size).toBe(1)
+  })
+})

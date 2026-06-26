@@ -4,6 +4,7 @@
 // injectable global WebSocket (stubbed in tests), mirroring chatStore.
 
 import { jsonFetch } from '../api'
+import { cockpit } from '../cockpit/cockpit.svelte'
 
 export interface AcpEvent {
   type: string // status | message | tool_call | tool_result | session_end | plan | permission_request
@@ -72,8 +73,18 @@ export class AgentStore {
       this.status = 'error'
       this.error = (msg.error as string) ?? '运行出错'
     } else if (!CONTROL.has(msg.type)) {
-      this.events = [...this.events, msg as unknown as AcpEvent]
+      const event = msg as unknown as AcpEvent
+      this.events = [...this.events, event]
+      // Link agent tool calls to the cockpit: when the agent edits/writes a
+      // file, flash it in the file browser (decision bf5dc16b; ticket f4987eed).
+      if (event.type === 'tool_call') this.#flashToolFile(event)
     }
+  }
+
+  #flashToolFile(event: AcpEvent): void {
+    const input = event.data?.input as Record<string, unknown> | undefined
+    const path = (input?.file_path ?? input?.path) as string | undefined
+    if (path) cockpit.markChanged(path)
   }
 
   stop(): void {
