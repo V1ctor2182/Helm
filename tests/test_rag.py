@@ -108,9 +108,14 @@ def test_rag_routes_register_and_count_without_vectors(config, tmp_path):
     created = c.post("/api/rag/sources", json={"path": str(tmp_path)})
     assert created.status_code == 200
     body = created.json()
-    assert body["status"] == "indexed"
-    assert body["file_count"] == 1
-    assert body["chunk_count"] >= 1  # counted even with vectors disabled
+    # response returns immediately as 'indexing'; the background task indexes
+    # (TestClient runs background tasks, so by the next request it's done).
+    assert body["status"] == "indexing"
+
+    after = c.get("/api/rag/sources").json()["sources"][0]
+    assert after["status"] == "indexed"
+    assert after["file_count"] == 1
+    assert after["chunk_count"] >= 1  # counted even with vectors disabled
 
     stats = c.get("/api/rag/stats").json()
     assert stats["sources"] == 1 and stats["vector_count"] == 0
