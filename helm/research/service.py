@@ -58,27 +58,60 @@ class ResearchService:
             )
         )
 
-    def run_research(self, question: str, engine: ResearchEngine) -> ResearchSession:
-        """Persist a session, run the (provider-injected) engine, store the
-        cited report + sources. Engine failure ⇒ status=failed (no partial
-        report claimed as complete)."""
-        sess = ResearchSession(question=question, status="running")
-        self.session.add(sess)
-        self.session.flush()
+    def run_research(
+        self,
+        question: str,
+        engine: ResearchEngine,
+        *,
+        cancel=None,
+        resume_session_id: int | None = None,
+    ) -> ResearchSession:
+        """Persist + run the engine, store the cited report + sources.
+        ``cancel`` (a no-arg predicate) interrupts → status=stopped with the
+        partial report kept. ``resume_session_id`` continues a stopped session
+        from its saved summary + sources. Engine failure ⇒ status=failed."""
+        from helm.research.providers import SearchResult
+
+        seed_summary = ""
+        seed_sources: list[SearchResult] | None = None
+        if resume_session_id is not None:
+            sess = self.get(resume_session_id)
+            if sess is None:
+                raise KeyError(f"research session {resume_session_id} not found")
+            if sess.report_json:
+                seed_summary = (json.loads(sess.report_json) or {}).get("summary", "")
+            seed_sources = [
+                SearchResult(url=x.url, title=x.title or "", snippet=x.snippet or "")
+                for x in self.sources(sess.id)
+            ]
+            question = sess.question
+            sess.status = "running"
+        else:
+            sess = ResearchSession(question=question, status="running")
+            self.session.add(sess)
+            self.session.flush()
+
         try:
-            report = engine.run(question)
+            report = engine.run(
+                question,
+                cancel=cancel,
+                resume_summary=seed_summary,
+                resume_sources=seed_sources,
+            )
+            existing = {x.url for x in self.sources(sess.id)}
             for s in report.sources:
-                self.session.add(
-                    ResearchSource(
-                        session_id=sess.id,
-                        url=s["url"],
-                        title=s.get("title"),
-                        snippet=s.get("snippet"),
+                if s["url"] not in existing:
+                    self.session.add(
+                        ResearchSource(
+                            session_id=sess.id,
+                            url=s["url"],
+                            title=s.get("title"),
+                            snippet=s.get("snippet"),
+                        )
                     )
-                )
             sess.report_json = json.dumps(report.to_dict(), ensure_ascii=False)
-            sess.rounds_done = report.rounds
-            sess.status = "completed"
+            sess.rounds_done = (sess.rounds_done or 0) + report.rounds
+            sess.status = "stopped" if (cancel is not None and cancel()) else "completed"
         except Exception as exc:  # noqa: BLE001 - engine/provider failure is recorded
             sess.status = "failed"
             sess.error = str(exc)

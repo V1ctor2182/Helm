@@ -147,16 +147,32 @@ class ResearchEngine:
         ).strip().lower()
         return ans.startswith("y")
 
-    def run(self, question: str) -> Report:
+    def run(
+        self,
+        question: str,
+        *,
+        cancel: Callable[[], bool] | None = None,
+        resume_summary: str = "",
+        resume_sources: list[SearchResult] | None = None,
+    ) -> Report:
+        """Run the research loop. ``cancel()`` is polled at each round boundary —
+        when it returns True the loop stops early and returns the partial report
+        (interrupt, intent#2). ``resume_summary``/``resume_sources`` seed a
+        continued run from a previously stopped session (resume)."""
         self._emit("plan", {"question": question})
         subs = self._plan(question)
-        gathered: list[tuple[int, SearchResult]] = []
-        seen: set[str] = set()
+        gathered: list[tuple[int, SearchResult]] = [
+            (0, r) for r in (resume_sources or [])
+        ]
+        seen: set[str] = {r.url for _, r in gathered}
         notes: list[str] = []
-        summary, claims = "", []
+        summary, claims = resume_summary, []
         rounds = 0
 
         for rnd in range(1, self.max_rounds + 1):
+            if cancel is not None and cancel():
+                self._emit("cancelled", {"round": rnd})
+                break
             rounds = rnd
             self._emit("round_start", {"round": rnd})
             for q in self._gen_queries(question, subs, summary, rnd):
