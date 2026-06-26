@@ -20,9 +20,9 @@ from helm.app import db_session
 from helm.cockpit import models  # noqa: F401  (register models on Base.metadata)
 from helm.cockpit.git import NotInRepo, file_diff
 from helm.cockpit.git import status as git_status
-from helm.cockpit.models import FileChange, TerminalSession
+from helm.cockpit.models import TerminalSession
 from helm.cockpit.preview import list_zip, read_text
-from helm.cockpit.service import ProjectService, list_dir
+from helm.cockpit.service import ProjectService, list_dir, record_change
 from helm.cockpit.terminal import PtyProcess
 from helm.cockpit.watcher import DirWatcher
 
@@ -212,7 +212,7 @@ async def watch_ws(ws: WebSocket, path: str) -> None:
             await ws.send_text(json.dumps({"type": "change", **event}))
             try:
                 with db.session_scope() as s:
-                    s.add(FileChange(path=event["path"], change_kind=event["kind"]))
+                    record_change(s, event["path"], event["kind"])
             except Exception:
                 pass
     except (WebSocketDisconnect, RuntimeError, ConnectionError):

@@ -9,10 +9,35 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from helm.cockpit.models import Project
+from helm.cockpit.models import FileChange, Project
+
+# file_changes is append-only (drives the live dashboard WS; the DB copy is for
+# future replay/inbox) with no reader yet — cap it so a long watch session can't
+# grow the table without bound (ticket 5582cd77).
+MAX_FILE_CHANGES = 5000
+_PRUNE_EVERY = 200
+
+
+def record_change(
+    session: Session, path: str, kind: str, *, cap: int = MAX_FILE_CHANGES
+) -> FileChange:
+    """Persist one file change, pruning the oldest beyond ``cap`` amortized
+    (every ~``_PRUNE_EVERY`` inserts, a cheap id-threshold DELETE)."""
+    change = FileChange(path=path, change_kind=kind)
+    session.add(change)
+    session.flush()  # assign id
+    if change.id % _PRUNE_EVERY == 0:
+        cutoff = change.id - cap
+        if cutoff > 0:
+            session.execute(delete(FileChange).where(FileChange.id <= cutoff))
+    return change
+
+
+def file_change_count(session: Session) -> int:
+    return session.scalar(select(func.count()).select_from(FileChange)) or 0
 
 # Marker file → project type badge.
 _BADGE_MARKERS: list[tuple[str, str]] = [
