@@ -1,0 +1,93 @@
+"""Notes REST. m1: CRUD over /api/notes (quick captures + journal entries).
+Convert-to memory/task/journal lands in m2."""
+
+from __future__ import annotations
+
+from datetime import date
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from helm.app import db_session
+from helm.notes import models  # noqa: F401  (register notes table on Base)
+from helm.notes.service import KINDS, NoteService, note_public
+
+router = APIRouter(prefix="/api/notes", tags=["notes"])
+
+
+class NoteBody(BaseModel):
+    content: str
+    kind: str = "note"
+    title: str | None = None
+    tags: list[str] | None = None
+    pinned: bool = False
+    source: str = "user"
+    journal_date: date | None = None
+
+
+class NotePatch(BaseModel):
+    content: str | None = None
+    title: str | None = None
+    kind: str | None = None
+    tags: list[str] | None = None
+    pinned: bool | None = None
+    journal_date: date | None = None
+
+
+def _check_kind(kind: str | None) -> None:
+    if kind is not None and kind not in KINDS:
+        raise HTTPException(status_code=422, detail=f"kind must be one of {KINDS}")
+
+
+@router.get("")
+def list_notes(
+    kind: str | None = Query(default=None),
+    journal_date: date | None = Query(default=None),
+    session: Session = Depends(db_session),
+) -> dict:
+    notes = NoteService(session).list(kind=kind, journal_date=journal_date)
+    return {"notes": [note_public(n) for n in notes]}
+
+
+@router.post("")
+def create_note(body: NoteBody, session: Session = Depends(db_session)) -> dict:
+    if not body.content.strip() and not (body.title or "").strip():
+        raise HTTPException(status_code=422, detail="content or title required")
+    _check_kind(body.kind)
+    note = NoteService(session).create(
+        content=body.content,
+        kind=body.kind,
+        title=body.title,
+        tags=body.tags,
+        pinned=body.pinned,
+        source=body.source,
+        journal_date=body.journal_date,
+    )
+    return note_public(note)
+
+
+@router.patch("/{note_id}")
+def update_note(
+    note_id: int, body: NotePatch, session: Session = Depends(db_session)
+) -> dict:
+    _check_kind(body.kind)
+    note = NoteService(session).update(
+        note_id,
+        content=body.content,
+        title=body.title,
+        kind=body.kind,
+        tags=body.tags,
+        pinned=body.pinned,
+        journal_date=body.journal_date,
+    )
+    if note is None:
+        raise HTTPException(status_code=404, detail="note not found")
+    return note_public(note)
+
+
+@router.delete("/{note_id}")
+def delete_note(note_id: int, session: Session = Depends(db_session)) -> dict:
+    if not NoteService(session).delete(note_id):
+        raise HTTPException(status_code=404, detail="note not found")
+    return {"deleted": note_id}
