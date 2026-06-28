@@ -1,20 +1,22 @@
 import AppKit
 import HelmNotchCore
+import Observation
 import SwiftUI
 
-/// Creates the borderless NSPanel pinned to the top-center (notch) of the main
-/// screen, hosts the SwiftUI `NotchView`, and polls the backend.
+/// Creates the borderless panel pinned to the top-center (notch) of the main
+/// screen, hosts the SwiftUI `NotchView`, polls the backend, and grows/shrinks
+/// the panel as the model expands into the capture form.
 ///
-/// m1 is intentionally a simple top-center floating pill — the full notch shape,
-/// click-through, hover-expand and multi-display handling (the boring.notch
-/// techniques) land in later milestones.
+/// The full notch shape, click-through, hover-expand and multi-display handling
+/// (the boring.notch techniques) land in later milestones.
 @MainActor
 final class NotchController {
     private let model: NotchModel
-    private var panel: NSPanel?
+    private var panel: NotchPanel?
     private var pollTask: Task<Void, Never>?
 
-    private let panelSize = NSSize(width: 220, height: 32)
+    private let collapsedSize = NSSize(width: 220, height: 32)
+    private let expandedSize = NSSize(width: 340, height: 176)
 
     init(model: NotchModel) {
         self.model = model
@@ -22,9 +24,9 @@ final class NotchController {
 
     func start() {
         let panel = makePanel()
-        position(panel)
-        panel.orderFrontRegardless()
         self.panel = panel
+        applyExpansion()  // initial position + size
+        panel.orderFrontRegardless()
 
         pollTask = Task { [model] in
             while !Task.isCancelled {
@@ -32,15 +34,16 @@ final class NotchController {
                 try? await Task.sleep(for: .seconds(5))
             }
         }
+        observeExpansion()
     }
 
     deinit {
         pollTask?.cancel()
     }
 
-    private func makePanel() -> NSPanel {
-        let panel = NSPanel(
-            contentRect: NSRect(origin: .zero, size: panelSize),
+    private func makePanel() -> NotchPanel {
+        let panel = NotchPanel(
+            contentRect: NSRect(origin: .zero, size: collapsedSize),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -55,11 +58,33 @@ final class NotchController {
         return panel
     }
 
-    private func position(_ panel: NSPanel) {
+    /// Re-arm an Observation tracker so panel size follows `model.expanded`.
+    private func observeExpansion() {
+        withObservationTracking {
+            _ = model.expanded
+        } onChange: { [weak self] in
+            Task { @MainActor in
+                guard let self else { return }
+                self.applyExpansion()
+                self.observeExpansion()
+            }
+        }
+    }
+
+    /// Size the panel for the current state, keeping the top edge pinned to the
+    /// screen top and horizontally centered (grows downward from the notch).
+    private func applyExpansion() {
+        guard let panel else { return }
+        let size = model.expanded ? expandedSize : collapsedSize
         guard let screen = NSScreen.main else { return }
-        let frame = screen.frame
-        let x = frame.midX - panelSize.width / 2
-        let y = frame.maxY - panelSize.height
-        panel.setFrameOrigin(NSPoint(x: x, y: y))
+        let topY = screen.frame.maxY
+        let origin = NSPoint(
+            x: screen.frame.midX - size.width / 2,
+            y: topY - size.height
+        )
+        panel.setFrame(NSRect(origin: origin, size: size), display: true, animate: true)
+        if model.expanded {
+            panel.makeKeyAndOrderFront(nil)
+        }
     }
 }
