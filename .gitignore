@@ -18,3 +18,8 @@ node_modules/
 dist/
 out/
 
+
+# Swift Package Manager (notch panel)
+notch/.build/
+.build/
+*.xcodeproj
