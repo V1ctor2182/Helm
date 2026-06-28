@@ -22,17 +22,31 @@ public final class NotchModel {
     /// Agents blocked on a permission decision (needs the user).
     public var attentionCount: Int { agents.lazy.filter(\.needsAttention).count }
 
-    private let backend: HelmBackend
+    /// Current now-playing media (nil when nothing is playing / unavailable).
+    public private(set) var nowPlaying: NowPlaying?
 
-    public init(backend: HelmBackend) {
+    private let backend: HelmBackend
+    private let media: MediaController
+
+    public init(backend: HelmBackend, media: MediaController = NoMediaController()) {
         self.backend = backend
+        self.media = media
     }
 
-    /// One poll tick: connection + agent runs.
+    /// One poll tick: connection + agent runs + media.
     public func poll() async {
         await refresh()
         await refreshAgents()
+        await refreshMedia()
     }
+
+    public func refreshMedia() async {
+        nowPlaying = await media.nowPlaying()
+    }
+
+    public func playPause() { media.playPause() }
+    public func nextTrack() { media.nextTrack() }
+    public func previousTrack() { media.previousTrack() }
 
     /// Poll the backend once and fold the result into `connection`.
     public func refresh() async {

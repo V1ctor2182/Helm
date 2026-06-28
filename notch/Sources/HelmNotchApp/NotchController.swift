@@ -16,7 +16,7 @@ final class NotchController {
     private var pollTask: Task<Void, Never>?
 
     private let collapsedSize = NSSize(width: 220, height: 32)
-    private let expandedSize = NSSize(width: 340, height: 232)
+    private let expandedSize = NSSize(width: 340, height: 284)
 
     init(model: NotchModel) {
         self.model = model

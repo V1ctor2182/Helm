@@ -29,6 +29,16 @@ struct NotchView: View {
             Text("Helm")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(.white)
+            if let np = model.nowPlaying {
+                Image(systemName: "music.note")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.white.opacity(0.6))
+                Text(np.title)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .lineLimit(1)
+                    .frame(maxWidth: 80, alignment: .leading)
+            }
             Spacer(minLength: 4)
             if model.activeAgentCount > 0 {
                 Text("🤖\(model.activeAgentCount)")
@@ -48,6 +58,10 @@ struct NotchView: View {
 
     private var expanded: some View {
         VStack(alignment: .leading, spacing: 8) {
+            if let np = model.nowPlaying {
+                mediaRow(np)
+                Divider().overlay(.white.opacity(0.12))
+            }
             HStack(spacing: 4) {
                 ForEach(CaptureKind.allCases) { kind in
                     Button(kind.label) { model.captureKind = kind }
@@ -87,6 +101,32 @@ struct NotchView: View {
             }
         }
         .padding(12)
+    }
+
+    private func mediaRow(_ np: NowPlaying) -> some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(np.title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                if !np.subtitle.isEmpty {
+                    Text(np.subtitle)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.white.opacity(0.5))
+                        .lineLimit(1)
+                }
+            }
+            Spacer()
+            Button { model.previousTrack() } label: { Image(systemName: "backward.fill") }
+            Button { model.playPause() } label: {
+                Image(systemName: np.isPlaying ? "pause.fill" : "play.fill")
+            }
+            Button { model.nextTrack() } label: { Image(systemName: "forward.fill") }
+        }
+        .buttonStyle(.plain)
+        .font(.system(size: 13))
+        .foregroundStyle(.white)
     }
 
     private var agentsSection: some View {
