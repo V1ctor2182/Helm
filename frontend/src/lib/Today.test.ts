@@ -17,13 +17,13 @@ describe('Today', () => {
     render(Today)
     expect(screen.getByRole('button', { name: /新建 Chat/ })).toBeInTheDocument()
     expect(screen.getByText('最近项目')).toBeInTheDocument()
-    expect(screen.getByText('紧急 / 未读邮件')).toBeInTheDocument()
+    expect(screen.getByText('日历 / 日程')).toBeInTheDocument()
   })
 
   it('clicking a module enters its mode', async () => {
     render(Today)
-    await fireEvent.click(screen.getByText('紧急 / 未读邮件'))
-    expect(layout.mode).toBe('mail')
+    await fireEvent.click(screen.getByText('最近项目'))
+    expect(layout.mode).toBe('cockpit')
   })
 
   it('New Chat switches to chat mode and opens a tab', async () => {

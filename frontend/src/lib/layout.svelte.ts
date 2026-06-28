@@ -8,9 +8,10 @@ export type ModeId =
   | 'research'
   | 'memory'
   | 'journal'
-  | 'mail'
   | 'cockpit'
   | 'settings'
+// NOTE: 'mail' mode removed for now — email capability disabled (calendar moved
+// into the Journal mode). Re-add the mode + Shell branch + MODES entry to restore.
 
 export interface Mode {
   id: ModeId
@@ -25,7 +26,6 @@ export const MODES: Mode[] = [
   { id: 'research', label: 'Research', icon: '🔍' },
   { id: 'memory', label: 'Memory', icon: '🧠' },
   { id: 'journal', label: 'Journal', icon: '📓' },
-  { id: 'mail', label: 'Mail', icon: '✉' },
   { id: 'cockpit', label: 'Cockpit', icon: '🛠' },
   { id: 'settings', label: 'Settings', icon: '⚙' },
 ]

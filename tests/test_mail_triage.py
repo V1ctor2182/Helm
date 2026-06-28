@@ -1,6 +1,14 @@
-"""m2 (email-calendar): AI email triage (fake LLM — no real LLM call)."""
+"""m2 (email-calendar): AI email triage (fake LLM — no real LLM call).
+
+Skipped while the mail capability is disabled (routes unmounted) — see
+tests/test_mail.py. Re-enable when mail is re-added.
+"""
 
 import json
+
+import pytest
+
+pytestmark = pytest.mark.skip(reason="mail capability disabled — re-add later")
 
 import helm.mail.routes as mail_routes
 from fastapi.testclient import TestClient

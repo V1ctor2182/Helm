@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node .vibehub/vibehub-hook.mjs session-start" }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node .vibehub/vibehub-hook.mjs pre-tool-use" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node .vibehub/vibehub-hook.mjs post-tool-use" }
+        ]
+      }
+    ]
+  }
+}
