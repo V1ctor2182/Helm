@@ -27,6 +27,22 @@ public struct HelmClient: HelmBackend {
         self.session = session
     }
 
+    /// Resolve the backend URL from an environment map — `HELM_NOTCH_URL`
+    /// overrides the loopback default (e.g. for an SSH-forwarded backend).
+    public static func baseURL(from environment: [String: String]) -> URL {
+        if let raw = environment["HELM_NOTCH_URL"],
+           !raw.isEmpty,
+           let url = URL(string: raw) {
+            return url
+        }
+        return URL(string: "http://127.0.0.1:8769")!
+    }
+
+    /// The backend URL for this process (reads `HELM_NOTCH_URL`).
+    public static func defaultBaseURL() -> URL {
+        baseURL(from: ProcessInfo.processInfo.environment)
+    }
+
     public func health() async throws -> Health {
         let url = baseURL.appendingPathComponent("healthz")
         let (data, _) = try await session.data(from: url)

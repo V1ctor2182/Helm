@@ -70,6 +70,11 @@ public final class NotchModel {
         if !expanded { captureStatus = .idle }
     }
 
+    public func collapse() {
+        expanded = false
+        captureStatus = .idle
+    }
+
     /// Submit the current capture text to Helm via the kind's endpoint.
     public func submit() async {
         let text = captureText.trimmingCharacters(in: .whitespacesAndNewlines)

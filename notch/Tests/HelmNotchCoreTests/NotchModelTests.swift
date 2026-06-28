@@ -214,6 +214,27 @@ final class MediaTests: XCTestCase {
     }
 }
 
+final class ConfigAndExpansionTests: XCTestCase {
+    func testBaseURLFromEnvOverride() {
+        let url = HelmClient.baseURL(from: ["HELM_NOTCH_URL": "http://192.168.1.5:9000"])
+        XCTAssertEqual(url.absoluteString, "http://192.168.1.5:9000")
+    }
+
+    func testBaseURLDefaultsWhenUnsetOrEmpty() {
+        XCTAssertEqual(HelmClient.baseURL(from: [:]).absoluteString, "http://127.0.0.1:8769")
+        XCTAssertEqual(HelmClient.baseURL(from: ["HELM_NOTCH_URL": ""]).absoluteString, "http://127.0.0.1:8769")
+    }
+
+    @MainActor
+    func testCollapseResetsState() {
+        let model = NotchModel(backend: FakeBackend())
+        model.toggleExpanded()
+        XCTAssertTrue(model.expanded)
+        model.collapse()
+        XCTAssertFalse(model.expanded)
+    }
+}
+
 final class HealthDecodingTests: XCTestCase {
     func testDecodesHealthz() throws {
         let json = #"{"status":"ok","version":"0.0.1"}"#.data(using: .utf8)!

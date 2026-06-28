@@ -35,6 +35,13 @@ final class NotchController {
             }
         }
         observeExpansion()
+
+        // Collapse when the user clicks away (panel loses key focus).
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.didResignKeyNotification, object: panel, queue: .main
+        ) { [weak model] _ in
+            MainActor.assumeIsolated { model?.collapse() }
+        }
     }
 
     deinit {
