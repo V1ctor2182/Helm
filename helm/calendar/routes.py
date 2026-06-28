@@ -102,3 +102,29 @@ def create_caldav(
         name=body.name, url=body.url, username=body.username, password=body.password
     )
     return {"id": a.id, "name": a.name, "url": a.url, "username": a.username}
+
+
+def make_caldav_client(account, password: str):  # patched in tests
+    from helm.calendar.caldav import RealCalDavClient
+
+    return RealCalDavClient(account.url, account.username, password)
+
+
+@router.post("/accounts/{account_id}/sync")
+def sync_caldav(
+    account_id: int,
+    session: Session = Depends(db_session),
+    box: SecretBox = Depends(get_secret_box),
+) -> dict:
+    from helm.calendar.models import CalDavAccount
+
+    accounts = CalDavAccountService(session, box)
+    account = session.get(CalDavAccount, account_id)
+    if account is None:
+        raise HTTPException(status_code=404, detail="caldav account not found")
+    password = accounts.password(account_id) or ""
+    try:
+        client = make_caldav_client(account, password)
+        return EventService(session).sync_caldav(client)
+    except Exception as exc:  # noqa: BLE001 - surface CalDAV errors as 502
+        raise HTTPException(status_code=502, detail=f"CalDAV sync failed: {exc}")

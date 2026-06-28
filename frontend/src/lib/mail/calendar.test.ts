@@ -82,3 +82,19 @@ describe('MailStore.toEvent', () => {
     expect(s.convertMsg).toContain('日历')
   })
 })
+
+describe('CalendarStore CalDAV', () => {
+  it('syncCaldav posts per account and reports counts', async () => {
+    const { calendar: cal } = await import('./calendarStore.svelte')
+    cal.caldavAccounts = [{ id: 1, name: 'iCloud', url: 'u', username: 'me' }]
+    const fetchMock = vi.fn((url: string) =>
+      Promise.resolve({ ok: true, json: () => Promise.resolve(url.includes('/sync') ? { pulled_new: 2, pushed: 1 } : { events: [] }) }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    await cal.syncCaldav()
+    expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('/accounts/1/sync'))).toBe(true)
+    expect(cal.syncMsg).toContain('拉取 2')
+    cal.caldavAccounts = []
+    cal.syncMsg = null
+  })
+})

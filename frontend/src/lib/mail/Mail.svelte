@@ -8,12 +8,22 @@
   let acc = $state({ name: '', email_addr: '', imap_host: '', username: '', password: '' })
   let evSummary = $state('')
   let evStart = $state('')
+  let showCaldav = $state(false)
+  let cdav = $state({ name: '', url: '', username: '', password: '' })
+
+  async function addCaldav() {
+    if (await calendar.addCaldav(cdav)) {
+      showCaldav = false
+      cdav = { name: '', url: '', username: '', password: '' }
+    }
+  }
 
   onMount(() => {
     void mail.loadAccounts()
     void mail.loadEmails()
     void mail.loadProviders()
     void calendar.load()
+    void calendar.loadCaldav()
   })
 
   async function addEvent() {
@@ -73,6 +83,12 @@
       <div class="tools">
         <button onclick={doImport}>导入 .ics</button>
         <button onclick={doExport} disabled={!calendar.events.length}>导出 .ics</button>
+        {#if calendar.caldavAccounts.length}
+          <button onclick={() => calendar.syncCaldav()} disabled={calendar.syncing}>
+            {calendar.syncing ? 'CalDAV 同步中…' : 'CalDAV 同步'}
+          </button>
+        {/if}
+        <button onclick={() => (showCaldav = !showCaldav)}>+ CalDAV</button>
       </div>
     {/if}
   </header>
@@ -83,6 +99,16 @@
       <input type="datetime-local" bind:value={evStart} aria-label="开始时间" />
       <button type="submit" disabled={!evSummary.trim() || !evStart}>加事件</button>
     </form>
+    {#if showCaldav}
+      <form class="addacc" onsubmit={(e) => { e.preventDefault(); void addCaldav() }}>
+        <input placeholder="名称" bind:value={cdav.name} aria-label="CalDAV 名称" />
+        <input placeholder="CalDAV URL(如 https://caldav.icloud.com)" bind:value={cdav.url} aria-label="CalDAV URL" />
+        <input placeholder="用户名" bind:value={cdav.username} aria-label="CalDAV 用户名" />
+        <input type="password" placeholder="密码 / 应用专用密码" bind:value={cdav.password} aria-label="CalDAV 密码" />
+        <button type="submit" disabled={!cdav.url.trim() || !cdav.password.trim()}>添加(凭据加密存储)</button>
+      </form>
+    {/if}
+    {#if calendar.syncMsg}<p class="cmsg">{calendar.syncMsg}</p>{/if}
     {#if calendar.events.length === 0}
       <p class="empty">还没有日程 — 加一个事件,或导入 .ics。</p>
     {:else}

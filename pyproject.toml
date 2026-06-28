@@ -25,6 +25,8 @@ dependencies = [
     "mcp",
     # journal-notes-tasks m4: cron schedule parsing for scheduled tasks.
     "croniter",
+    # email-calendar: CalDAV bidirectional calendar sync (intent#2).
+    "caldav",
 ]
 
 [project.optional-dependencies]
