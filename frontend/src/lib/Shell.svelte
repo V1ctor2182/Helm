@@ -7,7 +7,6 @@
   import BrainPanel from './memory/BrainPanel.svelte'
   import Research from './research/Research.svelte'
   import JournalView from './notes/JournalView.svelte'
-  import Mail from './mail/Mail.svelte'
   import CockpitView from './cockpit/CockpitView.svelte'
   import Terminal from './cockpit/terminal/Terminal.svelte'
   import { applyShortcut } from './keymap'
@@ -53,8 +52,6 @@
       <Research />
     {:else if layout.mode === 'journal'}
       <JournalView />
-    {:else if layout.mode === 'mail'}
-      <Mail />
     {:else}
       <div class="tabbar" role="tablist">
       {#each layout.tabs as tab (tab.id)}

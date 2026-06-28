@@ -16,7 +16,7 @@
     { title: '日记 · 今日小结', blurb: '写两行 + AI 小结（记录 Room）', mode: 'journal' },
     { title: '最近项目', blurb: '续上 agent 会话（驾驶舱）', mode: 'cockpit' },
     { title: 'Agent 活动 / 变更收件箱', blurb: '看 agent 改了什么（驾驶舱）', mode: 'cockpit' },
-    { title: '紧急 / 未读邮件', blurb: 'AI 已分诊（邮件 Room）', mode: 'mail' },
+    { title: '日历 / 日程', blurb: '事件与 CalDAV 同步（记录 Room）', mode: 'journal' },
   ]
 
   function go(mode: ModeId) {

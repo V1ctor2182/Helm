@@ -1,7 +1,17 @@
 """m1 (email-calendar): email accounts (encrypted creds) + IMAP sync (fake
-fetcher, no real mailbox) + inbox list."""
+fetcher, no real mailbox) + inbox list.
+
+NOTE: the mail (email) capability is currently DISABLED — its routes aren't
+mounted in create_app (calendar stays active, moved under the Journal mode).
+These tests exercise the unmounted /api/mail/* routes, so the whole module is
+skipped until mail is re-added. The mail code + tests are kept intact for that.
+"""
 
 from datetime import datetime, timezone
+
+import pytest
+
+pytestmark = pytest.mark.skip(reason="mail capability disabled — re-add later")
 
 import helm.mail.routes as mail_routes
 from fastapi.testclient import TestClient

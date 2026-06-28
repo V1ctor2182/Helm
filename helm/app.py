@@ -74,7 +74,11 @@ def create_app(config: HelmConfig | None = None) -> FastAPI:
     from helm.chat.routes import router as chat_router
     from helm.cockpit.routes import router as cockpit_router
     from helm.calendar.routes import router as calendar_router
-    from helm.mail.routes import router as mail_router
+
+    # Mail (email/IMAP) is disabled for now — to be re-added later. The module
+    # stays in the tree; just don't mount its routes. Calendar (incl. CalDAV)
+    # stays active and now lives under the Journal mode in the UI.
+    # from helm.mail.routes import router as mail_router
     from helm.memory.routes import router as memory_router
     from helm.notes.routes import router as notes_router
     from helm.orchestration.routes import router as orchestration_router
@@ -96,7 +100,7 @@ def create_app(config: HelmConfig | None = None) -> FastAPI:
     app.include_router(research_router)
     app.include_router(notes_router)
     app.include_router(tasks_router)
-    app.include_router(mail_router)
+    # app.include_router(mail_router)  # mail disabled — re-add later
     app.include_router(calendar_router)
 
     # Create tables now that every router module has imported its models.

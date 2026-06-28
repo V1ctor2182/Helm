@@ -4,8 +4,10 @@
   import DOMPurify from 'dompurify'
   import { notes, type Note } from './notesStore.svelte'
   import { tasks } from './tasksStore.svelte'
+  import { calendar } from '../mail/calendarStore.svelte'
+  import Calendar from './Calendar.svelte'
 
-  let view = $state<'notes' | 'journal' | 'tasks'>('notes')
+  let view = $state<'notes' | 'journal' | 'tasks' | 'calendar'>('notes')
   let draft = $state('')
   let taskPrompt = $state('')
   let taskCron = $state('0 9 * * *')
@@ -14,6 +16,8 @@
     void notes.load()
     void notes.loadProviders()
     void tasks.load()
+    void calendar.load()
+    void calendar.loadCaldav()
   })
 
   function today(): string {
@@ -61,9 +65,10 @@
     <button role="tab" aria-selected={view === 'notes'} class:active={view === 'notes'} onclick={() => (view = 'notes')}>速记</button>
     <button role="tab" aria-selected={view === 'journal'} class:active={view === 'journal'} onclick={() => (view = 'journal')}>日记</button>
     <button role="tab" aria-selected={view === 'tasks'} class:active={view === 'tasks'} onclick={() => (view = 'tasks')}>任务</button>
+    <button role="tab" aria-selected={view === 'calendar'} class:active={view === 'calendar'} onclick={() => (view = 'calendar')}>📅 日历</button>
   </div>
 
-  {#if view !== 'tasks'}
+  {#if view !== 'tasks' && view !== 'calendar'}
     <form
       class="add"
       onsubmit={(e) => {
@@ -124,7 +129,7 @@
         {/each}
       </div>
     {/if}
-  {:else}
+  {:else if view === 'tasks'}
     <form
       class="addtask"
       onsubmit={(e) => {
@@ -156,6 +161,8 @@
         {/each}
       </ul>
     {/if}
+  {:else}
+    <Calendar />
   {/if}
 </section>
 
