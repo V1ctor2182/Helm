@@ -31,7 +31,7 @@ final class SystemMediaController: MediaController, @unchecked Sendable {
         guard let getInfo else { return nil }
         let box = ResumeOnce()
         return await withCheckedContinuation { (continuation: CheckedContinuation<NowPlaying?, Never>) in
-            let finish: (NowPlaying?) -> Void = { value in
+            let finish: @Sendable (NowPlaying?) -> Void = { value in
                 if box.claim() { continuation.resume(returning: value) }
             }
             getInfo(DispatchQueue.global(qos: .userInitiated)) { dict in
