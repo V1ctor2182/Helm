@@ -16,7 +16,7 @@ final class NotchController {
     private var pollTask: Task<Void, Never>?
 
     private let collapsedSize = NSSize(width: 220, height: 32)
-    private let expandedSize = NSSize(width: 340, height: 176)
+    private let expandedSize = NSSize(width: 340, height: 232)
 
     init(model: NotchModel) {
         self.model = model
@@ -30,7 +30,7 @@ final class NotchController {
 
         pollTask = Task { [model] in
             while !Task.isCancelled {
-                await model.refresh()
+                await model.poll()
                 try? await Task.sleep(for: .seconds(5))
             }
         }
