@@ -60,3 +60,16 @@ jobs:
       - name: build
         working-directory: frontend
         run: npm run build
+
+  notch:
+    name: notch (swift)
+    # AppKit/SwiftUI + MediaRemote are macOS-only — this job needs a mac runner.
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: swift build
+        working-directory: notch
+        run: swift build
+      - name: swift test
+        working-directory: notch
+        run: swift test
