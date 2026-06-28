@@ -4,6 +4,7 @@ import HelmNotchCore
 /// Owns the notch controller and a menu-bar item for the app's lifetime. Sets
 /// accessory activation policy (no Dock icon) — the panel lives in the notch,
 /// and the menu-bar item provides the only Quit affordance.
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var controller: NotchController?
     private var statusItem: NSStatusItem?
