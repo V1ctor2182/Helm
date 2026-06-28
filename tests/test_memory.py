@@ -165,3 +165,24 @@ def test_memory_touch_bumps_uses(config):
     with db.session_scope() as s:
         assert MemoryService(s).get(mid).uses == 2
         assert MemoryService(s).touch(999) is None
+
+
+def test_cjk_keyword_search(config):
+    """Chinese keyword search must match substrings (no whitespace boundaries)."""
+    c = _client(config)
+    c.post("/api/memories", json={"text": "用户偏好暗色主题", "category": "preference"})
+    c.post("/api/memories", json={"text": "项目用 Stripe 结算", "category": "decision"})
+    res = c.get("/api/memories/search", params={"q": "暗色"}).json()["results"]
+    assert any("暗色主题" in r["text"] for r in res), "中文子串搜索应命中"
+    # unrelated query doesn't match
+    assert c.get("/api/memories/search", params={"q": "完全无关的词"}).json()["results"] == []
+
+
+def test_tokenize_cjk_and_english():
+    from helm.memory.service import tokenize, keyword_similarity
+    # English unchanged
+    assert tokenize("cat dog") == ["cat", "dog"]
+    # CJK → unigrams + bigrams
+    toks = set(tokenize("暗色"))
+    assert "暗" in toks and "色" in toks and "暗色" in toks
+    assert keyword_similarity("暗色", "用户偏好暗色主题") > 0
