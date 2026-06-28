@@ -28,6 +28,14 @@ describe('AgentView', () => {
     expect(await screen.findByText(/Read a\.py/)).toBeInTheDocument()
   })
 
+  it('renders a rate-limit line and warns when overage is exhausted', async () => {
+    render(AgentView)
+    agent.events = [
+      { type: 'rate_limit', session_id: 's', data: { status: 'allowed', limit_type: 'five_hour', overage_status: 'rejected' }, ts: 1 },
+    ]
+    expect(await screen.findByText(/额度状态.*超额额度已用尽/)).toBeInTheDocument()
+  })
+
   it('shows an error banner', async () => {
     agent.status = 'error'
     agent.error = 'agent not found: gemini'

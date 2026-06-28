@@ -123,6 +123,23 @@ class ClaudeCodeAdapter(AgentAdapter):
                             },
                         )
                     )
+        elif kind == "rate_limit_event":
+            # Newer Claude Code emits these mid-run; surface the credit / limit
+            # status so the cockpit can warn (e.g. out of overage credits).
+            info = obj.get("rate_limit_info", {})
+            events.append(
+                AcpEvent(
+                    AcpEventType.RATE_LIMIT,
+                    sid,
+                    {
+                        "status": info.get("status"),
+                        "limit_type": info.get("rateLimitType"),
+                        "resets_at": info.get("resetsAt"),
+                        "overage_status": info.get("overageStatus"),
+                        "using_overage": info.get("isUsingOverage"),
+                    },
+                )
+            )
         elif kind == "result":
             events.append(
                 AcpEvent(
