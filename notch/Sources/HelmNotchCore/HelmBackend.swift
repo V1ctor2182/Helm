@@ -10,6 +10,8 @@ public protocol HelmBackend: Sendable {
     func createNote(content: String, kind: String, journalDate: String?) async throws
     /// Create a scheduled task from a prompt (default daily schedule).
     func createTask(prompt: String) async throws
+    /// List the agent runs Helm knows about (for the notch agent monitor).
+    func listRuns() async throws -> [AgentRun]
 }
 
 /// Talks to the local Helm FastAPI backend over HTTP (default loopback:8769).
@@ -53,6 +55,13 @@ public struct HelmClient: HelmBackend {
             "api/tasks",
             Body(name: name, prompt: prompt, schedule_kind: "cron", schedule_value: ["expr": "0 9 * * *"])
         )
+    }
+
+    public func listRuns() async throws -> [AgentRun] {
+        struct Response: Decodable { let runs: [AgentRun] }
+        let url = baseURL.appendingPathComponent("api/orchestration/runs")
+        let (data, _) = try await session.data(from: url)
+        return try JSONDecoder().decode(Response.self, from: data).runs
     }
 
     private func post<T: Encodable>(_ path: String, _ body: T) async throws {

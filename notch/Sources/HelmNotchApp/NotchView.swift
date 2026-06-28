@@ -30,6 +30,11 @@ struct NotchView: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(.white)
             Spacer(minLength: 4)
+            if model.activeAgentCount > 0 {
+                Text("🤖\(model.activeAgentCount)")
+                    .font(.system(size: 10))
+                    .foregroundStyle(model.attentionCount > 0 ? .orange : .white.opacity(0.7))
+            }
             Text(statusText)
                 .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.6))
@@ -76,8 +81,63 @@ struct NotchView: View {
                     .foregroundStyle(model.captureText.isEmpty ? .white.opacity(0.3) : .white)
                     .disabled(model.captureText.isEmpty)
             }
+
+            if !model.agents.isEmpty {
+                agentsSection
+            }
         }
         .padding(12)
+    }
+
+    private var agentsSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Divider().overlay(.white.opacity(0.12))
+            HStack {
+                Text("Agents")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.5))
+                Spacer()
+                if model.attentionCount > 0 {
+                    Text("\(model.attentionCount) 待批准")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.orange)
+                }
+            }
+            ForEach(Array(model.agents.prefix(3))) { run in
+                HStack(spacing: 6) {
+                    Circle().fill(agentColor(run.status)).frame(width: 6, height: 6)
+                    Text(run.prompt ?? "(无指令)")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.white.opacity(0.8))
+                        .lineLimit(1)
+                    Spacer()
+                    Text(statusShort(run.status))
+                        .font(.system(size: 9))
+                        .foregroundStyle(.white.opacity(0.4))
+                }
+            }
+        }
+    }
+
+    private func agentColor(_ status: String) -> Color {
+        switch status {
+        case "running": .green
+        case "waiting_permission": .orange
+        case "failed": .red
+        case "completed": .white.opacity(0.4)
+        default: .yellow
+        }
+    }
+
+    private func statusShort(_ status: String) -> String {
+        switch status {
+        case "running": "运行中"
+        case "waiting_permission": "待批准"
+        case "completed": "完成"
+        case "failed": "失败"
+        case "pending": "排队"
+        default: status
+        }
     }
 
     private var placeholder: String {

@@ -8,6 +8,7 @@ import XCTest
 final class FakeBackend: HelmBackend, @unchecked Sendable {
     var healthResult: Result<Health, Error>
     var shouldFailCapture = false
+    var runs: [AgentRun] = []
     private(set) var notes: [(content: String, kind: String, journalDate: String?)] = []
     private(set) var tasks: [String] = []
 
@@ -17,6 +18,10 @@ final class FakeBackend: HelmBackend, @unchecked Sendable {
 
     func health() async throws -> Health {
         try healthResult.get()
+    }
+
+    func listRuns() async throws -> [AgentRun] {
+        runs
     }
 
     func createNote(content: String, kind: String, journalDate: String?) async throws {
@@ -114,6 +119,49 @@ final class CaptureTests: XCTestCase {
         await model.submit()
         XCTAssertEqual(model.captureStatus, .failed)
         XCTAssertEqual(model.captureText, "会失败的")  // preserved so the user can retry
+    }
+}
+
+final class AgentMonitorTests: XCTestCase {
+    @MainActor
+    func testRefreshAgentsPopulatesAndCounts() async {
+        let backend = FakeBackend()
+        backend.runs = [
+            AgentRun(id: 1, agent: "claude-code", status: "running", prompt: "fix bug"),
+            AgentRun(id: 2, agent: "claude-code", status: "waiting_permission", prompt: "rm file"),
+            AgentRun(id: 3, agent: "claude-code", status: "completed", prompt: "done"),
+        ]
+        let model = NotchModel(backend: backend)
+        await model.refreshAgents()
+        XCTAssertEqual(model.agents.count, 3)
+        XCTAssertEqual(model.activeAgentCount, 2)  // running + waiting
+        XCTAssertEqual(model.attentionCount, 1)    // waiting_permission only
+    }
+
+    @MainActor
+    func testRefreshAgentsKeepsLastListOnError() async {
+        let backend = FakeBackend()
+        backend.runs = [AgentRun(id: 1, agent: "claude-code", status: "running", prompt: "x")]
+        let model = NotchModel(backend: backend)
+        await model.refreshAgents()
+        backend.healthResult = .failure(StubError())  // unrelated; listRuns still returns []
+        backend.runs = []
+        await model.refreshAgents()
+        XCTAssertEqual(model.agents.count, 0)  // listRuns succeeded with empty
+    }
+
+    func testAgentRunStatusHelpers() {
+        XCTAssertTrue(AgentRun(id: 1, agent: "a", status: "running", prompt: nil).isActive)
+        let waiting = AgentRun(id: 2, agent: "a", status: "waiting_permission", prompt: nil)
+        XCTAssertTrue(waiting.isActive && waiting.needsAttention)
+        XCTAssertFalse(AgentRun(id: 3, agent: "a", status: "completed", prompt: nil).isActive)
+    }
+
+    func testDecodesRunsIgnoringExtraFields() throws {
+        let json = #"{"runs":[{"id":7,"session_id":"s","project_path":"/p","agent":"claude-code","status":"running","prompt":"hi","error":null,"started_at":null,"ended_at":null}]}"#.data(using: .utf8)!
+        struct Resp: Decodable { let runs: [AgentRun] }
+        let runs = try JSONDecoder().decode(Resp.self, from: json).runs
+        XCTAssertEqual(runs, [AgentRun(id: 7, agent: "claude-code", status: "running", prompt: "hi")])
     }
 }
 

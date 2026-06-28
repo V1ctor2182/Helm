@@ -35,6 +35,32 @@ public enum CaptureKind: String, Sendable, CaseIterable, Identifiable {
     }
 }
 
+/// An agent run as reported by `/api/orchestration/runs` (extra fields in the
+/// payload are ignored). Drives the notch's agent monitor.
+public struct AgentRun: Codable, Sendable, Equatable, Identifiable {
+    public let id: Int
+    public let agent: String
+    public let status: String
+    public let prompt: String?
+
+    public init(id: Int, agent: String, status: String, prompt: String?) {
+        self.id = id
+        self.agent = agent
+        self.status = status
+        self.prompt = prompt
+    }
+
+    /// Running or blocked on the user — i.e. worth surfacing on the notch.
+    public var isActive: Bool {
+        status == "running" || status == "waiting_permission"
+    }
+
+    /// Blocked waiting for a permission decision (needs the user).
+    public var needsAttention: Bool {
+        status == "waiting_permission"
+    }
+}
+
 /// Lifecycle of one capture submission, for inline UI feedback.
 public enum CaptureStatus: Sendable, Equatable {
     case idle

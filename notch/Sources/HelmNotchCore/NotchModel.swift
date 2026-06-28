@@ -14,10 +14,24 @@ public final class NotchModel {
     public var captureText = ""
     public private(set) var captureStatus: CaptureStatus = .idle
 
+    /// Agent runs Helm knows about (m3 monitor).
+    public private(set) var agents: [AgentRun] = []
+
+    /// Running or blocked agents — surfaced on the collapsed pill.
+    public var activeAgentCount: Int { agents.lazy.filter(\.isActive).count }
+    /// Agents blocked on a permission decision (needs the user).
+    public var attentionCount: Int { agents.lazy.filter(\.needsAttention).count }
+
     private let backend: HelmBackend
 
     public init(backend: HelmBackend) {
         self.backend = backend
+    }
+
+    /// One poll tick: connection + agent runs.
+    public func poll() async {
+        await refresh()
+        await refreshAgents()
     }
 
     /// Poll the backend once and fold the result into `connection`.
@@ -27,6 +41,13 @@ public final class NotchModel {
             connection = .connected(version: health.version)
         } catch {
             connection = .disconnected
+        }
+    }
+
+    /// Refresh the agent run list; keep the last list on error.
+    public func refreshAgents() async {
+        if let runs = try? await backend.listRuns() {
+            agents = runs
         }
     }
 
