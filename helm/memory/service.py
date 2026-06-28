@@ -11,6 +11,7 @@ unhealthy, recall is keyword-only and the API behaves exactly as in m1.
 from __future__ import annotations
 
 import json
+import re
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -27,10 +28,29 @@ VECTOR_WEIGHT = 0.7
 CATEGORIES = ("fact", "preference", "decision")
 
 
+# CJK (Chinese/Japanese kana) — these scripts don't use spaces, so a
+# whitespace tokenizer turns a whole sentence into one token and keyword recall
+# never matches a substring query. For CJK runs we emit per-character unigrams
+# + bigrams so e.g. "暗色" overlaps "用户偏好暗色主题".
+_CJK = re.compile(r"[一-鿿぀-ヿ㐀-䶿]")
+
+
 def tokenize(text: str) -> list[str]:
-    """Split on whitespace and strip trailing punctuation. Ported verbatim from
-    Odysseus `src/memory.py` so keyword recall matches the source semantics."""
-    return [word.strip('.,!?";') for word in text.split()]
+    """Tokenize for keyword recall. Whitespace-split (Odysseus semantics) for
+    space-delimited scripts; CJK words additionally yield char unigrams+bigrams
+    so substring queries match (Chinese/Japanese have no word boundaries)."""
+    tokens: list[str] = []
+    for word in text.split():
+        w = word.strip('.,!?";')
+        if not w:
+            continue
+        if _CJK.search(w):
+            chars = list(w)
+            tokens.extend(chars)  # unigrams (match short queries)
+            tokens.extend(chars[i] + chars[i + 1] for i in range(len(chars) - 1))
+        else:
+            tokens.append(w)
+    return tokens
 
 
 def keyword_similarity(text1: str, text2: str) -> float:
