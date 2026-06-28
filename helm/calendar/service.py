@@ -103,6 +103,49 @@ class EventService:
     def export_ics(self) -> str:
         return events_to_ics(self.list())
 
+    def sync_caldav(self, client) -> dict:
+        """Bidirectional sync against a CalDAV server (intent#2). Pull remote
+        events (upsert by uid, source='caldav') + push local-only events. First
+        pass: remote events not seen locally are added; existing uids are left
+        (no overwrite of local edits); local 'local'-source events absent
+        remotely are PUT. Returns counts."""
+        remote_uids: set[str] = set()
+        pulled = 0
+        for ics_text in client.list_events():
+            for ev in parse_ics(ics_text):
+                uid = ev.get("uid")
+                if not uid:
+                    continue
+                remote_uids.add(uid)
+                existing = self.session.scalar(
+                    select(CalendarEvent).where(CalendarEvent.uid == uid)
+                )
+                if existing is None:
+                    self.create(
+                        summary=ev.get("summary", ""),
+                        start=ev["start"],
+                        end=ev.get("end"),
+                        description=ev.get("description", ""),
+                        location=ev.get("location", ""),
+                        all_day=bool(ev.get("all_day", False)),
+                        uid=uid,
+                        source="caldav",
+                    )
+                    pulled += 1
+
+        pushed = 0
+        for ev in list(
+            self.session.scalars(
+                select(CalendarEvent).where(CalendarEvent.source == "local")
+            )
+        ):
+            if ev.uid not in remote_uids:
+                client.create_event(events_to_ics([ev]))
+                ev.source = "caldav"
+                pushed += 1
+        self.session.flush()
+        return {"pulled_new": pulled, "pushed": pushed}
+
 
 class CalDavAccountService:
     def __init__(self, session: Session, box: SecretBox) -> None:

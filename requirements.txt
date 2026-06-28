@@ -17,3 +17,5 @@ python-docx
 mcp
 # journal-notes-tasks m4: scheduled-task cron parsing
 croniter
+# email-calendar: CalDAV sync
+caldav
