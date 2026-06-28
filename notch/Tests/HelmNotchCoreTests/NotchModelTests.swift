@@ -37,6 +37,19 @@ final class FakeBackend: HelmBackend, @unchecked Sendable {
 
 struct StubError: Error {}
 
+/// Records media commands and serves a canned now-playing snapshot.
+final class FakeMedia: MediaController, @unchecked Sendable {
+    var current: NowPlaying?
+    private(set) var commands: [String] = []
+
+    init(current: NowPlaying? = nil) { self.current = current }
+
+    func nowPlaying() async -> NowPlaying? { current }
+    func playPause() { commands.append("playPause") }
+    func nextTrack() { commands.append("next") }
+    func previousTrack() { commands.append("prev") }
+}
+
 final class NotchModelTests: XCTestCase {
     @MainActor
     func testConnectsOnHealthyBackend() async {
@@ -162,6 +175,42 @@ final class AgentMonitorTests: XCTestCase {
         struct Resp: Decodable { let runs: [AgentRun] }
         let runs = try JSONDecoder().decode(Resp.self, from: json).runs
         XCTAssertEqual(runs, [AgentRun(id: 7, agent: "claude-code", status: "running", prompt: "hi")])
+    }
+}
+
+final class MediaTests: XCTestCase {
+    @MainActor
+    func testRefreshMediaPopulatesNowPlaying() async {
+        let media = FakeMedia(current: NowPlaying(title: "夜曲", artist: "周杰伦", isPlaying: true))
+        let model = NotchModel(backend: FakeBackend(), media: media)
+        await model.refreshMedia()
+        XCTAssertEqual(model.nowPlaying?.title, "夜曲")
+        XCTAssertEqual(model.nowPlaying?.artist, "周杰伦")
+        XCTAssertTrue(model.nowPlaying?.isPlaying ?? false)
+    }
+
+    @MainActor
+    func testNilWhenNothingPlaying() async {
+        let model = NotchModel(backend: FakeBackend(), media: FakeMedia(current: nil))
+        await model.refreshMedia()
+        XCTAssertNil(model.nowPlaying)
+    }
+
+    @MainActor
+    func testTransportCommandsForward() {
+        let media = FakeMedia()
+        let model = NotchModel(backend: FakeBackend(), media: media)
+        model.playPause()
+        model.nextTrack()
+        model.previousTrack()
+        XCTAssertEqual(media.commands, ["playPause", "next", "prev"])
+    }
+
+    @MainActor
+    func testDefaultsToNoMedia() async {
+        let model = NotchModel(backend: FakeBackend())  // no media arg
+        await model.refreshMedia()
+        XCTAssertNil(model.nowPlaying)
     }
 }
 

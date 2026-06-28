@@ -8,7 +8,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
-        let controller = NotchController(model: NotchModel(backend: HelmClient()))
+        let model = NotchModel(backend: HelmClient(), media: SystemMediaController())
+        let controller = NotchController(model: model)
         controller.start()
         self.controller = controller
     }
