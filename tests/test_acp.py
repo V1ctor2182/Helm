@@ -61,11 +61,34 @@ def test_parse_init_message_toolcall_result():
     assert ev[0].type == AcpEventType.SESSION_END and ev[0].data["is_error"] is False
 
 
+def test_parse_rate_limit_event():
+    a = ClaudeCodeAdapter()
+    ev = a.parse_line(json.dumps({
+        "type": "rate_limit_event",
+        "session_id": "s1",
+        "rate_limit_info": {
+            "status": "allowed",
+            "rateLimitType": "five_hour",
+            "resetsAt": 1782637800,
+            "overageStatus": "rejected",
+            "isUsingOverage": False,
+        },
+    }))
+    assert len(ev) == 1
+    assert ev[0].type == AcpEventType.RATE_LIMIT
+    assert ev[0].data["status"] == "allowed"
+    assert ev[0].data["limit_type"] == "five_hour"
+    assert ev[0].data["overage_status"] == "rejected"
+    assert ev[0].data["using_overage"] is False
+
+
 def test_parse_ignores_noise():
     a = ClaudeCodeAdapter()
     assert a.parse_line("") == []
     assert a.parse_line("not json at all") == []
     assert a.parse_line(json.dumps({"type": "unknown"})) == []
+    # new system subtypes (hook lifecycle) are gracefully ignored
+    assert a.parse_line(json.dumps({"type": "system", "subtype": "hook_started"})) == []
 
 
 def test_event_to_dict_serializable():

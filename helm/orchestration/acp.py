@@ -20,6 +20,7 @@ class AcpEventType(str, Enum):
     TOOL_RESULT = "tool_result"  # a tool returned
     PLAN = "plan"  # a plan/todo update (backends that emit one)
     PERMISSION_REQUEST = "permission_request"  # blocked, awaiting user approval
+    RATE_LIMIT = "rate_limit"  # backend reported rate-limit / credit status
     SESSION_END = "session_end"  # run finished (success/error)
     ERROR = "error"  # adapter/transport error
 

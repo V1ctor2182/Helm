@@ -28,6 +28,20 @@
         return { icon: d.is_error ? '⚠️' : '✓', text: String(d.content ?? '').slice(0, 200) }
       case 'permission_request':
         return { icon: '🔐', text: '请求权限确认' }
+      case 'rate_limit': {
+        const blocked = d.status !== 'allowed'
+        const overageOut = d.overage_status === 'rejected'
+        const reset =
+          typeof d.resets_at === 'number'
+            ? new Date(d.resets_at * 1000).toLocaleTimeString()
+            : ''
+        const warn = blocked || overageOut
+        const parts = [d.limit_type as string, overageOut ? '超额额度已用尽' : '', reset ? `${reset} 重置` : '']
+        return {
+          icon: warn ? '⏳' : '📊',
+          text: `${blocked ? '额度受限' : '额度状态'}${parts.filter(Boolean).length ? ' · ' + parts.filter(Boolean).join(' · ') : ''}`,
+        }
+      }
       case 'session_end':
         return { icon: d.is_error ? '🔴' : '🏁', text: String(d.result ?? '运行结束') }
       default:
