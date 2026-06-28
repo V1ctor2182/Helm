@@ -1,4 +1,4 @@
-// swift-tools-version: 6.2
+// swift-tools-version: 6.0
 import PackageDescription
 
 // HelmNotch — native macOS notch control panel (companion app), client of the
