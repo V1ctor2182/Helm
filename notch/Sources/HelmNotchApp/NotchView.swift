@@ -1,3 +1,4 @@
+import AppKit
 import HelmNotchCore
 import SwiftUI
 
@@ -105,6 +106,13 @@ struct NotchView: View {
 
     private func mediaRow(_ np: NowPlaying) -> some View {
         HStack(spacing: 10) {
+            if let art = artwork(np) {
+                Image(nsImage: art)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 38, height: 38)
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            }
             VStack(alignment: .leading, spacing: 1) {
                 Text(np.title)
                     .font(.system(size: 12, weight: .semibold))
@@ -157,6 +165,12 @@ struct NotchView: View {
                 }
             }
         }
+    }
+
+    private func artwork(_ np: NowPlaying) -> NSImage? {
+        guard let base64 = np.artworkBase64,
+              let data = Data(base64Encoded: base64) else { return nil }
+        return NSImage(data: data)
     }
 
     private func agentColor(_ status: String) -> Color {

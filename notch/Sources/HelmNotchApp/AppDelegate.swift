@@ -13,9 +13,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
         installMenuBarItem()
 
+        // Prefer the vendored mediaremote-adapter (works on macOS 15.4+); fall
+        // back to the direct private API where the adapter isn't bundled.
+        let adapter = AdapterMediaController()
+        let media: MediaController = adapter.isAvailable ? adapter : SystemMediaController()
         let model = NotchModel(
             backend: HelmClient(baseURL: HelmClient.defaultBaseURL()),
-            media: SystemMediaController()
+            media: media
         )
         let controller = NotchController(model: model)
         controller.start()

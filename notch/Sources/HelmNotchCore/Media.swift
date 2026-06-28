@@ -5,11 +5,14 @@ public struct NowPlaying: Sendable, Equatable {
     public let title: String
     public let artist: String
     public let isPlaying: Bool
+    /// Base64-encoded artwork (PNG/JPEG bytes), if the source provided it.
+    public let artworkBase64: String?
 
-    public init(title: String, artist: String, isPlaying: Bool) {
+    public init(title: String, artist: String, isPlaying: Bool, artworkBase64: String? = nil) {
         self.title = title
         self.artist = artist
         self.isPlaying = isPlaying
+        self.artworkBase64 = artworkBase64
     }
 
     public var subtitle: String { artist.isEmpty ? "" : artist }
