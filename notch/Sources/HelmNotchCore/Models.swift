@@ -61,6 +61,20 @@ public struct AgentRun: Codable, Sendable, Equatable, Identifiable {
     }
 }
 
+/// A calendar event from `/api/calendar/events` (m2). `when` is a short
+/// display string ("All-day" / "10:00–10:30") computed at decode time.
+public struct CalEvent: Sendable, Equatable, Identifiable {
+    public let id: String
+    public let summary: String
+    public let when: String
+
+    public init(id: String, summary: String, when: String) {
+        self.id = id
+        self.summary = summary
+        self.when = when
+    }
+}
+
 /// Lifecycle of one capture submission, for inline UI feedback.
 public enum CaptureStatus: Sendable, Equatable {
     case idle

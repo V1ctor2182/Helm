@@ -1,21 +1,37 @@
 import Foundation
 
-/// Now-playing snapshot for the notch media row. Artwork comes in a later pass.
+/// Now-playing snapshot for the notch media row.
 public struct NowPlaying: Sendable, Equatable {
     public let title: String
     public let artist: String
     public let isPlaying: Bool
     /// Base64-encoded artwork (PNG/JPEG bytes), if the source provided it.
     public let artworkBase64: String?
+    /// Playback position at capture time, in seconds (nil when unknown).
+    public let elapsed: Double?
+    /// Track length in seconds (nil when unknown / live stream).
+    public let duration: Double?
 
-    public init(title: String, artist: String, isPlaying: Bool, artworkBase64: String? = nil) {
+    public init(
+        title: String,
+        artist: String,
+        isPlaying: Bool,
+        artworkBase64: String? = nil,
+        elapsed: Double? = nil,
+        duration: Double? = nil
+    ) {
         self.title = title
         self.artist = artist
         self.isPlaying = isPlaying
         self.artworkBase64 = artworkBase64
+        self.elapsed = elapsed
+        self.duration = duration
     }
 
     public var subtitle: String { artist.isEmpty ? "" : artist }
+
+    /// Whether a determinate progress bar can be shown.
+    public var hasProgress: Bool { (duration ?? 0) > 0 }
 }
 
 /// System media access, behind a protocol so the core is testable with a fake

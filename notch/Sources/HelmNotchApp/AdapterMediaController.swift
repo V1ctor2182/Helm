@@ -55,7 +55,19 @@ final class AdapterMediaController: MediaController, @unchecked Sendable {
             title: title,
             artist: artist,
             isPlaying: playing,
-            artworkBase64: dict["artworkData"] as? String)
+            artworkBase64: dict["artworkData"] as? String,
+            elapsed: number(dict, "elapsedTime", "elapsed", "position"),
+            duration: number(dict, "duration", "totalTime", "length"))
+    }
+
+    /// First numeric value among the given keys (adapter spells these a few ways).
+    private func number(_ dict: [String: Any], _ keys: String...) -> Double? {
+        for key in keys {
+            if let value = dict[key] as? Double { return value }
+            if let value = dict[key] as? Int { return Double(value) }
+            if let str = dict[key] as? String, let value = Double(str) { return value }
+        }
+        return nil
     }
 
     // MRCommand IDs: 0 play, 1 pause, 2 togglePlayPause, 4 next, 5 previous.

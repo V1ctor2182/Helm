@@ -8,40 +8,113 @@ import Observation
 public final class NotchModel {
     public private(set) var connection: ConnectionState = .unknown
 
-    /// Whether the notch is expanded into the capture form.
+    /// Whether the notch is expanded into the 2×2 panel (hover-driven).
     public var expanded = false
+    /// Interaction lock: while set, the panel ignores hover-collapse and becomes
+    /// key (keyboard). Entered by clicking the capture cell (速记) or answering an
+    /// agent. Left on send / Esc / click-away.
+    public var locked = false
     public var captureKind: CaptureKind = .note
     public var captureText = ""
     public private(set) var captureStatus: CaptureStatus = .idle
 
-    /// Agent runs Helm knows about (m3 monitor).
+    // MARK: Theme (daily-rotating accent)
+
+    public var themeMode: ThemeMode = .daily { didSet { refreshTheme() } }
+    public var fixedColorIndex = 0 { didSet { refreshTheme() } }
+    /// The current accent color (recomputed each poll so it flips at midnight).
+    public private(set) var accent: RGB = Theme.accent(for: Date(), mode: .daily)
+
+    // MARK: Panel geometry (user-resizable, persisted by the controller)
+
+    /// Detected physical notch width in points (set by the controller).
+    public var notchWidth: Double = 200
+    public var expandedWidth: Double = 600
+    public var expandedHeight: Double = 268
+
+    /// Agent runs Helm knows about (backend orchestration).
     public private(set) var agents: [AgentRun] = []
+
+    /// Locally-watched Claude Code sessions (hook+bridge). Primary source for the
+    /// 本机 agent cell.
+    public private(set) var localSessions: [LocalSession] = []
+
+    /// Set by the controller — routes a permission verdict back to the bridge.
+    public var resolvePermission: (@MainActor (_ session: String, _ allow: Bool) -> Void)?
+
+    /// Set by the app — opens the settings window (gear button in the panel).
+    public var openSettings: (@MainActor () -> Void)?
+
+    public var localActiveCount: Int { localSessions.lazy.filter(\.isActive).count }
+    public var localAttentionCount: Int { localSessions.lazy.filter(\.needsAttention).count }
 
     /// Running or blocked agents — surfaced on the collapsed pill.
     public var activeAgentCount: Int { agents.lazy.filter(\.isActive).count }
     /// Agents blocked on a permission decision (needs the user).
     public var attentionCount: Int { agents.lazy.filter(\.needsAttention).count }
 
+    /// Today's calendar events (m2 — empty until the API is wired).
+    public private(set) var events: [CalEvent] = []
+
     /// Current now-playing media (nil when nothing is playing / unavailable).
     public private(set) var nowPlaying: NowPlaying?
+    /// Wall-clock time the current `nowPlaying` snapshot was captured — lets the
+    /// UI advance the progress bar smoothly between 5s polls.
+    public private(set) var nowPlayingFetchedAt = Date()
 
     private let backend: HelmBackend
     private let media: MediaController
+    private var collapseTask: Task<Void, Never>?
 
     public init(backend: HelmBackend, media: MediaController = NoMediaController()) {
         self.backend = backend
         self.media = media
     }
 
-    /// One poll tick: connection + agent runs + media.
+    /// One poll tick: connection + agent runs + media + theme (midnight rollover).
     public func poll() async {
+        refreshTheme()
         await refresh()
         await refreshAgents()
+        await refreshEvents()
         await refreshMedia()
     }
 
+    /// Refresh today's calendar events; keep the last list on error.
+    public func refreshEvents() async {
+        let cal = Calendar.current
+        let start = cal.startOfDay(for: Date())
+        let end = cal.date(byAdding: .day, value: 1, to: start) ?? start
+        if let evs = try? await backend.listEvents(start: start, end: end) {
+            events = evs
+        }
+    }
+
+    /// Recompute the accent for today under the current mode.
+    public func refreshTheme() {
+        accent = Theme.accent(for: Date(), mode: themeMode, fixedIndex: fixedColorIndex)
+    }
+
+    /// Clamp + apply a user drag-resize of the expanded panel.
+    public func resize(width: Double, height: Double) {
+        expandedWidth = min(max(width, 480), 1000)
+        expandedHeight = min(max(height, 230), 560)
+    }
+
     public func refreshMedia() async {
-        nowPlaying = await media.nowPlaying()
+        let snapshot = await media.nowPlaying()
+        nowPlaying = snapshot
+        nowPlayingFetchedAt = Date()
+    }
+
+    /// Live playback position in seconds, advanced from the last poll while
+    /// playing. `now` is passed in so a `TimelineView` can drive it each tick.
+    public func livePosition(at now: Date = Date()) -> Double {
+        guard let np = nowPlaying, let elapsed = np.elapsed else { return 0 }
+        let advanced = np.isPlaying ? now.timeIntervalSince(nowPlayingFetchedAt) : 0
+        let position = elapsed + max(0, advanced)
+        if let duration = np.duration, duration > 0 { return min(position, duration) }
+        return position
     }
 
     public func playPause() { media.playPause() }
@@ -65,13 +138,117 @@ public final class NotchModel {
         }
     }
 
+    // MARK: Local Claude Code monitoring (bridge events)
+
+    /// Fold one hook event into `localSessions`.
+    public func applyHook(_ m: HookMessage) {
+        let now = Date()
+        switch m.event {
+        case "SessionStart":
+            upsert(m.session, cwd: m.cwd, phase: .running, now: now)
+        case "UserPromptSubmit", "PostToolUse":
+            upsert(m.session, cwd: m.cwd, phase: .running, now: now)
+        case "PreToolUse", "Notification":
+            upsert(m.session, cwd: m.cwd, phase: .running,
+                   activity: activityLabel(m), now: now)
+        case "PermissionRequest":
+            upsert(m.session, cwd: m.cwd, phase: .waitingPermission,
+                   activity: activityLabel(m), pendingTool: m.tool, pendingDetail: m.detail, now: now)
+        case "Stop", "SessionEnd", "SubagentStop":
+            upsert(m.session, cwd: m.cwd, phase: .ended, now: now)
+        default:
+            break
+        }
+        prune(now: now)
+    }
+
+    /// User tapped 允许 / 拒绝 on a local session's permission card.
+    public func resolveLocalPermission(_ session: String, allow: Bool) {
+        if let i = localSessions.firstIndex(where: { $0.id == session }) {
+            localSessions[i].phase = .running
+            localSessions[i].pendingTool = nil
+            localSessions[i].pendingDetail = nil
+            localSessions[i].updatedAt = Date()
+        }
+        resolvePermission?(session, allow)
+    }
+
+    private func activityLabel(_ m: HookMessage) -> String? {
+        if let detail = m.detail, !detail.isEmpty { return detail }
+        return m.tool
+    }
+
+    private func upsert(_ id: String, cwd: String?, phase: LocalSession.Phase,
+                        activity: String? = nil, pendingTool: String? = nil,
+                        pendingDetail: String? = nil, now: Date) {
+        if let i = localSessions.firstIndex(where: { $0.id == id }) {
+            if let cwd, !cwd.isEmpty { localSessions[i].cwd = cwd }
+            localSessions[i].phase = phase
+            if let activity { localSessions[i].activity = activity }
+            localSessions[i].pendingTool = pendingTool
+            localSessions[i].pendingDetail = pendingDetail
+            localSessions[i].updatedAt = now
+        } else {
+            localSessions.append(LocalSession(
+                id: id, cwd: cwd ?? "", phase: phase, activity: activity,
+                pendingTool: pendingTool, pendingDetail: pendingDetail, updatedAt: now))
+        }
+        localSessions.sort { a, b in
+            if a.isActive != b.isActive { return a.isActive }  // active first
+            return a.updatedAt > b.updatedAt                    // then newest first
+        }
+    }
+
+    /// Drop ended sessions after a short grace period; cap the list length.
+    private func prune(now: Date) {
+        localSessions.removeAll { $0.phase == .ended && now.timeIntervalSince($0.updatedAt) > 90 }
+        if localSessions.count > 6 {
+            localSessions = Array(localSessions.prefix(6))
+        }
+    }
+
     public func toggleExpanded() {
         expanded.toggle()
         if !expanded { captureStatus = .idle }
     }
 
+    /// Hover-driven expand: open immediately on enter, collapse after a short
+    /// grace period on exit so brief mouse slips don't flap the panel. A pending
+    /// capture (non-empty text) keeps it open even if the pointer leaves.
+    /// When set, the panel ignores hover (stays as-is) — debug/screenshot aid.
+    public var hoverPinned = false
+
+    public func hover(_ inside: Bool) {
+        if hoverPinned { return }
+        collapseTask?.cancel()
+        if inside {
+            expanded = true
+            return
+        }
+        collapseTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(220))
+            guard let self, !Task.isCancelled else { return }
+            // Locked (mid-interaction) or with pending text → stay open.
+            if !self.locked && self.captureText.isEmpty { self.collapse() }
+        }
+    }
+
+    /// Click the 速记 cell → lock the panel open for keyboard input.
+    public func beginCapture() {
+        collapseTask?.cancel()
+        expanded = true
+        locked = true
+    }
+
+    /// Leave interaction mode (Esc / send / click-away) without forcing collapse.
+    public func endInteraction() {
+        locked = false
+    }
+
     public func collapse() {
+        collapseTask?.cancel()
         expanded = false
+        locked = false
         captureStatus = .idle
     }
 

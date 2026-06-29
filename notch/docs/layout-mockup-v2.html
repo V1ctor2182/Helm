@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>Helm Notch — 布局方案 v2</title>
+<style>
+  :root{
+    --accent:#FB9E66;--green:#34C759;--orange:#FF9F0A;--red:#FF453A;--blue:#0A84FF;
+    --panel:#000;--card:rgba(255,255,255,.05);--hair:rgba(255,255,255,.08);
+    --t1:#fff;--t2:rgba(255,255,255,.56);--t3:rgba(255,255,255,.36);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(1200px 700px at 50% -10%,#2a2438,#14121c 45%,#0a0910 100%);
+    min-height:100vh;color:var(--t1);padding:48px 24px 90px}
+  h1{font-size:15px;font-weight:600;color:var(--t2);text-align:center}
+  .sub{font-size:12px;color:var(--t3);text-align:center;margin:6px 0 12px}
+  .lbl{font-size:12px;font-weight:700;color:var(--accent);text-align:center;margin:48px 0 4px;letter-spacing:.6px}
+  .desc{font-size:12px;color:var(--t3);text-align:center;margin-bottom:16px;max-width:640px;margin-left:auto;margin-right:auto;line-height:1.6}
+  .stage{display:flex;justify-content:center;gap:30px;flex-wrap:wrap;align-items:flex-start}
+  .stcap{font-size:10px;color:var(--t3);text-align:center;margin-top:8px}
+
+  .notch{position:relative;background:var(--panel);border-radius:0 0 26px 26px;
+    box-shadow:0 26px 60px rgba(0,0,0,.6),inset 0 0 0 .5px rgba(255,255,255,.06);padding:16px}
+  .notch::before,.notch::after{content:"";position:absolute;top:0;width:13px;height:13px;background:var(--panel)}
+  .notch::before{left:-13px;-webkit-mask:radial-gradient(13px at 0 13px,transparent 98%,#000)}
+  .notch::after{right:-13px;-webkit-mask:radial-gradient(13px at 13px 13px,transparent 98%,#000)}
+
+  /* media bits */
+  .art{position:relative;border-radius:12px;background:linear-gradient(135deg,#e8a07a,#b56a8f 55%,#6a4f8f);flex:none}
+  .art .glow{position:absolute;inset:-6px;border-radius:18px;filter:blur(16px);opacity:.5;z-index:-1;
+    background:linear-gradient(135deg,#e8a07a,#b56a8f 55%,#6a4f8f)}
+  .title{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .artist{color:var(--accent);font-weight:600}
+  .bar{height:4px;border-radius:2px;background:rgba(255,255,255,.16);position:relative}
+  .bar>i{position:absolute;inset:0 58% 0 0;border-radius:2px;background:var(--accent)}
+  .times{display:flex;justify-content:space-between;font-size:10px;color:var(--t3);margin-top:5px}
+  .tp{display:flex;align-items:center;justify-content:center;gap:22px;color:#fff}
+  .tp .big{font-size:22px}
+
+  /* calendar bits */
+  .mon{font-size:20px;font-weight:800}.yr{font-size:11px;color:var(--t3)}
+  .ev{display:flex;gap:8px}.ev .tick{width:3px;border-radius:2px;background:var(--accent);align-self:stretch}
+  .ev .et{font-size:12px;font-weight:600}.ev .es{font-size:11px;color:var(--t3)}
+  .week{display:flex}.day{flex:1;text-align:center;font-size:10px;color:var(--t3)}
+  .day .n{font-size:14px;color:var(--t2);font-weight:600;display:block}
+  .day.t .n{background:var(--blue);color:#fff;border-radius:50%;width:24px;height:24px;line-height:24px;margin:2px auto 0}
+
+  /* agent bits */
+  .alab{font-size:9px;font-weight:700;letter-spacing:.8px;color:var(--t3);display:flex;justify-content:space-between}
+  .arow{display:flex;align-items:center;gap:8px;font-size:11px}
+  .st{width:7px;height:7px;border-radius:50%;flex:none}
+  .st.run{background:var(--green)}.st.wait{background:var(--orange)}.st.done{background:rgba(255,255,255,.4)}
+  .nm{color:rgba(255,255,255,.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+  .cwd{color:var(--t3);font-size:10px;font-family:"SF Mono",ui-monospace,monospace}
+  .tag{font-size:9px;color:var(--t3)}
+  .perm{background:rgba(255,159,10,.12);border:1px solid rgba(255,159,10,.3);border-radius:10px;padding:9px 10px;display:flex;flex-direction:column;gap:7px}
+  .perm .ph{font-size:11px;font-weight:600;color:#ffd9a3}
+  .perm .pc{font-size:11px;color:rgba(255,255,255,.82);font-family:"SF Mono",ui-monospace,monospace;background:rgba(0,0,0,.35);border-radius:6px;padding:5px 7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pb{display:flex;gap:7px}.btn{font-size:11px;font-weight:600;border-radius:7px;padding:4px 12px}
+  .btn.allow{background:var(--accent);color:#1a1208}.btn.deny{background:rgba(255,255,255,.1);color:#fff}
+
+  /* shared chrome */
+  .chip{font-size:11px;color:var(--t2);background:rgba(255,255,255,.07);border-radius:20px;padding:4px 11px;display:inline-flex;align-items:center;gap:5px}
+  .chip.on{background:var(--accent);color:#1a1208;font-weight:600}
+  .field{flex:1;background:rgba(255,255,255,.07);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--t3)}
+  .send{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.12);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:15px;flex:none}
+  .card{background:var(--card);border:.5px solid var(--hair);border-radius:14px;padding:12px}
+  .ctitle{font-size:9px;font-weight:700;letter-spacing:.7px;color:var(--t3);margin-bottom:9px;display:flex;justify-content:space-between}
+  .hair{height:.5px;background:var(--hair);margin:13px 0}
+  .vh{width:.5px;background:var(--hair);align-self:stretch}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--green)}
+  .sq{width:10px;height:10px;border-radius:3px}
+  .sq.run{background:var(--green)}.sq.wait{background:var(--orange);animation:p 1.3s infinite}.sq.idle{background:rgba(255,255,255,.22)}
+  @keyframes p{0%,100%{opacity:.35}50%{opacity:1}}
+  .railbtn{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--t3);background:transparent}
+  .railbtn.on{background:rgba(255,255,255,.1);color:var(--accent)}
+  .tab{font-size:12px;font-weight:600;color:var(--t3);padding:5px 12px;border-radius:18px}
+  .tab.on{background:rgba(255,255,255,.1);color:#fff}
+  .pin{font-size:9px;color:var(--t3);background:rgba(255,255,255,.06);border-radius:5px;padding:2px 6px;font-family:ui-monospace,monospace}
+</style>
+</head>
+<body>
+  <h1>Helm Notch · 布局方案 v2</h1>
+  <div class="sub">4 个新范式 — 解决「四块东西塞一个面板会挤」的不同思路</div>
+
+  <!-- ===================== C: TAB 分段 ===================== -->
+  <div class="lbl">变体 C — 分段模式(每块独占大舞台,不挤)</div>
+  <div class="desc">顶部一排 tab,一次只放大显示一块。默认<b>媒体</b>;有 agent 等权限时该 tab 自动跳橙点提醒。每块都能做大做精致,信息不堆叠。最像「灵动岛的多模式」。</div>
+  <div class="stage">
+    <div class="notch" style="width:560px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <span class="dot"></span><span style="font-size:12px;font-weight:600">Helm</span>
+        <div style="flex:1"></div>
+        <span class="tab on">♪ 媒体</span><span class="tab">📅 日历</span>
+        <span class="tab">◉ Agent <i style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--orange);margin-left:2px;vertical-align:middle"></i></span>
+        <span class="tab">✎ 速记</span>
+      </div>
+      <div style="display:flex;gap:18px;align-items:center">
+        <div class="art" style="width:118px;height:118px"><div class="glow"></div></div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">
+          <div><div class="title" style="font-size:20px">Snow Painting the View</div>
+          <div class="artist" style="font-size:14px">Brilliant Supervision</div></div>
+          <div class="bar"><i></i></div>
+          <div class="times"><span>0:31</span><span>4:02</span></div>
+          <div class="tp" style="justify-content:flex-start;gap:26px"><span>◀◀</span><span class="big">⏸</span><span>▶▶</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="stcap">↑ 当前 = 媒体 tab。点 📅/◉/✎ 切到对应大区。</div>
+
+  <!-- ===================== D: 动态优先级 ===================== -->
+  <div class="lbl">变体 D — 动态优先级(谁急谁当主角)</div>
+  <div class="desc">面板会变:平时<b>媒体</b>是主角占大区;一旦有 agent <b>等权限</b>,权限卡自动顶到 C 位,媒体缩成一条细带。右侧常驻日历+速记小入口。最贴合「刘海会呼吸」的理念。下面左=平时态,右=有权限请求态。</div>
+  <div class="stage">
+    <!-- normal state -->
+    <div>
+    <div class="notch" style="width:430px">
+      <div style="display:flex;gap:14px;align-items:center">
+        <div class="art" style="width:84px;height:84px"><div class="glow"></div></div>
+        <div style="flex:1;min-width:0">
+          <div class="title" style="font-size:16px">Snow Painting the View</div>
+          <div class="artist" style="font-size:12px">Brilliant Supervision</div>
+          <div class="bar" style="margin-top:9px"><i></i></div>
+          <div class="times"><span>0:31</span><span>4:02</span></div>
+        </div>
+        <div class="tp" style="gap:16px;font-size:13px"><span>◀◀</span><span class="big" style="font-size:19px">⏸</span><span>▶▶</span></div>
+      </div>
+      <div class="hair"></div>
+      <div style="display:flex;gap:14px;align-items:center">
+        <div style="flex:1"><div class="ev"><div class="tick"></div><div><div class="et">Final examination</div><div class="es">今天 · All-day</div></div></div></div>
+        <div class="vh"></div>
+        <div style="display:flex;align-items:center;gap:8px;color:var(--t3);font-size:11px"><span class="grid" style="display:flex;gap:3px"><i class="sq run"></i><i class="sq idle"></i></span> 1 agent</div>
+        <div class="send" style="width:24px;height:24px;font-size:13px">✎</div>
+      </div>
+    </div>
+    <div class="stcap">平时态 — 媒体当主角</div>
+    </div>
+    <!-- attention state -->
+    <div>
+    <div class="notch" style="width:430px">
+      <div class="perm">
+        <div class="ph">⚠︎ Claude Code 请求执行 · ~/helm/notch</div>
+        <div class="pc">$ rm -rf .build && swift build -c release</div>
+        <div class="pb"><span class="btn allow">允许</span><span class="btn deny">拒绝</span><span style="flex:1"></span><span class="tag" style="align-self:center">↩ 跳到终端</span></div>
+      </div>
+      <div class="hair"></div>
+      <div style="display:flex;gap:10px;align-items:center;color:var(--t2);font-size:11px">
+        <span class="wave" style="color:var(--accent)">▮▮▯</span>
+        <span class="title" style="font-size:12px;font-weight:500;flex:1">Snow Painting the View</span>
+        <span class="tp" style="gap:14px;font-size:12px"><span>◀◀</span><span>⏸</span><span>▶▶</span></span>
+      </div>
+    </div>
+    <div class="stcap">有权限请求 — 权限卡顶到 C 位,媒体缩条</div>
+    </div>
+  </div>
+
+  <!-- ===================== E: Widget 卡片流 ===================== -->
+  <div class="lbl">变体 E — Widget 卡片流(媒体横幅 + 三卡)</div>
+  <div class="desc">顶部一条贯通的媒体横幅(小封面 + 横进度条 + 控制),下面三张独立圆角卡片并排:日历 / 本机 Agent / 速记。模块化、疏朗,像 macOS 桌面小组件。每卡可独立点开。</div>
+  <div class="stage">
+    <div class="notch" style="width:780px">
+      <!-- banner -->
+      <div style="display:flex;align-items:center;gap:14px">
+        <div class="art" style="width:52px;height:52px;border-radius:10px"></div>
+        <div style="min-width:170px"><div class="title" style="font-size:14px">Snow Painting the View</div><div class="artist" style="font-size:12px">Brilliant Supervision</div></div>
+        <div style="flex:1"><div class="bar"><i></i></div><div class="times"><span>0:31</span><span>4:02</span></div></div>
+        <div class="tp" style="gap:20px"><span>◀◀</span><span class="big">⏸</span><span>▶▶</span></div>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:14px">
+        <div class="card" style="flex:1">
+          <div class="ctitle"><span>📅 日历</span><span>JUN 28</span></div>
+          <div class="ev" style="margin-bottom:8px"><div class="tick"></div><div><div class="et">Co-op work term ends</div><div class="es">All-day</div></div></div>
+          <div class="ev"><div class="tick" style="background:var(--blue)"></div><div><div class="et">站会</div><div class="es">10:00–10:30</div></div></div>
+        </div>
+        <div class="card" style="flex:1.1">
+          <div class="ctitle"><span>◉ 本机 CLAUDE CODE</span><span style="color:var(--orange)">1 待批准</span></div>
+          <div class="perm" style="padding:7px 8px;gap:6px">
+            <div class="ph" style="font-size:10px">⚠︎ ~/helm/notch · swift build</div>
+            <div class="pb"><span class="btn allow" style="padding:3px 10px">允许</span><span class="btn deny" style="padding:3px 10px">拒绝</span></div>
+          </div>
+          <div class="arow" style="margin-top:8px"><span class="st run"></span><span class="nm">重构媒体区</span><span class="tag">运行中</span></div>
+        </div>
+        <div class="card" style="flex:.85">
+          <div class="ctitle"><span>✎ 速记</span></div>
+          <div style="display:flex;gap:5px;margin-bottom:8px"><span class="chip on">速记</span><span class="chip">日记</span><span class="chip">任务</span></div>
+          <div style="display:flex;gap:7px"><div class="field" style="font-size:11px">记一笔…</div><div class="send">↑</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== F: 侧边导航 ===================== -->
+  <div class="lbl">变体 F — 侧边图标导航(窄栏 + 大内容)</div>
+  <div class="desc">最左一条竖向图标栏(♪ 📅 ◉ ✎),点哪个右边大面板就显示哪块。内容区始终宽敞,每块都能做深。徽章直接挂在图标上(agent 橙点 / 日历今日数)。扩展性最好。</div>
+  <div class="stage">
+    <div class="notch" style="width:560px">
+      <div style="display:flex;gap:14px">
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center">
+          <div class="railbtn on">♪</div>
+          <div class="railbtn" style="position:relative">📅</div>
+          <div class="railbtn" style="position:relative">◉<i style="position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--orange)"></i></div>
+          <div class="railbtn">✎</div>
+          <div style="flex:1"></div>
+          <div class="railbtn" style="font-size:13px">⚙</div>
+        </div>
+        <div class="vh"></div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;gap:16px;align-items:center">
+            <div class="art" style="width:104px;height:104px"><div class="glow"></div></div>
+            <div style="flex:1;min-width:0">
+              <div class="title" style="font-size:18px">Snow Painting the View</div>
+              <div class="artist" style="font-size:13px">Brilliant Supervision</div>
+              <div class="bar" style="margin-top:12px"><i></i></div>
+              <div class="times"><span>0:31</span><span>4:02</span></div>
+              <div class="tp" style="justify-content:flex-start;gap:24px;margin-top:10px"><span>◀◀</span><span class="big">⏸</span><span>▶▶</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="stcap">↑ 选中 ♪ 时右侧 = 媒体。切 ◉ → 右侧变 agent 列表(权限卡 + session 行)。</div>
+
+  <div class="desc" style="margin-top:50px;max-width:720px">
+    <b>我的倾向:</b> 如果你想要「刘海感 / 会呼吸」→ <b>D 动态优先级</b> 最有灵魂(平时不打扰,有事才放大,本机 agent 等权限时直接弹卡)。
+    如果你想要「每块都精致、随时切」→ <b>C 分段</b> 或 <b>F 侧边导航</b>。
+    <b>E 卡片流</b> 最像传统 dashboard,信息全但少了点灵动岛味道。<br>
+    告诉我选哪个(可以混搭,比如「D 的动态逻辑 + F 的侧边切换」),或哪里再调。
+  </div>
+</body>
+</html>
