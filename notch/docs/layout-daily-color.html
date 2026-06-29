@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>Helm Notch — 每日变色预览</title>
+<style>
+  :root{
+    --green:#34C759;--orange:#FF9F0A;--red:#FF453A;--hair:rgba(255,255,255,.08);
+    --t1:#fff;--t2:rgba(255,255,255,.56);--t3:rgba(255,255,255,.36);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(1200px 700px at 50% -10%,#2a2438,#14121c 45%,#0a0910 100%);
+    min-height:100vh;color:var(--t1);padding:42px 24px 90px}
+  h1{font-size:16px;font-weight:600;color:var(--t2);text-align:center}
+  .sub{font-size:12px;color:var(--t3);text-align:center;margin:6px auto 0;max-width:700px;line-height:1.6}
+  .sub b{color:var(--t2)}
+  .lbl{font-size:13px;font-weight:700;color:var(--t1);text-align:center;margin:46px 0 4px}
+  .ldesc{font-size:12px;color:var(--t3);text-align:center;margin-bottom:18px;max-width:620px;margin-left:auto;margin-right:auto;line-height:1.5}
+  .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:18px;max-width:1100px;margin:0 auto}
+  .day{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .dlabel{font-size:11px;font-weight:600;display:flex;align-items:center;gap:7px}
+  .dlabel .sw{width:12px;height:12px;border-radius:4px;background:var(--acc)}
+  .dlabel .hx{font-size:9px;color:var(--t3);font-family:ui-monospace,monospace}
+  .today-tag{font-size:9px;font-weight:700;color:#0a0a0a;background:var(--acc);border-radius:10px;padding:1px 7px}
+
+  .barbar{display:inline-flex}
+  .slot{background:#000;display:flex;align-items:center;gap:5px;padding:4px 8px}
+  .slot.l{border-radius:0 0 0 8px}.slot.r{border-radius:0 0 8px 0}
+  .cam{width:54px;background:#000;border-radius:0 0 9px 9px;position:relative}
+  .cam .lens{position:absolute;top:4px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:#0c0c0c;box-shadow:inset 0 0 0 1px #2a2a2a}
+  .gdot{width:5px;height:5px;border-radius:50%;background:var(--green)}
+  .wv{color:var(--acc);font-size:8px}
+  .sq{width:7px;height:7px;border-radius:2px}.sq.run{background:var(--green)}.sq.wait{background:var(--orange)}.sq.idle{background:rgba(255,255,255,.22)}
+
+  .panel{position:relative;background:#000;border-radius:0 0 16px 16px;width:100%;
+    box-shadow:0 14px 34px rgba(0,0,0,.55),inset 0 0 0 .5px rgba(255,255,255,.06);padding:11px}
+  .panel.now{box-shadow:0 14px 38px rgba(0,0,0,.6),inset 0 0 0 1.5px var(--acc)}
+  .panel::before,.panel::after{content:"";position:absolute;top:0;width:9px;height:9px;background:#000}
+  .panel::before{left:-9px;-webkit-mask:radial-gradient(9px at 0 9px,transparent 98%,#000)}
+  .panel::after{right:-9px;-webkit-mask:radial-gradient(9px at 9px 9px,transparent 98%,#000)}
+
+  .mh{display:flex;gap:8px;align-items:center}
+  .art{width:38px;height:38px;border-radius:8px;background:linear-gradient(135deg,#e8a07a,#b56a8f 55%,#6a4f8f);flex:none}
+  .title{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .artist{font-size:9px;font-weight:600;color:var(--acc)}
+  .bar{height:3.5px;border-radius:2px;background:rgba(255,255,255,.16);position:relative;margin-top:8px}
+  .bar>i{position:absolute;inset:0 56% 0 0;border-radius:2px;background:var(--acc)}
+  .strip{display:flex;align-items:center;gap:7px;margin-top:9px}
+  .tnum{font-size:10px;font-weight:700;color:#0a0a0a;background:var(--acc);border-radius:50%;width:19px;height:19px;line-height:19px;text-align:center;flex:none}
+  .ev{font-size:10px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chips{display:flex;gap:5px;align-items:center;margin-top:9px}
+  .chip{font-size:9px;color:var(--t2);background:rgba(255,255,255,.07);border-radius:13px;padding:2px 8px}
+  .chip.on{background:var(--acc);color:#0a0a0a;font-weight:600}
+  .send{width:19px;height:19px;border-radius:50%;background:var(--acc);color:#0a0a0a;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex:none;margin-left:auto}
+
+  .note{max-width:760px;margin:48px auto 0;font-size:12px;color:var(--t3);line-height:1.7}
+  .note b{color:var(--t2)}
+  code{font-family:ui-monospace,monospace;color:var(--t2);background:rgba(255,255,255,.06);padding:1px 5px;border-radius:4px}
+</style>
+</head>
+<body>
+  <h1>Helm Notch · 每日变色</h1>
+  <div class="sub"><b>由日期确定性推导</b>:同一天永远同色,午夜自动换。下面是<b>从今天起 12 天</b>的真实效果,两种策略 —— 状态色(绿/橙/红)始终语义不变,只换主题色。</div>
+
+  <div class="lbl">策略一 · 精选轮换</div>
+  <div class="ldesc">在 10 个手工调过、黑底上都好看的颜色里按天循环。<b>保证每天的颜色都耐看</b>,10 天一轮回。</div>
+  <div class="row" id="rowA"></div>
+
+  <div class="lbl">策略二 · 连续色相(黄金角)</div>
+  <div class="ldesc">用黄金角(137.5°)在整个色环上每天跳一格,固定饱和度/亮度调到黑底好看。<b>365 天几乎天天不重样</b>,色彩更丰富,但偶有个别色没精选的稳。</div>
+  <div class="row" id="rowB"></div>
+
+  <div class="note" id="note"></div>
+
+<script>
+  const WD = ["周日","周一","周二","周三","周四","周五","周六"];
+  const palette = [
+    ["Peach","#FB9E66"],["Coral","#FF6F61"],["Amber","#FFC53D"],["Lime","#B6E84F"],
+    ["Mint","#34D6C0"],["Aqua","#4FD6E8"],["Sky","#5EA0FF"],["Indigo","#7C9CFF"],
+    ["Violet","#B98CFF"],["Rose","#FF6FA5"]
+  ];
+  const today = new Date();
+  const dayIndex = Math.floor((Date.UTC(today.getFullYear(),today.getMonth(),today.getDate()))/86400000);
+
+  function hueColor(seed){
+    const h = (seed * 137.508) % 360;
+    return `hsl(${h.toFixed(0)} 80% 67%)`;
+  }
+  function fmt(d){ return `${WD[d.getDay()]} · ${d.getMonth()+1}/${d.getDate()}`; }
+
+  function panel(isNow){
+    return `
+    <div class="barbar">
+      <div class="slot l"><span class="gdot"></span><span class="wv">▮▮▯</span></div>
+      <div class="cam"><span class="lens"></span></div>
+      <div class="slot r"><span class="sq run"></span><span class="sq wait"></span><span class="sq idle"></span></div>
+    </div>
+    <div class="panel ${isNow?'now':''}">
+      <div class="mh"><div class="art"></div><div style="min-width:0;flex:1">
+        <div class="title">Snow Painting…</div><div class="artist">Brilliant Supervision</div></div></div>
+      <div class="bar"><i></i></div>
+      <div class="strip"><span class="tnum">28</span><span class="ev">站会 · 10:00</span></div>
+      <div class="chips"><span class="chip on">速记</span><span class="chip">日记</span><span class="chip">任务</span><span class="send">↑</span></div>
+    </div>`;
+  }
+
+  function render(rowId, colorFn){
+    let html = "";
+    for(let i=0;i<12;i++){
+      const d = new Date(today); d.setDate(today.getDate()+i);
+      const [acc,label] = colorFn(dayIndex+i);
+      html += `<div class="day" style="--acc:${acc}">
+        <div class="dlabel"><span class="sw"></span>${fmt(d)} ${i===0?'<span class="today-tag">今天</span>':''}
+          <span class="hx">${label}</span></div>
+        ${panel(i===0)}
+      </div>`;
+    }
+    document.getElementById(rowId).innerHTML = html;
+  }
+
+  render("rowA", seed => { const [n,hex]=palette[((seed%palette.length)+palette.length)%palette.length]; return [hex,n]; });
+  render("rowB", seed => { const c=hueColor(seed); return [c, c.replace('hsl(','').replace(')','')]; });
+
+  document.getElementById("note").innerHTML = `
+    <b>实现(写进 Swift):</b> 取当天日期 → 算 day-index → 精选轮换 <code>palette[index % 10]</code> 或 连续色相 <code>hue = index × 137.5° mod 360</code>;
+    每次 poll(5s)顺手检查日期是否跨天,跨天就重算主题色并淡入过渡。同一天内永远固定。<br>
+    <b>可选开关:</b> 设置里给「固定颜色 / 每日轮换 / 连续色相」三档,默认你选的那个。<br>
+    告诉我:<b>要每日变色吗?选策略一还是二?</b> 想固定也行(回到上一页选一个定色)。`;
+</script>
+</body>
+</html>

@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Helm Notch — 展开态布局稿</title>
+<style>
+  :root{
+    --accent:#FB9E66;          /* 暖橙 peach */
+    --green:#34C759;
+    --orange:#FF9F0A;
+    --red:#FF453A;
+    --panel:#000;
+    --hair:rgba(255,255,255,.08);
+    --t1:#fff;
+    --t2:rgba(255,255,255,.55);
+    --t3:rgba(255,255,255,.38);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #2a2438 0%, #14121c 45%, #0b0a10 100%);
+    min-height:100vh;color:var(--t1);padding:54px 24px 80px;
+  }
+  h1{font-size:15px;font-weight:600;color:var(--t2);text-align:center;margin-bottom:6px;letter-spacing:.3px}
+  .sub{font-size:12px;color:var(--t3);text-align:center;margin-bottom:40px}
+  .variant-label{font-size:12px;font-weight:700;color:var(--accent);text-align:center;margin:46px 0 14px;letter-spacing:1px}
+  .stage{display:flex;justify-content:center}
+
+  /* ---- notch shape ---- */
+  .notch{
+    position:relative;background:var(--panel);color:var(--t1);
+    border-radius:0 0 26px 26px;
+    box-shadow:0 24px 60px rgba(0,0,0,.6), inset 0 0 0 .5px rgba(255,255,255,.05);
+    padding:18px;
+  }
+  /* concave top corners that hug the notch */
+  .notch::before,.notch::after{
+    content:"";position:absolute;top:0;width:14px;height:14px;background:var(--panel);
+  }
+  .notch::before{left:-14px;border-top-right-radius:14px;
+    -webkit-mask:radial-gradient(14px at 0 14px, transparent 98%, #000);}
+  .notch::after{right:-14px;border-top-left-radius:14px;
+    -webkit-mask:radial-gradient(14px at 14px 14px, transparent 98%, #000);}
+
+  /* ---- collapsed: two slots hugging the physical notch ---- */
+  .notchbar{display:inline-flex;align-items:stretch;justify-content:center}
+  .slot{background:#000;color:#fff;display:flex;align-items:center;gap:8px;
+    padding:7px 13px;font-size:12px;font-weight:600;box-shadow:0 10px 24px rgba(0,0,0,.5)}
+  .slot.left{border-radius:0 0 0 12px}
+  .slot.right{border-radius:0 0 12px 0}
+  /* the physical notch / camera cut-out — must stay clear */
+  .camera{width:190px;background:#000;border-radius:0 0 18px 18px;position:relative;
+    box-shadow:0 10px 24px rgba(0,0,0,.5)}
+  .camera .lens{position:absolute;top:7px;left:50%;transform:translateX(-50%);
+    width:8px;height:8px;border-radius:50%;background:#0c0c0c;box-shadow:inset 0 0 0 1px #2c2c2c}
+  .camera .lbl{position:absolute;bottom:3px;left:0;right:0;text-align:center;
+    font-size:8px;letter-spacing:.5px;color:rgba(255,255,255,.22)}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--green)}
+  .grid{display:flex;gap:3px}
+  .sq{width:9px;height:9px;border-radius:2.5px}
+  .sq.run{background:var(--green)}
+  .sq.wait{background:var(--orange);animation:pulse 1.3s ease-in-out infinite}
+  .sq.idle{background:rgba(255,255,255,.22)}
+  @keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+  .np{color:var(--t2);font-weight:500;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .wave{color:var(--accent);font-size:10px}
+
+  /* ---- shared media block ---- */
+  .media{display:flex;gap:14px}
+  .art{position:relative;width:96px;height:96px;flex:0 0 96px}
+  .art .img{position:absolute;inset:0;border-radius:13px;
+    background:linear-gradient(135deg,#e8a07a,#b56a8f 55%,#6a4f8f);
+    box-shadow:0 6px 18px rgba(0,0,0,.5)}
+  .art .glow{position:absolute;inset:-6px;border-radius:18px;filter:blur(18px);opacity:.55;
+    background:linear-gradient(135deg,#e8a07a,#b56a8f 55%,#6a4f8f);z-index:-1}
+  .art .speaker{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    color:rgba(255,255,255,.7);font-size:26px}
+  .minfo{flex:1;min-width:0;display:flex;flex-direction:column}
+  .title{font-size:17px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .artist{font-size:13px;font-weight:600;color:var(--accent);margin-top:1px}
+  .bar{height:4px;border-radius:2px;background:rgba(255,255,255,.16);margin-top:auto;position:relative}
+  .bar > i{position:absolute;left:0;top:0;bottom:0;width:42%;border-radius:2px;background:var(--accent)}
+  .times{display:flex;justify-content:space-between;font-size:10px;font-weight:500;color:var(--t3);margin-top:5px}
+  .transport{display:flex;align-items:center;justify-content:center;gap:24px;margin-top:8px;font-size:15px}
+  .transport .big{font-size:23px}
+  .transport span{color:#fff;cursor:default}
+
+  /* ---- calendar block ---- */
+  .cal{display:flex;flex-direction:column;gap:10px}
+  .cal .head{display:flex;align-items:baseline;gap:8px}
+  .cal .mon{font-size:22px;font-weight:800}
+  .cal .yr{font-size:12px;color:var(--t3)}
+  .week{display:flex;gap:0;margin-top:2px}
+  .day{flex:1;text-align:center;font-size:11px;color:var(--t3);display:flex;flex-direction:column;gap:3px}
+  .day .n{font-size:15px;color:var(--t2);font-weight:600}
+  .day.today .n{background:#0a84ff;color:#fff;border-radius:50%;width:26px;height:26px;
+    display:flex;align-items:center;justify-content:center;margin:0 auto;font-weight:700}
+  .day.today{color:#fff}
+  .events{display:flex;flex-direction:column;gap:9px;margin-top:2px}
+  .ev{display:flex;gap:9px;align-items:flex-start}
+  .ev .tick{width:3px;align-self:stretch;border-radius:2px;background:var(--accent)}
+  .ev .et{font-size:13px;font-weight:600;line-height:1.2}
+  .ev .es{font-size:11px;color:var(--t3);margin-top:1px}
+
+  /* ---- agent monitor block ---- */
+  .agents{display:flex;flex-direction:column;gap:7px}
+  .agents .lab{font-size:9px;font-weight:700;letter-spacing:.8px;color:var(--t3);display:flex;justify-content:space-between}
+  .agents .badge{color:var(--orange)}
+  .arow{display:flex;align-items:center;gap:8px;font-size:11px}
+  .arow .st{width:7px;height:7px;border-radius:50%;flex:0 0 7px}
+  .arow .st.run{background:var(--green)}
+  .arow .st.wait{background:var(--orange)}
+  .arow .st.done{background:rgba(255,255,255,.4)}
+  .arow .nm{color:rgba(255,255,255,.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+  .arow .cwd{color:var(--t3);font-size:10px;font-family:"SF Mono",ui-monospace,monospace}
+  .arow .tag{font-size:9px;color:var(--t3)}
+  /* permission card (live activity) */
+  .perm{background:rgba(255,159,10,.12);border:1px solid rgba(255,159,10,.3);border-radius:10px;padding:9px 10px;display:flex;flex-direction:column;gap:7px}
+  .perm .ph{font-size:11px;font-weight:600;color:#ffd9a3}
+  .perm .pc{font-size:11px;color:rgba(255,255,255,.8);font-family:"SF Mono",ui-monospace,monospace;
+    background:rgba(0,0,0,.35);border-radius:6px;padding:5px 7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .perm .pb{display:flex;gap:7px}
+  .btn{font-size:11px;font-weight:600;border-radius:7px;padding:4px 12px;cursor:default}
+  .btn.allow{background:var(--accent);color:#1a1208}
+  .btn.deny{background:rgba(255,255,255,.1);color:#fff}
+
+  /* ---- capture block ---- */
+  .cap{display:flex;flex-direction:column;gap:8px}
+  .seg{display:flex;gap:6px}
+  .chip{font-size:11px;color:var(--t2);background:rgba(255,255,255,.08);border-radius:20px;padding:3px 11px}
+  .chip.on{background:var(--accent);color:#1a1208;font-weight:600}
+  .capin{display:flex;gap:8px;align-items:center}
+  .field{flex:1;background:rgba(255,255,255,.08);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--t3)}
+  .send{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.12);color:var(--accent);
+    display:flex;align-items:center;justify-content:center;font-size:15px}
+
+  .hair{height:1px;background:var(--hair);margin:14px 0}
+  .vhair{width:1px;background:var(--hair);align-self:stretch;margin:0 4px}
+  .col{display:flex;flex-direction:column}
+  .note{max-width:780px;margin:18px auto 0;font-size:12px;color:var(--t3);line-height:1.7}
+  .note b{color:var(--t2)}
+</style>
+</head>
+<body>
+  <h1>Helm Notch · 展开态布局稿</h1>
+  <div class="sub">暖橙 = 强调色 · 媒体 / 日历(接 Helm) / 本机 Claude Code 监听 / 速记捕获</div>
+
+  <!-- ============ COLLAPSED ============ -->
+  <div class="variant-label">折叠态(内容分在摄像头两侧 · 中间预留物理刘海 · hover 才合并展开)</div>
+  <div class="stage">
+    <div class="notchbar">
+      <div class="slot left">
+        <span class="dot"></span>
+        <span class="wave">▮▮▯</span>
+        <span class="np">Snow Painting the View</span>
+      </div>
+      <div class="camera">
+        <span class="lens"></span>
+        <span class="lbl">摄像头 / 刘海</span>
+      </div>
+      <div class="slot right">
+        <span class="grid"><i class="sq run"></i><i class="sq wait"></i><i class="sq run"></i><i class="sq idle"></i></span>
+      </div>
+    </div>
+  </div>
+  <div class="note" style="margin-top:10px">
+    左槽:连接点 + 正在播放 · 右槽:本机 Claude Code session 方块网格 · <b>中间 190px 是物理刘海/摄像头,内容绕开它</b>。
+    hover 时左右槽向中间合并、盖住刘海、展开成下面的完整面板。
+  </div>
+
+  <!-- ============ VARIANT A ============ -->
+  <div class="variant-label">变体 A — 两栏 + 底部双区(更接近 boringNotch)</div>
+  <div class="stage">
+    <div class="notch" style="width:760px">
+      <!-- top row: media | calendar -->
+      <div style="display:flex;gap:20px">
+        <div class="media" style="flex:1.15">
+          <div class="art"><div class="glow"></div><div class="img"></div></div>
+          <div class="minfo">
+            <div class="title">Snow Painting the View</div>
+            <div class="artist">Brilliant Supervision</div>
+            <div class="bar"><i></i></div>
+            <div class="times"><span>0:31</span><span>4:02</span></div>
+            <div class="transport"><span>◀◀</span><span class="big">⏸</span><span>▶▶</span></div>
+          </div>
+        </div>
+        <div class="vhair"></div>
+        <div class="cal" style="flex:1">
+          <div class="head"><span class="mon">Jun</span><span class="yr">2026</span></div>
+          <div class="week">
+            <div class="day"><span>Fri</span><span class="n">26</span></div>
+            <div class="day"><span>Sat</span><span class="n">27</span></div>
+            <div class="day today"><span>Sun</span><span class="n">28</span></div>
+            <div class="day"><span>Mon</span><span class="n">29</span></div>
+            <div class="day"><span>Tue</span><span class="n">30</span></div>
+            <div class="day"><span>Wed</span><span class="n">1</span></div>
+          </div>
+          <div class="events">
+            <div class="ev"><div class="tick"></div><div><div class="et">Co-operative work term ends</div><div class="es">All-day</div></div></div>
+            <div class="ev"><div class="tick"></div><div><div class="et">Final examination</div><div class="es">All-day</div></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="hair"></div>
+      <!-- bottom row: agents | capture -->
+      <div style="display:flex;gap:20px">
+        <div class="agents" style="flex:1.15">
+          <div class="lab"><span>本机 AGENTS · CLAUDE CODE</span><span class="badge">1 待批准</span></div>
+          <div class="perm">
+            <div class="ph">⚠︎ helm/notch · 请求执行</div>
+            <div class="pc">$ rm -rf .build && swift build -c release</div>
+            <div class="pb"><span class="btn allow">允许</span><span class="btn deny">拒绝</span></div>
+          </div>
+          <div class="arow"><span class="st run"></span><span class="nm">重构 NotchView 媒体区</span><span class="cwd">~/helm/notch</span><span class="tag">运行中</span></div>
+          <div class="arow"><span class="st done"></span><span class="nm">修 CI swift 6.1</span><span class="cwd">~/helm</span><span class="tag">完成</span></div>
+        </div>
+        <div class="vhair"></div>
+        <div class="cap" style="flex:1">
+          <div class="seg"><span class="chip on">速记</span><span class="chip">日记</span><span class="chip">任务</span></div>
+          <div class="capin"><div class="field">随手记一笔…</div><div class="send">↑</div></div>
+          <div class="es" style="font-size:10px;color:var(--t3)">连接 ● v0.0.1 · 5s 轮询</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ VARIANT B ============ -->
+  <div class="variant-label">变体 B — 三栏并列(媒体 | 日历 | agent),速记收成底栏</div>
+  <div class="stage">
+    <div class="notch" style="width:860px">
+      <div style="display:flex;gap:18px">
+        <!-- media -->
+        <div class="media col" style="flex:1">
+          <div style="display:flex;gap:12px">
+            <div class="art" style="width:78px;height:78px;flex:0 0 78px">
+              <div class="glow"></div><div class="img" style="border-radius:11px"></div>
+            </div>
+            <div class="minfo">
+              <div class="title" style="font-size:15px">Snow Painting…</div>
+              <div class="artist" style="font-size:12px">Brilliant Supervision</div>
+            </div>
+          </div>
+          <div class="bar" style="margin-top:12px"><i></i></div>
+          <div class="times"><span>0:31</span><span>4:02</span></div>
+          <div class="transport" style="font-size:14px;gap:20px"><span>◀◀</span><span class="big" style="font-size:20px">⏸</span><span>▶▶</span></div>
+        </div>
+        <div class="vhair"></div>
+        <!-- calendar -->
+        <div class="cal" style="flex:.95">
+          <div class="head"><span class="mon" style="font-size:18px">Jun</span><span class="yr">28 · Sun</span></div>
+          <div class="events" style="margin-top:4px">
+            <div class="ev"><div class="tick"></div><div><div class="et" style="font-size:12px">Co-op work term ends</div><div class="es">All-day</div></div></div>
+            <div class="ev"><div class="tick"></div><div><div class="et" style="font-size:12px">Final examination</div><div class="es">All-day</div></div></div>
+            <div class="ev"><div class="tick" style="background:#0a84ff"></div><div><div class="et" style="font-size:12px">站会</div><div class="es">10:00 – 10:30</div></div></div>
+          </div>
+        </div>
+        <div class="vhair"></div>
+        <!-- agents -->
+        <div class="agents" style="flex:1.1">
+          <div class="lab"><span>本机 CLAUDE CODE</span><span class="badge">1 待批准</span></div>
+          <div class="perm">
+            <div class="ph">⚠︎ ~/helm/notch</div>
+            <div class="pc">$ swift build -c release</div>
+            <div class="pb"><span class="btn allow">允许</span><span class="btn deny">拒绝</span></div>
+          </div>
+          <div class="arow"><span class="st run"></span><span class="nm">重构媒体区</span><span class="tag">运行中</span></div>
+        </div>
+      </div>
+      <div class="hair"></div>
+      <div class="capin">
+        <div class="seg" style="flex:0 0 auto"><span class="chip on">速记</span><span class="chip">日记</span><span class="chip">任务</span></div>
+        <div class="field">随手记一笔 / 让 agent 去做…</div>
+        <div class="send">↑</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>说明:</b> 两个变体的差异 —— <b>A</b> 是 2×2 田字格(上:媒体|日历,下:agent|速记),每块都有呼吸空间,接近 boringNotch 的疏朗;
+    <b>B</b> 把媒体/日历/agent 三栏并排,速记压成底部一条,信息密度更高、横向更宽。<br>
+    <b>本机 agent 监听</b>(vibeisland 路线):折叠态用彩色方块网格显示本机 Claude Code session(绿=运行 / 橙呼吸=等权限 / 灰=空闲);
+    展开态把「等待权限/提问」做成可点「允许/拒绝」的 live 卡片,其余 session 列成行(名字 + 工作目录 + 状态)。<br>
+    日历数据来自 Helm <code>/api/calendar/events</code>;媒体走已接好的 mediaremote-adapter。
+  </div>
+</body>
+</html>

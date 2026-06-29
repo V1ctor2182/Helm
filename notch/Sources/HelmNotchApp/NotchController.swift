@@ -4,28 +4,51 @@ import Observation
 import SwiftUI
 
 /// Creates the borderless panel pinned to the top-center (notch) of the main
-/// screen, hosts the SwiftUI `NotchView`, polls the backend, and grows/shrinks
-/// the panel as the model expands into the capture form.
-///
-/// The full notch shape, click-through, hover-expand and multi-display handling
-/// (the boring.notch techniques) land in later milestones.
+/// screen and hosts the SwiftUI `NotchView`. The window is a *fixed full-size
+/// canvas* — it is never resized to open/close (that AppKit resize is what made
+/// the animation janky); the open/close grow is pure SwiftUI inside. A custom
+/// hit-test (see `NotchHostingView`) makes the transparent area below the
+/// collapsed strip click through.
 @MainActor
 final class NotchController {
     private let model: NotchModel
     private var panel: NotchPanel?
     private var pollTask: Task<Void, Never>?
 
-    private let collapsedSize = NSSize(width: 220, height: 32)
-    private let expandedSize = NSSize(width: 340, height: 284)
+    /// Interactive top strip when collapsed (must clear the slot content).
+    private let collapsedHeight: CGFloat = 34
+    /// Extra canvas height beyond the panel so a taller drag-resize still fits.
+    private let canvasSlack: CGFloat = 260
+
+    private let defaults = UserDefaults.standard
+    private let widthKey = "notch.expandedWidth"
+    private let heightKey = "notch.expandedHeight.v2"  // v2: drop the old 300 default
 
     init(model: NotchModel) {
         self.model = model
     }
 
+    /// The fixed window size: wide/tall enough for the panel (plus drag slack).
+    private var canvasSize: NSSize {
+        NSSize(width: max(CGFloat(model.expandedWidth), CGFloat(model.notchWidth) + 320),
+               height: CGFloat(model.expandedHeight) + canvasSlack)
+    }
+
     func start() {
+        if let screen = NSScreen.main {
+            model.notchWidth = detectNotchWidth(screen)
+        }
+        if let w = defaults.object(forKey: widthKey) as? Double { model.expandedWidth = w }
+        if let h = defaults.object(forKey: heightKey) as? Double { model.expandedHeight = h }
+
         let panel = makePanel()
         self.panel = panel
-        applyExpansion()  // initial position + size
+
+        if ProcessInfo.processInfo.environment["HELM_NOTCH_EXPANDED"] == "1" {
+            model.expanded = true
+            model.hoverPinned = true
+        }
+        applyFrame()
         panel.orderFrontRegardless()
 
         pollTask = Task { [model] in
@@ -34,9 +57,10 @@ final class NotchController {
                 try? await Task.sleep(for: .seconds(5))
             }
         }
-        observeExpansion()
+        observeState()
 
-        // Collapse when the user clicks away (panel loses key focus).
+        // The panel only becomes key when the capture field is focused, so losing
+        // key = the user clicked away — collapse (keeping any typed text).
         NotificationCenter.default.addObserver(
             forName: NSWindow.didResignKeyNotification, object: panel, queue: .main
         ) { [weak model] _ in
@@ -48,9 +72,20 @@ final class NotchController {
         pollTask?.cancel()
     }
 
+    /// Notch width in points: the gap between the two usable menu-bar areas.
+    private func detectNotchWidth(_ screen: NSScreen) -> Double {
+        if #available(macOS 12.0, *),
+           let left = screen.auxiliaryTopLeftArea?.maxX,
+           let right = screen.auxiliaryTopRightArea?.minX,
+           right > left {
+            return Double(right - left)
+        }
+        return 200  // 14"/16" MacBook Pro fallback
+    }
+
     private func makePanel() -> NotchPanel {
         let panel = NotchPanel(
-            contentRect: NSRect(origin: .zero, size: collapsedSize),
+            contentRect: NSRect(origin: .zero, size: canvasSize),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -58,40 +93,53 @@ final class NotchController {
         panel.level = .statusBar
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.hasShadow = true
+        panel.hasShadow = false  // shadow is drawn in SwiftUI on the panel shape
+        // Clicking the capture TextField auto-makes the panel key + focuses it,
+        // without hover-expand ever stealing focus from the user's app.
+        panel.becomesKeyOnlyIfNeeded = true
         panel.isMovableByWindowBackground = false
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
-        panel.contentView = NSHostingView(rootView: NotchView(model: model))
+
+        let host = NotchHostingView(rootView: NotchView(model: model))
+        host.activeSize = { [weak model, collapsedHeight] in
+            guard let model else { return .zero }
+            return model.expanded
+                ? CGSize(width: model.expandedWidth, height: model.expandedHeight)
+                : CGSize(width: CGFloat(model.notchWidth) + 150, height: collapsedHeight)
+        }
+        panel.contentView = host
         return panel
     }
 
-    /// Re-arm an Observation tracker so panel size follows `model.expanded`.
-    private func observeExpansion() {
+    /// Re-arm an Observation tracker so the canvas follows a drag-resize and the
+    /// panel grabs key focus only while locked (keyboard input).
+    private func observeState() {
         withObservationTracking {
-            _ = model.expanded
+            _ = model.locked
+            _ = model.expandedWidth
+            _ = model.expandedHeight
         } onChange: { [weak self] in
             Task { @MainActor in
                 guard let self else { return }
-                self.applyExpansion()
-                self.observeExpansion()
+                self.applyFrame()
+                self.persistSize()
+                self.observeState()
             }
         }
     }
 
-    /// Size the panel for the current state, keeping the top edge pinned to the
-    /// screen top and horizontally centered (grows downward from the notch).
-    private func applyExpansion() {
-        guard let panel else { return }
-        let size = model.expanded ? expandedSize : collapsedSize
-        guard let screen = NSScreen.main else { return }
-        let topY = screen.frame.maxY
-        let origin = NSPoint(
-            x: screen.frame.midX - size.width / 2,
-            y: topY - size.height
-        )
-        panel.setFrame(NSRect(origin: origin, size: size), display: true, animate: true)
-        if model.expanded {
-            panel.makeKeyAndOrderFront(nil)
-        }
+    /// Position the fixed canvas: top edge pinned to the screen top, centered so
+    /// the collapsed strip lines up with the physical notch.
+    private func applyFrame() {
+        guard let panel, let screen = NSScreen.main else { return }
+        let size = canvasSize
+        let origin = NSPoint(x: screen.frame.midX - size.width / 2, y: screen.frame.maxY - size.height)
+        panel.setFrame(NSRect(origin: origin, size: size), display: true, animate: false)
+        if model.locked { panel.makeKeyAndOrderFront(nil) } else { panel.orderFrontRegardless() }
+    }
+
+    private func persistSize() {
+        defaults.set(model.expandedWidth, forKey: widthKey)
+        defaults.set(model.expandedHeight, forKey: heightKey)
     }
 }

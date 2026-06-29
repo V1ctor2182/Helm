@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>A×D 融合 — 2×2 田字格 + 动态交互</title>
+<style>
+  :root{
+    --accent:#FB9E66;--green:#34C759;--orange:#FF9F0A;--blue:#0A84FF;
+    --panel:#000;--hair:rgba(255,255,255,.08);
+    --t1:#fff;--t2:rgba(255,255,255,.56);--t3:rgba(255,255,255,.36);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(1200px 700px at 50% -10%,#2a2438,#14121c 45%,#0a0910 100%);
+    min-height:100vh;color:var(--t1);padding:44px 24px 90px}
+  h1{font-size:16px;font-weight:600;color:var(--t2);text-align:center}
+  .sub{font-size:12px;color:var(--t3);text-align:center;margin:6px auto 0;max-width:700px;line-height:1.6}
+  .sub b{color:var(--t2)}
+  .lbl{font-size:13px;font-weight:700;color:var(--accent);text-align:center;margin:50px 0 4px;letter-spacing:.4px}
+  .desc{font-size:12px;color:var(--t3);text-align:center;margin-bottom:16px;max-width:600px;margin-left:auto;margin-right:auto;line-height:1.55}
+  .desc b{color:var(--t2)}
+  .stage{display:flex;justify-content:center;gap:34px;flex-wrap:wrap;align-items:flex-start}
+
+  .notch{position:relative;background:var(--panel);border-radius:0 0 26px 26px;
+    box-shadow:0 24px 56px rgba(0,0,0,.6),inset 0 0 0 .5px rgba(255,255,255,.06);padding:16px;width:600px}
+  .notch::before,.notch::after{content:"";position:absolute;top:0;width:13px;height:13px;background:var(--panel)}
+  .notch::before{left:-13px;-webkit-mask:radial-gradient(13px at 0 13px,transparent 98%,#000)}
+  .notch::after{right:-13px;-webkit-mask:radial-gradient(13px at 13px 13px,transparent 98%,#000)}
+  .locked{box-shadow:0 24px 56px rgba(0,0,0,.6),inset 0 0 0 1px rgba(251,158,102,.5)}
+  .close{position:absolute;top:11px;right:13px;font-size:11px;color:var(--t3);z-index:2}
+
+  /* 2x2 grid */
+  .quad{display:grid;grid-template-columns:1fr 1fr;gap:0}
+  .cell{padding:13px}
+  .cell.tl{padding-top:4px;padding-left:4px}.cell.tr{padding-top:4px;padding-right:4px}
+  .cell.bl{padding-bottom:4px;padding-left:4px}.cell.br{padding-bottom:4px;padding-right:4px}
+  .quad .cell.tl,.quad .cell.tr{border-bottom:.5px solid var(--hair)}
+  .quad .cell.tl,.quad .cell.bl{border-right:.5px solid var(--hair)}
+  .cellhdr{font-size:9px;font-weight:700;letter-spacing:.7px;color:var(--t3);margin-bottom:9px;display:flex;justify-content:space-between;align-items:center}
+  .active{background:rgba(251,158,102,.06)}
+
+  /* media */
+  .art{position:relative;border-radius:11px;background:linear-gradient(135deg,#e8a07a,#b56a8f 55%,#6a4f8f);flex:none}
+  .art .glow{position:absolute;inset:-5px;border-radius:15px;filter:blur(13px);opacity:.5;z-index:-1;background:inherit}
+  .title{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .artist{color:var(--accent);font-weight:600}
+  .bar{height:4px;border-radius:2px;background:rgba(255,255,255,.16);position:relative}
+  .bar>i{position:absolute;inset:0 58% 0 0;border-radius:2px;background:var(--accent)}
+  .times{display:flex;justify-content:space-between;font-size:10px;color:var(--t3);margin-top:5px}
+  .tp{display:flex;align-items:center;justify-content:center;gap:20px;color:#fff;margin-top:8px}.tp .big{font-size:20px}
+
+  /* calendar */
+  .mon{font-size:18px;font-weight:800}.yr{font-size:11px;color:var(--t3)}
+  .week{display:flex;margin:6px 0}.day{flex:1;text-align:center;font-size:10px;color:var(--t3)}
+  .day .n{font-size:13px;color:var(--t2);font-weight:600;display:block;margin-top:2px}
+  .day.t .n{background:var(--blue);color:#fff;border-radius:50%;width:22px;height:22px;line-height:22px;margin:2px auto 0}
+  .ev{display:flex;gap:7px;margin-top:7px}.ev .tick{width:3px;border-radius:2px;background:var(--accent);align-self:stretch}
+  .ev .et{font-size:12px;font-weight:600}.ev .es{font-size:10px;color:var(--t3)}
+
+  /* agent */
+  .arow{display:flex;align-items:center;gap:8px;font-size:11px;margin-top:7px}
+  .st{width:7px;height:7px;border-radius:50%;flex:none}
+  .st.run{background:var(--green)}.st.wait{background:var(--orange)}.st.done{background:rgba(255,255,255,.4)}
+  .nm{color:rgba(255,255,255,.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+  .cwd{color:var(--t3);font-size:10px;font-family:ui-monospace,monospace}.tag{font-size:9px;color:var(--t3)}
+  .perm{background:rgba(255,159,10,.12);border:1px solid rgba(255,159,10,.35);border-radius:9px;padding:8px 9px;display:flex;flex-direction:column;gap:6px}
+  .perm.pulse{animation:pl 1.4s ease-in-out infinite}
+  @keyframes pl{0%,100%{border-color:rgba(255,159,10,.3)}50%{border-color:rgba(255,159,10,.85)}}
+  .ph{font-size:10px;font-weight:600;color:#ffd9a3}
+  .pc{font-size:10px;color:rgba(255,255,255,.82);font-family:ui-monospace,monospace;background:rgba(0,0,0,.35);border-radius:5px;padding:4px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pb{display:flex;gap:6px;align-items:center}.btn{font-size:10px;font-weight:600;border-radius:6px;padding:4px 11px}
+  .btn.allow{background:var(--accent);color:#1a1208}.btn.deny{background:rgba(255,255,255,.1);color:#fff}
+
+  /* capture */
+  .chip{font-size:11px;color:var(--t2);background:rgba(255,255,255,.07);border-radius:18px;padding:3px 10px}
+  .chip.on{background:var(--accent);color:#1a1208;font-weight:600}
+  .field{flex:1;background:rgba(255,255,255,.07);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--t3)}
+  .field.focus{background:rgba(255,255,255,.1);box-shadow:0 0 0 1px rgba(251,158,102,.5);color:#fff}
+  .send{width:25px;height:25px;border-radius:50%;background:rgba(255,255,255,.12);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:14px;flex:none}
+  .send.on{background:var(--accent);color:#1a1208}
+  .caret{display:inline-block;width:1.5px;height:13px;background:var(--accent);vertical-align:-2px;animation:bl 1s steps(1) infinite}
+  @keyframes bl{50%{opacity:0}}
+  .lockmsg{font-size:9px;color:var(--accent);font-weight:600}
+
+  /* collapsed — 整条是「一块」连续的黑,左右内容绕过中间摄像头,同属一条(非三个独立药丸) */
+  .notchbar{display:inline-flex;align-items:stretch;position:relative;background:#000;
+    border-radius:0 0 16px 16px;box-shadow:0 8px 22px rgba(0,0,0,.55)}
+  /* 与菜单栏衔接的凹角小翼:让黑条像从刘海长出来,强化「一整块」 */
+  .notchbar::before,.notchbar::after{content:"";position:absolute;top:0;width:12px;height:12px;background:#000}
+  .notchbar::before{left:-12px;-webkit-mask:radial-gradient(12px at 0 12px,transparent 98%,#000);mask:radial-gradient(12px at 0 12px,transparent 98%,#000)}
+  .notchbar::after{right:-12px;-webkit-mask:radial-gradient(12px at 12px 12px,transparent 98%,#000);mask:radial-gradient(12px at 12px 12px,transparent 98%,#000)}
+  .slot{display:flex;align-items:center;gap:7px;padding:6px 13px;font-size:11px;font-weight:600}
+  /* 摄像头只是中间这一段,跟左右共用同一块黑底——不再自带圆角/独立背景 */
+  .camera{width:150px;background:transparent;position:relative}
+  .camera .lens{position:absolute;top:7px;left:50%;transform:translateX(-50%);width:7px;height:7px;border-radius:50%;background:#0c0c0c;box-shadow:inset 0 0 0 1px #2c2c2c}
+  .camera .lbl{position:absolute;bottom:3px;left:0;right:0;text-align:center;font-size:7px;color:rgba(255,255,255,.22)}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--green)}.wave{color:var(--accent);font-size:9px}
+  .np{color:var(--t2);font-weight:500;font-size:10px}
+  .grid{display:flex;gap:3px}.sq{width:9px;height:9px;border-radius:2.5px}
+  .sq.run{background:var(--green)}.sq.wait{background:var(--orange);animation:p 1.3s infinite}.sq.idle{background:rgba(255,255,255,.22)}
+  @keyframes p{0%,100%{opacity:.35}50%{opacity:1}}
+  .cap{font-size:10px;color:var(--t3);text-align:center;margin-top:10px}
+
+  /* collapsed v2 — 改进折叠态 */
+  .mart{width:17px;height:17px;border-radius:5px;flex:none;
+    background:linear-gradient(135deg,#e8a07a,#b56a8f 55%,#6a4f8f)}
+  .eq{display:flex;align-items:flex-end;gap:2px;height:12px}
+  .eq i{width:2px;border-radius:1px;background:var(--accent);animation:eq .95s ease-in-out infinite}
+  .eq i:nth-child(1){animation-delay:-.20s}.eq i:nth-child(2){animation-delay:-.55s}
+  .eq i:nth-child(3){animation-delay:-.80s}.eq i:nth-child(4){animation-delay:-.35s}
+  @keyframes eq{0%,100%{height:3px}50%{height:12px}}
+  .mtitle{color:var(--t2);font-weight:500;font-size:10px;max-width:0;overflow:hidden;
+    white-space:nowrap;transition:max-width .25s ease,margin .25s ease;margin-left:0}
+  .notchbar:hover .mtitle{max-width:90px;margin-left:2px}
+  /* 右槽聚合状态字形(借鉴 Open Island UnifiedBars):动效+颜色表状态,不靠文字 */
+  .apill{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;line-height:1;color:var(--t2)}
+  .apill .ct{color:#fff;font-variant-numeric:tabular-nums}
+  .apill .word{font-size:9px;font-weight:600;color:var(--t3)}
+  .sbars{display:flex;align-items:center;gap:2.5px;height:13px;color:inherit}
+  .sbars i{width:2.5px;border-radius:1.5px;background:currentColor}
+  .sbars.run i{height:4px;animation:eq .9s ease-in-out infinite}
+  .sbars.run i:nth-child(1){animation-delay:-.20s}.sbars.run i:nth-child(2){animation-delay:-.55s}.sbars.run i:nth-child(3){animation-delay:-.35s}
+  .sbars.wait i{height:11px;animation:barpulse 1.6s ease-in-out infinite}
+  .sbars.wait i:nth-child(2){height:4px;opacity:.4;animation:none}
+  @keyframes barpulse{0%,100%{opacity:.5}50%{opacity:1}}
+  /* 运行=绿,等待=琥珀+整槽呼吸描边,无 agent=中性回退 */
+  .slot.run{color:var(--green)}
+  .slot.wait{color:var(--orange);animation:slotglow 1.6s ease-in-out infinite}
+  .slot.wait .ct{color:var(--orange)}
+  @keyframes slotglow{0%,100%{box-shadow:inset 0 0 0 1px rgba(255,159,10,.28)}
+    50%{box-shadow:inset 0 0 0 1px rgba(255,159,10,.85),0 0 11px rgba(255,159,10,.3)}}
+
+  /* ===== 实时 hover:折叠 ⇄ 2×2 丝滑展开 ===== */
+  .livewrap{display:flex;justify-content:center;align-items:flex-start;padding:30px 0 46px;min-height:360px;
+    background:#e8e2d4;border-radius:16px;margin:4px auto 0;max-width:760px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
+  /* 一整块黑;摄像头恒定居中,黑条向下+向两侧长开 */
+  .morph{position:relative;background:#000;overflow:hidden;
+    width:300px;height:34px;border-radius:0 0 18px 18px;
+    box-shadow:0 10px 30px rgba(0,0,0,.5);
+    transition:width .52s cubic-bezier(.32,.72,0,1),height .52s cubic-bezier(.32,.72,0,1),box-shadow .52s ease;
+    will-change:width,height}
+  .morph:hover{width:600px;height:312px;box-shadow:0 26px 60px rgba(0,0,0,.62)}
+  .morph::before,.morph::after{content:"";position:absolute;top:0;width:12px;height:12px;background:#000;pointer-events:none}
+  .morph::before{left:-12px;-webkit-mask:radial-gradient(12px at 0 12px,transparent 98%,#000);mask:radial-gradient(12px at 0 12px,transparent 98%,#000)}
+  .morph::after{right:-12px;-webkit-mask:radial-gradient(12px at 12px 12px,transparent 98%,#000);mask:radial-gradient(12px at 12px 12px,transparent 98%,#000)}
+  /* 顶行:摄像头居中,两侧折叠内容 hover 淡出 */
+  .mtop{position:relative;height:34px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;z-index:2}
+  .mcam{width:150px;height:34px;position:relative}
+  .mcam .lens{position:absolute;top:7px;left:50%;transform:translateX(-50%);width:7px;height:7px;border-radius:50%;background:#0c0c0c;box-shadow:inset 0 0 0 1px #2c2c2c}
+  .mc-left{justify-self:start;padding-left:15px;display:flex;align-items:center;gap:7px}
+  .mc-right{justify-self:end;padding-right:15px;display:flex;align-items:center;gap:6px}
+  .mc-side{transition:opacity .22s ease .1s}
+  .morph:hover .mc-side{opacity:0;transition:opacity .15s ease}
+  /* 2×2 面板:hover 丝滑落下,移开顺滑收回 */
+  .mpanel{padding:0 13px 13px;opacity:0;transform:translateY(-10px);
+    transition:opacity .24s ease,transform .42s cubic-bezier(.32,.72,0,1)}
+  .morph:hover .mpanel{opacity:1;transform:translateY(0);
+    transition:opacity .34s ease .13s,transform .48s cubic-bezier(.32,.72,0,1) .08s}
+  .hint-hover{font-size:10px;color:var(--t3);text-align:center;margin-top:-30px;margin-bottom:30px}
+
+  /* ===== 每日变色:折叠条黑底(只换 accent+光晕) / 面板可整面染色 ===== */
+  .dayrow{display:flex;justify-content:center;gap:22px;flex-wrap:wrap;margin-bottom:26px}
+  .dcol{display:flex;flex-direction:column;align-items:center;gap:9px}
+  .dname{font-size:10px;color:var(--t3);font-weight:700;letter-spacing:.3px}
+  /* 折叠条:黑底固定,accent 与底部光晕随当日色 */
+  .dbar{display:inline-flex;align-items:center;gap:9px;background:#000;border-radius:0 0 13px 13px;
+    padding:7px 13px 8px;position:relative;box-shadow:0 8px 20px rgba(0,0,0,.5)}
+  .dbar .mart{width:15px;height:15px}
+  .dbar .eq{height:11px}
+  .dlens{width:7px;height:7px;border-radius:50%;background:#0c0c0c;box-shadow:inset 0 0 0 1px #2c2c2c;margin:0 4px}
+  /* 整面染色的面板(只改变量,内部全部跟着走) */
+  .tinted{width:300px}
+  /* 折叠条底「微染」演示:底=深色调,摄像头处守黑 */
+  .tbar{position:relative;display:inline-flex;align-items:center;gap:9px;border-radius:0 0 13px 13px;
+    padding:7px 13px 8px;box-shadow:0 8px 20px rgba(0,0,0,.5);overflow:hidden;background:var(--base,#000)}
+  .tbar>*{position:relative;z-index:1}
+  .tbar .keep{position:absolute;top:0;left:50%;transform:translateX(-50%);width:118px;height:140%;
+    background:#000;filter:blur(9px);border-radius:0 0 50px 50px;z-index:0}
+  .tbar .mart{width:15px;height:15px}.tbar .eq{height:11px}
+  .badge-ok{color:var(--green);font-weight:700}.badge-no{color:#FF453A;font-weight:700}
+</style>
+</head>
+<body>
+  <h1>A × D 融合 · 2×2 田字格 + 动态交互</h1>
+  <div class="sub"><b>骨架 = A 的 2×2(hover 出来四块全在);行为 = D 的动态</b> —— 不打破网格,被激活的那一格「变活/锁定/高亮」。媒体↖ 日历↗ 本机agent↙ 速记↘。</div>
+
+  <!-- 实时 hover 演示 -->
+  <div class="lbl">实时 hover — 折叠 ⇄ 2×2 丝滑展开(把鼠标移上去 ↓)</div>
+  <div class="desc">摄像头恒定居中,黑条向下+向两侧长开,折叠内容淡出、2×2 面板丝滑落下;移开顺滑收回。缓动用 <b>iOS 风 cubic-bezier(.32,.72,0,1)</b>,展开 520ms、面板内容延迟 ~120ms 入场(先长壳再出内容,不糊成一团)。</div>
+  <div class="livewrap">
+    <div class="morph">
+      <div class="mtop">
+        <div class="mc-left mc-side"><span class="mart"></span><span class="eq"><i></i><i></i><i></i><i></i></span></div>
+        <div class="mcam"><span class="lens"></span></div>
+        <div class="mc-right mc-side"><span class="apill" style="color:var(--green)"><span class="sbars run"><i></i><i></i><i></i></span><span class="ct">2</span></span></div>
+      </div>
+      <div class="mpanel">
+        <div class="quad">
+          <div class="cell tl">
+            <div class="cellhdr"><span>♪ 正在播放</span></div>
+            <div style="display:flex;gap:12px">
+              <div class="art" style="width:64px;height:64px"><div class="glow"></div></div>
+              <div style="flex:1;min-width:0">
+                <div class="title" style="font-size:14px">Snow Painting the View</div>
+                <div class="artist" style="font-size:11px">Brilliant Supervision</div>
+                <div class="bar" style="margin-top:7px"><i></i></div>
+                <div class="times"><span>0:31</span><span>4:02</span></div>
+              </div>
+            </div>
+            <div class="tp"><span>◀◀</span><span class="big">⏸</span><span>▶▶</span></div>
+          </div>
+          <div class="cell tr">
+            <div class="cellhdr"><span>日历</span><span>JUN 2026</span></div>
+            <div class="week">
+              <div class="day">F<span class="n">26</span></div><div class="day">S<span class="n">27</span></div>
+              <div class="day t">S<span class="n">28</span></div><div class="day">M<span class="n">29</span></div>
+              <div class="day">T<span class="n">30</span></div><div class="day">W<span class="n">1</span></div>
+            </div>
+            <div class="ev"><div class="tick"></div><div><div class="et">Co-op work term ends</div><div class="es">All-day</div></div></div>
+            <div class="ev"><div class="tick" style="background:var(--blue)"></div><div><div class="et">站会</div><div class="es">10:00–10:30</div></div></div>
+          </div>
+          <div class="cell bl">
+            <div class="cellhdr"><span>◉ 本机 CLAUDE CODE</span><span>2 活跃</span></div>
+            <div class="arow"><span class="st run"></span><span class="nm">重构 NotchView 媒体区</span><span class="cwd">~/notch</span></div>
+            <div class="arow"><span class="st run"></span><span class="nm">接日历 API</span><span class="cwd">~/helm</span></div>
+            <div class="arow"><span class="st done"></span><span class="nm">修 CI swift 6.1</span><span class="tag">完成</span></div>
+          </div>
+          <div class="cell br">
+            <div class="cellhdr"><span>✎ 速记</span></div>
+            <div style="display:flex;gap:6px;margin-bottom:9px"><span class="chip on">速记</span><span class="chip">日记</span><span class="chip">任务</span></div>
+            <div style="display:flex;gap:8px;align-items:center"><div class="field">随手记一笔…</div><div class="send">↑</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="hint-hover">↑ 这是可交互的真 hover,不是静态图;下面是各状态拆解</div>
+
+  <!-- 每日变色:最终采用 ① 纯黑底 + 当日 accent/光晕,自动轮换 -->
+  <div class="lbl">每日变色 — 黑底不变,只换 accent + 光晕(已落地)</div>
+  <div class="desc"><b>最终设计:</b>折叠条与展开面板的<b>底色永远纯黑</b>,只有强调色(均衡器 / 状态字形 / 进度条 / 今日 / 选中胶囊)随当日色走。按日期在 <b>10 色精选调色板</b>里循环,<b>午夜自动切换 · 设置里无需调节</b>。(曾探索的「折叠条微染 ①b」「面板整面染色 ②」均未采用 —— 底色保持纯黑。)</div>
+
+  <div class="dname" style="text-align:center;margin-bottom:10px;color:var(--accent)">① 折叠条:黑底不变,只换 accent —— 10 色按日循环</div>
+  <div class="dayrow">
+    <div class="dcol" style="--accent:#FB9E66"><div class="dbar"><span class="mart"></span><span class="eq"><i></i><i></i><i></i></span><span class="dlens"></span><span class="apill" style="color:var(--accent)"><span class="sbars run"><i></i><i></i><i></i></span><span class="ct">2</span></span></div><div class="dname">Peach 暖橙</div></div>
+    <div class="dcol" style="--accent:#FF6F61"><div class="dbar"><span class="mart"></span><span class="eq"><i></i><i></i><i></i></span><span class="dlens"></span><span class="apill" style="color:var(--accent)"><span class="sbars run"><i></i><i></i><i></i></span><span class="ct">2</span></span></div><div class="dname">Coral 珊瑚</div></div>
+    <div class="dcol" style="--accent:#FFC53D"><div class="dbar"><span class="mart"></span><span class="eq"><i></i><i></i><i></i></span><span class="dlens"></span><span class="apill" style="color:var(--accent)"><span class="sbars run"><i></i><i></i><i></i></span><span class="ct">2</span></span></div><div class="dname">Amber 琥珀</div></div>
+    <div class="dcol" style="--accent:#B6E84F"><div class="dbar"><span class="mart"></span><span class="eq"><i></i><i></i><i></i></span><span class="dlens"></span><span class="apill" style="color:var(--accent)"><span class="sbars run"><i></i><i></i><i></i></span><span class="ct">2</span></span></div><div class="dname">Lime 酸橙</div></div>
+    <div class="dcol" style="--accent:#34D6C0"><div class="dbar"><span class="mart"></span><span class="eq"><i></i><i></i><i></i></span><span class="dlens"></span><span class="apill" style="color:var(--accent)"><span class="sbars run"><i></i><i></i><i></i></span><span class="ct">2</span></span></div><div class="dname">Mint 薄荷</div></div>
+    <div class="dcol" style="--accent:#4FD6E8"><div class="dbar"><span class="mart"></span><span class="eq"><i></i><i></i><i></i></span><span class="dlens"></span><span class="apill" style="color:var(--accent)"><span class="sbars run"><i></i><i></i><i></i></span><span class="ct">2</span></span></div><div class="dname">Aqua 水蓝</div></div>
+    <div class="dcol" style="--accent:#5EA0FF"><div class="dbar"><span class="mart"></span><span class="eq"><i></i><i></i><i></i></span><span class="dlens"></span><span class="apill" style="color:var(--accent)"><span class="sbars run"><i></i><i></i><i></i></span><span class="ct">2</span></span></div><div class="dname">Sky 天蓝</div></div>
+    <div class="dcol" style="--accent:#7C9CFF"><div class="dbar"><span class="mart"></span><span class="eq"><i></i><i></i><i></i></span><span class="dlens"></span><span class="apill" style="color:var(--accent)"><span class="sbars run"><i></i><i></i><i></i></span><span class="ct">2</span></span></div><div class="dname">Indigo 靛蓝</div></div>
+    <div class="dcol" style="--accent:#B98CFF"><div class="dbar"><span class="mart"></span><span class="eq"><i></i><i></i><i></i></span><span class="dlens"></span><span class="apill" style="color:var(--accent)"><span class="sbars run"><i></i><i></i><i></i></span><span class="ct">2</span></span></div><div class="dname">Violet 紫</div></div>
+    <div class="dcol" style="--accent:#FF6FA5"><div class="dbar"><span class="mart"></span><span class="eq"><i></i><i></i><i></i></span><span class="dlens"></span><span class="apill" style="color:var(--accent)"><span class="sbars run"><i></i><i></i><i></i></span><span class="ct">2</span></span></div><div class="dname">Rose 玫红</div></div>
+  </div>
+
+  <div class="cap" style="margin-bottom:30px">底色全程纯黑;每天只有强调色换一色,午夜自动切,设置里不可调。</div>
+
+  <!-- 折叠 -->
+  <div class="stage">
+    <div>
+      <div class="notchbar">
+        <div class="slot left"><span class="dot"></span><span class="wave">▮▮▯</span><span class="np">Snow…</span></div>
+        <div class="camera"><span class="lens"></span><span class="lbl">摄像头</span></div>
+        <div class="slot right"><span class="grid"><i class="sq run"></i><i class="sq wait"></i><i class="sq idle"></i></span></div>
+      </div>
+      <div class="cap">折叠态:<b style="color:var(--accent)">整条是一块连续的黑</b> · 左右内容绕过中间摄像头、属同一条 · hover 展开成 2×2 ↓</div>
+    </div>
+  </div>
+
+  <!-- 折叠态改进对比 — 借鉴 Open Island:右槽=会变形的状态字形,动效+颜色表状态 -->
+  <div class="lbl">折叠态改进 — 右槽是「会变形的状态字形」,不堆文字</div>
+  <div class="desc">左:封面 + 真·均衡器,标题 hover 滑出。右:三根竖条随 Claude 状态<b>变形</b> —— <b>运行</b>=绿色跳动 / <b>等你</b>=琥珀色高条脉冲+整槽呼吸描边(不写"待批准"也懂) / <b>没 agent</b>=回退显示今天待办数。<br><b style="color:var(--accent)">注意:整条黑是一块</b>,左槽·摄像头·右槽共用同一块黑底连成一条,不是三个独立小药丸。</div>
+  <div class="stage">
+
+    <!-- A: 运行中 -->
+    <div>
+      <div class="notchbar">
+        <div class="slot left"><span class="mart"></span><span class="eq"><i></i><i></i><i></i><i></i></span><span class="mtitle">Snow Painting</span></div>
+        <div class="camera"><span class="lens"></span><span class="lbl">摄像头</span></div>
+        <div class="slot right run"><span class="apill"><span class="sbars run"><i></i><i></i><i></i></span><span class="ct">2</span></span></div>
+      </div>
+      <div class="cap">A · 运行中:右槽绿色竖条跳动 + 活跃数 2</div>
+    </div>
+
+    <!-- B: 等你处理(等权限/提问) -->
+    <div>
+      <div class="notchbar">
+        <div class="slot left"><span class="mart"></span><span class="eq"><i></i><i></i><i></i><i></i></span></div>
+        <div class="camera"><span class="lens"></span><span class="lbl">摄像头</span></div>
+        <div class="slot right wait"><span class="apill"><span class="sbars wait"><i></i><i></i><i></i></span><span class="ct">1</span></span></div>
+      </div>
+      <div class="cap">B · 等你:琥珀高条脉冲 + 整槽呼吸描边(像⏸停下等你)</div>
+    </div>
+
+    <!-- C: 没有 agent → 回退待办 -->
+    <div>
+      <div class="notchbar">
+        <div class="slot left"><span class="mart" style="opacity:.5"></span><span style="color:var(--t3);font-size:11px">⏸</span></div>
+        <div class="camera"><span class="lens"></span><span class="lbl">摄像头</span></div>
+        <div class="slot right todo"><span class="apill"><span style="font-size:12px">☑</span><span class="ct">3</span><span class="word">今日</span></span></div>
+      </div>
+      <div class="cap">C · 没 agent:右槽回退 → 今天待办/日程数 ☑3</div>
+    </div>
+
+  </div>
+
+  <!-- 1) 默认 2×2 浏览态 -->
+  <div class="lbl">① 浏览态 — hover 出来的 2×2</div>
+  <div class="desc">四块同时在。媒体/日历是只读;<b>速记格本身就是输入口</b>,agent 格显示本机 session。鼠标移开即收。</div>
+  <div class="stage">
+    <div class="notch">
+      <div class="quad">
+        <div class="cell tl">
+          <div class="cellhdr"><span>♪ 正在播放</span></div>
+          <div style="display:flex;gap:12px">
+            <div class="art" style="width:74px;height:74px"><div class="glow"></div></div>
+            <div style="flex:1;min-width:0">
+              <div class="title" style="font-size:15px">Snow Painting the View</div>
+              <div class="artist" style="font-size:12px">Brilliant Supervision</div>
+              <div class="bar" style="margin-top:8px"><i></i></div>
+              <div class="times"><span>0:31</span><span>4:02</span></div>
+            </div>
+          </div>
+          <div class="tp"><span>◀◀</span><span class="big">⏸</span><span>▶▶</span></div>
+        </div>
+        <div class="cell tr">
+          <div class="cellhdr"><span>日历</span><span>JUN 2026</span></div>
+          <div class="week">
+            <div class="day">F<span class="n">26</span></div><div class="day">S<span class="n">27</span></div>
+            <div class="day t">S<span class="n">28</span></div><div class="day">M<span class="n">29</span></div>
+            <div class="day">T<span class="n">30</span></div><div class="day">W<span class="n">1</span></div>
+          </div>
+          <div class="ev"><div class="tick"></div><div><div class="et">Co-op work term ends</div><div class="es">All-day</div></div></div>
+          <div class="ev"><div class="tick" style="background:var(--blue)"></div><div><div class="et">站会</div><div class="es">10:00–10:30</div></div></div>
+        </div>
+        <div class="cell bl">
+          <div class="cellhdr"><span>◉ 本机 CLAUDE CODE</span><span>2 活跃</span></div>
+          <div class="arow"><span class="st run"></span><span class="nm">重构 NotchView 媒体区</span><span class="cwd">~/notch</span></div>
+          <div class="arow"><span class="st run"></span><span class="nm">接日历 API</span><span class="cwd">~/helm</span></div>
+          <div class="arow"><span class="st done"></span><span class="nm">修 CI swift 6.1</span><span class="tag">完成</span></div>
+        </div>
+        <div class="cell br">
+          <div class="cellhdr"><span>✎ 速记</span></div>
+          <div style="display:flex;gap:6px;margin-bottom:9px"><span class="chip on">速记</span><span class="chip">日记</span><span class="chip">任务</span></div>
+          <div style="display:flex;gap:8px;align-items:center"><div class="field">随手记一笔…</div><div class="send">↑</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2) 速记激活 -->
+  <div class="lbl">② 速记激活 — 点速记格,面板锁定输入</div>
+  <div class="desc">点速记格 → 整面板<b>锁定(橙边)</b>、输入框获焦、键盘可打字,其余三格保持可见但不抢焦。发送 / Esc / 点外 → 回浏览态。<b>网格不变形。</b></div>
+  <div class="stage">
+    <div class="notch locked" style="position:relative">
+      <span class="close">✕ Esc</span>
+      <div class="quad">
+        <div class="cell tl">
+          <div class="cellhdr"><span>♪ 正在播放</span></div>
+          <div style="display:flex;gap:12px">
+            <div class="art" style="width:74px;height:74px"><div class="glow"></div></div>
+            <div style="flex:1;min-width:0">
+              <div class="title" style="font-size:15px">Snow Painting the View</div>
+              <div class="artist" style="font-size:12px">Brilliant Supervision</div>
+              <div class="bar" style="margin-top:8px"><i></i></div><div class="times"><span>0:31</span><span>4:02</span></div>
+            </div>
+          </div>
+          <div class="tp"><span>◀◀</span><span class="big">⏸</span><span>▶▶</span></div>
+        </div>
+        <div class="cell tr">
+          <div class="cellhdr"><span>日历</span><span>JUN 2026</span></div>
+          <div class="week">
+            <div class="day">F<span class="n">26</span></div><div class="day">S<span class="n">27</span></div>
+            <div class="day t">S<span class="n">28</span></div><div class="day">M<span class="n">29</span></div>
+            <div class="day">T<span class="n">30</span></div><div class="day">W<span class="n">1</span></div>
+          </div>
+          <div class="ev"><div class="tick"></div><div><div class="et">Co-op work term ends</div><div class="es">All-day</div></div></div>
+          <div class="ev"><div class="tick" style="background:var(--blue)"></div><div><div class="et">站会</div><div class="es">10:00–10:30</div></div></div>
+        </div>
+        <div class="cell bl">
+          <div class="cellhdr"><span>◉ 本机 CLAUDE CODE</span><span>2 活跃</span></div>
+          <div class="arow"><span class="st run"></span><span class="nm">重构 NotchView 媒体区</span><span class="cwd">~/notch</span></div>
+          <div class="arow"><span class="st run"></span><span class="nm">接日历 API</span><span class="cwd">~/helm</span></div>
+          <div class="arow"><span class="st done"></span><span class="nm">修 CI swift 6.1</span><span class="tag">完成</span></div>
+        </div>
+        <div class="cell br active">
+          <div class="cellhdr"><span style="color:var(--accent)">✎ 速记</span><span class="lockmsg">● 输入中</span></div>
+          <div style="display:flex;gap:6px;margin-bottom:9px"><span class="chip on">速记</span><span class="chip">日记</span><span class="chip">任务</span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start"><div class="field focus" style="min-height:42px">开会记得问下 CI 的事<span class="caret"></span></div><div class="send on">↑</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3) agent 权限 -->
+  <div class="lbl">③ agent 等权限 — 本机 agent 格自动高亮</div>
+  <div class="desc">某个本机 Claude Code 请求权限时:折叠态右槽对应方块<b>橙色呼吸</b>;hover 展开后 <b>agent 格顶部弹出权限卡(橙边脉冲)</b>,点允许/拒绝直接回传 CLI。其它三格照常。</div>
+  <div class="stage">
+    <div class="notch">
+      <div class="quad">
+        <div class="cell tl">
+          <div class="cellhdr"><span>♪ 正在播放</span></div>
+          <div style="display:flex;gap:12px">
+            <div class="art" style="width:74px;height:74px"><div class="glow"></div></div>
+            <div style="flex:1;min-width:0">
+              <div class="title" style="font-size:15px">Snow Painting the View</div>
+              <div class="artist" style="font-size:12px">Brilliant Supervision</div>
+              <div class="bar" style="margin-top:8px"><i></i></div><div class="times"><span>0:31</span><span>4:02</span></div>
+            </div>
+          </div>
+          <div class="tp"><span>◀◀</span><span class="big">⏸</span><span>▶▶</span></div>
+        </div>
+        <div class="cell tr">
+          <div class="cellhdr"><span>日历</span><span>JUN 2026</span></div>
+          <div class="week">
+            <div class="day">F<span class="n">26</span></div><div class="day">S<span class="n">27</span></div>
+            <div class="day t">S<span class="n">28</span></div><div class="day">M<span class="n">29</span></div>
+            <div class="day">T<span class="n">30</span></div><div class="day">W<span class="n">1</span></div>
+          </div>
+          <div class="ev"><div class="tick"></div><div><div class="et">Co-op work term ends</div><div class="es">All-day</div></div></div>
+          <div class="ev"><div class="tick" style="background:var(--blue)"></div><div><div class="et">站会</div><div class="es">10:00–10:30</div></div></div>
+        </div>
+        <div class="cell bl active">
+          <div class="cellhdr"><span style="color:#ffd9a3">◉ 本机 CLAUDE CODE</span><span style="color:var(--orange)">1 待批准</span></div>
+          <div class="perm pulse">
+            <div class="ph">⚠︎ ~/helm/notch · 请求执行</div>
+            <div class="pc">$ rm -rf .build && swift build -c release</div>
+            <div class="pb"><span class="btn allow">允许</span><span class="btn deny">拒绝</span><span style="flex:1"></span><span class="tag">↩ 终端</span></div>
+          </div>
+          <div class="arow"><span class="st run"></span><span class="nm">接日历 API</span><span class="cwd">~/helm</span></div>
+        </div>
+        <div class="cell br">
+          <div class="cellhdr"><span>✎ 速记</span></div>
+          <div style="display:flex;gap:6px;margin-bottom:9px"><span class="chip on">速记</span><span class="chip">日记</span><span class="chip">任务</span></div>
+          <div style="display:flex;gap:8px;align-items:center"><div class="field">随手记一笔…</div><div class="send">↑</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub" style="margin-top:50px;max-width:720px;text-align:left">
+    <b>融合规则(写进 Swift):</b><br>
+    • hover → 展开 2×2(四格全在),移开 220ms 收起;<br>
+    • <b>媒体 / 日历</b>格只读;<b>速记</b>格点一下 → 面板锁定(橙边、忽略 hover 收起、键盘获焦),发送/Esc/点外解锁;<br>
+    • <b>agent 格</b>:平时列本机 session;有 agent 等权限/提问 → 该格顶部弹卡 + 折叠态右槽橙呼吸提醒,可直接允许/拒绝/选项;<br>
+    • 网格<b>始终 2×2 不变形</b>,只是格内内容随状态变活。<br>
+    要调的点:格子大小比例?权限请求要不要在折叠态就强提醒(脉冲/角标)?速记默认聚焦哪个 tab?
+  </div>
+</body>
+</html>
