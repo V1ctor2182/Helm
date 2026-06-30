@@ -17,10 +17,12 @@ struct NotchView: View {
     private var collapsedWidth: CGFloat { CGFloat(model.notchWidth) + 150 }
 
     var body: some View {
-        let shellW = model.expanded ? model.expandedWidth : collapsedWidth
-        // Per-view auto height (HTML --eh) — each module is as tall as it needs.
-        let shellH = model.expanded ? model.autoExpandedHeight : collapsedBarHeight
-        shell(width: shellW, height: shellH)
+        // A waiting-permission agent pops a wide-short banner (HTML notch.banner),
+        // overriding collapsed/expanded until it's resolved.
+        let waiting = model.localSessions.first(where: { $0.needsAttention })
+        let shellW = waiting != nil ? 620 : (model.expanded ? model.expandedWidth : collapsedWidth)
+        let shellH = waiting != nil ? 208 : (model.expanded ? model.autoExpandedHeight : collapsedBarHeight)
+        shell(width: shellW, height: shellH, banner: waiting)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .onExitCommand { captureFocused = false; model.locked ? model.endInteraction() : model.collapse() }
             // Focus drives the lock: clicking the field focuses it (panel becomes
@@ -34,18 +36,22 @@ struct NotchView: View {
     /// One continuous black shell that grows width+height out of the notch with
     /// iOS easing. Folded content fades out fast; the 2×2 grid fades + slides in
     /// after a short delay — grow the shell first, then reveal (no mush).
-    private func shell(width: CGFloat, height: CGFloat) -> some View {
+    private func shell(width: CGFloat, height: CGFloat, banner: LocalSession? = nil) -> some View {
         ZStack(alignment: .top) {
-            collapsedBar
-                .opacity(model.expanded ? 0 : 1)
-                .animation(.easeOut(duration: model.expanded ? 0.12 : 0.22), value: model.expanded)
+            if let banner {
+                permissionBanner(banner)
+            } else {
+                collapsedBar
+                    .opacity(model.expanded ? 0 : 1)
+                    .animation(.easeOut(duration: model.expanded ? 0.12 : 0.22), value: model.expanded)
 
-            expandedPanel
-                .frame(width: model.expandedWidth, height: model.autoExpandedHeight, alignment: .top)
-                .opacity(model.expanded ? 1 : 0)
-                .offset(y: model.expanded ? 0 : -10)
-                .allowsHitTesting(model.expanded)
-                .animation(.easeOut(duration: 0.3).delay(model.expanded ? 0.12 : 0), value: model.expanded)
+                expandedPanel
+                    .frame(width: model.expandedWidth, height: model.autoExpandedHeight, alignment: .top)
+                    .opacity(model.expanded ? 1 : 0)
+                    .offset(y: model.expanded ? 0 : -10)
+                    .allowsHitTesting(model.expanded)
+                    .animation(.easeOut(duration: 0.3).delay(model.expanded ? 0.12 : 0), value: model.expanded)
+            }
         }
         .frame(width: width, height: height, alignment: .top)
         .background(Color.black)
@@ -1207,6 +1213,48 @@ struct NotchView: View {
         .padding(9)
         .background(RoundedRectangle(cornerRadius: 10).fill(Color.orange.opacity(0.12)))
         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.orange.opacity(0.35), lineWidth: 1))
+    }
+
+    // MARK: Permission banner (HTML bannerHTML — pops on waiting_permission)
+    //
+    // TODO(align-banner): HTML shows a code diff; the hook only sends tool/detail
+    // for now, so the request body shows that instead of a real diff.
+
+    private func permissionBanner(_ s: LocalSession) -> some View {
+        let amber = Color(red: 1, green: 0.85, blue: 0.64)
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                HStack(spacing: 7) {
+                    Circle().fill(.orange).frame(width: 7, height: 7)
+                    Text("Permission Request · \(s.folderName)").font(.system(size: 11, weight: .bold)).foregroundStyle(amber)
+                }
+                Spacer()
+                Text("⌘Y 允许 · ⌘N 拒绝").font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
+            }
+            Text("⚠︎ \(s.pendingTool ?? "请求执行")").font(.system(size: 11, weight: .semibold)).foregroundStyle(amber).padding(.top, 10)
+            Text(s.pendingDetail ?? s.pendingTool ?? "(请求权限)")
+                .font(.system(size: 11, design: .monospaced)).foregroundStyle(.white.opacity(0.82))
+                .lineLimit(3).frame(maxWidth: .infinity, alignment: .leading)
+                .padding(9)
+                .background(RoundedRectangle(cornerRadius: 8).fill(.black.opacity(0.4)))
+                .padding(.top, 9)
+            HStack(spacing: 10) {
+                Button { model.resolveLocalPermission(s.id, allow: false) } label: {
+                    Text("Deny ⌘N").font(.system(size: 12, weight: .semibold)).foregroundStyle(.white)
+                        .frame(maxWidth: .infinity).padding(.vertical, 9)
+                        .background(RoundedRectangle(cornerRadius: 10).fill(.white.opacity(0.1)))
+                }.buttonStyle(.plain)
+                Button { model.resolveLocalPermission(s.id, allow: true) } label: {
+                    Text("Allow ⌘Y").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color(red: 0.1, green: 0.07, blue: 0.03))
+                        .frame(maxWidth: .infinity).padding(.vertical, 9)
+                        .background(RoundedRectangle(cornerRadius: 10).fill(accent))
+                }.buttonStyle(.plain)
+            }
+            .padding(.top, 12)
+            Spacer(minLength: 0)
+        }
+        .padding(EdgeInsets(top: 14, leading: 18, bottom: 14, trailing: 18))
+        .frame(width: 620, height: 208, alignment: .topLeading)
     }
 
     // MARK: Capture cell ↘

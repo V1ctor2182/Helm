@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 00:29 · swift-align-10-permission-banner
+- 设计源: helm-notch-pro.html(bannerHTML / notch.banner / render banner 分支 / S.mode==waiting)
+- 界面: 等权限 banner 态(顶层覆盖折叠/展开,620×208)
+- 做了: shell 加 banner 分支:有 needsAttention session 时弹 permissionBanner(橙点+Permission Request·folder+⌘Y/⌘N 提示+⚠︎ pendingTool+pendingDetail 等宽黑块+Deny 白/Allow accent 双钮→resolveLocalPermission)。Controller canvasSize 宽加 640 下限容纳 620;host.activeSize 在 localAttentionCount>0 返回 620×208。
+- 取舍: HTML banner 显代码 diff(硬编码 demo),hook 目前只传 tool/detail → 显真实 pendingDetail 不伪造 diff(真 diff 需 hook 传,TODO);⌘Y/⌘N 键盘快捷暂不接(面板非 key,TODO);resolve 后 waiting 清零自动回正常。无新 Core(复用已测 resolveLocalPermission)。
+- 改动: HelmNotchApp/NotchView.swift(body waiting 计算、shell banner 分支、permissionBanner)、NotchController.swift(canvasSize 640 下限、activeSize banner 尺寸)
+- VibeHub: record_decision「等权限 banner 态」→ ac8c75a4-ddaf-4de9-8993-bbfdac1fffb2 (ai_proposed);add_question 无;add_constraint 无
+- 自检: 硬门 swift build + swift test 全绿,39 测 0 失败(无新 Core)。逐项对照 HTML CSS:banner 620×208、perm ph 橙、diff 黑块、bbtn allow accent/deny 白 10%。视觉实机待用户。
+- 状态: ✅ 待 review  |  ❓需确认: 真实代码 diff 传输、⌘Y/⌘N 快捷键(均 TODO)
+
 ## 2026-07-01 00:25 · swift-align-09-capture-enrich
 - 设计源: helm-notch-pro.html(V.cap / .ttog / .capatt / .recents / S.taskTo·capWhen·capWhere·showRecent)
 - 界面: 速记模块丰富化(captureCell)+ Core 速记附加态

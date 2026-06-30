@@ -35,7 +35,8 @@ final class NotchController {
 
     /// The fixed window size: wide/tall enough for the panel (plus drag slack).
     private var canvasSize: NSSize {
-        NSSize(width: max(CGFloat(model.expandedWidth), CGFloat(model.notchWidth) + 320),
+        // 640 floor leaves room for the 620-wide permission banner.
+        NSSize(width: max(CGFloat(model.expandedWidth), CGFloat(model.notchWidth) + 320, 640),
                height: CGFloat(model.expandedHeight) + canvasSlack)
     }
 
@@ -145,6 +146,9 @@ final class NotchController {
         let host = NotchHostingView(rootView: NotchView(model: model))
         host.activeSize = { [weak model, collapsedHeight] in
             guard let model else { return .zero }
+            if model.localAttentionCount > 0 {
+                return CGSize(width: 620, height: 208)  // permission banner
+            }
             return model.expanded
                 ? CGSize(width: model.expandedWidth, height: model.autoExpandedHeight)
                 : CGSize(width: CGFloat(model.notchWidth) + 150, height: collapsedHeight)
