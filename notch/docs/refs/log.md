@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-06-30 23:58 · swift-align-02-dock-toolbar-router-dashboard
+- 设计源: helm-notch-pro.html(#panel / .ntop / .dock / renderDock / V.dash / V.clip)
+- 界面: 展开面板重构为「顶栏 + 单模块视图 + dock」;Dashboard 与 Clipboard 模块端口
+- 做了: expandedPanel 替换 2×2 grid;topBar(Helm logo accent 圆角方+深色 H 字形、齿轮、锁定态 X)、dockBar(5×34圆按钮 单色字形 ⊞✎◫⌘⧉,选中 accent 环、Dev 橙 badge);moduleBody 路由:dashboard 端口 V.dash 三栏(NOW PLAYING/TODAY 甜甜圈+任务/本机 CLAUDE CODE,GeometryReader 精确 1.6:1:1 + 发丝竖线,卡片点击进 media/dev),clipboard 端口 CLIP 列表;capture/calendar/dev/media 暂复用 cell body。
+- 取舍: 设计稿 dock 模型取代 2×2(grid/cell/vline/hline/topControls 暂留可回退,标 TODO 引用 question 3edd9817)。TODAY 甜甜圈 3/11 与 CLIP 为 HTML 静态种子(无后端任务计数/剪贴板源)→ 照搬并标 TODO。dev 子页 rail、全屏 media 歌词+波形留后续块。视觉门:NSPanel 刘海窗无头不可靠截图 → 改「对照 HTML CSS 逐值还原」+ build/test 硬门,实机目视留用户早上。
+- 改动: notch/Sources/HelmNotchApp/NotchView.swift(expandedPanel/topBar/logoMark/dockBar/dockButton/moduleBody/dashboard 三 widget/clipboardBody;shell 用 expandedPanel)
+- VibeHub: record_decision「dock+顶栏+模块路由;Dashboard/Clipboard 端口」→ fde8fdde-5a13-4fee-8e42-cdd14d165238 (ai_proposed);add_question 无(架构切换沿用已开 3edd9817);add_constraint 无
+- 自检: 硬门 swift build + swift test 全绿,28 测 0 失败(无新 Core 逻辑,纯 App UI)。逐项对照 HTML CSS:dock 34/圆/accent 环、logo 16+H、dashrow 1.6:1:1+发丝线、封面 64/r12、甜甜圈 54、clip 行 26 ic。视觉实机目视待用户。
+- 状态: ✅ 待 review  |  ❓需确认: 沿用 2×2→dock 架构 question(3edd9817);视觉实机待早上目视
+
 ## 2026-06-30 23:51 · swift-align-01-module-dock-statemachine
 - 设计源: helm-notch-pro.html(MODULES / S.view / switchModule / DEVSECS / switchDev)
 - 界面: Core 状态机(NotchModule / DevSection / NotchModel module 切换)——本块无 UI delta

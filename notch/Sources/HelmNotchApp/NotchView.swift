@@ -39,7 +39,7 @@ struct NotchView: View {
                 .opacity(model.expanded ? 0 : 1)
                 .animation(.easeOut(duration: model.expanded ? 0.12 : 0.22), value: model.expanded)
 
-            grid
+            expandedPanel
                 .frame(width: model.expandedWidth, height: model.expandedHeight, alignment: .top)
                 .opacity(model.expanded ? 1 : 0)
                 .offset(y: model.expanded ? 0 : -10)
@@ -49,7 +49,6 @@ struct NotchView: View {
         .frame(width: width, height: height, alignment: .top)
         .background(Color.black)
         .clipShape(NotchShape(bottomRadius: model.expanded ? 24 : 16))
-        .overlay(alignment: .topTrailing) { if model.expanded { topControls } }
         .overlay(alignment: .bottomTrailing) { if model.expanded { resizeHandle } }
         .contentShape(Rectangle())
         .onHover { model.hover($0) }
@@ -138,6 +137,309 @@ struct NotchView: View {
         // Inset the grid from the rounded edges so nothing hugs the border.
         .padding(EdgeInsets(top: 14, leading: 9, bottom: 10, trailing: 9))
     }
+
+    // MARK: Expanded — dock + module router (ported from helm-notch-pro.html #panel)
+    //
+    // TODO(align): pending [needs-human] 3edd9817 — this dock+module shell
+    // supersedes the fixed 2×2 `grid` above (kept for rollback). Once confirmed,
+    // delete `grid`/`cell`/`vline`/`hline`/`topControls`.
+
+    /// `#panel`: top bar (logo · gear) → switchable module view → dock.
+    private var expandedPanel: some View {
+        VStack(spacing: 0) {
+            topBar
+            moduleBody
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .clipped()
+            dockBar
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    /// `.ntop` — Helm wordmark on the left, an X (when locked) + gear on the right.
+    private var topBar: some View {
+        HStack(spacing: 7) {
+            logoMark
+            Text("Helm").font(.system(size: 12, weight: .bold)).foregroundStyle(.white)
+            Spacer()
+            if model.locked {
+                Button { model.collapse() } label: {
+                    Image(systemName: "xmark").font(.system(size: 11, weight: .semibold))
+                }
+                .buttonStyle(.plain).foregroundStyle(.white.opacity(0.45))
+            }
+            Button { model.openSettings?() } label: {
+                Image(systemName: "gearshape").font(.system(size: 13)).fontWeight(.regular)
+            }
+            .buttonStyle(.plain).foregroundStyle(.white.opacity(0.56))
+        }
+        .frame(height: 30)
+        .padding(.horizontal, 13)
+    }
+
+    /// The HTML logo SVG: an accent rounded square with a dark "H" (`M8 7.5v9 M16 7.5v9 M8 12h8`).
+    private var logoMark: some View {
+        let dark = Color(red: 0.043, green: 0.055, blue: 0.059)
+        return RoundedRectangle(cornerRadius: 5, style: .continuous)
+            .fill(accent)
+            .frame(width: 16, height: 16)
+            .overlay {
+                ZStack {
+                    HStack(spacing: 4) {
+                        Capsule().fill(dark).frame(width: 2, height: 9)
+                        Capsule().fill(dark).frame(width: 2, height: 9)
+                    }
+                    Capsule().fill(dark).frame(width: 8, height: 2)
+                }
+            }
+    }
+
+    /// `.dock` — the five module glyphs; the active one rings in accent, Dev
+    /// shows an orange badge when a local agent is waiting on permission.
+    private var dockBar: some View {
+        HStack(spacing: 9) {
+            ForEach(NotchModule.dock) { m in dockButton(m) }
+        }
+        .padding(.top, 8).padding(.bottom, 9)
+        .frame(maxWidth: .infinity)
+    }
+
+    private func dockButton(_ m: NotchModule) -> some View {
+        let on = model.module == m
+        let badge = (m == .dev && model.localAttentionCount > 0)
+        return Button { model.selectModule(m) } label: {
+            Text(m.glyph)
+                .font(.system(size: 14))
+                .foregroundStyle(on ? accent : .white.opacity(0.56))
+                .frame(width: 34, height: 34)
+                .background(Circle().fill(Color(white: on ? 0.17 : 0.10)))
+                .overlay(Circle().stroke(accent, lineWidth: on ? 1.5 : 0))
+                .overlay(alignment: .topTrailing) {
+                    if badge {
+                        Circle().fill(Color.orange).frame(width: 9, height: 9)
+                            .overlay(Circle().stroke(Color.black, lineWidth: 2))
+                            .offset(x: 1)
+                    }
+                }
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// `.view` — one module at a time. Reuses the 2×2 cell bodies as interim
+    /// content for capture/calendar/dev/media; dashboard + clipboard are ported here.
+    @ViewBuilder private var moduleBody: some View {
+        switch model.module {
+        case .dashboard:
+            dashboardModule.padding(.top, 12)
+        case .capture:
+            moduleScroll { captureCell }
+        case .calendar:
+            moduleScroll { calendarCell }
+        case .dev:
+            // TODO(align-dev): port the Dev rail + ports/reviews/stats sub-pages.
+            moduleScroll { agentCell }
+        case .clipboard:
+            moduleScroll { clipboardBody }
+        case .media:
+            // TODO(align-media): port the full-screen media (lyrics + waveform).
+            moduleScroll { mediaCell }
+        }
+    }
+
+    private func moduleScroll<C: View>(@ViewBuilder _ content: () -> C) -> some View {
+        VStack(alignment: .leading, spacing: 0) { content() }
+            .padding(.top, 14).padding(.horizontal, 16)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    // MARK: Dashboard module (V.dash — three widgets: NOW PLAYING · TODAY · 本机 CLAUDE CODE)
+
+    private var dashboardModule: some View {
+        GeometryReader { geo in
+            let unit = geo.size.width / 3.6  // widget flex 1.6 : 1 : 1
+            HStack(spacing: 0) {
+                dashMediaWidget
+                    .frame(width: unit * 1.6, alignment: .topLeading)
+                    .overlay(alignment: .trailing) { dashColDivider }
+                dashTodayWidget
+                    .frame(width: unit, alignment: .topLeading)
+                    .overlay(alignment: .trailing) { dashColDivider }
+                dashAgentWidget
+                    .frame(width: unit, alignment: .topLeading)
+            }
+            .frame(maxHeight: .infinity, alignment: .top)
+        }
+    }
+
+    private var dashColDivider: some View { Rectangle().fill(.white.opacity(0.09)).frame(width: 1) }
+
+    private func dashHeader(_ title: String) -> some View {
+        Text(title).font(.system(size: 9, weight: .bold)).tracking(0.6)
+            .foregroundStyle(.white.opacity(0.34)).padding(.bottom, 12)
+    }
+
+    private var dashMediaWidget: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            dashHeader("NOW PLAYING")
+            if let np = model.nowPlaying {
+                HStack(spacing: 12) {
+                    dashCover(np).frame(width: 64, height: 64)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(np.title).font(.system(size: 12, weight: .bold)).foregroundStyle(.white).lineLimit(1)
+                        Text(np.subtitle.isEmpty ? " " : np.subtitle).font(.system(size: 10)).foregroundStyle(.white.opacity(0.56)).lineLimit(1)
+                        dashMiniBar(np).padding(.top, 6)
+                        HStack(spacing: 16) {
+                            Button { model.previousTrack() } label: { Image(systemName: "backward.fill") }
+                            Button { model.playPause() } label: { Image(systemName: np.isPlaying ? "pause.fill" : "play.fill") }
+                            Button { model.nextTrack() } label: { Image(systemName: "forward.fill") }
+                        }
+                        .font(.system(size: 12)).buttonStyle(.plain).foregroundStyle(.white).padding(.top, 8)
+                    }
+                }
+            } else {
+                HStack(spacing: 12) {
+                    dashCover(nil).frame(width: 64, height: 64)
+                    Text("未在播放").font(.system(size: 11)).foregroundStyle(.white.opacity(0.4))
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16).padding(.vertical, 2)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .contentShape(Rectangle())
+        .onTapGesture { model.selectModule(.media) }
+    }
+
+    private func dashCover(_ np: NowPlaying?) -> some View {
+        Group {
+            if let np, let art = nsArtwork(np) {
+                Image(nsImage: art).resizable().aspectRatio(contentMode: .fill)
+            } else {
+                LinearGradient(colors: [Color(red: 0.11, green: 0.72, blue: 0.33), Color(red: 0.04, green: 0.5, blue: 0.23)],
+                               startPoint: .topLeading, endPoint: .bottomTrailing)
+            }
+        }
+        .frame(width: 64, height: 64)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    @ViewBuilder private func dashMiniBar(_ np: NowPlaying) -> some View {
+        TimelineView(.periodic(from: .now, by: 0.5)) { context in
+            let total = np.duration ?? 0
+            let frac = total > 0 ? min(1, model.livePosition(at: context.date) / total) : 0.42
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(.white.opacity(0.2))
+                    Capsule().fill(accent).frame(width: max(2, geo.size.width * frac))
+                }
+            }
+            .frame(height: 3)
+        }
+        .frame(height: 3)
+    }
+
+    private var dashTodayWidget: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            dashHeader("TODAY")
+            HStack(spacing: 13) {
+                dashDonut
+                VStack(alignment: .leading, spacing: 6) {
+                    if model.events.isEmpty {
+                        dashTaskRow(.green, "站会 10:00")
+                        dashTaskRow(Color(red: 0.04, green: 0.52, blue: 1), "Review")
+                        dashTaskRow(.orange, "1:1 15:00")
+                    } else {
+                        ForEach(Array(model.events.prefix(3))) { ev in
+                            dashTaskRow(accent, "\(ev.summary) \(ev.when)")
+                        }
+                    }
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16).padding(.vertical, 2)
+        .frame(maxHeight: .infinity, alignment: .top)
+    }
+
+    /// Static demo donut (HTML shows "3/11"); real task counts need backend.
+    // TODO(align): wire to task completion once Core surfaces it.
+    private var dashDonut: some View {
+        ZStack {
+            Circle().stroke(.white.opacity(0.12), lineWidth: 7)
+            Circle().trim(from: 0, to: 0.27).stroke(accent, style: StrokeStyle(lineWidth: 7, lineCap: .butt))
+                .rotationEffect(.degrees(-90))
+            Text("3/11").font(.system(size: 11, weight: .bold)).foregroundStyle(.white)
+        }
+        .frame(width: 54, height: 54)
+    }
+
+    private func dashTaskRow(_ dot: Color, _ text: String) -> some View {
+        HStack(spacing: 6) {
+            Circle().fill(dot).frame(width: 6, height: 6)
+            Text(text).font(.system(size: 11)).foregroundStyle(.white.opacity(0.56)).lineLimit(1)
+        }
+    }
+
+    private var dashAgentWidget: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            dashHeader("本机 CLAUDE CODE")
+            if model.localSessions.isEmpty {
+                Text("无 agent").font(.system(size: 11)).foregroundStyle(.white.opacity(0.34))
+            } else {
+                VStack(alignment: .leading, spacing: 7) {
+                    ForEach(Array(model.localSessions.prefix(3))) { s in
+                        HStack(spacing: 7) {
+                            Circle().fill(phaseColor(s.phase)).frame(width: 7, height: 7)
+                            Text(s.folderName).font(.system(size: 11, weight: .medium)).foregroundStyle(.white.opacity(0.85)).lineLimit(1)
+                            if s.phase == .waitingPermission {
+                                Text("待批准").font(.system(size: 10)).foregroundStyle(.orange)
+                            } else if let act = s.activity, s.phase == .running {
+                                Text(act).font(.system(size: 10)).foregroundStyle(.white.opacity(0.34)).lineLimit(1)
+                            } else if s.phase == .ended {
+                                Text("完成").font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
+                            }
+                        }
+                    }
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16).padding(.vertical, 2)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .contentShape(Rectangle())
+        .onTapGesture { model.selectModule(.dev) }
+    }
+
+    // MARK: Clipboard module (V.clip) — seed data; real history is a later block.
+
+    /// HTML `CLIP` seed. TODO(align-clipboard): replace with a Core clipboard
+    /// model fed by an NSPasteboard watcher.
+    private var clipboardBody: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            cellHeader("⧉ CLIPBOARD 历史", trailing: "点→复制 / 存速记")
+            ForEach(clipSeed.indices, id: \.self) { i in
+                let c = clipSeed[i]
+                HStack(spacing: 9) {
+                    Text(c.0).font(.system(size: 13))
+                        .frame(width: 26, height: 26)
+                        .background(RoundedRectangle(cornerRadius: 7).fill(Color(white: 0.10)))
+                    Text(c.1).font(.system(size: 12)).foregroundStyle(.white.opacity(0.85)).lineLimit(1)
+                    Spacer(minLength: 6)
+                    Text(c.2).font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
+                }
+                .padding(.vertical, 8)
+                .overlay(alignment: .bottom) { Rectangle().fill(.white.opacity(0.09)).frame(height: 0.5) }
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    private let clipSeed: [(String, String, String)] = [
+        ("↗", "https://github.com/V1ctor2182/Helm/pull/50", "just now"),
+        ("≡", "feat(notch): A×D 2×2 面板重做…", "5m"),
+        ("#", "127.0.0.1:8769", "12m"),
+        ("▣", "Screenshot 2026-06-29.png", "20m"),
+    ]
 
     private var topControls: some View {
         HStack(spacing: 12) {
