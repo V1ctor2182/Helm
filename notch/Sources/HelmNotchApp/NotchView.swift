@@ -76,7 +76,13 @@ struct NotchView: View {
             collapsedLeft
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .padding(.trailing, 11)
-            Color.clear.frame(width: CGFloat(model.notchWidth))  // physical notch / camera
+            // Physical notch / camera gap, with the HTML camera lens dot.
+            Color.clear.frame(width: CGFloat(model.notchWidth))
+                .overlay(alignment: .top) {
+                    Circle().fill(Color(white: 0.05))
+                        .overlay(Circle().stroke(Color(white: 0.17), lineWidth: 1))
+                        .frame(width: 7, height: 7).padding(.top, 8)
+                }
             collapsedRight
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.leading, 11)
@@ -100,6 +106,8 @@ struct NotchView: View {
                 } else {
                     Image(systemName: "pause.fill").font(.system(size: 9)).foregroundStyle(.white.opacity(0.5))
                 }
+                Text(np.title).font(.system(size: 10)).foregroundStyle(.white.opacity(0.56))
+                    .lineLimit(1).frame(maxWidth: 90, alignment: .leading)
             }
         } else {
             HStack(spacing: 6) {
@@ -137,14 +145,23 @@ struct NotchView: View {
                 }
             }
         } else if waiting > 0 {
-            StatusGlyph(state: .waiting, count: waiting).glowingPill()
-        } else if running > 0 {
-            StatusGlyph(state: .running, count: running)
-        } else if !model.events.isEmpty {
+            // HTML: orange ● + count (an actual waiting agent pops the banner anyway).
             HStack(spacing: 5) {
-                Image(systemName: "checklist").font(.system(size: 10)).foregroundStyle(.white.opacity(0.5))
-                Text("\(model.events.count)").font(.system(size: 11, weight: .bold)).foregroundStyle(.white)
-                Text("今日").font(.system(size: 9, weight: .semibold)).foregroundStyle(.white.opacity(0.35))
+                Circle().fill(.orange).frame(width: 7, height: 7)
+                Text("\(waiting)").font(.system(size: 11, weight: .bold)).foregroundStyle(.orange).monospacedDigit()
+            }
+        } else if running > 0 {
+            // HTML: spinning ✻ star + count.
+            HStack(spacing: 5) {
+                SpinningStar(color: accent)
+                Text("\(running)").font(.system(size: 11, weight: .bold)).foregroundStyle(.white).monospacedDigit()
+            }
+        } else if let ev = model.events.first {
+            // HTML cev: next event "10:00 站会" (accent time + name).
+            HStack(spacing: 5) {
+                Text(ev.when).font(.system(size: 10, weight: .bold)).foregroundStyle(accent).monospacedDigit()
+                Text(ev.summary).font(.system(size: 10)).foregroundStyle(.white.opacity(0.56))
+                    .lineLimit(1).frame(maxWidth: 80, alignment: .leading)
             }
         } else {
             Circle().fill(.white.opacity(0.22)).frame(width: 8, height: 8)
@@ -1648,6 +1665,18 @@ private struct EqualizerBars: View {
         }
         .frame(height: 12, alignment: .bottom)
         .onAppear { animate = true }
+    }
+}
+
+/// The HTML `.cstar` — a slowly spinning ✻ that marks a running agent.
+private struct SpinningStar: View {
+    var color: Color
+    @State private var spin = false
+    var body: some View {
+        Text("✻").font(.system(size: 12)).foregroundStyle(color)
+            .rotationEffect(.degrees(spin ? 360 : 0))
+            .animation(.linear(duration: 1.1).repeatForever(autoreverses: false), value: spin)
+            .onAppear { spin = true }
     }
 }
 

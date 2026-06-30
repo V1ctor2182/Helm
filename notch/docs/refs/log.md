@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 00:44 · swift-align-13-collapsed-bar-fidelity
+- 设计源: helm-notch-pro.html(renderBar / .cc .lens / .cnp / .cstar / .cev)
+- 界面: 折叠条保真(相机 lens / 曲名 / 运行 ✻ / 等权限橙点 / 下个日程)
+- 做了: 中间间隙加相机 lens 点(7×7 深+内环);折叠左播放态加曲名(max-width 90 截断);折叠右 等权限=橙●+count、运行=旋转✻(SpinningStar linear 1.1s)+count、空闲有事件=下个日程「HH:MM summary」(accent 时间)。
+- 取舍: 旧 StatusGlyph/GlowPill 不再用于折叠右(留死代码无警告,待 2×2 question 清理);SpinningStar 仅自转(HTML cstar 的 scale/opacity 脉冲简化)。纯 App UI。
+- 改动: HelmNotchApp/NotchView.swift(collapsedBar lens、collapsedLeft 曲名、collapsedRight 字形对齐、SpinningStar struct)
+- VibeHub: record_decision「折叠条保真」→ 0b0d9663-5bed-4957-8a11-150e163e987e (ai_proposed);add_question 无;add_constraint 无
+- 自检: 硬门 swift build + swift test 全绿,46 测 0 失败(纯 UI)。逐项对照 HTML CSS:lens 7×7、cnp 90 截断、cstar ✻、cev accent 时间。视觉实机待用户。
+- 状态: ✅ 待 review
+
 ## 2026-07-01 00:39 · swift-align-12-reminder-banner
 - 设计源: helm-notch-pro.html(remindHTML / .notch.remind / .rmd* / REMINDER)
 - 界面: 日程提醒 banner(560×152)+ 真实临近触发
