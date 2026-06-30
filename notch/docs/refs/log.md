@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 00:49 · swift-align-14-agent-think-shine
+- 设计源: helm-notch-pro.html(V.agents / .think .st / .shine / dash agr)
+- 界面: agent 运行态 think/shine 动效
+- 做了: 新增 ShineText(亮带扫过文字,linear 1.6s 循环,mask 文字,fixedSize)。Dev agents running 行加 小 SpinningStar + ShineText(activity 或「正在思考…」);Dashboard 本机 CLAUDE CODE running 行 ShineText(activity 或「思考中」)。复用 SpinningStar。
+- 取舍: HTML .shine 多色渐变横扫 → 简化为 透明→白→accent→透明 亮带扫过(观感一致)。纯 App UI。
+- 改动: HelmNotchApp/NotchView.swift(ShineText struct、agentCell running 行、dashAgentWidget running 行)
+- VibeHub: record_decision「agent think/shine 动效」→ 2dc68ed9-6128-4953-81df-4fd132d0a695 (ai_proposed);add_question 无;add_constraint 无
+- 自检: 硬门 swift build + swift test 全绿,46 测 0 失败(纯 UI)。对照 HTML:cstar ✻ 自转、shine 亮带横扫。视觉实机待用户。
+- 状态: ✅ 待 review
+
 ## 2026-07-01 00:44 · swift-align-13-collapsed-bar-fidelity
 - 设计源: helm-notch-pro.html(renderBar / .cc .lens / .cnp / .cstar / .cev)
 - 界面: 折叠条保真(相机 lens / 曲名 / 运行 ✻ / 等权限橙点 / 下个日程)

@@ -434,8 +434,8 @@ struct NotchView: View {
                             Text(s.folderName).font(.system(size: 11, weight: .medium)).foregroundStyle(.white.opacity(0.85)).lineLimit(1)
                             if s.phase == .waitingPermission {
                                 Text("待批准").font(.system(size: 10)).foregroundStyle(.orange)
-                            } else if let act = s.activity, s.phase == .running {
-                                Text(act).font(.system(size: 10)).foregroundStyle(.white.opacity(0.34)).lineLimit(1)
+                            } else if s.phase == .running {
+                                ShineText(s.activity ?? "思考中", accent: accent, size: 10)
                             } else if s.phase == .ended {
                                 Text("完成").font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
                             }
@@ -1206,8 +1206,9 @@ struct NotchView: View {
                 HStack(spacing: 7) {
                     Circle().fill(phaseColor(session.phase)).frame(width: 6, height: 6)
                     Text(session.folderName).font(.system(size: 11, weight: .medium)).foregroundStyle(.white.opacity(0.85)).lineLimit(1)
-                    if let act = session.activity, session.phase == .running {
-                        Text(act).font(.system(size: 10)).foregroundStyle(.white.opacity(0.4)).lineLimit(1)
+                    if session.phase == .running {
+                        SpinningStar(color: accent).scaleEffect(0.78)
+                        ShineText(session.activity ?? "正在思考…", accent: accent, size: 10)
                     }
                     Spacer(minLength: 4)
                     Text(phaseShort(session.phase)).font(.system(size: 9)).foregroundStyle(.white.opacity(0.35))
@@ -1665,6 +1666,39 @@ private struct EqualizerBars: View {
         }
         .frame(height: 12, alignment: .bottom)
         .onAppear { animate = true }
+    }
+}
+
+/// The HTML `.shine` — text with a bright band sweeping across (a running agent
+/// "thinking" shimmer). Falls back to a static dim label off-screen.
+private struct ShineText: View {
+    let text: String
+    var accent: Color
+    var size: CGFloat = 11
+    @State private var animate = false
+
+    init(_ text: String, accent: Color, size: CGFloat = 11) {
+        self.text = text
+        self.accent = accent
+        self.size = size
+    }
+
+    private var font: Font { .system(size: size, weight: .medium) }
+
+    var body: some View {
+        Text(text).font(font).foregroundStyle(.white.opacity(0.35)).lineLimit(1)
+            .overlay {
+                GeometryReader { geo in
+                    LinearGradient(colors: [.clear, .white, accent, .clear],
+                                   startPoint: .leading, endPoint: .trailing)
+                        .frame(width: geo.size.width)
+                        .offset(x: animate ? geo.size.width : -geo.size.width)
+                        .mask(Text(text).font(font).lineLimit(1))
+                        .animation(.linear(duration: 1.6).repeatForever(autoreverses: false), value: animate)
+                }
+            }
+            .fixedSize()
+            .onAppear { animate = true }
     }
 }
 
