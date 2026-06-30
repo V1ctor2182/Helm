@@ -146,6 +146,9 @@ final class NotchController {
         let host = NotchHostingView(rootView: NotchView(model: model))
         host.activeSize = { [weak model, collapsedHeight] in
             guard let model else { return .zero }
+            if model.reminder != nil {
+                return CGSize(width: 560, height: 152)  // reminder banner
+            }
             if model.localAttentionCount > 0 {
                 return CGSize(width: 620, height: 208)  // permission banner
             }

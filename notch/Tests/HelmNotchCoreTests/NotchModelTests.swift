@@ -9,6 +9,7 @@ final class FakeBackend: HelmBackend, @unchecked Sendable {
     var healthResult: Result<Health, Error>
     var shouldFailCapture = false
     var runs: [AgentRun] = []
+    var events: [CalEvent] = []
     private(set) var notes: [(content: String, kind: String, journalDate: String?)] = []
     private(set) var tasks: [String] = []
 
@@ -22,6 +23,10 @@ final class FakeBackend: HelmBackend, @unchecked Sendable {
 
     func listRuns() async throws -> [AgentRun] {
         runs
+    }
+
+    func listEvents(start: Date, end: Date) async throws -> [CalEvent] {
+        events
     }
 
     func createNote(content: String, kind: String, journalDate: String?) async throws {
@@ -288,6 +293,51 @@ final class NotchModuleTests: XCTestCase {
         model.captureText = "x"
         model.startFocus()
         XCTAssertEqual(model.viewHeight(), 300)  // running
+    }
+
+    func testReminderStartMinutesParsing() {
+        XCTAssertEqual(NotchModel.startMinutes("10:00"), 600)
+        XCTAssertEqual(NotchModel.startMinutes("10:00–10:30"), 600)
+        XCTAssertNil(NotchModel.startMinutes("全天"))
+        XCTAssertNil(NotchModel.startMinutes(""))
+    }
+
+    @MainActor
+    func testReminderFiresForImminentEvent() async {
+        let backend = FakeBackend()
+        backend.events = [CalEvent(id: "e1", summary: "Team standup", when: "10:03–10:30")]
+        let model = NotchModel(backend: backend)
+        await model.refreshEvents()
+        let now = Calendar.current.date(bySettingHour: 10, minute: 0, second: 0, of: Date())!
+        model.checkReminders(now: now)
+        XCTAssertEqual(model.reminder?.id, "e1")
+        XCTAssertEqual(model.reminder?.title, "Team standup")
+    }
+
+    @MainActor
+    func testReminderDoesNotFireForFarEvent() async {
+        let backend = FakeBackend()
+        backend.events = [CalEvent(id: "e1", summary: "Later", when: "10:30")]
+        let model = NotchModel(backend: backend)
+        await model.refreshEvents()
+        let now = Calendar.current.date(bySettingHour: 10, minute: 0, second: 0, of: Date())!
+        model.checkReminders(now: now)
+        XCTAssertNil(model.reminder)
+    }
+
+    @MainActor
+    func testDismissedReminderDoesNotRefire() async {
+        let backend = FakeBackend()
+        backend.events = [CalEvent(id: "e1", summary: "Standup", when: "10:03")]
+        let model = NotchModel(backend: backend)
+        await model.refreshEvents()
+        let now = Calendar.current.date(bySettingHour: 10, minute: 0, second: 0, of: Date())!
+        model.checkReminders(now: now)
+        XCTAssertNotNil(model.reminder)
+        model.dismissReminder()
+        XCTAssertNil(model.reminder)
+        model.checkReminders(now: now)
+        XCTAssertNil(model.reminder)  // dismissed → no re-fire
     }
 }
 

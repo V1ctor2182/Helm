@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 00:39 · swift-align-12-reminder-banner
+- 设计源: helm-notch-pro.html(remindHTML / .notch.remind / .rmd* / REMINDER)
+- 界面: 日程提醒 banner(560×152)+ 真实临近触发
+- 做了: Core EventReminder + NotchModel reminder/checkReminders(now:)(解析事件 when 前缀 HH:mm,与当前分钟差 0..5 弹,跳过已忽略)+startMinutes(nonisolated)+dismiss/snooze/openReminder;poll 末调 checkReminders(+4 测)。App shell reminder 分支(优先级高于等权限 banner);remindBanner(日历字形卡 56+「日程提醒·现在开始」+标题 18heavy+时间段 mono+查看/稍后/忽略);Controller activeSize 560×152。
+- 取舍: HTML 显「加入」会议链接+地点,CalEvent 无 join/location → 改「查看」(开日历)+时间段,省地点(TODO 真链接/地点需后端字段)。触发用 when 前缀 HH:mm 启发式(全天/无时间跳过),依赖后端 when 格式。
+- 改动: HelmNotchCore/Models.swift(+EventReminder)、NotchModel.swift(+reminder 态/checkReminders/poll)、Tests(+4,FakeBackend +events/listEvents)、HelmNotchApp/NotchView.swift(body/shell reminder 分支/remindBanner)、NotchController.swift(activeSize)
+- VibeHub: record_decision「日程提醒 banner+真实触发」→ a0a5a5d0-59e2-402f-8e78-0192cc93b870 (ai_proposed);add_question 无;add_constraint 无
+- 自检: 硬门 swift build + swift test 全绿,46 测 0 失败(修 1 轮:startMinutes static 在 @MainActor 类被隔离 → nonisolated)。+4:解析/临近触发/远事件不弹/忽略不再弹。视觉实机待用户。
+- 状态: ✅ 待 review  |  ❓需确认: 会议加入链接/地点字段(后端,TODO)
+
 ## 2026-07-01 00:34 · swift-align-11-focus-timer
 - 设计源: helm-notch-pro.html(cap focus 态 / startFocus / stopFocus / renderBar focus 分支 / .focusrun / .bfocus)
 - 界面: 专注计时(capture focus kind + 折叠条专注态)

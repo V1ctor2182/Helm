@@ -186,6 +186,43 @@ public final class NotchModel {
     /// Today's calendar events (m2 — empty until the API is wired).
     public private(set) var events: [CalEvent] = []
 
+    /// A near-term event popped as the reminder banner (HTML S.remind).
+    public private(set) var reminder: EventReminder?
+    private var dismissedReminderIDs: Set<String> = []
+
+    /// Pop a reminder for a today event starting within the next 5 minutes
+    /// (HTML's "现在开始"). Skips events already dismissed; one at a time.
+    public func checkReminders(now: Date = Date()) {
+        guard reminder == nil else { return }
+        let cal = Calendar.current
+        let nowMin = cal.component(.hour, from: now) * 60 + cal.component(.minute, from: now)
+        for ev in events where !dismissedReminderIDs.contains(ev.id) {
+            guard let startMin = Self.startMinutes(ev.when) else { continue }
+            let delta = startMin - nowMin
+            if delta >= 0, delta <= 5 {
+                reminder = EventReminder(id: ev.id, title: ev.summary, timeRange: ev.when)
+                return
+            }
+        }
+    }
+
+    /// Leading "HH:mm" of an event's display string → minutes-of-day (nil for 全天).
+    nonisolated static func startMinutes(_ when: String) -> Int? {
+        let parts = when.prefix(5).split(separator: ":")
+        guard parts.count == 2, let h = Int(parts[0]), let m = Int(parts[1]) else { return nil }
+        return h * 60 + m
+    }
+
+    /// 忽略 — drop and don't re-fire for this event.
+    public func dismissReminder() {
+        if let r = reminder { dismissedReminderIDs.insert(r.id) }
+        reminder = nil
+    }
+    /// 稍后 — drop but allow it to re-fire on a later check.
+    public func snoozeReminder() { reminder = nil }
+    /// 查看/加入 — treat like a dismiss (the caller opens the calendar).
+    public func openReminder() { dismissReminder() }
+
     /// Current now-playing media (nil when nothing is playing / unavailable).
     public private(set) var nowPlaying: NowPlaying?
     /// Wall-clock time the current `nowPlaying` snapshot was captured — lets the
@@ -208,6 +245,7 @@ public final class NotchModel {
         await refreshAgents()
         await refreshEvents()
         await refreshMedia()
+        checkReminders()
     }
 
     /// Refresh today's calendar events; keep the last list on error.

@@ -17,12 +17,13 @@ struct NotchView: View {
     private var collapsedWidth: CGFloat { CGFloat(model.notchWidth) + 150 }
 
     var body: some View {
-        // A waiting-permission agent pops a wide-short banner (HTML notch.banner),
-        // overriding collapsed/expanded until it's resolved.
+        // Banner states override collapsed/expanded. Reminder (560×152) takes
+        // precedence over a permission request (620×208) — matching HTML render().
         let waiting = model.localSessions.first(where: { $0.needsAttention })
-        let shellW = waiting != nil ? 620 : (model.expanded ? model.expandedWidth : collapsedWidth)
-        let shellH = waiting != nil ? 208 : (model.expanded ? model.autoExpandedHeight : collapsedBarHeight)
-        shell(width: shellW, height: shellH, banner: waiting)
+        let reminder = model.reminder
+        let shellW: CGFloat = reminder != nil ? 560 : (waiting != nil ? 620 : (model.expanded ? model.expandedWidth : collapsedWidth))
+        let shellH: CGFloat = reminder != nil ? 152 : (waiting != nil ? 208 : (model.expanded ? model.autoExpandedHeight : collapsedBarHeight))
+        shell(width: shellW, height: shellH, banner: waiting, reminder: reminder)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .onExitCommand { captureFocused = false; model.locked ? model.endInteraction() : model.collapse() }
             // Focus drives the lock: clicking the field focuses it (panel becomes
@@ -36,9 +37,11 @@ struct NotchView: View {
     /// One continuous black shell that grows width+height out of the notch with
     /// iOS easing. Folded content fades out fast; the 2×2 grid fades + slides in
     /// after a short delay — grow the shell first, then reveal (no mush).
-    private func shell(width: CGFloat, height: CGFloat, banner: LocalSession? = nil) -> some View {
+    private func shell(width: CGFloat, height: CGFloat, banner: LocalSession? = nil, reminder: EventReminder? = nil) -> some View {
         ZStack(alignment: .top) {
-            if let banner {
+            if let reminder {
+                remindBanner(reminder)
+            } else if let banner {
                 permissionBanner(banner)
             } else {
                 collapsedBar
@@ -1269,6 +1272,51 @@ struct NotchView: View {
         }
         .padding(EdgeInsets(top: 14, leading: 18, bottom: 14, trailing: 18))
         .frame(width: 620, height: 208, alignment: .topLeading)
+    }
+
+    // MARK: Reminder banner (HTML remindHTML / .notch.remind — pops on a near event)
+    //
+    // TODO(align-remind): the HTML shows a meeting "加入" link + location; CalEvent
+    // carries neither, so we show 查看 (→ Calendar) + 稍后 / 忽略 and the time range.
+
+    private func remindBanner(_ r: EventReminder) -> some View {
+        HStack(spacing: 17) {
+            RoundedRectangle(cornerRadius: 15, style: .continuous).fill(.white.opacity(0.05))
+                .overlay(RoundedRectangle(cornerRadius: 15).stroke(.white.opacity(0.09), lineWidth: 0.5))
+                .frame(width: 56, height: 56)
+                .overlay(Image(systemName: "calendar").font(.system(size: 24)).foregroundStyle(accent))
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: 7) {
+                    Circle().fill(accent).frame(width: 7, height: 7)
+                        .overlay(Circle().stroke(.white.opacity(0.08), lineWidth: 3))
+                    Text("日程提醒 · 现在开始").font(.system(size: 10, weight: .bold)).tracking(0.5).foregroundStyle(.white.opacity(0.56))
+                }
+                .padding(.bottom, 6)
+                Text(r.title).font(.system(size: 18, weight: .heavy)).foregroundStyle(.white).lineLimit(1)
+                Text(r.timeRange).font(.system(size: 12)).foregroundStyle(.white.opacity(0.56)).monospacedDigit().padding(.top, 3)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(spacing: 8) {
+                Button { model.openReminder(); model.selectModule(.calendar); model.expanded = true } label: {
+                    Text("查看").font(.system(size: 13, weight: .bold)).foregroundStyle(Color(red: 0.1, green: 0.07, blue: 0.03))
+                        .frame(maxWidth: .infinity).padding(.vertical, 10)
+                        .background(RoundedRectangle(cornerRadius: 10).fill(accent))
+                }.buttonStyle(.plain)
+                HStack(spacing: 8) {
+                    Button { model.snoozeReminder() } label: { remindSubLabel("稍后") }.buttonStyle(.plain)
+                    Button { model.dismissReminder() } label: { remindSubLabel("忽略") }.buttonStyle(.plain)
+                }
+            }
+            .frame(width: 132)
+        }
+        .padding(.horizontal, 22)
+        .frame(width: 560, height: 152, alignment: .leading)
+    }
+
+    private func remindSubLabel(_ text: String) -> some View {
+        Text(text).font(.system(size: 11, weight: .semibold)).foregroundStyle(.white.opacity(0.56))
+            .frame(maxWidth: .infinity).padding(.vertical, 7)
+            .background(RoundedRectangle(cornerRadius: 9).fill(.white.opacity(0.1)))
     }
 
     // MARK: Capture cell ↘

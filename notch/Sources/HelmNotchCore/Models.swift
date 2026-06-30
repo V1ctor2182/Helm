@@ -87,6 +87,19 @@ public struct CalEvent: Sendable, Equatable, Identifiable {
     }
 }
 
+/// A near-term event surfaced as the notch's reminder banner (HTML `S.remind`).
+public struct EventReminder: Sendable, Equatable, Identifiable {
+    public let id: String       // the event id
+    public let title: String
+    public let timeRange: String  // "10:00–10:30"
+
+    public init(id: String, title: String, timeRange: String) {
+        self.id = id
+        self.title = title
+        self.timeRange = timeRange
+    }
+}
+
 /// Lifecycle of one capture submission, for inline UI feedback.
 public enum CaptureStatus: Sendable, Equatable {
     case idle
