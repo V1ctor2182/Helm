@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 00:34 · swift-align-11-focus-timer
+- 设计源: helm-notch-pro.html(cap focus 态 / startFocus / stopFocus / renderBar focus 分支 / .focusrun / .bfocus)
+- 界面: 专注计时(capture focus kind + 折叠条专注态)
+- 做了: Core CaptureKind +.focus;NotchModel +focusOn/focusWhat/focusStartedAt +focusElapsed(at:)/startFocus/stopFocus(at:);submit .focus no-op;viewHeight cap focus 268/300(+3 测)。App captureCell focus 分支 focusBody(未开始=输入+开始专注;进行中=大计时 mm:ss 脉冲点+focusWhat+停止并记录);折叠条专注态 左 timer+what、右 mm:ss accent(TimelineView 1s)。
+- 取舍: focus 选 4th CaptureKind(chips 现 速记/日记/任务/专注);stopFocus 暂只算分钟不发后端(POST /api/focus 待后端 TODO);ask 仍未端口(TODO)。计时用开始时间推导(可测+TimelineView 平滑)。
+- 改动: HelmNotchCore/Models.swift(+.focus)、NotchModel.swift(+focus 态/viewHeight/submit)、Tests(+3)、HelmNotchApp/NotchView.swift(captureCell focus 分支/focusBody/collapsedLeft·Right focus 态/placeholder)
+- VibeHub: record_decision「专注计时」→ f00784c8-9f18-4a1a-940d-30c0cd62117e (ai_proposed);add_question 无;add_constraint 无
+- 自检: 硬门 swift build + swift test 全绿,42 测 0 失败(+3:start 取 what/空回退、stop 150s→3min、focus viewHeight)。逐项对照 HTML CSS:focusrun ft 42px+dot 脉冲、fstop accent、bfocus mm:ss accent。视觉实机待用户。
+- 状态: ✅ 待 review  |  ❓需确认: /api/focus 发送、ask(问大脑)kind(均 TODO)
+
 ## 2026-07-01 00:29 · swift-align-10-permission-banner
 - 设计源: helm-notch-pro.html(bannerHTML / notch.banner / render banner 分支 / S.mode==waiting)
 - 界面: 等权限 banner 态(顶层覆盖折叠/展开,620×208)

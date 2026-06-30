@@ -23,6 +23,7 @@ public enum CaptureKind: String, Sendable, CaseIterable, Identifiable {
     case note     // 速记 → /api/notes kind=note
     case journal  // 日记 → /api/notes kind=journal (today)
     case task     // 任务 → /api/tasks (default daily schedule)
+    case focus    // 专注 → forward timer; records to /api/focus on stop
 
     public var id: String { rawValue }
 
@@ -31,6 +32,7 @@ public enum CaptureKind: String, Sendable, CaseIterable, Identifiable {
         case .note: "速记"
         case .journal: "日记"
         case .task: "任务"
+        case .focus: "专注"
         }
     }
 }

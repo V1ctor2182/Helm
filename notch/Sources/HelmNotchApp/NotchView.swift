@@ -84,7 +84,12 @@ struct NotchView: View {
     }
 
     @ViewBuilder private var collapsedLeft: some View {
-        if let np = model.nowPlaying {
+        if model.focusOn {
+            HStack(spacing: 6) {
+                Image(systemName: "timer").font(.system(size: 11)).foregroundStyle(accent)
+                Text(model.focusWhat).font(.system(size: 10, weight: .medium)).foregroundStyle(.white).lineLimit(1)
+            }
+        } else if let np = model.nowPlaying {
             HStack(spacing: 6) {
                 collapsedArt(np)
                 if np.isPlaying {
@@ -119,7 +124,16 @@ struct NotchView: View {
     @ViewBuilder private var collapsedRight: some View {
         let waiting = model.localSessions.filter(\.needsAttention).count
         let running = model.localSessions.filter { $0.phase == .running }.count
-        if waiting > 0 {
+        if model.focusOn {
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                let s = model.focusElapsed(at: context.date)
+                HStack(spacing: 5) {
+                    Circle().fill(accent).frame(width: 6, height: 6)
+                    Text(String(format: "%02d:%02d", s / 60, s % 60))
+                        .font(.system(size: 12, weight: .bold)).monospacedDigit().foregroundStyle(accent)
+                }
+            }
+        } else if waiting > 0 {
             StatusGlyph(state: .waiting, count: waiting).glowingPill()
         } else if running > 0 {
             StatusGlyph(state: .running, count: running)
@@ -1273,28 +1287,77 @@ struct NotchView: View {
             }
         }
         .padding(.top, 6)
-        // 任务:给自己 / 交给 agent
-        if model.captureKind == .task { taskTargetToggle.padding(.top, 8) }
-        HStack(spacing: 8) {
-            TextField(placeholder, text: $model.captureText, axis: .vertical)
-                .textFieldStyle(.plain).font(.system(size: 12)).foregroundStyle(.white)
-                .lineLimit(1...3).focused($captureFocused)
-                .onSubmit { Task { await model.submit() } }
-                .padding(8)
-                .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(model.locked ? 0.1 : 0.07)))
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(accent.opacity(model.locked ? 0.5 : 0), lineWidth: 1))
-            Button { Task { await model.submit() } } label: {
-                Image(systemName: "arrow.up.circle.fill").font(.system(size: 23))
-                    .foregroundStyle(model.captureText.isEmpty ? .white.opacity(0.25) : accent)
+        if model.captureKind == .focus {
+            focusBody.padding(.top, 10)
+        } else {
+            // 任务:给自己 / 交给 agent
+            if model.captureKind == .task { taskTargetToggle.padding(.top, 8) }
+            HStack(spacing: 8) {
+                TextField(placeholder, text: $model.captureText, axis: .vertical)
+                    .textFieldStyle(.plain).font(.system(size: 12)).foregroundStyle(.white)
+                    .lineLimit(1...3).focused($captureFocused)
+                    .onSubmit { Task { await model.submit() } }
+                    .padding(8)
+                    .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(model.locked ? 0.1 : 0.07)))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(accent.opacity(model.locked ? 0.5 : 0), lineWidth: 1))
+                Button { Task { await model.submit() } } label: {
+                    Image(systemName: "arrow.up.circle.fill").font(.system(size: 23))
+                        .foregroundStyle(model.captureText.isEmpty ? .white.opacity(0.25) : accent)
+                }
+                .buttonStyle(.plain).disabled(model.captureText.isEmpty)
             }
-            .buttonStyle(.plain).disabled(model.captureText.isEmpty)
+            .padding(.top, 7)
+            // 时间 / 地点 附件(note/task)
+            if model.captureKind != .journal { attachmentRow.padding(.top, 8) }
+            statusLabel.padding(.top, 2)
+            recentsSection.padding(.top, 6)
         }
-        .padding(.top, 7)
-        // 时间 / 地点 附件(note/task)
-        if model.captureKind != .journal { attachmentRow.padding(.top, 8) }
-        statusLabel.padding(.top, 2)
-        recentsSection.padding(.top, 6)
         Spacer(minLength: 0)
+    }
+
+    /// 专注:未开始 = 输入「在做什么」+ 开始;进行中 = 大计时 + 停止并记录。
+    @ViewBuilder private var focusBody: some View {
+        if model.focusOn {
+            VStack(spacing: 9) {
+                Text("正在专注").font(.system(size: 10, weight: .bold)).tracking(0.6).foregroundStyle(.white.opacity(0.34))
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    let s = model.focusElapsed(at: context.date)
+                    HStack(spacing: 11) {
+                        Circle().fill(accent).frame(width: 10, height: 10)
+                        Text(String(format: "%02d:%02d", s / 60, s % 60))
+                            .font(.system(size: 42, weight: .heavy)).monospacedDigit().foregroundStyle(.white)
+                    }
+                }
+                Text(model.focusWhat).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white).lineLimit(1)
+                Button { _ = model.stopFocus() } label: {
+                    Text("停止并记录").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color(red: 0.1, green: 0.07, blue: 0.03))
+                        .padding(.horizontal, 22).padding(.vertical, 8)
+                        .background(Capsule().fill(accent))
+                }
+                .buttonStyle(.plain)
+                Text("停止时自动写入 Helm /api/focus").font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
+            }
+            .frame(maxWidth: .infinity)
+        } else {
+            VStack(alignment: .leading, spacing: 10) {
+                TextField("我现在在做什么…", text: $model.captureText)
+                    .textFieldStyle(.plain).font(.system(size: 14)).foregroundStyle(.white)
+                    .focused($captureFocused)
+                    .onSubmit { model.startFocus() }
+                    .padding(11)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.06)))
+                HStack {
+                    Text("⏎ 开始 · 关掉时自动记录这段专注到 Helm").font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
+                    Spacer()
+                    Button { model.startFocus() } label: {
+                        Text("开始专注").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color(red: 0.1, green: 0.07, blue: 0.03))
+                            .padding(.horizontal, 16).padding(.vertical, 7)
+                            .background(Capsule().fill(accent))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
     }
 
     /// 给自己 / 交给 agent (HTML .ttog). TODO(align-capture): agent path → Cockpit.
@@ -1453,6 +1516,7 @@ struct NotchView: View {
         case .note: "随手记一笔…"
         case .journal: "今天发生了什么?"
         case .task: "到点让 agent 做什么…"
+        case .focus: "我现在在做什么…"
         }
     }
 

@@ -27,6 +27,37 @@ public final class NotchModel {
     /// Whether the "最近" recents strip is expanded (affects panel height).
     public var captureShowRecent = false
 
+    // Focus session (HTML focusOn / focusWhat / focusSec) — a forward timer that
+    // records to Helm on stop. Elapsed is derived from a start time so the UI can
+    // tick without mutating state.
+    public private(set) var focusOn = false
+    public private(set) var focusWhat = ""
+    public private(set) var focusStartedAt = Date()
+
+    /// Seconds elapsed in the current focus session (0 when not focusing).
+    public func focusElapsed(at now: Date = Date()) -> Int {
+        focusOn ? max(0, Int(now.timeIntervalSince(focusStartedAt))) : 0
+    }
+
+    /// Start a focus session, seeding "what" from the capture text.
+    public func startFocus() {
+        let what = captureText.trimmingCharacters(in: .whitespacesAndNewlines)
+        focusWhat = what.isEmpty ? "专注" : what
+        focusStartedAt = Date()
+        focusOn = true
+        captureText = ""
+        locked = false
+    }
+
+    /// Stop the focus session; returns the rounded minutes (min 1).
+    /// TODO(align-focus): POST /api/focus { what, minutes } once the backend exposes it.
+    @discardableResult public func stopFocus(at now: Date = Date()) -> Int {
+        let minutes = max(1, Int((Double(focusElapsed(at: now)) / 60).rounded()))
+        focusOn = false
+        focusWhat = ""
+        return minutes
+    }
+
     // MARK: Module switching (dock + view), ported from helm-notch-pro.html
 
     /// The module shown in the expanded panel (HTML `S.view`).
@@ -78,12 +109,13 @@ public final class NotchModel {
             case .reviews: 252
             case .stats: 252
             }
-        // HTML cap: task→300, note/journal→256; +64 when recents expanded.
-        // (focus/ask kinds not ported yet.)
+        // HTML cap: focus→300/268, task→300, note/journal→256; +64 with recents.
         case .capture:
-            captureShowRecent
-                ? min(360, (captureKind == .task ? 300 : 256) + 64)
-                : (captureKind == .task ? 300 : 256)
+            captureKind == .focus
+                ? (focusOn ? 300 : 268)
+                : (captureShowRecent
+                    ? min(360, (captureKind == .task ? 300 : 256) + 64)
+                    : (captureKind == .task ? 300 : 256))
         }
     }
 
@@ -369,6 +401,8 @@ public final class NotchModel {
                 try await backend.createNote(content: text, kind: "journal", journalDate: Self.today())
             case .task:
                 try await backend.createTask(prompt: text + ext)
+            case .focus:
+                return  // focus uses start/stop, not submit
             }
             captureText = ""
             captureWhen = nil

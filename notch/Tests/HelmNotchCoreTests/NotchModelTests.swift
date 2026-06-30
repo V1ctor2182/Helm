@@ -255,6 +255,40 @@ final class NotchModuleTests: XCTestCase {
         XCTAssertNil(model.captureWhen)
         XCTAssertNil(model.captureWhere)
     }
+
+    @MainActor
+    func testFocusStartSeedsWhatAndStopRoundsMinutes() {
+        let model = NotchModel(backend: FakeBackend())
+        XCTAssertEqual(model.focusElapsed(), 0)  // not focusing
+        model.captureText = "写 PRD"
+        model.startFocus()
+        XCTAssertTrue(model.focusOn)
+        XCTAssertEqual(model.focusWhat, "写 PRD")
+        XCTAssertEqual(model.captureText, "")  // consumed
+        XCTAssertEqual(model.focusElapsed(at: model.focusStartedAt.addingTimeInterval(150)), 150)
+        let minutes = model.stopFocus(at: model.focusStartedAt.addingTimeInterval(150))
+        XCTAssertEqual(minutes, 3)  // 150s → 2.5 → rounds to 3 min, min 1
+        XCTAssertFalse(model.focusOn)
+    }
+
+    @MainActor
+    func testFocusDefaultsWhatWhenTextEmpty() {
+        let model = NotchModel(backend: FakeBackend())
+        model.captureText = "   "
+        model.startFocus()
+        XCTAssertEqual(model.focusWhat, "专注")
+    }
+
+    @MainActor
+    func testFocusViewHeight() {
+        let model = NotchModel(backend: FakeBackend())
+        model.module = .capture
+        model.captureKind = .focus
+        XCTAssertEqual(model.viewHeight(), 268)  // idle
+        model.captureText = "x"
+        model.startFocus()
+        XCTAssertEqual(model.viewHeight(), 300)  // running
+    }
 }
 
 final class CaptureTests: XCTestCase {
