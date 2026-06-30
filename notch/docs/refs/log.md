@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 00:20 · swift-align-08-settings-dark-modal
+- 设计源: helm-notch-pro.html(settingsHTML / setdlg / 外观·后端·本机·媒体分区)
+- 界面: 设置窗口重做成深色分区 modal
+- 做了: SettingsView 重写为深色 #161719 分区(外观/HELM 后端/本机 CLAUDE CODE/媒体),发丝分隔行;接有真实 backing 的控件——主题色 palette 10 dot(点击→fixed+index,选中白环)+ 配色模式胶囊段(daily/hue/fixed→themeMode);连接状态行(model.connection);hook 安装/卸载+状态;默认播放源(点击 cycleMediaSource)。AppDelegate 窗改 440×540+darkAqua+深底。
+- 取舍: HTML 的背景材质玻璃/开机自启/点外收起/每天随机 toggle 无后端支撑 → 不端口假开关(以「打开 Helm 完整设置」承接,TODO)。Core 已有 themeMode/fixedColorIndex/connection/mediaSource,纯 App 改。
+- 改动: HelmNotchApp/SettingsView.swift(全重写)、AppDelegate.swift(窗尺寸+深色)
+- VibeHub: record_decision「设置窗深色分区 modal 重做」→ c82ae547-1b70-477c-959f-ade83abc9e61 (ai_proposed);add_question 无;add_constraint 无
+- 自检: 硬门 swift build + swift test 全绿,36 测 0 失败(纯 App UI)。逐项对照 HTML CSS:setsec 9 大写、accdot 24+选中环、模式胶囊 accent、setrow 发丝线、sdot 状态。视觉实机待用户。
+- 状态: ✅ 待 review  |  ❓需确认: 材质/自启/点外收起/每天随机 toggle 待后端支撑(TODO)
+
 ## 2026-07-01 00:16 · swift-align-07-swipe-gestures
 - 设计源: helm-notch-pro.html(notch wheel handler / switchModule / switchDev)
 - 界面: 触控板滑动手势(横滑切模块 · Dev 内纵滑分页)

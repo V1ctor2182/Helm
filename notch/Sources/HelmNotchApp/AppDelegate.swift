@@ -65,9 +65,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let model else { return }
         if settingsWindow == nil {
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 380, height: 360),
+                contentRect: NSRect(x: 0, y: 0, width: 440, height: 540),
                 styleMask: [.titled, .closable], backing: .buffered, defer: false)
             window.title = "Helm Notch 设置"
+            window.appearance = NSAppearance(named: .darkAqua)
+            window.backgroundColor = NSColor(red: 0.086, green: 0.090, blue: 0.098, alpha: 1)
             window.contentView = NSHostingView(rootView: SettingsView(model: model))
             window.center()
             window.isReleasedWhenClosed = false
