@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 00:16 · swift-align-07-swipe-gestures
+- 设计源: helm-notch-pro.html(notch wheel handler / switchModule / switchDev)
+- 界面: 触控板滑动手势(横滑切模块 · Dev 内纵滑分页)
+- 做了: NotchController 装 NSEvent.addLocalMonitorForEvents(.scrollWheel);仅展开+未锁+指针在可见 shell 矩形内响应,0.35s 冷却=一次滑一步。映射同 HTML:Dev 内 |dy|>|dx|>6→switchDev(夹紧);否则 |dx|>|dy|>6→switchModule(环绕)。AppKit delta 取负翻转(右滑→下一模块、下滑→下一页)。
+- 取舍: 只做触控板 scroll 路径(MBP 主路径);鼠标拖拽切换暂不做(怕与 dock/按钮 tap 冲突,dock 点击已可用,TODO)。delta 符号实机可能需翻(TODO)。switchModule/switchDev 逻辑 block1 已测;本块纯 App 接线。
+- 改动: HelmNotchApp/NotchController.swift(scrollMonitor nonisolated(unsafe)/installScrollMonitor/handleScroll;deinit 移除)
+- VibeHub: record_decision「触控板滑动手势」→ 28654ce3-ebea-401f-ad52-af534f007a73 (ai_proposed);add_question 无;add_constraint 无
+- 自检: 硬门 swift build + swift test 全绿,36 测 0 失败(修 1 轮:deinit 非 Sendable 访问 scrollMonitor → nonisolated(unsafe))。手势实机目视待用户(符号方向)。
+- 状态: ✅ 待 review  |  ❓需确认: scroll delta 符号方向实机校准;鼠标拖拽切换(均 TODO)
+
 ## 2026-07-01 00:12 · swift-align-06-per-view-auto-height
 - 设计源: helm-notch-pro.html(viewHeight() / VH / DEVSECS[].h / --eh / NTOP)
 - 界面: 展开面板高度按当前模块自适应 + 切换平滑过渡(Core 算高 + shell 用之)

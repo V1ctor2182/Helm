@@ -15,6 +15,11 @@ final class NotchController {
     private var panel: NotchPanel?
     private var pollTask: Task<Void, Never>?
 
+    /// Trackpad swipe → switch module / page Dev (HTML wheel handler).
+    /// `nonisolated(unsafe)`: set only on the MainActor, read once in deinit.
+    private nonisolated(unsafe) var scrollMonitor: Any?
+    private var lastSwitchAt = Date.distantPast
+
     /// Interactive top strip when collapsed (must clear the slot content).
     private let collapsedHeight: CGFloat = 34
     /// Extra canvas height beyond the panel so a taller drag-resize still fits.
@@ -58,6 +63,7 @@ final class NotchController {
             }
         }
         observeState()
+        installScrollMonitor()
 
         // The panel only becomes key when the capture field is focused, so losing
         // key = the user clicked away — collapse (keeping any typed text).
@@ -70,6 +76,42 @@ final class NotchController {
 
     deinit {
         pollTask?.cancel()
+        if let scrollMonitor { NSEvent.removeMonitor(scrollMonitor) }
+    }
+
+    /// Map a trackpad two-finger swipe over the expanded panel to a module switch
+    /// (horizontal) or a Dev sub-page page (vertical), mirroring the HTML wheel
+    /// handler. A short cooldown makes one swipe = one step.
+    private func installScrollMonitor() {
+        scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
+            MainActor.assumeIsolated { self?.handleScroll(event) }
+            return event
+        }
+    }
+
+    private func handleScroll(_ event: NSEvent) {
+        guard model.expanded, !model.locked, let panel else { return }
+        // Only when the pointer is over the visible top-centered shell.
+        guard let screen = NSScreen.main else { return }
+        let w = CGFloat(model.expandedWidth), h = CGFloat(model.autoExpandedHeight)
+        let shell = NSRect(x: screen.frame.midX - w / 2, y: screen.frame.maxY - h, width: w, height: h)
+        guard shell.contains(NSEvent.mouseLocation), panel.isVisible else { return }
+
+        // One step per gesture: ignore further events within the cooldown.
+        let now = Date()
+        guard now.timeIntervalSince(lastSwitchAt) > 0.35 else { return }
+
+        // AppKit scrolling deltas are inverted vs the web's wheel deltas; flip so
+        // swipe-right → next module, swipe-down → next Dev page.
+        // TODO(align-gesture): sign may need tuning on real hardware.
+        let dx = -event.scrollingDeltaX, dy = -event.scrollingDeltaY
+        if model.module == .dev, abs(dy) > abs(dx), abs(dy) > 6 {
+            model.switchDev(dy > 0 ? 1 : -1)
+            lastSwitchAt = now
+        } else if abs(dx) > abs(dy), abs(dx) > 6 {
+            model.switchModule(dx > 0 ? 1 : -1)
+            lastSwitchAt = now
+        }
     }
 
     /// Notch width in points: the gap between the two usable menu-bar areas.
