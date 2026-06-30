@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 00:02 · swift-align-03-media-fullscreen
+- 设计源: helm-notch-pro.html(V.media / .mfull / .bgcov / .lyrics / .mwave / SOURCES / srccycle)
+- 界面: Media 模块全屏(mediaModule 取代复用小 cell);Core 加播放源状态
+- 做了: Core MediaSource 枚举(system/appleMusic/spotify/browser 纯文本名)+ NotchModel.mediaSource/cycleMediaSource(环绕,+1 测)。App mediaModule:模糊封面背景(blur34/scale1.3/opacity.6+黑 scrim.45)+ mtop(‹返回→dash · 源 chip ●Source⌄→cycle)+ mrow(左190:bigcov84 r14 阴影/标题/艺人/进度条+圆 knob/控制 ◀◀❚❚21▶▶;右 lyrics 静态 demo 当前句高亮+上下渐隐 mask,2.6s 推进)+ Waveform 44 条(sine 基高、错位 delay 动画、暂停冻结、两端 mask)。
+- 取舍: 歌词 = HTML 静态 demo(真同步歌词需 provider,TODO);per-view 自适应高度 VH.media=330 未端口(TODO,暂用可调面板高度);封面/进度/控制接真实 nowPlaying,无时长时进度回退 HTML 静态 42%/0:42·1:31。
+- 改动: HelmNotchCore/Media.swift(+MediaSource)、NotchModel.swift(+mediaSource/cycle)、Tests(+1)、HelmNotchApp/NotchView.swift(mediaModule/mediaBgCover/coverArt/mediaProgress/lyricsColumn + Waveform struct;media 路由)
+- VibeHub: record_decision「全屏 Media 模块端口」→ 34586cc4-99a6-4c9e-91aa-93a2ea826916 (ai_proposed);add_question 无;add_constraint 无
+- 自检: 硬门 swift build + swift test 全绿,29 测 0 失败(+1 mediaSource 循环 wrap)。逐项对照 HTML CSS:bgcov blur/scale/scrim、bigcov 84/r14、mbar2 白条+10 圆 knob、mctrl2 21pp、lyrics .38/.22-.78 mask、mwave 44/sine/两端 mask。视觉实机待用户目视。
+- 状态: ✅ 待 review  |  ❓需确认: per-view 自适应高度待后续块;歌词真源待定(均 TODO)
+
 ## 2026-06-30 23:58 · swift-align-02-dock-toolbar-router-dashboard
 - 设计源: helm-notch-pro.html(#panel / .ntop / .dock / renderDock / V.dash / V.clip)
 - 界面: 展开面板重构为「顶栏 + 单模块视图 + dock」;Dashboard 与 Clipboard 模块端口

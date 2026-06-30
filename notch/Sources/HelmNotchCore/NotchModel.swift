@@ -24,6 +24,15 @@ public final class NotchModel {
     public var module: NotchModule = .dashboard
     /// The Dev module's active sub-section (HTML `S.devSec`).
     public var devSection: DevSection = .agents
+    /// The player the transport controls (HTML `S.mediaSrc`).
+    public private(set) var mediaSource: MediaSource = .system
+
+    /// Cycle to the next media source (HTML `srccycle`), wrapping around.
+    public func cycleMediaSource() {
+        let all = MediaSource.allCases
+        let i = all.firstIndex(of: mediaSource) ?? 0
+        mediaSource = all[(i + 1) % all.count]
+    }
 
     /// Select a module directly (HTML dock click). Entering Dev resets to its
     /// first sub-section, matching `if(S.view==='dev')S.devSec=0`.

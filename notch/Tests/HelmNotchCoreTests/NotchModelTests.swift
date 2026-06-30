@@ -140,6 +140,19 @@ final class NotchModuleTests: XCTestCase {
         model.switchDev(1)
         XCTAssertEqual(model.devSection, .reviews)
     }
+
+    @MainActor
+    func testMediaSourceCyclesAndWraps() {
+        let model = NotchModel(backend: FakeBackend())
+        XCTAssertEqual(model.mediaSource, .system)
+        model.cycleMediaSource()
+        XCTAssertEqual(model.mediaSource, .appleMusic)
+        model.cycleMediaSource()  // spotify
+        model.cycleMediaSource()  // browser
+        XCTAssertEqual(model.mediaSource, .browser)
+        model.cycleMediaSource()  // wraps
+        XCTAssertEqual(model.mediaSource, .system)
+    }
 }
 
 final class CaptureTests: XCTestCase {

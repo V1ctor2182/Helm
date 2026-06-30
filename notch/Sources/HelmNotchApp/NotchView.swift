@@ -241,8 +241,7 @@ struct NotchView: View {
         case .clipboard:
             moduleScroll { clipboardBody }
         case .media:
-            // TODO(align-media): port the full-screen media (lyrics + waveform).
-            moduleScroll { mediaCell }
+            mediaModule
         }
     }
 
@@ -408,6 +407,155 @@ struct NotchView: View {
         .frame(maxHeight: .infinity, alignment: .top)
         .contentShape(Rectangle())
         .onTapGesture { model.selectModule(.dev) }
+    }
+
+    // MARK: Media module (V.media / .mfull — blurred cover · cover/lyrics · waveform)
+    //
+    // TODO(align-media-height): HTML `VH.media`=330 — per-view auto-height isn't
+    // ported yet; this renders within the current resizable panel height.
+
+    private let lyricsDemo = [
+        "I've been walking through the storm",
+        "Counting every blessing as it comes",
+        "Even when the night feels long",
+        "I know the morning's gonna come",
+        "So I'll keep counting my blessings",
+        "One by one by one",
+    ]
+
+    private var mediaModule: some View {
+        let np = model.nowPlaying
+        let title = np?.title ?? "Counting My Blessings"
+        let artist = (np.map { $0.artist.isEmpty ? "Seph Schlueter" : $0.artist }) ?? "Seph Schlueter"
+        return ZStack {
+            mediaBgCover
+            VStack(spacing: 0) {
+                HStack {
+                    Button { model.selectModule(.dashboard) } label: {
+                        Text("‹ 返回").font(.system(size: 12, weight: .semibold)).foregroundStyle(.white.opacity(0.56))
+                    }
+                    .buttonStyle(.plain)
+                    Spacer()
+                    Button { model.cycleMediaSource() } label: {
+                        HStack(spacing: 6) {
+                            Circle().fill(accent).frame(width: 7, height: 7)
+                            Text(model.mediaSource.label).font(.system(size: 11, weight: .semibold)).foregroundStyle(.white.opacity(0.56))
+                            Text("⌄").font(.system(size: 9)).foregroundStyle(.white.opacity(0.34))
+                        }
+                        .padding(.horizontal, 10).padding(.vertical, 4)
+                        .background(Capsule().fill(.white.opacity(0.08)))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.bottom, 3)
+
+                HStack(spacing: 22) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Spacer(minLength: 0)
+                        coverArt(np, size: 84, radius: 14)
+                            .shadow(color: .black.opacity(0.5), radius: 10, y: 6)
+                        Text(title).font(.system(size: 14, weight: .heavy)).foregroundStyle(.white).lineLimit(1).padding(.top, 8)
+                        Text(artist).font(.system(size: 11)).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
+                        mediaProgress(np).padding(.top, 9)
+                        HStack(spacing: 22) {
+                            Button { model.previousTrack() } label: { Image(systemName: "backward.fill").font(.system(size: 15)) }
+                            Button { model.playPause() } label: { Image(systemName: (np?.isPlaying ?? true) ? "pause.fill" : "play.fill").font(.system(size: 21)) }
+                            Button { model.nextTrack() } label: { Image(systemName: "forward.fill").font(.system(size: 15)) }
+                        }
+                        .buttonStyle(.plain).foregroundStyle(.white).padding(.top, 8)
+                        Spacer(minLength: 0)
+                    }
+                    .frame(width: 190)
+                    lyricsColumn
+                }
+                .frame(maxHeight: .infinity)
+
+                Waveform(playing: np?.isPlaying ?? true, color: accent)
+                    .frame(height: 24).padding(.top, 7)
+            }
+            .padding(EdgeInsets(top: 9, leading: 16, bottom: 9, trailing: 16))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    /// `.bgcov` — the cover blurred + scaled behind everything, with a dark scrim.
+    private var mediaBgCover: some View {
+        ZStack {
+            Group {
+                if let np = model.nowPlaying, let art = nsArtwork(np) {
+                    Image(nsImage: art).resizable().aspectRatio(contentMode: .fill)
+                } else {
+                    LinearGradient(
+                        colors: [Color(red: 0.91, green: 0.63, blue: 0.48), Color(red: 0.71, green: 0.42, blue: 0.56), Color(red: 0.42, green: 0.31, blue: 0.56)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing)
+                }
+            }
+            .blur(radius: 34).scaleEffect(1.3).opacity(0.6)
+            Color.black.opacity(0.45)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipped()
+    }
+
+    private func coverArt(_ np: NowPlaying?, size: CGFloat, radius: CGFloat) -> some View {
+        Group {
+            if let np, let art = nsArtwork(np) {
+                Image(nsImage: art).resizable().aspectRatio(contentMode: .fill)
+            } else {
+                LinearGradient(colors: [Color(red: 0.11, green: 0.72, blue: 0.33), Color(red: 0.04, green: 0.5, blue: 0.23)],
+                               startPoint: .topLeading, endPoint: .bottomTrailing)
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+    }
+
+    /// `.mbar2` — real progress when known; otherwise the HTML's static 42% demo.
+    @ViewBuilder private func mediaProgress(_ np: NowPlaying?) -> some View {
+        TimelineView(.periodic(from: .now, by: 0.5)) { context in
+            let total = np?.duration ?? 0
+            let pos = model.livePosition(at: context.date)
+            let frac = total > 0 ? min(1, pos / total) : 0.42
+            VStack(spacing: 3) {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(.white.opacity(0.22))
+                        Capsule().fill(.white).frame(width: max(2, geo.size.width * frac))
+                        Circle().fill(.white).frame(width: 10, height: 10)
+                            .shadow(color: .black.opacity(0.4), radius: 2, y: 1)
+                            .offset(x: max(0, geo.size.width * frac - 5))
+                    }
+                }
+                .frame(height: 10)
+                HStack {
+                    Text(total > 0 ? timeString(pos) : "0:42"); Spacer(); Text(total > 0 ? timeString(total) : "1:31")
+                }
+                .font(.system(size: 9)).foregroundStyle(.white.opacity(0.55)).monospacedDigit()
+            }
+        }
+    }
+
+    /// `.lyrics` — scrolling lyrics with the current line lit, masked top/bottom.
+    /// TODO(align-media): demo lyrics; real synced lyrics need a provider.
+    private var lyricsColumn: some View {
+        TimelineView(.periodic(from: .now, by: 2.6)) { context in
+            let playing = model.nowPlaying?.isPlaying ?? true
+            let cur = playing ? Int(context.date.timeIntervalSince1970 / 2.6) % lyricsDemo.count : 2
+            VStack(alignment: .leading, spacing: 7) {
+                ForEach(lyricsDemo.indices, id: \.self) { i in
+                    Text(lyricsDemo[i])
+                        .font(.system(size: i == cur ? 14 : 13, weight: i == cur ? .bold : .regular))
+                        .foregroundStyle(i == cur ? .white : .white.opacity(0.38))
+                        .lineLimit(1)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .mask(LinearGradient(
+                stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.22),
+                        .init(color: .black, location: 0.78), .init(color: .clear, location: 1)],
+                startPoint: .top, endPoint: .bottom))
+        }
     }
 
     // MARK: Clipboard module (V.clip) — seed data; real history is a later block.
@@ -820,6 +968,41 @@ private struct EqualizerBars: View {
             }
         }
         .frame(height: 12, alignment: .bottom)
+        .onAppear { animate = true }
+    }
+}
+
+/// `.mwave` — a 44-bar monochrome visualizer (sine base heights, staggered
+/// dance). Bars freeze when playback is paused.
+private struct Waveform: View {
+    var playing: Bool
+    var color: Color
+    @State private var animate = false
+    private let n = 44
+
+    var body: some View {
+        GeometryReader { geo in
+            HStack(alignment: .bottom, spacing: 3) {
+                ForEach(0..<n, id: \.self) { i in
+                    let frac = 0.20 + 0.46 * abs(sin(Double(i) * 0.9 + 1))
+                    Capsule().fill(color).opacity(0.5)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: max(2, geo.size.height * frac))
+                        .scaleEffect(CGSize(width: 1, height: animate ? 1 : 0.32), anchor: .bottom)
+                        .animation(
+                            playing
+                                ? .easeInOut(duration: 1.1).repeatForever(autoreverses: true)
+                                    .delay(Double((i * 37) % 13) * 0.11)
+                                : .default,
+                            value: animate)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+            .mask(LinearGradient(
+                stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.07),
+                        .init(color: .black, location: 0.93), .init(color: .clear, location: 1)],
+                startPoint: .leading, endPoint: .trailing))
+        }
         .onAppear { animate = true }
     }
 }
