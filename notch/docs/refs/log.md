@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 01:00 · swift-align-16-ask-brain-kind
+- 设计源: helm-notch-pro.html(cap kind 'ask' / CHIPS 五项 / capatt 条件)
+- 界面: 问大脑(ask)速记 kind
+- 做了: Core CaptureKind +.ask;submit ask→createNote(kind:"ask");App placeholder ask、chips 现 5 个、时间/地点附件收紧为仅 note/task(还原 HTML capatt)(+1 测)。
+- 取舍: HTML ask 亦为 stub(只 flash);暂存为 ask note,真实大脑查询/回答通道 TODO。
+- 改动: HelmNotchCore/Models.swift(+.ask)、NotchModel.swift(submit ask)、Tests(+1)、HelmNotchApp/NotchView.swift(placeholder、attachmentRow 条件)
+- VibeHub: record_decision「问大脑 kind」→ 1152eca6-4fe7-4112-adf9-38d8315358ef (ai_proposed);add_question 无;add_constraint 无
+- 自检: 硬门 swift build + swift test 全绿,49 测 0 失败(+1 ask)。对照 HTML:CHIPS 五项、capatt 仅 note/task。视觉实机待用户。
+- 状态: ✅ 待 review  |  ❓需确认: 大脑查询/回答通道(TODO)
+
 ## 2026-07-01 00:55 · swift-align-15-file-drop-attach
 - 设计源: helm-notch-pro.html(notch.drag / drop handler / addFiles / .attchip)
 - 界面: 拖文件到刘海 → 速记附件

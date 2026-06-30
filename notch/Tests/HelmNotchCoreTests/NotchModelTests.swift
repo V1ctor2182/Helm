@@ -296,6 +296,18 @@ final class NotchModuleTests: XCTestCase {
     }
 
     @MainActor
+    func testAskPostsAsAskNote() async {
+        let backend = FakeBackend()
+        let model = NotchModel(backend: backend)
+        model.captureKind = .ask
+        model.captureText = "Helm 怎么配后端?"
+        await model.submit()
+        XCTAssertEqual(backend.notes.count, 1)
+        XCTAssertEqual(backend.notes[0].kind, "ask")
+        XCTAssertEqual(model.captureStatus, .sent)
+    }
+
+    @MainActor
     func testAddFilesStagesAndSwitchesToCapture() {
         let model = NotchModel(backend: FakeBackend())
         model.module = .dashboard

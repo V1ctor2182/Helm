@@ -458,6 +458,9 @@ public final class NotchModel {
                 try await backend.createTask(prompt: text + ext)
             case .focus:
                 return  // focus uses start/stop, not submit
+            case .ask:
+                // TODO(align-ask): real brain query + answer channel; interim = stored note.
+                try await backend.createNote(content: text, kind: "ask", journalDate: nil)
             }
             captureText = ""
             captureWhen = nil

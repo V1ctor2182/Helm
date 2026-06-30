@@ -1394,7 +1394,8 @@ struct NotchView: View {
             .padding(.top, 7)
             // 时间 / 地点 附件(note/task)
             if !model.captureFiles.isEmpty { captureFilesRow.padding(.top, 8) }
-            if model.captureKind != .journal { attachmentRow.padding(.top, 8) }
+            // 时间/地点附件仅 note/task(HTML capatt 条件),ask/journal 不显示。
+            if model.captureKind == .note || model.captureKind == .task { attachmentRow.padding(.top, 8) }
             statusLabel.padding(.top, 2)
             recentsSection.padding(.top, 6)
         }
@@ -1626,6 +1627,7 @@ struct NotchView: View {
         case .journal: "今天发生了什么?"
         case .task: "到点让 agent 做什么…"
         case .focus: "我现在在做什么…"
+        case .ask: "问问 Helm 大脑…"
         }
     }
 
