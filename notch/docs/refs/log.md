@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 00:12 · swift-align-06-per-view-auto-height
+- 设计源: helm-notch-pro.html(viewHeight() / VH / DEVSECS[].h / --eh / NTOP)
+- 界面: 展开面板高度按当前模块自适应 + 切换平滑过渡(Core 算高 + shell 用之)
+- 做了: Core viewHeight()(dash172/media330/clip232/cal 月312周240/dev 204·248·252·252/cap task300·其余256)+topBarHeight30+autoExpandedHeight。App shell 展开高度改 autoExpandedHeight + .animation(.42s timingCurve, value: autoExpandedHeight) 平滑过渡;Controller host.activeSize 高度同改;resize handle 改仅宽度。
+- 取舍: 与 decision 09eb9245「用户可拖拽持久化尺寸」冲突 → 按 loop 忠实实现 HTML 自适应高度,开 [needs-human] question 7597d8c5 等拍板;持久化高度暂留可回退;cap 的 recents/focus/ask 高度分支未端口(只覆盖 note/journal/task,TODO)。canvas 大画布不变(slack 容纳最高 360)。
+- 改动: HelmNotchCore/NotchModel.swift(+viewHeight/topBarHeight/autoExpandedHeight)、Tests(+4)、HelmNotchApp/NotchView.swift(shell 高度+过渡动画、resize 仅宽)、NotchController.swift(activeSize 高度)
+- VibeHub: record_decision「per-view 自适应高度端口」→ 21778dfc-f9fd-4cb1-a13a-ee8f278c4fe8 (ai_proposed);add_question「[needs-human] 自适应高度 vs 拖拽持久化」→ 7597d8c5-d12f-4df2-9715-e5d996410eb8 (ai_proposed)
+- 自检: 硬门 swift build + swift test 全绿,36 测 0 失败(+4 高度:各模块/dev 子页/cal·cap 态/autoExpanded 加顶栏)。视觉实机待用户(切模块高度过渡)。
+- 状态: ✅ 待 review  |  ❓需确认: 面板高度策略(已开 7597d8c5);cap 非 task 态高度细分待 cap 丰富化块
+
 ## 2026-07-01 00:08 · swift-align-05-calendar-week-month-agenda
 - 设计源: helm-notch-pro.html(V.cal / calhd2 / wstrip / mgrid / mrail / agenda / S.calExpand·calSel·calOff)
 - 界面: Calendar 模块(calendarModule 取代复用周条 cell);Core 加日历视图态

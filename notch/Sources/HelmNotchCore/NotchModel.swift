@@ -49,6 +49,34 @@ public final class NotchModel {
     public func calPrevMonth() { calMonthOffset -= 1 }
     public func calNextMonth() { calMonthOffset += 1 }
 
+    // MARK: Per-view height (HTML viewHeight() + NTOP)
+
+    /// Height of the top bar, added on top of every view budget (HTML `NTOP`).
+    public static let topBarHeight: Double = 30
+
+    /// The view+dock budget for the current module (HTML `viewHeight()` / `VH`).
+    /// Each module is as tall as its content needs — no big black void.
+    public func viewHeight() -> Double {
+        switch module {
+        case .dashboard: 172
+        case .media: 330
+        case .clipboard: 232
+        case .calendar: calMonthView ? 312 : 240
+        case .dev:
+            switch devSection {
+            case .agents: 204
+            case .ports: 248
+            case .reviews: 252
+            case .stats: 252
+            }
+        // HTML cap: task→300, note/journal→256 (recents/focus/ask not ported yet).
+        case .capture: captureKind == .task ? 300 : 256
+        }
+    }
+
+    /// Total expanded panel height for the current view (HTML `--eh`).
+    public var autoExpandedHeight: Double { viewHeight() + Self.topBarHeight }
+
     /// Select a module directly (HTML dock click). Entering Dev resets to its
     /// first sub-section, matching `if(S.view==='dev')S.devSec=0`.
     public func selectModule(_ m: NotchModule) {

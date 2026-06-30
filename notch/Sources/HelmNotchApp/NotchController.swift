@@ -104,7 +104,7 @@ final class NotchController {
         host.activeSize = { [weak model, collapsedHeight] in
             guard let model else { return .zero }
             return model.expanded
-                ? CGSize(width: model.expandedWidth, height: model.expandedHeight)
+                ? CGSize(width: model.expandedWidth, height: model.autoExpandedHeight)
                 : CGSize(width: CGFloat(model.notchWidth) + 150, height: collapsedHeight)
         }
         panel.contentView = host

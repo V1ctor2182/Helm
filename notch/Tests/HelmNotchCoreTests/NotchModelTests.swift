@@ -181,6 +181,49 @@ final class NotchModuleTests: XCTestCase {
         model.calSelectDay(15)
         XCTAssertEqual(model.calSelectedDay, 15)
     }
+
+    @MainActor
+    func testViewHeightVariesPerModule() {
+        let model = NotchModel(backend: FakeBackend())
+        model.module = .dashboard
+        XCTAssertEqual(model.viewHeight(), 172)
+        model.module = .media
+        XCTAssertEqual(model.viewHeight(), 330)
+        model.module = .clipboard
+        XCTAssertEqual(model.viewHeight(), 232)
+    }
+
+    @MainActor
+    func testViewHeightFollowsDevSection() {
+        let model = NotchModel(backend: FakeBackend())
+        model.module = .dev
+        model.devSection = .agents
+        XCTAssertEqual(model.viewHeight(), 204)
+        model.devSection = .stats
+        XCTAssertEqual(model.viewHeight(), 252)
+    }
+
+    @MainActor
+    func testViewHeightFollowsCalAndCaptureState() {
+        let model = NotchModel(backend: FakeBackend())
+        model.module = .calendar
+        model.calMonthView = true
+        XCTAssertEqual(model.viewHeight(), 312)
+        model.calMonthView = false
+        XCTAssertEqual(model.viewHeight(), 240)
+        model.module = .capture
+        model.captureKind = .task
+        XCTAssertEqual(model.viewHeight(), 300)
+        model.captureKind = .note
+        XCTAssertEqual(model.viewHeight(), 256)
+    }
+
+    @MainActor
+    func testAutoExpandedHeightAddsTopBar() {
+        let model = NotchModel(backend: FakeBackend())
+        model.module = .dashboard
+        XCTAssertEqual(model.autoExpandedHeight, 172 + NotchModel.topBarHeight)
+    }
 }
 
 final class CaptureTests: XCTestCase {

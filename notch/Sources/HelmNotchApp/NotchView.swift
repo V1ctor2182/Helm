@@ -18,7 +18,8 @@ struct NotchView: View {
 
     var body: some View {
         let shellW = model.expanded ? model.expandedWidth : collapsedWidth
-        let shellH = model.expanded ? model.expandedHeight : collapsedBarHeight
+        // Per-view auto height (HTML --eh) — each module is as tall as it needs.
+        let shellH = model.expanded ? model.autoExpandedHeight : collapsedBarHeight
         shell(width: shellW, height: shellH)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .onExitCommand { captureFocused = false; model.locked ? model.endInteraction() : model.collapse() }
@@ -40,7 +41,7 @@ struct NotchView: View {
                 .animation(.easeOut(duration: model.expanded ? 0.12 : 0.22), value: model.expanded)
 
             expandedPanel
-                .frame(width: model.expandedWidth, height: model.expandedHeight, alignment: .top)
+                .frame(width: model.expandedWidth, height: model.autoExpandedHeight, alignment: .top)
                 .opacity(model.expanded ? 1 : 0)
                 .offset(y: model.expanded ? 0 : -10)
                 .allowsHitTesting(model.expanded)
@@ -54,6 +55,8 @@ struct NotchView: View {
         .onHover { model.hover($0) }
         // iOS-style shell grow (content has its own, delayed, animations above).
         .animation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.5), value: model.expanded)
+        // Animate the height re-flow when the active view changes (HTML --eh transition).
+        .animation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.42), value: model.autoExpandedHeight)
         .frame(maxWidth: .infinity, alignment: .top)  // center the shell in the canvas
     }
 
@@ -1241,10 +1244,14 @@ struct NotchView: View {
         Spacer(minLength: 0)
     }
 
-    // MARK: Resize handle
+    // MARK: Resize handle (width only — height is now auto per-view)
+    //
+    // TODO(align): pending [needs-human] — per-view auto-height (HTML viewHeight())
+    // supersedes the persisted drag-resize *height* from decision 09eb9245. Width
+    // stays user-adjustable; height follows the active module.
 
     private var resizeHandle: some View {
-        Image(systemName: "arrow.down.right")
+        Image(systemName: "arrow.left.and.right")
             .font(.system(size: 9, weight: .bold))
             .foregroundStyle(.white.opacity(0.25))
             .padding(7)
@@ -1254,7 +1261,7 @@ struct NotchView: View {
                     .onChanged { value in
                         model.resize(
                             width: model.expandedWidth + value.translation.width * 2,
-                            height: model.expandedHeight + value.translation.height)
+                            height: model.expandedHeight)  // height auto; keep as-is
                     }
             )
     }
