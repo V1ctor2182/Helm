@@ -236,8 +236,7 @@ struct NotchView: View {
         case .calendar:
             moduleScroll { calendarCell }
         case .dev:
-            // TODO(align-dev): port the Dev rail + ports/reviews/stats sub-pages.
-            moduleScroll { agentCell }
+            devModule
         case .clipboard:
             moduleScroll { clipboardBody }
         case .media:
@@ -407,6 +406,196 @@ struct NotchView: View {
         .frame(maxHeight: .infinity, alignment: .top)
         .contentShape(Rectangle())
         .onTapGesture { model.selectModule(.dev) }
+    }
+
+    // MARK: Dev module (V.dev — vertical rail paging agents/ports/reviews/stats)
+
+    /// `.devwrap` — the current sub-page on the left, a minimal vertical pager
+    /// rail on the right. The rail dot for the active section elongates in accent.
+    private var devModule: some View {
+        HStack(spacing: 6) {
+            devStage.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            devRail
+        }
+        .padding(.top, 14).padding(.horizontal, 16).padding(.bottom, 6)
+    }
+
+    @ViewBuilder private var devStage: some View {
+        switch model.devSection {
+        case .agents: VStack(alignment: .leading, spacing: 0) { agentCell }
+        case .ports: devPorts
+        case .reviews: devReviews
+        case .stats: devStats
+        }
+    }
+
+    private var devRail: some View {
+        VStack(spacing: 9) {
+            ForEach(DevSection.allCases) { s in
+                let on = model.devSection == s
+                RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                    .fill(on ? accent : .white.opacity(0.22))
+                    .frame(width: 5, height: on ? 18 : 5)
+                    .contentShape(Rectangle())
+                    .onTapGesture { model.devSection = s }
+            }
+        }
+        .frame(width: 20)
+        .frame(maxHeight: .infinity)
+    }
+
+    // Ports (V.ports). TODO(align-dev-ports): real list needs an lsof probe.
+    private let portSeed: [(port: Int, name: String, color: Color)] = [
+        (3000, "Frontend · next dev", .green),
+        (8769, "Helm backend · python", .green),
+        (5173, "Vite · docs", .green),
+        (11434, "Ollama", .orange),
+        (6006, "Storybook", .green),
+    ]
+
+    private var devPorts: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            cellHeader("本地端口 · LISTENING", trailing: "lsof -iTCP -sTCP:LISTEN")
+            ForEach(portSeed.indices, id: \.self) { i in
+                let p = portSeed[i]
+                HStack(spacing: 11) {
+                    Circle().fill(p.color).frame(width: 7, height: 7)
+                    Text(":\(p.port)").font(.system(size: 12, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.white).frame(minWidth: 56, alignment: .leading)
+                    Text(p.name).font(.system(size: 12)).foregroundStyle(.white.opacity(0.56)).lineLimit(1)
+                    Spacer(minLength: 6)
+                    Text("↗ 打开").font(.system(size: 10)).foregroundStyle(accent)
+                }
+                .padding(.vertical, 7)
+                .overlay(alignment: .bottom) { Rectangle().fill(.white.opacity(0.09)).frame(height: 0.5) }
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    // Reviews (V.prs). TODO(align-dev-reviews): real list needs a GitHub/GitLab probe.
+    private let prSeed: [(who: String, title: String, repo: String, num: String, src: String)] = [
+        ("VZ", "feat(notch): 日程提醒 banner + 波形", "V1ctor2182/Helm", "#51", "GH"),
+        ("VZ", "fix(notch): AppDelegate @MainActor + @Sendable", "V1ctor2182/Helm", "#50", "GH"),
+        ("BP", "Resolve \"Implement integration test\"", "helm/bridge", "#123", "GL"),
+    ]
+
+    private var devReviews: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            cellHeader("◈ 待评审 · PRs / MRs", trailing: "\(prSeed.count) 待处理")
+            ForEach(prSeed.indices, id: \.self) { i in
+                let p = prSeed[i]
+                HStack(spacing: 10) {
+                    Text(p.who).font(.system(size: 10, weight: .bold)).foregroundStyle(.white.opacity(0.56))
+                        .frame(width: 26, height: 26).background(Circle().fill(Color(white: 0.15)))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(p.title).font(.system(size: 12, weight: .semibold)).foregroundStyle(.white).lineLimit(1)
+                        HStack(spacing: 6) {
+                            Text("\(p.repo) \(p.num)").font(.system(size: 10)).foregroundStyle(.white.opacity(0.56)).lineLimit(1)
+                            Text(p.src).font(.system(size: 8, weight: .bold)).foregroundStyle(.white.opacity(0.34))
+                                .padding(.horizontal, 5).padding(.vertical, 1)
+                                .background(RoundedRectangle(cornerRadius: 4).fill(.white.opacity(0.07)))
+                        }
+                    }
+                    Spacer(minLength: 4)
+                    Text("↗").font(.system(size: 13)).foregroundStyle(accent)
+                }
+                .padding(.vertical, 9)
+                .overlay(alignment: .bottom) {
+                    if i < prSeed.count - 1 { Rectangle().fill(.white.opacity(0.09)).frame(height: 0.5) }
+                }
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    // Stats (V.stats). TODO(align-dev-stats): heatmap/tokens/commits are seed
+    // data — real numbers need GitHub + Claude-Code token tracking.
+    private let sparkSeed: [Int] = [38, 62, 30, 78, 52, 88, 68]
+
+    private var devStats: some View {
+        GeometryReader { geo in
+            let heatW = (geo.size.width - 18) * 1.45 / 2.45
+            HStack(spacing: 18) {
+                VStack(alignment: .leading, spacing: 0) {
+                    cellHeader("GITHUB · 1,284 contributions")
+                    heatmap.padding(.top, 4)
+                    HStack(spacing: 3) {
+                        Text("Less").font(.system(size: 9)).foregroundStyle(.white.opacity(0.34))
+                        ForEach(1..<5) { l in RoundedRectangle(cornerRadius: 2).fill(accent).opacity(heatOpacity(l)).frame(width: 9, height: 9) }
+                        Text("More").font(.system(size: 9)).foregroundStyle(.white.opacity(0.34))
+                    }
+                    .padding(.top, 8)
+                }
+                .frame(width: heatW, alignment: .leading)
+
+                VStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("CLAUDE CODE TOKENS · TODAY").font(.system(size: 9, weight: .bold)).tracking(0.5).foregroundStyle(.white.opacity(0.34))
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            (Text("2.4").font(.system(size: 24, weight: .heavy)) + Text("M").font(.system(size: 13)).foregroundColor(.white.opacity(0.56)))
+                                .foregroundStyle(.white)
+                            Text("· 48M 总").font(.system(size: 11, weight: .semibold)).foregroundStyle(.white.opacity(0.34))
+                        }
+                        .padding(.top, 3)
+                        HStack(alignment: .bottom, spacing: 3) {
+                            ForEach(sparkSeed.indices, id: \.self) { i in
+                                RoundedRectangle(cornerRadius: 2).fill(accent).opacity(0.85)
+                                    .frame(maxWidth: .infinity).frame(height: CGFloat(sparkSeed[i]) / 100 * 24)
+                            }
+                        }
+                        .frame(height: 24).padding(.top, 8)
+                    }
+                    .padding(.horizontal, 13).padding(.vertical, 10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.04)))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.09), lineWidth: 0.5))
+
+                    HStack(spacing: 10) {
+                        statMini("COMMITS · 本周", value: "37")
+                        statMini("PULL REQUESTS", value: "3 open · 12")
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .top)
+            }
+        }
+    }
+
+    private func statMini(_ label: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label).font(.system(size: 9, weight: .bold)).tracking(0.5).foregroundStyle(.white.opacity(0.34))
+            Text(value).font(.system(size: 18, weight: .heavy)).foregroundStyle(.white).lineLimit(1)
+        }
+        .padding(.horizontal, 12).padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.04)))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.09), lineWidth: 0.5))
+    }
+
+    /// `.hmap` — 19 columns × 7 rows; level→opacity from a deterministic hash
+    /// (HTML seeds it with Math.random; we use a stable hash for reproducibility).
+    private var heatmap: some View {
+        HStack(spacing: 3) {
+            ForEach(0..<19, id: \.self) { col in
+                VStack(spacing: 3) {
+                    ForEach(0..<7, id: \.self) { row in
+                        RoundedRectangle(cornerRadius: 2).fill(accent)
+                            .opacity(heatOpacity(heatLevel(col * 7 + row)))
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
+            }
+        }
+    }
+
+    private func heatLevel(_ i: Int) -> Int {
+        let r = heatHash(i)
+        return r < 0.4 ? 0 : r < 0.62 ? 1 : r < 0.82 ? 2 : r < 0.94 ? 3 : 4
+    }
+    private func heatOpacity(_ level: Int) -> Double { [0.09, 0.3, 0.52, 0.74, 1.0][level] }
+    private func heatHash(_ i: Int) -> Double {
+        let x = sin(Double(i) * 12.9898 + 78.233) * 43758.5453
+        return x - floor(x)
     }
 
     // MARK: Media module (V.media / .mfull — blurred cover · cover/lyrics · waveform)

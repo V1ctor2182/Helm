@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 00:05 · swift-align-04-dev-rail-subpages
+- 设计源: helm-notch-pro.html(V.dev / devrail / V.ports / V.prs / V.stats / PORTS / PRS / HEAT / SPARK)
+- 界面: Dev 模块(devModule 取代复用单 agentCell);竖向 rail 分页四子页
+- 做了: devModule = devStage(左,fill)+ devRail(右 width20:4 分页点,选中 5×18 accent 圆角条/其余 5×5 点,点击切 devSection)。四子页:agents 复用 agentCell;ports 端口 V.ports(PORTS 种子,状态点+:端口 mono+名+↗打开+发丝线);reviews 端口 V.prs(PRS 种子,单色缩写头像圆+标题截断+repo#num+GH/GL 单色徽标+accent↗);stats 端口 V.stats(热力图 19×7+token 2.4M+spark 7 条+commits/PR 两 mini tile,GeometryReader 1.45:1)。
+- 取舍: ports/reviews/stats 全 HTML 静态种子(真实需 lsof/GitHub API/token 追踪,各 TODO)。热力图等级 HTML 用 Math.random → Swift 确定性 hash(sin*43758 取小数)保证可复现、分布近似。switchDev 逻辑 block1 已测;本块纯 App UI。
+- 改动: HelmNotchApp/NotchView.swift(devModule/devStage/devRail/devPorts/devReviews/devStats/heatmap/statMini + portSeed/prSeed/sparkSeed + heatLevel/heatOpacity/heatHash;dev 路由)
+- VibeHub: record_decision「Dev 模块端口(rail 四子页)」→ 50189722-bf3d-4b03-8984-9a4a017fd351 (ai_proposed);add_question 无;add_constraint 无
+- 自检: 硬门 swift build + swift test 全绿,29 测 0 失败(无新 Core)。逐项对照 HTML CSS:devrail dri 5/18 accent、ports pp2 56 mono、prs pav26/psrc 徽标、hmap 19×7 gap3 + l0-l4 opacity、spark/tile r12。视觉实机待用户。
+- 状态: ✅ 待 review  |  ❓需确认: ports/reviews/stats 真实数据源待接(均 TODO)
+
 ## 2026-07-01 00:02 · swift-align-03-media-fullscreen
 - 设计源: helm-notch-pro.html(V.media / .mfull / .bgcov / .lyrics / .mwave / SOURCES / srccycle)
 - 界面: Media 模块全屏(mediaModule 取代复用小 cell);Core 加播放源状态
