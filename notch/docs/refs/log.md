@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 00:08 · swift-align-05-calendar-week-month-agenda
+- 设计源: helm-notch-pro.html(V.cal / calhd2 / wstrip / mgrid / mrail / agenda / S.calExpand·calSel·calOff)
+- 界面: Calendar 模块(calendarModule 取代复用周条 cell);Core 加日历视图态
+- 做了: Core +calMonthView(默认月)/calMonthOffset/calSelectedDay(今天)+nav/toggle/select(+3 测)。App calhd2(月名17+年+Today pill+grid/rows 段 toggle+‹›)+ calbody 左右:左 月网格(MON..SUN+6 周+首列月份导轨,格出月淡/今天白圆深字/选中 accent 环/点击选日)或周条(大月名年+7 列,今天 accent/选中环);右 议程(选中日标题+计数+事件行 evtime+summary+accent 点 / 空态「这天没有安排·＋到 Helm 新建」)。Monday-first (weekday+5)%7。
+- 取舍: 议程事件仅「选中日=今天 且 model.events 非空」时显示(per-day 需后端日期范围查询,TODO);HTML CAL_ITEMS 多日 demo 不照搬(不虚构后端数据)。网格日期数学用 Foundation Calendar 在 View 构建。
+- 改动: HelmNotchCore/NotchModel.swift(+日历态/nav)、Tests(+3)、HelmNotchApp/NotchView.swift(calendarModule/calhd2/calWeekStrip/calMonthGrid/calMonthRail/calMonthCell/calAgenda + seg/nav 按钮;calendar 路由)
+- VibeHub: record_decision「Calendar 模块端口(周⇄月+议程)」→ 30dd9072-b00b-4581-a07c-df3070c56dfe (ai_proposed);add_question 无;add_constraint 无
+- 自检: 硬门 swift build + swift test 全绿,32 测 0 失败(+3 日历 nav/toggle/默认)。逐项对照 HTML CSS:calhd2 cseg 25×22 accent、mgrid 30+7 列、mcell 今天白圆 26、mrail 缩写+月号+点、议程 evtime 44 mono+evdot。视觉实机待用户。
+- 状态: ✅ 待 review  |  ❓需确认: per-day 事件数据源待接(TODO)
+
 ## 2026-07-01 00:05 · swift-align-04-dev-rail-subpages
 - 设计源: helm-notch-pro.html(V.dev / devrail / V.ports / V.prs / V.stats / PORTS / PRS / HEAT / SPARK)
 - 界面: Dev 模块(devModule 取代复用单 agentCell);竖向 rail 分页四子页

@@ -153,6 +153,34 @@ final class NotchModuleTests: XCTestCase {
         model.cycleMediaSource()  // wraps
         XCTAssertEqual(model.mediaSource, .system)
     }
+
+    @MainActor
+    func testCalendarDefaultsToMonthViewOnToday() {
+        let model = NotchModel(backend: FakeBackend())
+        XCTAssertTrue(model.calMonthView)
+        XCTAssertEqual(model.calMonthOffset, 0)
+        XCTAssertEqual(model.calSelectedDay, Calendar.current.component(.day, from: Date()))
+    }
+
+    @MainActor
+    func testCalendarNavAndToday() {
+        let model = NotchModel(backend: FakeBackend())
+        model.calNextMonth(); model.calNextMonth()
+        XCTAssertEqual(model.calMonthOffset, 2)
+        model.calPrevMonth()
+        XCTAssertEqual(model.calMonthOffset, 1)
+        model.calToday()
+        XCTAssertEqual(model.calMonthOffset, 0)
+    }
+
+    @MainActor
+    func testCalendarViewToggleAndSelect() {
+        let model = NotchModel(backend: FakeBackend())
+        model.calSetMonthView(false)
+        XCTAssertFalse(model.calMonthView)
+        model.calSelectDay(15)
+        XCTAssertEqual(model.calSelectedDay, 15)
+    }
 }
 
 final class CaptureTests: XCTestCase {

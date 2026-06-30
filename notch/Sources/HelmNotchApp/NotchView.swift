@@ -234,7 +234,7 @@ struct NotchView: View {
         case .capture:
             moduleScroll { captureCell }
         case .calendar:
-            moduleScroll { calendarCell }
+            calendarModule
         case .dev:
             devModule
         case .clipboard:
@@ -406,6 +406,224 @@ struct NotchView: View {
         .frame(maxHeight: .infinity, alignment: .top)
         .contentShape(Rectangle())
         .onTapGesture { model.selectModule(.dev) }
+    }
+
+    // MARK: Calendar module (V.cal — header · week strip ⇄ month grid · agenda)
+
+    private let calWeekLabels = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+
+    /// The month currently shown (this month + `calMonthOffset`).
+    private var calDisplayMonth: Date {
+        let cal = Calendar.current
+        let firstOfThis = cal.date(from: cal.dateComponents([.year, .month], from: Date())) ?? Date()
+        return cal.date(byAdding: .month, value: model.calMonthOffset, to: firstOfThis) ?? firstOfThis
+    }
+
+    private func calMonthName(_ d: Date, short: Bool = false) -> String {
+        let f = DateFormatter(); f.locale = Locale(identifier: "en_US"); f.dateFormat = short ? "MMM" : "MMMM"
+        return f.string(from: d)
+    }
+
+    private var calendarModule: some View {
+        let cal = Calendar.current
+        let dm = calDisplayMonth
+        return VStack(spacing: 0) {
+            // calhd2 — month/year · Today · view toggle · ‹ ›
+            HStack(spacing: 7) {
+                Text(calMonthName(dm)).font(.system(size: 17, weight: .heavy)).foregroundStyle(.white)
+                Text("\(cal.component(.year, from: dm))").font(.system(size: 12, weight: .semibold)).foregroundStyle(.white.opacity(0.34))
+                if model.calMonthOffset != 0 {
+                    Button { model.calToday() } label: {
+                        Text("Today").font(.system(size: 10, weight: .bold)).foregroundStyle(.white.opacity(0.56))
+                            .padding(.horizontal, 9).padding(.vertical, 4)
+                            .background(Capsule().fill(.white.opacity(0.08)))
+                    }.buttonStyle(.plain)
+                }
+                Spacer()
+                HStack(spacing: 2) {
+                    calSegButton(systemImage: "square.grid.2x2.fill", on: model.calMonthView) { model.calSetMonthView(true) }
+                    calSegButton(systemImage: "line.3.horizontal", on: !model.calMonthView) { model.calSetMonthView(false) }
+                }
+                .padding(2).background(RoundedRectangle(cornerRadius: 9).fill(.white.opacity(0.06)))
+                HStack(spacing: 5) {
+                    calNavButton("chevron.left") { model.calPrevMonth() }
+                    calNavButton("chevron.right") { model.calNextMonth() }
+                }
+            }
+            .padding(.bottom, 11)
+
+            // calbody — left (week/month) · right (agenda)
+            HStack(spacing: 14) {
+                Group {
+                    if model.calMonthView { calMonthGrid(dm) } else { calWeekStrip(dm) }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                calAgenda(dm)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .padding(.leading, 14)
+                    .overlay(alignment: .leading) { Rectangle().fill(.white.opacity(0.09)).frame(width: 0.5) }
+            }
+        }
+        .padding(.top, 14).padding(.horizontal, 16).padding(.bottom, 10)
+    }
+
+    private func calSegButton(systemImage: String, on: Bool, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage).font(.system(size: 10))
+                .foregroundStyle(on ? Color(red: 0.1, green: 0.07, blue: 0.03) : .white.opacity(0.56))
+                .frame(width: 25, height: 22)
+                .background { if on { RoundedRectangle(cornerRadius: 7).fill(accent) } }
+        }.buttonStyle(.plain)
+    }
+
+    private func calNavButton(_ systemImage: String, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage).font(.system(size: 11, weight: .semibold)).foregroundStyle(.white.opacity(0.56))
+                .frame(width: 24, height: 24).background(Circle().fill(.white.opacity(0.06)))
+        }.buttonStyle(.plain)
+    }
+
+    // Week strip (S.calExpand=false): big month/year + 7 day columns.
+    private func calWeekStrip(_ dm: Date) -> some View {
+        let cal = Calendar.current
+        let today = Date()
+        // Week containing today (offset 0) or the 1st of the displayed month.
+        let base = model.calMonthOffset == 0 ? today : dm
+        let weekdayMon0 = (cal.component(.weekday, from: base) + 5) % 7
+        let weekStart = cal.date(byAdding: .day, value: -weekdayMon0, to: base) ?? base
+        let dmMonth = cal.component(.month, from: dm)
+        return HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(calMonthName(dm, short: true)).font(.system(size: 30, weight: .heavy)).foregroundStyle(.white)
+                Text("\(cal.component(.year, from: dm))").font(.system(size: 12, weight: .semibold)).foregroundStyle(.white.opacity(0.34))
+            }
+            HStack(spacing: 4) {
+                ForEach(0..<7, id: \.self) { i in
+                    let d = cal.date(byAdding: .day, value: i, to: weekStart) ?? weekStart
+                    let day = cal.component(.day, from: d)
+                    let inMonth = cal.component(.month, from: d) == dmMonth
+                    let isToday = cal.isDateInToday(d)
+                    let selected = inMonth && day == model.calSelectedDay
+                    VStack(spacing: 6) {
+                        Text(calWeekLabels[i]).font(.system(size: 9, weight: .bold)).foregroundStyle(.white.opacity(0.34))
+                        Text("\(day)").font(.system(size: 21, weight: .heavy)).foregroundStyle(isToday ? accent : .white)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 9)
+                    .background {
+                        if isToday { RoundedRectangle(cornerRadius: 13).fill(.white.opacity(0.06)) }
+                        else if selected { RoundedRectangle(cornerRadius: 13).stroke(accent, lineWidth: 1.5) }
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture { if inMonth { model.calSelectDay(day) } }
+                }
+            }
+        }
+    }
+
+    // Month grid (S.calExpand=true): MON..SUN header + 6 weeks with a month rail.
+    private func calMonthGrid(_ dm: Date) -> some View {
+        let cal = Calendar.current
+        let dmMonth = cal.component(.month, from: dm)
+        let firstOfMonth = cal.date(from: cal.dateComponents([.year, .month], from: dm)) ?? dm
+        let weekdayMon0 = (cal.component(.weekday, from: firstOfMonth) + 5) % 7
+        let gridStart = cal.date(byAdding: .day, value: -weekdayMon0, to: firstOfMonth) ?? firstOfMonth
+        return VStack(spacing: 5) {
+            HStack(spacing: 0) {
+                Color.clear.frame(width: 30)
+                ForEach(calWeekLabels, id: \.self) { w in
+                    Text(w).font(.system(size: 9, weight: .bold)).foregroundStyle(.white.opacity(0.34)).frame(maxWidth: .infinity)
+                }
+            }
+            ForEach(0..<6, id: \.self) { r in
+                let rowStart = cal.date(byAdding: .day, value: r * 7, to: gridStart) ?? gridStart
+                let prevRowMonth = r == 0 ? -1 : cal.component(.month, from: cal.date(byAdding: .day, value: (r - 1) * 7, to: gridStart) ?? gridStart)
+                let rowMonth = cal.component(.month, from: rowStart)
+                HStack(spacing: 0) {
+                    calMonthRail(rowStart, show: rowMonth != prevRowMonth, isCurrent: rowMonth == dmMonth).frame(width: 30)
+                    ForEach(0..<7, id: \.self) { i in
+                        let d = cal.date(byAdding: .day, value: i, to: rowStart) ?? rowStart
+                        calMonthCell(d, displayedMonth: dmMonth)
+                    }
+                }
+                .frame(maxHeight: .infinity)
+            }
+        }
+    }
+
+    private func calMonthRail(_ d: Date, show: Bool, isCurrent: Bool) -> some View {
+        let cal = Calendar.current
+        return VStack(alignment: .leading, spacing: 2) {
+            if show {
+                Text(calMonthName(d, short: true).uppercased()).font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(isCurrent ? accent : .white.opacity(0.34))
+                Text(String(format: "%02d", cal.component(.month, from: d))).font(.system(size: 16, weight: .heavy))
+                    .foregroundStyle(isCurrent ? accent : .white.opacity(0.56))
+                if isCurrent { Circle().fill(accent).frame(width: 4, height: 4) }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+
+    private func calMonthCell(_ d: Date, displayedMonth: Int) -> some View {
+        let cal = Calendar.current
+        let day = cal.component(.day, from: d)
+        let out = cal.component(.month, from: d) != displayedMonth
+        let isToday = cal.isDateInToday(d)
+        let selected = !out && day == model.calSelectedDay
+        return ZStack {
+            if isToday { Circle().fill(.white).frame(width: 26, height: 26) }
+            else if selected { Circle().stroke(accent, lineWidth: 1.5).frame(width: 26, height: 26) }
+            Text("\(day)")
+                .font(.system(size: 12.5, weight: isToday ? .heavy : .semibold))
+                .foregroundStyle(isToday ? Color(red: 0.05, green: 0.06, blue: 0.07) : (out ? .white.opacity(0.2) : .white.opacity(0.86)))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
+        .onTapGesture { if !out { model.calSelectDay(day) } }
+    }
+
+    // Agenda (calR): selected-day header + events. Per-day events need a backend
+    // date-range query; for now today's events show, other days are empty.
+    // TODO(align-cal): wire per-day events once the backend exposes them.
+    private func calAgenda(_ dm: Date) -> some View {
+        let cal = Calendar.current
+        let isToday = model.calMonthOffset == 0 && model.calSelectedDay == cal.component(.day, from: Date())
+        let events = isToday ? model.events : []
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("\(isToday ? "今天 · " : "")\(cal.component(.month, from: dm))月\(model.calSelectedDay)日")
+                    .font(.system(size: 13, weight: .heavy)).foregroundStyle(.white)
+                Spacer()
+                Text(events.isEmpty ? "无安排" : "\(events.count) 项").font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
+            }
+            .padding(.bottom, 4)
+            if events.isEmpty {
+                VStack(spacing: 9) {
+                    Spacer()
+                    Text("这天没有安排").font(.system(size: 12)).foregroundStyle(.white.opacity(0.34))
+                    Text("＋ 到 Helm 新建").font(.system(size: 12)).foregroundStyle(accent)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(events) { ev in
+                        HStack(alignment: .top, spacing: 11) {
+                            Text(ev.when).font(.system(size: 12, weight: .heavy)).foregroundStyle(accent)
+                                .frame(width: 44, alignment: .leading).monospacedDigit()
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(ev.summary).font(.system(size: 13, weight: .bold)).foregroundStyle(.white).lineLimit(1)
+                            }
+                            Spacer(minLength: 0)
+                            Circle().fill(accent).frame(width: 7, height: 7).padding(.top, 5)
+                        }
+                        .padding(.vertical, 9)
+                        .overlay(alignment: .bottom) { Rectangle().fill(.white.opacity(0.09)).frame(height: 0.5) }
+                    }
+                }
+            }
+        }
     }
 
     // MARK: Dev module (V.dev — vertical rail paging agents/ports/reviews/stats)

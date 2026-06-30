@@ -34,6 +34,21 @@ public final class NotchModel {
         mediaSource = all[(i + 1) % all.count]
     }
 
+    // MARK: Calendar view state (HTML S.calExpand / S.calSel / S.calOff)
+
+    /// `true` = month grid, `false` = week strip (HTML `S.calExpand`, default month).
+    public var calMonthView = true
+    /// Months away from the current month, for ‹ › nav (HTML `S.calOff`).
+    public var calMonthOffset = 0
+    /// The selected day-of-month for the agenda (HTML `S.calSel`).
+    public var calSelectedDay = Calendar.current.component(.day, from: Date())
+
+    public func calSelectDay(_ day: Int) { calSelectedDay = day }
+    public func calSetMonthView(_ month: Bool) { calMonthView = month }
+    public func calToday() { calMonthOffset = 0 }
+    public func calPrevMonth() { calMonthOffset -= 1 }
+    public func calNextMonth() { calMonthOffset += 1 }
+
     /// Select a module directly (HTML dock click). Entering Dev resets to its
     /// first sub-section, matching `if(S.view==='dev')S.devSec=0`.
     public func selectModule(_ m: NotchModule) {
