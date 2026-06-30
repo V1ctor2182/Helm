@@ -18,6 +18,39 @@ public final class NotchModel {
     public var captureText = ""
     public private(set) var captureStatus: CaptureStatus = .idle
 
+    // MARK: Module switching (dock + view), ported from helm-notch-pro.html
+
+    /// The module shown in the expanded panel (HTML `S.view`).
+    public var module: NotchModule = .dashboard
+    /// The Dev module's active sub-section (HTML `S.devSec`).
+    public var devSection: DevSection = .agents
+
+    /// Select a module directly (HTML dock click). Entering Dev resets to its
+    /// first sub-section, matching `if(S.view==='dev')S.devSec=0`.
+    public func selectModule(_ m: NotchModule) {
+        module = m
+        if m == .dev { devSection = .agents }
+    }
+
+    /// Cycle the docked modules left/right with wrap-around (HTML
+    /// `switchModule(dir)`). `media` is excluded — it is a zoom target only.
+    public func switchModule(_ direction: Int) {
+        let dock = NotchModule.dock
+        let count = dock.count
+        let i = dock.firstIndex(of: module) ?? 0
+        selectModule(dock[((i + direction) % count + count) % count])
+    }
+
+    /// Page the Dev sub-sections vertically (HTML `switchDev(dir)`). Clamps at
+    /// the ends — no wrap.
+    public func switchDev(_ direction: Int) {
+        let all = DevSection.allCases
+        guard let i = all.firstIndex(of: devSection) else { return }
+        let next = i + direction
+        guard next >= 0, next < all.count else { return }
+        devSection = all[next]
+    }
+
     // MARK: Theme (daily-rotating accent)
 
     public var themeMode: ThemeMode = .daily { didSet { refreshTheme() } }

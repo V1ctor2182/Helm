@@ -74,6 +74,74 @@ final class NotchModelTests: XCTestCase {
     }
 }
 
+/// Module/dock state machine ported from helm-notch-pro.html.
+final class NotchModuleTests: XCTestCase {
+    @MainActor
+    func testStartsOnDashboard() {
+        let model = NotchModel(backend: FakeBackend())
+        XCTAssertEqual(model.module, .dashboard)
+        XCTAssertEqual(model.devSection, .agents)
+    }
+
+    @MainActor
+    func testDockOrderExcludesMedia() {
+        XCTAssertEqual(NotchModule.dock, [.dashboard, .capture, .calendar, .dev, .clipboard])
+        XCTAssertFalse(NotchModule.dock.contains(.media))
+    }
+
+    @MainActor
+    func testSwitchModuleWrapsForward() {
+        let model = NotchModel(backend: FakeBackend())
+        model.module = .clipboard  // last in the dock
+        model.switchModule(1)
+        XCTAssertEqual(model.module, .dashboard)  // wraps to first
+    }
+
+    @MainActor
+    func testSwitchModuleWrapsBackward() {
+        let model = NotchModel(backend: FakeBackend())
+        model.switchModule(-1)  // from dashboard (first)
+        XCTAssertEqual(model.module, .clipboard)  // wraps to last
+    }
+
+    @MainActor
+    func testSwitchModuleFromMediaFallsBackToDockStart() {
+        let model = NotchModel(backend: FakeBackend())
+        model.module = .media  // not in the dock
+        model.switchModule(1)
+        XCTAssertEqual(model.module, .capture)  // index 0 + 1
+    }
+
+    @MainActor
+    func testEnteringDevResetsSubSection() {
+        let model = NotchModel(backend: FakeBackend())
+        model.devSection = .stats
+        model.selectModule(.dev)
+        XCTAssertEqual(model.devSection, .agents)
+    }
+
+    @MainActor
+    func testSwitchDevClampsAtEnds() {
+        let model = NotchModel(backend: FakeBackend())
+        model.devSection = .agents
+        model.switchDev(-1)  // already at top
+        XCTAssertEqual(model.devSection, .agents)  // clamped, no wrap
+        model.devSection = .stats
+        model.switchDev(1)  // already at bottom
+        XCTAssertEqual(model.devSection, .stats)  // clamped, no wrap
+    }
+
+    @MainActor
+    func testSwitchDevPagesThrough() {
+        let model = NotchModel(backend: FakeBackend())
+        model.devSection = .agents
+        model.switchDev(1)
+        XCTAssertEqual(model.devSection, .ports)
+        model.switchDev(1)
+        XCTAssertEqual(model.devSection, .reviews)
+    }
+}
+
 final class CaptureTests: XCTestCase {
     @MainActor
     func testNoteCapturePostsNote() async {
