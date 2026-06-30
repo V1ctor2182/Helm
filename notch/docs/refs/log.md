@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 00:55 · swift-align-15-file-drop-attach
+- 设计源: helm-notch-pro.html(notch.drag / drop handler / addFiles / .attchip)
+- 界面: 拖文件到刘海 → 速记附件
+- 做了: Core CaptureFile + NotchModel captureFiles/addFiles(切 capture/focus→note/expanded)/removeFile;submit 清空 files(+2 测)。App shell .onDrop(.fileURL)→addFiles;拖拽时 NotchShape 虚线 accent 轮廓;captureCell captureFilesRow(横滑文件 chip:ext 徽标+名+×)。
+- 取舍: 真实上传到 Helm(/api/files 或 RAG)未做(submit 仅清空,TODO);Files 整模块不进 dock(HTML 亦然),只做「拖进刘海→速记附件」可达路径。
+- 改动: HelmNotchCore/Models.swift(+CaptureFile)、NotchModel.swift(+captureFiles/addFiles/removeFile/submit 清空)、Tests(+2)、HelmNotchApp/NotchView.swift(import UTType、dragOver、shell onDrop+虚线轮廓、captureFilesRow)
+- VibeHub: record_decision「拖文件→速记附件」→ 36b553f3-1a02-461a-8f82-1f6e831eff90 (ai_proposed);add_question 无;add_constraint 无
+- 自检: 硬门 swift build + swift test 全绿,48 测 0 失败(修 1 轮:NotchShape strokeBorder→stroke)。对照 HTML:notch.drag 虚线、attchip ext 徽标+×。视觉实机待用户。
+- 状态: ✅ 待 review  |  ❓需确认: 文件上传到 Helm 通道(TODO)
+
 ## 2026-07-01 00:49 · swift-align-14-agent-think-shine
 - 设计源: helm-notch-pro.html(V.agents / .think .st / .shine / dash agr)
 - 界面: agent 运行态 think/shine 动效

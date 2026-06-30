@@ -295,6 +295,33 @@ final class NotchModuleTests: XCTestCase {
         XCTAssertEqual(model.viewHeight(), 300)  // running
     }
 
+    @MainActor
+    func testAddFilesStagesAndSwitchesToCapture() {
+        let model = NotchModel(backend: FakeBackend())
+        model.module = .dashboard
+        model.captureKind = .focus
+        model.addFiles(["report.pdf", "photo.PNG"])
+        XCTAssertEqual(model.captureFiles.count, 2)
+        XCTAssertEqual(model.captureFiles[0].ext, "PDF")
+        XCTAssertEqual(model.captureFiles[1].ext, "PNG")
+        XCTAssertEqual(model.module, .capture)
+        XCTAssertEqual(model.captureKind, .note)  // focus → note when files dropped
+        XCTAssertTrue(model.expanded)
+    }
+
+    @MainActor
+    func testRemoveFileAndSubmitClears() async {
+        let backend = FakeBackend()
+        let model = NotchModel(backend: backend)
+        model.addFiles(["a.txt", "b.txt"])
+        let firstID = model.captureFiles[0].id
+        model.removeFile(firstID)
+        XCTAssertEqual(model.captureFiles.count, 1)
+        model.captureText = "归档这个"
+        await model.submit()
+        XCTAssertTrue(model.captureFiles.isEmpty)  // cleared on submit
+    }
+
     func testReminderStartMinutesParsing() {
         XCTAssertEqual(NotchModel.startMinutes("10:00"), 600)
         XCTAssertEqual(NotchModel.startMinutes("10:00–10:30"), 600)

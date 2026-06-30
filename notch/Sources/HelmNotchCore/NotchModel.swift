@@ -26,6 +26,23 @@ public final class NotchModel {
     public var captureWhere: String?
     /// Whether the "最近" recents strip is expanded (affects panel height).
     public var captureShowRecent = false
+    /// Files dragged onto the notch, staged for the capture (HTML S.files).
+    public private(set) var captureFiles: [CaptureFile] = []
+    private var fileSeq = 0
+
+    /// Stage dropped files and switch to capture (HTML addFiles / drop handler).
+    public func addFiles(_ names: [String]) {
+        for name in names {
+            fileSeq += 1
+            let ext = String((name as NSString).pathExtension.uppercased().prefix(4))
+            captureFiles.append(CaptureFile(id: "\(fileSeq)", name: name, ext: ext.isEmpty ? "FILE" : ext))
+        }
+        module = .capture
+        if captureKind == .focus { captureKind = .note }
+        expanded = true
+    }
+
+    public func removeFile(_ id: String) { captureFiles.removeAll { $0.id == id } }
 
     // Focus session (HTML focusOn / focusWhat / focusSec) — a forward timer that
     // records to Helm on stop. Elapsed is derived from a start time so the UI can
@@ -445,6 +462,7 @@ public final class NotchModel {
             captureText = ""
             captureWhen = nil
             captureWhere = nil
+            captureFiles = []  // TODO(align-files): upload staged files to Helm.
             captureStatus = .sent
         } catch {
             captureStatus = .failed

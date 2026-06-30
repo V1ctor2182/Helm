@@ -87,6 +87,19 @@ public struct CalEvent: Sendable, Equatable, Identifiable {
     }
 }
 
+/// A file dragged onto the notch, staged as a capture attachment (HTML `S.files`).
+public struct CaptureFile: Sendable, Equatable, Identifiable {
+    public let id: String
+    public let name: String
+    public let ext: String   // up to 4 chars, uppercased (HTML badge)
+
+    public init(id: String, name: String, ext: String) {
+        self.id = id
+        self.name = name
+        self.ext = ext
+    }
+}
+
 /// A near-term event surfaced as the notch's reminder banner (HTML `S.remind`).
 public struct EventReminder: Sendable, Equatable, Identifiable {
     public let id: String       // the event id

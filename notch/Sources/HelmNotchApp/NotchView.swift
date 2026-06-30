@@ -1,6 +1,7 @@
 import AppKit
 import HelmNotchCore
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// The notch surface (A×D fusion). Collapsed: two slots hugging the physical
 /// notch, camera gap left clear. Hover → expand into a fixed 2×2 panel
@@ -10,6 +11,7 @@ import SwiftUI
 struct NotchView: View {
     @Bindable var model: NotchModel
     @FocusState private var captureFocused: Bool
+    @State private var dragOver = false
 
     private var accent: Color { Color(model.accent) }
 
@@ -59,8 +61,25 @@ struct NotchView: View {
         .frame(width: width, height: height, alignment: .top)
         .background(Color.black)
         .clipShape(NotchShape(bottomRadius: model.expanded ? 24 : 16))
+        // Drag a file onto the notch → stage it in 速记 (HTML notch.drag + drop).
+        .overlay {
+            if dragOver {
+                NotchShape(bottomRadius: model.expanded ? 24 : 16)
+                    .stroke(accent.opacity(0.7), style: StrokeStyle(lineWidth: 2, dash: [5]))
+                    .padding(6)
+            }
+        }
         .overlay(alignment: .bottomTrailing) { if model.expanded { resizeHandle } }
         .contentShape(Rectangle())
+        .onDrop(of: [.fileURL], isTargeted: $dragOver) { providers in
+            for p in providers {
+                _ = p.loadObject(ofClass: URL.self) { url, _ in
+                    guard let url else { return }
+                    Task { @MainActor in model.addFiles([url.lastPathComponent]) }
+                }
+            }
+            return true
+        }
         .onHover { model.hover($0) }
         // iOS-style shell grow (content has its own, delayed, animations above).
         .animation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.5), value: model.expanded)
@@ -1374,6 +1393,7 @@ struct NotchView: View {
             }
             .padding(.top, 7)
             // 时间 / 地点 附件(note/task)
+            if !model.captureFiles.isEmpty { captureFilesRow.padding(.top, 8) }
             if model.captureKind != .journal { attachmentRow.padding(.top, 8) }
             statusLabel.padding(.top, 2)
             recentsSection.padding(.top, 6)
@@ -1441,6 +1461,29 @@ struct NotchView: View {
         }
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay(RoundedRectangle(cornerRadius: 8).stroke(.white.opacity(0.09), lineWidth: 0.5))
+    }
+
+    /// 拖入文件的附件 chip (HTML .attchip). Upload happens on send — TODO.
+    private var captureFilesRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(model.captureFiles) { f in
+                    HStack(spacing: 7) {
+                        Text(f.ext).font(.system(size: 8, weight: .bold)).foregroundStyle(.white.opacity(0.56))
+                            .frame(width: 26, height: 26)
+                            .background(RoundedRectangle(cornerRadius: 6).fill(Color(white: 0.10)))
+                        Text(f.name).font(.system(size: 11)).foregroundStyle(.white.opacity(0.9)).lineLimit(1)
+                            .frame(maxWidth: 120, alignment: .leading)
+                        Button { model.removeFile(f.id) } label: {
+                            Image(systemName: "xmark").font(.system(size: 8)).foregroundStyle(.white.opacity(0.6))
+                        }.buttonStyle(.plain)
+                    }
+                    .padding(.horizontal, 6).padding(.vertical, 5)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(.white.opacity(0.06)))
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(.white.opacity(0.09), lineWidth: 0.5))
+                }
+            }
+        }
     }
 
     /// 时间 / 地点 chips (HTML .capatt). Demo values; real pickers are a TODO.
