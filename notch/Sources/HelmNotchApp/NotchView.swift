@@ -1225,6 +1225,8 @@ struct NotchView: View {
             }
         }
         .padding(.top, 6)
+        // 任务:给自己 / 交给 agent
+        if model.captureKind == .task { taskTargetToggle.padding(.top, 8) }
         HStack(spacing: 8) {
             TextField(placeholder, text: $model.captureText, axis: .vertical)
                 .textFieldStyle(.plain).font(.system(size: 12)).foregroundStyle(.white)
@@ -1240,8 +1242,111 @@ struct NotchView: View {
             .buttonStyle(.plain).disabled(model.captureText.isEmpty)
         }
         .padding(.top, 7)
+        // 时间 / 地点 附件(note/task)
+        if model.captureKind != .journal { attachmentRow.padding(.top, 8) }
         statusLabel.padding(.top, 2)
+        recentsSection.padding(.top, 6)
         Spacer(minLength: 0)
+    }
+
+    /// 给自己 / 交给 agent (HTML .ttog). TODO(align-capture): agent path → Cockpit.
+    private var taskTargetToggle: some View {
+        HStack(spacing: 0) {
+            ForEach(TaskTarget.allCases) { target in
+                let on = model.taskTarget == target
+                Button(target.label) { model.taskTarget = target }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 11, weight: on ? .semibold : .regular))
+                    .foregroundStyle(on ? Color(red: 0.1, green: 0.07, blue: 0.03) : .white.opacity(0.56))
+                    .padding(.horizontal, 12).padding(.vertical, 5)
+                    .background { if on { accent } }
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(.white.opacity(0.09), lineWidth: 0.5))
+    }
+
+    /// 时间 / 地点 chips (HTML .capatt). Demo values; real pickers are a TODO.
+    private var attachmentRow: some View {
+        HStack(spacing: 7) {
+            attachmentChip(systemImage: "clock", value: model.captureWhen,
+                           add: { model.captureWhen = "今天 15:00" }, remove: { model.captureWhen = nil }, label: "时间")
+            attachmentChip(systemImage: "mappin.and.ellipse", value: model.captureWhere,
+                           add: { model.captureWhere = "Brooklyn, New York" }, remove: { model.captureWhere = nil }, label: "地点")
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func attachmentChip(systemImage: String, value: String?, add: @escaping () -> Void, remove: @escaping () -> Void, label: String) -> some View {
+        Group {
+            if let value {
+                HStack(spacing: 6) {
+                    Image(systemName: systemImage).font(.system(size: 10)).foregroundStyle(accent)
+                    Text(value).font(.system(size: 11)).foregroundStyle(.white)
+                    Button { remove() } label: { Image(systemName: "xmark").font(.system(size: 8)).foregroundStyle(.white.opacity(0.34)) }
+                        .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 9).padding(.vertical, 5)
+                .background(Capsule().fill(Color(white: 0.16)))
+            } else {
+                Button(action: add) {
+                    HStack(spacing: 6) {
+                        Image(systemName: systemImage).font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
+                        Text(label).font(.system(size: 11)).foregroundStyle(.white.opacity(0.56))
+                    }
+                    .padding(.horizontal, 12).padding(.vertical, 5)
+                    .background(Capsule().fill(.white.opacity(0.06)))
+                    .overlay(Capsule().stroke(.white.opacity(0.09), lineWidth: 0.5))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    /// 最近 速记/日记/任务 (HTML .recents) — seed data; real recents need backend.
+    // TODO(align-capture): replace recentSeed with a backend recents query.
+    private let recentSeed: [(kind: String, text: String, time: String)] = [
+        ("速记", "开会记得问 CI 的事", "2m"), ("速记", "刘海配色换 teal", "40m"),
+        ("任务", "明早 9 点跑回归测试", "1h"), ("任务", "review notch PR #51", "2h"),
+        ("日记", "今天把刘海重做了一版", "3h"),
+    ]
+
+    private var recentsSection: some View {
+        let label = model.captureKind.label
+        let items = recentSeed.filter { $0.kind == label }
+        return VStack(alignment: .leading, spacing: 0) {
+            Button { model.captureShowRecent.toggle() } label: {
+                Text("最近\(label) \(model.captureShowRecent ? "▴" : "▾")")
+                    .font(.system(size: 10, weight: .bold)).tracking(0.4).foregroundStyle(.white.opacity(0.34))
+            }
+            .buttonStyle(.plain)
+            if model.captureShowRecent {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        if items.isEmpty {
+                            Text("暂无").font(.system(size: 11)).foregroundStyle(.white.opacity(0.34))
+                                .frame(width: 160, height: 52, alignment: .topLeading)
+                        } else {
+                            ForEach(items.indices, id: \.self) { i in
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(items[i].kind).font(.system(size: 9, weight: .bold))
+                                        .foregroundStyle(Color(red: 0.1, green: 0.07, blue: 0.03))
+                                        .padding(.horizontal, 6).padding(.vertical, 1)
+                                        .background(RoundedRectangle(cornerRadius: 5).fill(accent))
+                                    Text(items[i].text).font(.system(size: 11)).foregroundStyle(.white.opacity(0.9)).lineLimit(1)
+                                    Text(items[i].time).font(.system(size: 9)).foregroundStyle(.white.opacity(0.34))
+                                }
+                                .frame(width: 160, alignment: .topLeading)
+                                .padding(.horizontal, 11).padding(.vertical, 8)
+                                .background(RoundedRectangle(cornerRadius: 11).fill(.white.opacity(0.04)))
+                                .overlay(RoundedRectangle(cornerRadius: 11).stroke(.white.opacity(0.09), lineWidth: 0.5))
+                            }
+                        }
+                    }
+                    .padding(.top, 8)
+                }
+            }
+        }
     }
 
     // MARK: Resize handle (width only — height is now auto per-view)

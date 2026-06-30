@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 00:25 · swift-align-09-capture-enrich
+- 设计源: helm-notch-pro.html(V.cap / .ttog / .capatt / .recents / S.taskTo·capWhen·capWhere·showRecent)
+- 界面: 速记模块丰富化(captureCell)+ Core 速记附加态
+- 做了: Core +TaskTarget(me/agent) +taskTarget/captureWhen/captureWhere/captureShowRecent;viewHeight cap +showRecent→+64(min360);submit 折时间/地点进内容并清空(+3 测)。App captureCell 加:任务态 给自己/交给 agent 段切换;note/task 态 时间/地点 附件 chip(无值虚线 add→demo 值,有值实心+×删);最近卡片条(「最近X ▾」toggle 横滑卡片,按 kind 过滤 seed)。
+- 取舍: focus(计时)/ask(问大脑)两 kind 暂不端口(独立功能,TODO),仍 3 kind chip;时间/地点 demo 固定值(选择器 TODO);最近 seed(后端 recents TODO);taskTarget=agent 暂走 /api/tasks(Cockpit 通道 TODO)。
+- 改动: HelmNotchCore/Models.swift(+TaskTarget)、NotchModel.swift(+附加态/viewHeight/submit)、Tests(+3)、HelmNotchApp/NotchView.swift(captureCell+taskTargetToggle/attachmentRow/attachmentChip/recentsSection + recentSeed)
+- VibeHub: record_decision「速记模块丰富化」→ 4824bc01-8de5-43ae-bc9f-47e4af88a7ef (ai_proposed);add_question 无;add_constraint 无
+- 自检: 硬门 swift build + swift test 全绿,39 测 0 失败(修 1 轮:viewHeight switch 表达式混 return → 内联)。逐项对照 HTML CSS:ttog 段、achip/aadd 胶囊、rcard 160 卡片+k 标签。视觉实机待用户。
+- 状态: ✅ 待 review  |  ❓需确认: focus/ask kind、时间地点选择器、最近真源、agent 派发通道(均 TODO)
+
 ## 2026-07-01 00:20 · swift-align-08-settings-dark-modal
 - 设计源: helm-notch-pro.html(settingsHTML / setdlg / 外观·后端·本机·媒体分区)
 - 界面: 设置窗口重做成深色分区 modal

@@ -18,6 +18,15 @@ public final class NotchModel {
     public var captureText = ""
     public private(set) var captureStatus: CaptureStatus = .idle
 
+    // Capture extras (HTML S.taskTo / capWhen / capWhere / showRecent).
+    /// For a task: send to myself (`/api/tasks`) or hand to an agent.
+    public var taskTarget: TaskTarget = .me
+    /// Optional time / place attachments appended to the capture.
+    public var captureWhen: String?
+    public var captureWhere: String?
+    /// Whether the "最近" recents strip is expanded (affects panel height).
+    public var captureShowRecent = false
+
     // MARK: Module switching (dock + view), ported from helm-notch-pro.html
 
     /// The module shown in the expanded panel (HTML `S.view`).
@@ -69,8 +78,12 @@ public final class NotchModel {
             case .reviews: 252
             case .stats: 252
             }
-        // HTML cap: task→300, note/journal→256 (recents/focus/ask not ported yet).
-        case .capture: captureKind == .task ? 300 : 256
+        // HTML cap: task→300, note/journal→256; +64 when recents expanded.
+        // (focus/ask kinds not ported yet.)
+        case .capture:
+            captureShowRecent
+                ? min(360, (captureKind == .task ? 300 : 256) + 64)
+                : (captureKind == .task ? 300 : 256)
         }
     }
 
@@ -337,21 +350,29 @@ public final class NotchModel {
         captureStatus = .idle
     }
 
-    /// Submit the current capture text to Helm via the kind's endpoint.
+    /// Submit the current capture text to Helm via the kind's endpoint. Time /
+    /// place attachments are folded into the content (HTML `ext`).
+    /// TODO(align-capture): taskTarget=.agent should route to the Cockpit agent
+    /// endpoint; for now both targets use `/api/tasks`.
     public func submit() async {
         let text = captureText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
+        var ext = ""
+        if let w = captureWhen { ext += " · \(w)" }
+        if let p = captureWhere { ext += " · \(p)" }
         captureStatus = .sending
         do {
             switch captureKind {
             case .note:
-                try await backend.createNote(content: text, kind: "note", journalDate: nil)
+                try await backend.createNote(content: text + ext, kind: "note", journalDate: nil)
             case .journal:
                 try await backend.createNote(content: text, kind: "journal", journalDate: Self.today())
             case .task:
-                try await backend.createTask(prompt: text)
+                try await backend.createTask(prompt: text + ext)
             }
             captureText = ""
+            captureWhen = nil
+            captureWhere = nil
             captureStatus = .sent
         } catch {
             captureStatus = .failed

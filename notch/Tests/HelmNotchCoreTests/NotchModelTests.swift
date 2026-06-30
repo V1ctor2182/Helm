@@ -224,6 +224,37 @@ final class NotchModuleTests: XCTestCase {
         model.module = .dashboard
         XCTAssertEqual(model.autoExpandedHeight, 172 + NotchModel.topBarHeight)
     }
+
+    @MainActor
+    func testCaptureRecentsExpandGrowsHeight() {
+        let model = NotchModel(backend: FakeBackend())
+        model.module = .capture
+        model.captureKind = .note
+        XCTAssertEqual(model.viewHeight(), 256)
+        model.captureShowRecent = true
+        XCTAssertEqual(model.viewHeight(), 320)  // 256 + 64
+    }
+
+    @MainActor
+    func testTaskTargetDefaultsToMe() {
+        let model = NotchModel(backend: FakeBackend())
+        XCTAssertEqual(model.taskTarget, .me)
+    }
+
+    @MainActor
+    func testCaptureFoldsTimeAndPlaceAndResets() async {
+        let backend = FakeBackend()
+        let model = NotchModel(backend: backend)
+        model.captureKind = .note
+        model.captureText = "买牛奶"
+        model.captureWhen = "今天 15:00"
+        model.captureWhere = "Brooklyn"
+        await model.submit()
+        XCTAssertEqual(backend.notes.count, 1)
+        XCTAssertEqual(backend.notes[0].content, "买牛奶 · 今天 15:00 · Brooklyn")
+        XCTAssertNil(model.captureWhen)
+        XCTAssertNil(model.captureWhere)
+    }
 }
 
 final class CaptureTests: XCTestCase {

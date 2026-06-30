@@ -35,6 +35,16 @@ public enum CaptureKind: String, Sendable, CaseIterable, Identifiable {
     }
 }
 
+/// Where a task capture goes (HTML `S.taskTo`): the user's own task list, or
+/// handed to an agent in the Cockpit.
+public enum TaskTarget: String, Sendable, CaseIterable, Identifiable {
+    case me      // 给自己 → /api/tasks
+    case agent   // 交给 agent → Cockpit
+
+    public var id: String { rawValue }
+    public var label: String { self == .me ? "给自己" : "交给 agent" }
+}
+
 /// An agent run as reported by `/api/orchestration/runs` (extra fields in the
 /// payload are ignored). Drives the notch's agent monitor.
 public struct AgentRun: Codable, Sendable, Equatable, Identifiable {
