@@ -6,6 +6,17 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 02:28 · swift-align-25-media-zoom
+- 对齐: 媒体 zoomTo 缩放钻入(用户 #1 列了 zoomTo)
+- HTML 基线: zoomTo(scale .97 淡出 .16s → scale .955→1 淡入 .34s cubic-bezier)
+- HTML↔实际对比: dash↔media 我原用横滑,HTML 用缩放钻入。
+- 做了: moduleTransition 加 media 特例(module==.media 时 scale insertion .955→1 / removal→.97 + opacity),其它模块仍横滑。利用 SwiftUI 保留被移除视图 transition 的特性,让 media 进/离场缩放。
+- 取舍: dash 侧仍横滑(HTML 两侧对称缩放,.id/.transition 模式难两侧对称,不做大重构);media 是显著视图,zoom 已抓住精髓,TODO 实机看混搭;enter .3s(HTML .34s 近似)。
+- Swift 改动: NotchView.swift(moduleTransition media 分支)
+- VibeHub: record_decision「媒体 zoomTo 缩放钻入」→ cdbf1a8a-78c0-4967-968d-11a48460adc0 (ai_proposed)
+- 验证: swift build ✓ / swift test 59 通过 0 失败;视觉:动效待实机(参数对齐 HTML zoomTo)
+- 状态: ✅ 待 review  |  滑动三件(slideTo/slideDev/zoomTo)全对齐
+
 ## 2026-07-01 02:20 · swift-align-24-daily-random-theme
 - 对齐: 「每天随机一套」dailyRandTheme(随机主题最后一块)
 - HTML 基线: dailyRandTheme()(di 日种子 LCG 选材质+palette+while 对比≥3.2)+ cfg.dailytheme toggle

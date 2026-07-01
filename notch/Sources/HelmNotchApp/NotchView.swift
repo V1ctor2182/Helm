@@ -220,9 +220,19 @@ struct NotchView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
-    /// Directional slide (HTML slideTo): forward → new enters from the right and
-    /// the old exits left; backward → the reverse.
+    /// Module transition: media zooms (HTML zoomTo — dash↔media), everything else
+    /// slides (HTML slideTo). SwiftUI keeps a removed view's transition, so keying
+    /// the zoom on `module == .media` gives media a zoom-in on enter + zoom-out on
+    /// leave; the dashboard counterpart slides.
+    // TODO(align-zoom): dash side slides while media zooms — tune on device if the
+    // mix reads off; HTML zooms both sides symmetrically.
     private var moduleTransition: AnyTransition {
+        if model.module == .media {
+            // HTML zoomTo: scale-in .955→1 on enter, scale-out to .97 on leave.
+            return .asymmetric(
+                insertion: .scale(scale: 0.955).combined(with: .opacity),
+                removal: .scale(scale: 0.97).combined(with: .opacity))
+        }
         // HTML slideTo: a subtle ±46px translateX + fade — NOT a full-width move.
         let f = model.moduleSwitchForward
         return .asymmetric(
