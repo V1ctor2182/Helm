@@ -6,6 +6,13 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 06:56 · swift-fix-anim-durations(实机反馈)
+- 对齐: 滑动 + hover 展开收起动画稍慢一点
+- 做了: 滑动(module/dev transition + scroll withAnimation)0.3→0.36;hover 展开收起(value:expanded)0.46→0.54。dock .12 保持快切;模块切换高度 reflow 保持 0.46(HTML)。
+- Swift 改动: NotchView.swift(expanded 0.54、module/devSection 0.36)、NotchController.swift(animatedSwitch 0.36)
+- 验证: swift build ✓ / swift test 61 通过;手感待实机
+- 状态: ✅ 待实机复验
+
 ## 2026-07-01 06:44 · swift-fix-scroll-hover-feel(实机反馈)
 - 对齐: 滑动偶发闪跳 + hover 收起慢
 - 做了: ① hover 收起延迟 220ms→80ms(HTML 是立即,留少量防抖)。② scroll 切换加 0.30s 冷却(防新滑动打断在飞的过渡→snap)+ 包 withAnimation(NSEvent 回调有时不触发隐式 .animation → 偶发瞬跳,显式动画兜底)。

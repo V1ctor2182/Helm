@@ -170,7 +170,7 @@ final class NotchController {
     /// callbacks don't reliably trigger SwiftUI's implicit `.animation(value:)`,
     /// which caused occasional instant "jumps" (device feedback).
     private func animatedSwitch(_ body: () -> Void) {
-        withAnimation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.3)) { body() }
+        withAnimation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.36)) { body() }
         lastSwitchAt = Date()
     }
 

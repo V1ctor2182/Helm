@@ -82,7 +82,7 @@ struct NotchView: View {
         }
         .onHover { model.hover($0) }
         // iOS-style shell grow (content has its own, delayed, animations above).
-        .animation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.46), value: model.expanded)
+        .animation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.54), value: model.expanded)
         // Animate the height re-flow when the active view changes (HTML notch
         // width/height transition = .46s cubic-bezier(.32,.72,0,1)).
         .animation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.46), value: model.autoExpandedHeight)
@@ -231,7 +231,7 @@ struct NotchView: View {
                 .id(model.module)
                 .transition(moduleTransition)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .animation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.3), value: model.module)
+                .animation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.36), value: model.module)
             dockBar
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -801,7 +801,7 @@ struct NotchView: View {
                 .transition(devTransition)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .clipped()
-                .animation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.3), value: model.devSection)
+                .animation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.36), value: model.devSection)
             devRail
         }
         .padding(.top, 14).padding(.horizontal, 16).padding(.bottom, 6)
