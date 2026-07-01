@@ -6,6 +6,15 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 06:30 · swift-fix-jank(实机反馈)
+- 对齐: 打字/hover/滑动卡顿 + 剪贴板底部被 dock 遮挡(Image #8)
+- 根因(卡): shell 里 collapsedBar 与 expandedPanel 一直在树里(opacity 切),collapsedBar 的 EqualizerBars 等 repeatForever 即使不可见也常跑 → 常驻重渲染 → 卡。
+- 做了: ① shell 改条件渲染(expanded→只 expandedPanel、else→只 collapsedBar),.transition(.opacity) 由外层单一 .46s grow 动画统一驱动;② moduleBody 去 .clipped()(外层 NotchShape 裁剪够);③ clipboardBody 加 ScrollView(HTML .clip overflow-y:auto)修遮挡。
+- Swift 改动: NotchView.swift(shell 条件渲染、moduleBody 去 clipped、clipboardBody 滚动)
+- VibeHub: record_decision「治卡+剪贴板滚动」→ 3c610bdb-f63f-4ebf-8f39-a486a183fdad (ai_proposed)
+- 验证: swift build ✓ / swift test 61 通过;卡顿改善待实机;若切模块仍卡→查 .id 重建 heatmap/GeometryReader 成本
+- 状态: ✅ 待实机复验
+
 ## 2026-07-01 06:14 · swift-fix-scroll-while-typing(实机反馈)
 - 对齐: 速记打字时切不走(上轮 !locked 拦截引入的回归)
 - 根因: 上轮给 handleScroll 加了 !model.locked guard,打字时 locked=true → scroll 全被挡。

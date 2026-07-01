@@ -47,19 +47,15 @@ struct NotchView: View {
                 remindBanner(reminder)
             } else if let banner {
                 permissionBanner(banner)
-            } else {
-                collapsedBar
-                    .opacity(model.expanded ? 0 : 1)
-                    // HTML #bar: transition opacity .14s.
-                    .animation(.easeOut(duration: 0.14), value: model.expanded)
-
+            } else if model.expanded {
+                // Only the expanded panel exists while open — the collapsed bar's
+                // repeatForever animations aren't left running invisibly (jank).
                 expandedPanel
                     .frame(width: model.expandedWidth, height: model.autoExpandedHeight, alignment: .top)
-                    .opacity(model.expanded ? 1 : 0)
-                    .offset(y: model.expanded ? 0 : -10)
-                    .allowsHitTesting(model.expanded)
-                    // HTML #panel: open = opacity .34s ease .12s delay; close = .3s.
-                    .animation(.easeOut(duration: model.expanded ? 0.34 : 0.3).delay(model.expanded ? 0.12 : 0), value: model.expanded)
+                    .transition(.opacity)
+            } else {
+                collapsedBar
+                    .transition(.opacity)
             }
         }
         .frame(width: width, height: height, alignment: .top)
@@ -235,7 +231,6 @@ struct NotchView: View {
                 .id(model.module)
                 .transition(moduleTransition)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .clipped()
                 .animation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.3), value: model.module)
             dockBar
         }
@@ -1161,20 +1156,24 @@ struct NotchView: View {
     private var clipboardBody: some View {
         VStack(alignment: .leading, spacing: 0) {
             cellHeader("⧉ CLIPBOARD 历史", trailing: "点→复制 / 存速记")
-            ForEach(clipSeed.indices, id: \.self) { i in
-                let c = clipSeed[i]
-                HStack(spacing: 9) {
-                    Text(c.0).font(.system(size: 13))
-                        .frame(width: 26, height: 26)
-                        .background(RoundedRectangle(cornerRadius: 7).fill(Color(white: 0.10)))
-                    Text(c.1).font(.system(size: 12)).foregroundStyle(.white.opacity(0.85)).lineLimit(1)
-                    Spacer(minLength: 6)
-                    Text(c.2).font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
+            // HTML .clip is overflow-y:auto — scroll so rows never sit under the dock.
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(clipSeed.indices, id: \.self) { i in
+                        let c = clipSeed[i]
+                        HStack(spacing: 9) {
+                            Text(c.0).font(.system(size: 13))
+                                .frame(width: 26, height: 26)
+                                .background(RoundedRectangle(cornerRadius: 7).fill(Color(white: 0.10)))
+                            Text(c.1).font(.system(size: 12)).foregroundStyle(.white.opacity(0.85)).lineLimit(1)
+                            Spacer(minLength: 6)
+                            Text(c.2).font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
+                        }
+                        .padding(.vertical, 8)
+                        .overlay(alignment: .bottom) { Rectangle().fill(.white.opacity(0.09)).frame(height: 0.5) }
+                    }
                 }
-                .padding(.vertical, 8)
-                .overlay(alignment: .bottom) { Rectangle().fill(.white.opacity(0.09)).frame(height: 0.5) }
             }
-            Spacer(minLength: 0)
         }
     }
 
