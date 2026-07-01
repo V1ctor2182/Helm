@@ -6,6 +6,17 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 03:08 · swift-align-30-visualdiff-media-demo
+- 对齐: 视觉 diff · 媒体 demo 回退(折叠左/dash widget/折叠右计数)
+- HTML 基线: renderBar 左媒体 / V.dash NOW PLAYING / renderBar 右 ✻N
+- HTML↔实际对比: HTML 处处显 demo 歌「Counting My Blessings」,我用真实 nowPlaying(nil)→折叠左「Helm 点」/dash「未在播放」。
+- 做了: shownNowPlaying(真实 else HTML demo 歌 42/91)+ mediaFraction(真实 livePosition/demo 静态);collapsedLeft 去 Helm 点统一 shownNowPlaying;dashMediaWidget 去「未在播放」;dashMiniBar 用 mediaFraction;collapsedRight 计数改 displaySessions(默认 ✻2)。mediaModule 已有 demo 文案。
+- 取舍: ⚠️ 折叠条常驻,现无真实数据永久显 demo 歌+✻2(和 HTML 一样但真机常态一直 demo),已 flag 用户可否决;真实数据一来即顶替。
+- Swift 改动: NotchView.swift(shownNowPlaying/mediaFraction、collapsedLeft/Right、dashMediaWidget/dashMiniBar)
+- VibeHub: record_decision「媒体 demo 回退」→ 04d00064-5009-44f6-aaaa-9bf5933b60e4 (ai_proposed)
+- 验证: swift build ✓ / swift test 59 通过 0 失败;视觉:折叠+dash 媒体已和 HTML 一致
+- 状态: ✅ 待 review  |  ⚠️ 折叠条永久 demo(待用户定是否接受)
+
 ## 2026-07-01 03:00 · swift-align-29-visualdiff-agents-demo
 - 对齐: 视觉 diff · 本机 agent demo 回退(靶图 /tmp/html-dev-agents.png、dev-stats.png)
 - HTML 基线: V.agents / dash agr(demo notch/app/helm)

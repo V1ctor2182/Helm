@@ -104,6 +104,22 @@ struct NotchView: View {
         }
     }
 
+    /// Now-playing to render — real when available, else HTML's demo song so the
+    /// media surfaces match the design out of the box (like the agent demo).
+    private var shownNowPlaying: NowPlaying {
+        model.nowPlaying ?? NowPlaying(
+            title: "Counting My Blessings", artist: "Seph Schlueter",
+            isPlaying: true, elapsed: 42, duration: 91)
+    }
+    /// Fraction 0…1 for the media progress bar (live for real playback, static
+    /// elapsed/duration for the demo song).
+    private func mediaFraction(_ np: NowPlaying, at now: Date) -> Double {
+        let total = np.duration ?? 0
+        guard total > 0 else { return 0.42 }
+        let pos = model.nowPlaying != nil ? model.livePosition(at: now) : (np.elapsed ?? 0)
+        return min(1, pos / total)
+    }
+
     // MARK: Collapsed — one continuous bar (left content · camera gap · right glyph)
 
     private var collapsedBar: some View {
@@ -133,7 +149,8 @@ struct NotchView: View {
                 Image(systemName: "timer").font(.system(size: 11)).foregroundStyle(accent)
                 Text(model.focusWhat).font(.system(size: 10, weight: .medium)).foregroundStyle(.white).lineLimit(1)
             }
-        } else if let np = model.nowPlaying {
+        } else {
+            let np = shownNowPlaying
             HStack(spacing: 6) {
                 collapsedArt(np)
                 if np.isPlaying {
@@ -143,11 +160,6 @@ struct NotchView: View {
                 }
                 Text(np.title).font(.system(size: 10)).foregroundStyle(.white.opacity(0.56))
                     .lineLimit(1).frame(maxWidth: 90, alignment: .leading)
-            }
-        } else {
-            HStack(spacing: 6) {
-                Circle().fill(dotColor).frame(width: 6, height: 6)
-                Text("Helm").font(.system(size: 10, weight: .semibold)).foregroundStyle(.white.opacity(0.7))
             }
         }
     }
@@ -168,8 +180,8 @@ struct NotchView: View {
 
     /// Right glyph — Open Island-style morphing status, color + motion over text.
     @ViewBuilder private var collapsedRight: some View {
-        let waiting = model.localSessions.filter(\.needsAttention).count
-        let running = model.localSessions.filter { $0.phase == .running }.count
+        let waiting = displaySessions.filter(\.needsAttention).count
+        let running = displaySessions.filter { $0.phase == .running }.count
         if model.focusOn {
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 let s = model.focusElapsed(at: context.date)
@@ -361,27 +373,21 @@ struct NotchView: View {
     }
 
     private var dashMediaWidget: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let np = shownNowPlaying
+        return VStack(alignment: .leading, spacing: 0) {
             dashHeader("NOW PLAYING")
-            if let np = model.nowPlaying {
-                HStack(spacing: 12) {
-                    dashCover(np).frame(width: 64, height: 64)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(np.title).font(.system(size: 12, weight: .bold)).foregroundStyle(.white).lineLimit(1)
-                        Text(np.subtitle.isEmpty ? " " : np.subtitle).font(.system(size: 10)).foregroundStyle(.white.opacity(0.56)).lineLimit(1)
-                        dashMiniBar(np).padding(.top, 6)
-                        HStack(spacing: 16) {
-                            Button { model.previousTrack() } label: { Text("◀◀") }
-                            Button { model.playPause() } label: { Text(np.isPlaying ? "❚❚" : "▶") }
-                            Button { model.nextTrack() } label: { Text("▶▶") }
-                        }
-                        .font(.system(size: 12)).buttonStyle(.plain).foregroundStyle(.white).padding(.top, 8)
+            HStack(spacing: 12) {
+                dashCover(model.nowPlaying).frame(width: 64, height: 64)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(np.title).font(.system(size: 12, weight: .bold)).foregroundStyle(.white).lineLimit(1)
+                    Text(np.subtitle.isEmpty ? " " : np.subtitle).font(.system(size: 10)).foregroundStyle(.white.opacity(0.56)).lineLimit(1)
+                    dashMiniBar(np).padding(.top, 6)
+                    HStack(spacing: 16) {
+                        Button { model.previousTrack() } label: { Text("◀◀") }
+                        Button { model.playPause() } label: { Text(np.isPlaying ? "❚❚" : "▶") }
+                        Button { model.nextTrack() } label: { Text("▶▶") }
                     }
-                }
-            } else {
-                HStack(spacing: 12) {
-                    dashCover(nil).frame(width: 64, height: 64)
-                    Text("未在播放").font(.system(size: 11)).foregroundStyle(.white.opacity(0.4))
+                    .font(.system(size: 12)).buttonStyle(.plain).foregroundStyle(.white).padding(.top, 8)
                 }
             }
             Spacer(minLength: 0)
@@ -416,8 +422,7 @@ struct NotchView: View {
 
     @ViewBuilder private func dashMiniBar(_ np: NowPlaying) -> some View {
         TimelineView(.periodic(from: .now, by: 0.5)) { context in
-            let total = np.duration ?? 0
-            let frac = total > 0 ? min(1, model.livePosition(at: context.date) / total) : 0.42
+            let frac = mediaFraction(np, at: context.date)
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule().fill(.white.opacity(0.2))
