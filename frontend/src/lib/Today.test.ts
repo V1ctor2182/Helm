@@ -12,35 +12,34 @@ afterEach(() => {
   projects.setRecent([])
 })
 
-describe('Today', () => {
-  it('renders quick actions and module cards', () => {
+describe('Today · instrument readout', () => {
+  it('renders the readout header, sections and mock rows', () => {
     render(Today)
-    expect(screen.getByRole('button', { name: /新建 Chat/ })).toBeInTheDocument()
-    expect(screen.getByText('最近项目')).toBeInTheDocument()
-    expect(screen.getByText('日历 / 日程')).toBeInTheDocument()
-  })
-
-  it('clicking a module enters its mode', async () => {
-    render(Today)
-    await fireEvent.click(screen.getByText('最近项目'))
-    expect(layout.mode).toBe('cockpit')
+    expect(screen.getByRole('heading', { name: /Today/ })).toBeInTheDocument()
+    expect(screen.getByText(/任务 \/ TASKS/)).toBeInTheDocument()
+    expect(screen.getByText(/notch scroll/)).toBeInTheDocument()
+    expect(screen.getByText(/最近项目 \/ PROJECTS/)).toBeInTheDocument()
+    // agent viewport row
+    expect(screen.getByText('notch')).toBeInTheDocument()
   })
 
   it('New Chat switches to chat mode and opens a tab', async () => {
     render(Today)
-    await fireEvent.click(screen.getByRole('button', { name: /新建 Chat/ }))
+    await fireEvent.click(screen.getByRole('button', { name: /新 Chat/ }))
     expect(layout.mode).toBe('chat')
     expect(layout.tabs.some((t) => t.mode === 'chat')).toBe(true)
   })
 
-  it('shows the current project when one is set', () => {
-    projects.setCurrent({ path: '/p', name: 'MyProj' })
+  it('发起研究 switches to research mode', async () => {
     render(Today)
-    expect(screen.getByText('MyProj')).toBeInTheDocument()
+    await fireEvent.click(screen.getByRole('button', { name: /发起研究/ }))
+    expect(layout.mode).toBe('research')
   })
 
-  it('shows "未选择项目" when none is set', () => {
+  it('clicking a recent project enters cockpit mode', async () => {
     render(Today)
-    expect(screen.getByText('未选择项目')).toBeInTheDocument()
+    // 用分支名唯一定位「最近项目」里的 helm 按钮（agent 行也有 "helm" 文本）
+    await fireEvent.click(screen.getByRole('button', { name: /feat\/notch/ }))
+    expect(layout.mode).toBe('cockpit')
   })
 })

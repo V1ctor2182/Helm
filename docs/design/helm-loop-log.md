@@ -6,6 +6,15 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 01:37 · design-05-today-readout（夜间模式）
+- 对齐: Today 无卡片仪表读数（阶段1 第5块）——任务/日记/agent 框选视口/项目/邮件/快速动作
+- 设计基线: helm-pro.html `.rd`(rdrow/gut/task/jr/framed/agl/projline/mailn/qa) / DESIGN.md「三招牌动作·无卡片 Today」（只读对照，未改）
+- Svelte 改动: `lib/Today.svelte`（重写为读数：左槽 mono + 发丝行 + 各节 mock + 框选视口 L 角 + ✻ 旋转/caret 闪烁 + 快速动作 wired）；`lib/Today.test.ts`（更新到新读数断言，修 helm 文本重复→用 /feat\/notch/ 唯一定位）
+- 取舍: 清掉旧卡片+emoji（🔍📝）；数据用设计稿同款 mock（真实数据阶段2 接 /api 保持版式）；旧 Today.test 的线框断言作废，改断言新读数行为
+- VibeHub: record_decision「Today 无卡片仪表读数」→ (F8, ai_proposed)；add_constraint/add_question：无
+- 验证: npm build ✓ / check 0 错 0 警（242 文件）/ test 146 通过；视觉：dev 5174 dark+light 与 helm-pro 读数基本一致（当天 accent 青）
+- 状态: ✅ 夜间自 commit（feat/design-shell-today）｜❓需确认: 无
+
 ## 2026-07-02 01:33 · design-04-filament-rail（夜间模式）
 - 对齐: 细丝 Rail（阶段1 第4块）——1px accent 活线 + 锚点滑移 + agent 脉冲 + emoji→单色 SVG
 - 设计基线: helm-pro.html `.rail`(fil/anchor/pulse/ric/logo) / DESIGN.md「三招牌动作·细丝 Rail」（只读对照，未改）
