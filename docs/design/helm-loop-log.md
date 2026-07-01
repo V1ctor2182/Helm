@@ -6,6 +6,15 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 01:54 · design-10-quick-capture（夜间模式）
+- 对齐: 速记 ⌘N QuickCapture token 化（次级表面·全局入口）
+- 设计基线: DESIGN.md 双主题 token + helm-pro.html 模态观感（只读对照，未改）
+- Svelte 改动: `lib/QuickCapture.svelte`（仅 <style>）——overlay 模糊背景、capture 暗面板、textarea/hint/save token 化（save=accent）
+- 取舍: 逻辑/结构不动（测试无损）。至此 ⌘K/⌘N 两个全局 overlay 都 token 化完；F8 外壳+全局入口收齐，loop 近自然边界（各模式视图归各 Room、helm-pro 未画）
+- VibeHub: record_decision「速记 ⌘N token 化」→ (F8, ai_proposed)；add_constraint/add_question：无
+- 验证: npm build ✓ / check 0 错 0 警（243 文件）/ test 146 通过；视觉：dev 5174 dark 开速记，暗面板+模糊+accent 保存与暗壳一致
+- 状态: ✅ 夜间自 commit（feat/design-shell-today）｜边界：F8 外壳+全局 overlay 收齐，深入各模式属阶段2/各 Room｜❓需确认: 无
+
 ## 2026-07-02 01:52 · design-09-command-palette（夜间模式）
 - 对齐: 命令面板 ⌘K token 化（次级表面·全局入口）
 - 设计基线: DESIGN.md 双主题 token + helm-pro.html `.setdlg` 模态观感（只读对照，未改）
