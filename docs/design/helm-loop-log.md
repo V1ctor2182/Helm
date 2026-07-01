@@ -6,6 +6,15 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 01:52 · design-09-command-palette（夜间模式）
+- 对齐: 命令面板 ⌘K token 化（次级表面·全局入口）
+- 设计基线: DESIGN.md 双主题 token + helm-pro.html `.setdlg` 模态观感（只读对照，未改）
+- Svelte 改动: `lib/CommandPalette.svelte`（仅 <style>）——overlay 模糊背景、palette 暗面板走 token、input/row/选中/group token 化
+- 取舍: 逻辑/结构/role/文案全不动（测试无损）；各模式视图（Chat/Research 等）helm-pro 未画、归各自 Room，不在本 loop 靶内，故转做全局 overlay
+- VibeHub: record_decision「命令面板 ⌘K token 化」→ (F8, ai_proposed)；add_constraint/add_question：无
+- 验证: npm build ✓ / check 0 错 0 警（243 文件）/ test 146 通过；视觉：dev 5174 dark 开面板，暗面板+模糊背景+accent 选中+mono group 与暗壳一致
+- 状态: ✅ 夜间自 commit（feat/design-shell-today）｜❓需确认: 无
+
 ## 2026-07-02 01:48 · design-08-orage-chrome（夜间模式）· 阶段1 核心八块收官
 - 对齐: ORAGE chrome（阶段1 第8块）——点阵底纹 + 散落准星 fiducial + 坐标 chip + 强弱切
 - 设计基线: helm-pro.html `.app::before` 点阵 / `.fidmark` / `.coord` / `.weak` / DESIGN.md「ORAGE Chrome 词汇 + 强度可切」（只读对照，未改）
