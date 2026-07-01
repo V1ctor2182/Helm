@@ -84,6 +84,9 @@ public final class NotchModel {
     /// Direction of the last module switch — drives the slide-in transition
     /// (HTML `slideTo(dir)`): true = forward (new enters from the right).
     public private(set) var moduleSwitchForward = true
+    /// Direction of the last Dev sub-page change — drives the vertical slide
+    /// (HTML `slideDev(dir)`): true = down (new enters from the bottom).
+    public private(set) var devSwitchForward = true
     /// The player the transport controls (HTML `S.mediaSrc`).
     public private(set) var mediaSource: MediaSource = .system
 
@@ -173,7 +176,17 @@ public final class NotchModel {
         guard let i = all.firstIndex(of: devSection) else { return }
         let next = i + direction
         guard next >= 0, next < all.count else { return }
+        devSwitchForward = direction > 0
         devSection = all[next]
+    }
+
+    /// Jump to a Dev sub-section (rail tap); infers the slide direction.
+    public func selectDev(_ s: DevSection) {
+        let all = DevSection.allCases
+        let from = all.firstIndex(of: devSection) ?? 0
+        let to = all.firstIndex(of: s) ?? from
+        devSwitchForward = to >= from
+        devSection = s
     }
 
     // MARK: Theme (daily-rotating accent)

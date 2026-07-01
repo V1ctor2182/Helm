@@ -706,10 +706,23 @@ struct NotchView: View {
     /// rail on the right. The rail dot for the active section elongates in accent.
     private var devModule: some View {
         HStack(spacing: 6) {
-            devStage.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            devStage
+                .id(model.devSection)
+                .transition(devTransition)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .clipped()
+                .animation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.3), value: model.devSection)
             devRail
         }
         .padding(.top, 14).padding(.horizontal, 16).padding(.bottom, 6)
+    }
+
+    /// Vertical slide (HTML slideDev): down → new enters from the bottom.
+    private var devTransition: AnyTransition {
+        let f = model.devSwitchForward
+        return .asymmetric(
+            insertion: .move(edge: f ? .bottom : .top).combined(with: .opacity),
+            removal: .move(edge: f ? .top : .bottom).combined(with: .opacity))
     }
 
     @ViewBuilder private var devStage: some View {
@@ -729,7 +742,7 @@ struct NotchView: View {
                     .fill(on ? accent : .white.opacity(0.22))
                     .frame(width: 5, height: on ? 18 : 5)
                     .contentShape(Rectangle())
-                    .onTapGesture { model.devSection = s }
+                    .onTapGesture { model.selectDev(s) }
             }
         }
         .frame(width: 20)

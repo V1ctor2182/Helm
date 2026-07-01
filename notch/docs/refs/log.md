@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 01:11 · swift-align-18-dev-vertical-slide
+- 设计源: helm-notch-pro.html(slideDev / switchDev 纵向分页动画)
+- 界面: Dev 子页纵向滑动分页动画
+- 做了: Core +devSwitchForward;switchDev 设方向、新增 selectDev(索引差推方向)(+1 测)。App devStage .id(devSection)+.transition(纵向 asymmetric:forward 下入上出)+.animation(.3s,value:devSection),.clipped;rail 点击改 selectDev(s)。
+- 取舍: 与 block17 模块横向滑入配套,分页动画故事完整。
+- 改动: HelmNotchCore/NotchModel.swift(+devSwitchForward/switchDev/selectDev)、Tests(+1)、HelmNotchApp/NotchView.swift(devStage id+transition+animation、devTransition、rail selectDev)
+- VibeHub: record_decision「Dev 纵向滑动分页」→ bf75bca2-aaf8-483f-9ec5-84e3d7d88004 (ai_proposed);add_question 无;add_constraint 无
+- 自检: 硬门 swift build + swift test 全绿,51 测 0 失败(+1 方向)。对照 HTML:slideDev 纵向方向性。视觉实机待用户。
+- 状态: ✅ 待 review
+
 ## 2026-07-01 01:06 · swift-align-17-module-slide-transition
 - 设计源: helm-notch-pro.html(slideTo / switchModule 动画)
 - 界面: 模块切换方向性滑入动画

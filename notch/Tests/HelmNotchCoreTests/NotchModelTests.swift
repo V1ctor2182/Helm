@@ -140,6 +140,20 @@ final class NotchModuleTests: XCTestCase {
     }
 
     @MainActor
+    func testSelectDevTracksDirection() {
+        let model = NotchModel(backend: FakeBackend())
+        model.devSection = .agents
+        model.selectDev(.stats)  // forward (down)
+        XCTAssertTrue(model.devSwitchForward)
+        XCTAssertEqual(model.devSection, .stats)
+        model.selectDev(.agents)  // backward (up)
+        XCTAssertFalse(model.devSwitchForward)
+        model.devSection = .ports
+        model.switchDev(1)
+        XCTAssertTrue(model.devSwitchForward)
+    }
+
+    @MainActor
     func testSwitchDevClampsAtEnds() {
         let model = NotchModel(backend: FakeBackend())
         model.devSection = .agents
