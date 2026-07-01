@@ -27,13 +27,23 @@
 <svelte:window onkeydown={onGlobalKey} />
 
 <div class="shell" class:immersive={layout.immersive}>
+  <!-- titlebar: 交通灯 + wordmark + 路径 + 会话 meta（承 helm-pro.html） -->
+  <header class="titlebar">
+    <span class="tl r" aria-hidden="true"></span>
+    <span class="tl y" aria-hidden="true"></span>
+    <span class="tl g" aria-hidden="true"></span>
+    <span class="wm">HELM</span>
+    <span class="path">~/helm</span>
+    <span class="meta">SESSION · RES 1440×900 · LOCAL</span>
+  </header>
+
   <Rail {layout} />
 
   {#if !layout.contextCollapsed}
     <aside class="context" aria-label="Context panel">
-      <header>{modeLabel}</header>
+      <header class="ctx-h">{modeLabel}</header>
       <p class="hint">{modeLabel} 面板将由对应 Room 提供。</p>
-      <button onclick={() => layout.openTab(`${modeLabel} ${layout.tabs.length + 1}`)}>
+      <button class="ctx-btn" onclick={() => layout.openTab(`${modeLabel} ${layout.tabs.length + 1}`)}>
         + 打开一个 {modeLabel} Tab
       </button>
     </aside>
@@ -102,12 +112,16 @@
     </aside>
   {/if}
 
+  <!-- statusbar: CLI 面包屑 / 遥测 HUD（承 helm-pro.html） -->
   <footer class="statusbar">
-    <button onclick={() => layout.toggleContext()}>⟨ 上下文</button>
-    <button onclick={() => layout.toggleTerminal()}>终端 ⟩</button>
-    <button onclick={() => layout.openPalette()}>⌘K</button>
-    <button onclick={() => layout.openCapture()}>⌘N 速记</button>
-    <span class="status">{backendStatus}</span>
+    <button class="seg" onclick={() => layout.toggleContext()}>⟨ 上下文</button>
+    <span class="seg"><span class="live" aria-hidden="true">●</span> ~/helm</span>
+    <span class="seg">⎇ main <span class="num">↑0</span></span>
+    <span class="seg">{backendStatus}</span>
+    <span class="grow"></span>
+    <button class="seg" onclick={() => layout.toggleTerminal()}>终端 ⟩</button>
+    <button class="seg k" onclick={() => layout.openPalette()}>⌘K 命令面板</button>
+    <button class="seg k" onclick={() => layout.openCapture()}>⌘N 速记</button>
   </footer>
 
   <CommandPalette />
@@ -118,57 +132,129 @@
   .shell {
     height: 100vh;
     display: grid;
-    grid-template-columns: auto auto 1fr auto;
-    grid-template-rows: 1fr 28px;
+    grid-template-columns: var(--rail-w) auto 1fr auto;
+    grid-template-rows: var(--titlebar-h) 1fr var(--statusbar-h);
     grid-template-areas:
+      'title title title title'
       'rail context center terminal'
       'status status status status';
+    background: var(--bg);
+    color: var(--t2);
+    font-family: var(--sans);
   }
+
+  /* titlebar */
+  .titlebar {
+    grid-area: title;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 12px;
+    background: var(--chrome);
+    border-bottom: 1px solid var(--hair);
+  }
+  .tl {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+  }
+  .tl.r { background: #ff5f57; }
+  .tl.y { background: #febc2e; }
+  .tl.g { background: #28c840; }
+  .titlebar .wm {
+    margin-left: 10px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    color: var(--t2);
+  }
+  .titlebar .path {
+    margin-left: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--t4);
+    letter-spacing: .3px;
+  }
+  .titlebar .meta {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--t4);
+    letter-spacing: .3px;
+  }
+
   :global(.shell > nav.rail) {
     grid-area: rail;
   }
+
+  /* context panel */
   .context {
     grid-area: context;
-    width: 240px;
-    padding: 12px;
-    border-right: 1px solid #e5e4e7;
+    width: var(--ctx-w);
+    padding: 14px;
+    background: var(--panel);
+    border-right: 1px solid var(--hair);
     overflow: auto;
   }
-  .context header {
-    font-weight: 600;
-    margin-bottom: 6px;
+  .ctx-h {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--t4);
+    margin-bottom: 8px;
   }
   .hint {
-    color: #888;
-    font-size: 0.85rem;
+    color: var(--t3);
+    font-size: 12.5px;
+    line-height: 1.5;
   }
+  .ctx-btn {
+    margin-top: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--acc-ink);
+    background: transparent;
+    border: 1px solid var(--acc-ink);
+    padding: 6px 11px;
+    cursor: pointer;
+    transition: background var(--dur-micro) var(--ease);
+  }
+  .ctx-btn:hover {
+    background: color-mix(in srgb, var(--acc) 12%, transparent);
+  }
+
+  /* center */
   .center {
     grid-area: center;
     display: flex;
     flex-direction: column;
     min-width: 0;
+    background: var(--bg);
   }
   .tabbar {
     display: flex;
     gap: 2px;
     padding: 6px 6px 0;
-    border-bottom: 1px solid #e5e4e7;
+    border-bottom: 1px solid var(--hair);
     overflow-x: auto;
   }
   .tab {
     display: flex;
     align-items: center;
-    border: 1px solid #e5e4e7;
+    border: 1px solid var(--line);
     border-bottom: none;
-    border-radius: 8px 8px 0 0;
-    background: #f4f3f5;
+    background: var(--panel);
   }
   .tab.active {
-    background: #fff;
+    background: var(--tile);
   }
   .tab-label {
     border: 0;
     background: transparent;
+    color: var(--t2);
     padding: 6px 8px;
     cursor: pointer;
     max-width: 160px;
@@ -181,46 +267,77 @@
     background: transparent;
     cursor: pointer;
     padding: 0 6px;
-    color: #999;
+    color: var(--t4);
   }
+  .tab-close:hover { color: var(--t2); }
   .content {
     flex: 1;
     display: grid;
     place-items: center;
-    color: #444;
+    color: var(--t3);
   }
   .empty {
-    color: #aaa;
+    color: var(--t4);
   }
+
+  /* terminal */
   .terminal {
     grid-area: terminal;
-    width: 320px;
+    width: var(--term-w);
     padding: 12px;
-    border-left: 1px solid #e5e4e7;
-    background: #1e1e1e;
-    color: #ddd;
-    font-family: ui-monospace, monospace;
-    font-size: 0.85rem;
+    background: #050506;
+    border-left: 1px solid var(--hair);
+    color: var(--t3);
+    font-family: var(--mono);
+    font-size: 11px;
   }
+  .term-hint { color: var(--t4); }
+
+  /* statusbar · CLI 面包屑 HUD */
   .statusbar {
     grid-area: status;
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 0 10px;
-    border-top: 1px solid #e5e4e7;
-    background: #f1f0f3;
-    font-size: 0.8rem;
+    background: var(--chrome);
+    border-top: 1px solid var(--hair);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--t3);
+    letter-spacing: .2px;
   }
-  .statusbar button {
-    border: 0;
+  .statusbar .seg {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 12px;
+    height: var(--statusbar-h);
+    border-right: 1px solid var(--hair);
     background: transparent;
-    cursor: pointer;
-    color: #555;
-    font-size: 0.8rem;
+    color: var(--t3);
+    font-family: var(--mono);
+    font-size: 11px;
+    cursor: default;
   }
-  .statusbar .status {
-    margin-left: auto;
-    color: #888;
+  button.seg {
+    border: 0;
+    cursor: pointer;
+  }
+  button.seg:hover {
+    color: var(--t1);
+  }
+  .statusbar .seg.k {
+    border-right: none;
+    border-left: 1px solid var(--hair);
+    color: var(--t4);
+  }
+  .statusbar .live {
+    color: var(--acc-ink);
+  }
+  .statusbar .num {
+    color: var(--t3);
+    font-variant-numeric: tabular-nums;
+  }
+  .statusbar .grow {
+    flex: 1;
   }
 </style>

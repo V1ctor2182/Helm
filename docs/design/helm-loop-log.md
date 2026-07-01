@@ -6,6 +6,15 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 01:27 · design-03-shell-chrome（夜间模式）
+- 对齐: 外壳 Shell chrome（阶段1 第3块）——titlebar + token 网格 + CLI 面包屑状态栏
+- 设计基线: helm-pro.html `.app` 网格 + titlebar + `.sbar` / DESIGN.md「Spacing 骨架 / Layout」（只读对照，未改）
+- Svelte 改动: `lib/Shell.svelte`（chrome 重构，功能逻辑不动）——titlebar（交通灯+HELM+路径+meta）、grid 加 title 行+列走骨架变量、context/center/terminal/tabbar 全改 token、statusbar 重做 CLI 面包屑 HUD（live accent 点+mono 分段+toggle 分段）
+- 取舍: 保留 mode 路由/tabs/收起/palette/capture 不破；Rail 内部与 Today 内容仍旧浅样式透出=预期（各自块在后）；terminal 未做 40px edge（TODO）。视觉门 dev 端口 5174（5173 被他项目 Euka 占，后续截图用 5174）
+- VibeHub: record_decision「外壳 Shell chrome」→ (F8, ai_proposed)；add_constraint/add_question：无
+- 验证: npm build ✓ / check 0 错 0 警（242 文件）/ test 147 通过；视觉：dev 5174 截图 dark 纯黑 chrome + 纸白双主题都对（titlebar/context/statusbar/canvas 正确，Rail/Today 待其块）
+- 状态: ✅ 夜间自 commit（feat/design-shell-today）｜❓需确认: 无
+
 ## 2026-07-02 01:24 · design-02-theme-store（夜间模式）
 - 对齐: 主题/accent 系统（阶段1 第2块）——dark/light/跟随系统 + 每日 accent + 对比压暗
 - 设计基线: helm-pro.html 的 theme 切换/darken()/palette + DESIGN.md「Themes / Color 每日变色」（只读对照，未改）
