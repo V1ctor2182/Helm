@@ -192,7 +192,7 @@ public final class NotchModel {
     // MARK: Theme (daily-rotating accent)
 
     /// Notch background material (HTML MATS). Default black keeps the current look.
-    public var backgroundMaterial: NotchMaterial = .black
+    public var backgroundMaterial: NotchMaterial = .black { didSet { refreshTheme() } }
     public var themeMode: ThemeMode = .daily { didSet { refreshTheme() } }
     public var fixedColorIndex = 0 { didSet { refreshTheme() } }
     /// The current accent color (recomputed each poll so it flips at midnight).
@@ -301,9 +301,11 @@ public final class NotchModel {
         }
     }
 
-    /// Recompute the accent for today under the current mode.
+    /// Recompute the accent for today under the current mode, then nudge it to
+    /// stay readable on the current background material (HTML contrast guarantee).
     public func refreshTheme() {
-        accent = Theme.accent(for: Date(), mode: themeMode, fixedIndex: fixedColorIndex)
+        let base = Theme.accent(for: Date(), mode: themeMode, fixedIndex: fixedColorIndex)
+        accent = Theme.contrastSafeAccent(base, on: backgroundMaterial)
     }
 
     /// Clamp + apply a user drag-resize of the expanded panel.

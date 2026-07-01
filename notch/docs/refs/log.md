@@ -6,6 +6,17 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 02:06 · swift-align-22-glass-contrast
+- 对齐: 玻璃背景对比度自适应(用户「玻璃背景+字体必须有对比度」)
+- HTML 基线: MATS[].rep / _lum / _contrast / randomTheme 的 while 对比循环
+- HTML↔实际对比: HTML 有对比度自适应(<3.2 就 亮背景×0.55 / 暗背景×1.2+28,≤8 步)但只在 randomTheme 跑;我 block19 accent 完全没自适应 → 白玻璃上浅 accent 不可读。browse 实测:玻璃 notchbg 14% 白叠深色页读作深色、白字可读(靶图 /tmp/html-lightglass-plain.png)。
+- 做了: Core Theme +materialBackground/luminance/contrast/contrastSafeAccent(1:1 复刻);NotchModel.refreshTheme 过 contrastSafeAccent、backgroundMaterial didSet 重算(+4 测)。
+- 取舍: 比 HTML 略强——每次材质变化都保证对比(用户明确要求);黑底默认 no-op 零变化;字体仍白(和 HTML 一致)。browse harness 打通可渲染靶图。
+- Swift 改动: HelmNotchCore/Theme.swift(+对比度算法)、NotchModel.swift(refreshTheme/didSet)、Tests(+4)
+- VibeHub: record_decision「玻璃对比度自适应」→ 2da15102-2fcf-4444-9007-8e6976965f93 (ai_proposed)
+- 验证: swift build ✓ / swift test 56 通过 0 失败;视觉:HTML 靶图已截并核对,Swift 算法逐值对齐
+- 状态: ✅ 待 review
+
 ## 2026-07-01 02:00 · swift-align-21-slide-smoothness
 - 对齐: 滑动丝滑度(用户反馈「滑动不够丝滑」)
 - HTML 基线: slideTo / slideDev / .notch width·height transition

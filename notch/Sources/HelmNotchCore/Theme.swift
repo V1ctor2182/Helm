@@ -103,6 +103,49 @@ public enum Theme {
         ((i % palette.count) + palette.count) % palette.count
     }
 
+    // MARK: Contrast-aware accent (HTML MATS + randomTheme's while-loop)
+
+    /// Each material's "effective background" for contrast math (HTML `MATS[].rep`).
+    public static func materialBackground(_ m: NotchMaterial) -> RGB {
+        switch m {
+        case .black: RGB(r: 12/255, g: 14/255, b: 16/255)
+        case .darkGlass: RGB(r: 40/255, g: 44/255, b: 48/255)
+        case .lightGlass: RGB(r: 208/255, g: 208/255, b: 214/255)
+        case .vibrant: RGB(r: 42/255, g: 46/255, b: 58/255)
+        }
+    }
+
+    /// WCAG relative luminance (HTML `_lum`).
+    static func luminance(_ c: RGB) -> Double {
+        func lin(_ v: Double) -> Double { v <= 0.03928 ? v / 12.92 : pow((v + 0.055) / 1.055, 2.4) }
+        return 0.2126 * lin(c.r) + 0.7152 * lin(c.g) + 0.0722 * lin(c.b)
+    }
+
+    /// WCAG contrast ratio between two colors (HTML `_contrast`).
+    static func contrast(_ a: RGB, _ b: RGB) -> Double {
+        let l1 = luminance(a), l2 = luminance(b)
+        return (max(l1, l2) + 0.05) / (min(l1, l2) + 0.05)
+    }
+
+    /// Nudge `accent` until it reads on the material's background (≥ 3.2:1),
+    /// ported 1:1 from HTML `randomTheme`: darken on a light bg, brighten on a
+    /// dark bg, up to 8 steps. On black this is a no-op (palette already reads).
+    public static func contrastSafeAccent(_ accent: RGB, on material: NotchMaterial) -> RGB {
+        let bg = materialBackground(material)
+        let bgLight = luminance(bg) > 0.4
+        var c = accent
+        var tries = 0
+        while contrast(c, bg) < 3.2, tries < 8 {
+            if bgLight {
+                c = RGB(r: c.r * 0.55, g: c.g * 0.55, b: c.b * 0.55)
+            } else {
+                c = RGB(r: min(1, c.r * 1.2 + 28/255), g: min(1, c.g * 1.2 + 28/255), b: min(1, c.b * 1.2 + 28/255))
+            }
+            tries += 1
+        }
+        return c
+    }
+
     /// HSL→RGB (h in degrees, s/l in 0...1).
     static func hsl(h: Double, s: Double, l: Double) -> RGB {
         let c = (1 - abs(2 * l - 1)) * s

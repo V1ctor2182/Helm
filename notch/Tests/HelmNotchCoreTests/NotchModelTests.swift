@@ -125,6 +125,38 @@ final class NotchModuleTests: XCTestCase {
         XCTAssertEqual(model.backgroundMaterial, .darkGlass)
     }
 
+    func testContrastRatioSanity() {
+        let white = RGB(r: 1, g: 1, b: 1), black = RGB(r: 0, g: 0, b: 0)
+        XCTAssertEqual(Theme.contrast(white, black), 21, accuracy: 0.3)
+    }
+
+    func testContrastSafeAccentIsNoopOnBlack() {
+        let sky = RGB(hex: "5EA0FF")  // already reads on the near-black notch
+        let safe = Theme.contrastSafeAccent(sky, on: .black)
+        XCTAssertEqual(safe.r, sky.r, accuracy: 0.0001)
+        XCTAssertEqual(safe.g, sky.g, accuracy: 0.0001)
+        XCTAssertEqual(safe.b, sky.b, accuracy: 0.0001)
+    }
+
+    func testContrastSafeAccentDarkensOnLightGlass() {
+        let amber = RGB(hex: "FFC53D")  // light accent, unreadable on 白玻璃
+        let bg = Theme.materialBackground(.lightGlass)
+        XCTAssertLessThan(Theme.contrast(amber, bg), 3.2)          // originally poor
+        let safe = Theme.contrastSafeAccent(amber, on: .lightGlass)
+        XCTAssertGreaterThanOrEqual(Theme.contrast(safe, bg), 3.0) // now readable
+        XCTAssertLessThan(Theme.luminance(safe), Theme.luminance(amber))  // darkened
+    }
+
+    @MainActor
+    func testAccentBecomesContrastSafeWhenMaterialChanges() {
+        let model = NotchModel(backend: FakeBackend())
+        model.themeMode = .fixed
+        model.fixedColorIndex = 2  // Amber
+        model.backgroundMaterial = .lightGlass
+        let bg = Theme.materialBackground(.lightGlass)
+        XCTAssertGreaterThanOrEqual(Theme.contrast(model.accent, bg), 3.0)
+    }
+
     @MainActor
     func testModuleSwitchDirectionTracked() {
         let model = NotchModel(backend: FakeBackend())
