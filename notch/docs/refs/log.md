@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 05:56 · swift-fix-device-batch3(实机 debug)
+- 对齐: 速记切走后不收起 + 折叠条去 demo
+- A(不收起): 根因 hover 收起条件 !locked && captureText.isEmpty,切走后 text 非空一直挡;切走 locked 未清。修:setModule 离 capture 清 locked;hover 条件改「!locked && !(module==.capture && text 非空)」。
+- C(输入时滑还能切): handleScroll 已 guard !locked,配合 A 清锁,流程正常。
+- B(折叠还显 demo): collapsedLeft 用真实 model.nowPlaying(nil→Helm 点)、collapsedRight 用真实 localSessions;demo 只留展开面板。
+- Swift 改动: NotchModel.swift(setModule 清锁/hover 条件)、NotchView.swift(collapsedLeft/Right 真实数据)、Tests(+1)
+- VibeHub: record_decision「切走收起+折叠去 demo」→ 1f214758-0b2e-40ed-bd74-23f98e5c439a (ai_proposed)
+- 验证: swift build ✓ / swift test 61 通过;待实机复验
+- 状态: ✅ 待实机复验
+
 ## 2026-07-01 05:42 · swift-fix-dock-icon-anim(实机反馈)
 - 对齐: dock 图标切换动画(用户:切模块时 dock 图标不该有这种变化,参考 HTML)
 - 根因: 切模块时 module 与 autoExpandedHeight 同变,shell .animation(value:autoExpandedHeight)(.46s)把 dock 激活态(accent 色/背景圆/1.5 环)卷进慢曲线 → dock 图标 0.46s 缓慢 morph;HTML .dk 只 .12s 快切。

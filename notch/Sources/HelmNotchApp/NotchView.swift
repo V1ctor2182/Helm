@@ -153,8 +153,8 @@ struct NotchView: View {
                 Image(systemName: "timer").font(.system(size: 11)).foregroundStyle(accent)
                 Text(model.focusWhat).font(.system(size: 10, weight: .medium)).foregroundStyle(.white).lineLimit(1)
             }
-        } else {
-            let np = shownNowPlaying
+        } else if let np = model.nowPlaying {
+            // Collapsed bar shows REAL media only (no demo — it's always visible).
             HStack(spacing: 6) {
                 collapsedArt(np)
                 if np.isPlaying {
@@ -164,6 +164,11 @@ struct NotchView: View {
                 }
                 Text(np.title).font(.system(size: 10)).foregroundStyle(.white.opacity(0.56))
                     .lineLimit(1).truncationMode(.tail)
+            }
+        } else {
+            HStack(spacing: 6) {
+                Circle().fill(dotColor).frame(width: 6, height: 6)
+                Text("Helm").font(.system(size: 10, weight: .semibold)).foregroundStyle(.white.opacity(0.7))
             }
         }
     }
@@ -184,8 +189,9 @@ struct NotchView: View {
 
     /// Right glyph — Open Island-style morphing status, color + motion over text.
     @ViewBuilder private var collapsedRight: some View {
-        let waiting = displaySessions.filter(\.needsAttention).count
-        let running = displaySessions.filter { $0.phase == .running }.count
+        // Collapsed bar reflects REAL sessions only (no demo fallback).
+        let waiting = model.localSessions.filter(\.needsAttention).count
+        let running = model.localSessions.filter { $0.phase == .running }.count
         if model.focusOn {
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 let s = model.focusElapsed(at: context.date)

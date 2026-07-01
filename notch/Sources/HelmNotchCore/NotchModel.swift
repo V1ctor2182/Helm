@@ -175,6 +175,8 @@ public final class NotchModel {
         moduleSwitchForward = forward
         module = m
         if m == .dev { devSection = .agents }
+        // Leaving 速记 ends the capture lock so hover-away can collapse again.
+        if m != .capture { locked = false }
     }
 
     /// Page the Dev sub-sections vertically (HTML `switchDev(dir)`). Clamps at
@@ -489,7 +491,10 @@ public final class NotchModel {
             try? await Task.sleep(for: .milliseconds(220))
             guard let self, !Task.isCancelled else { return }
             // Locked (mid-interaction) or with pending text → stay open.
-            if !self.locked && self.captureText.isEmpty { self.collapse() }
+            // Stay open only while locked, or while there's pending 速记 text AND
+            // we're still on the 速记 module (switching away shouldn't pin it open).
+            let heldByCapture = self.module == .capture && !self.captureText.isEmpty
+            if !self.locked && !heldByCapture { self.collapse() }
         }
     }
 

@@ -329,6 +329,16 @@ final class NotchModuleTests: XCTestCase {
     }
 
     @MainActor
+    func testLeavingCaptureClearsLock() {
+        let model = NotchModel(backend: FakeBackend())
+        model.module = .capture
+        model.beginCapture()          // locks for keyboard input
+        XCTAssertTrue(model.locked)
+        model.selectModule(.media)    // switch away
+        XCTAssertFalse(model.locked)  // lock cleared → hover-away can collapse
+    }
+
+    @MainActor
     func testCycleCaptureKindWrapsBothWays() {
         let model = NotchModel(backend: FakeBackend())
         model.captureKind = .note
