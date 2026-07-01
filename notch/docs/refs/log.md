@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 03:44 · swift-align-34-snapshot-stats-pr-tile
+- 对齐: 真机快照 · Stats PR tile 混排(靶图 /tmp/notchshots/swift-dev-stats.png)
+- HTML 基线: V.stats .sv2 / small
+- HTML↔实际对比(真机渲染): PULL REQUESTS 截成「3 ope...」——我 statMini 全 18pt「3 open · 12」放不下;HTML 大数字+small(11)单位词能塞下。
+- 做了: statMini→statTile(@ViewBuilder 富文本);PR tile Text 拼接(3/·12 用 18heavy、open/merged 用 11+t2)+minimumScaleFactor;commits 37 也走 statTile。重渲染显「3 open · 12…」结构对。
+- Swift 改动: NotchView.swift(statTile、commits/PR tile 富文本)
+- VibeHub: record_decision「Stats PR tile 混排」→ 76851cdc-6f51-445d-8e78-761932a5f7d1 (ai_proposed)
+- 验证: swift build ✓ / swift test 59 通过 0 失败;视觉:真机重渲染 PR tile 数字大词小
+- 状态: ✅ 待 review  |  已核 dev-ports/clip/dev-stats 真机对齐 HTML
+
 ## 2026-07-01 03:34 · swift-align-33-snapshot-collapsed-width
 - 对齐: 真机快照 · 折叠条侧槽宽度(靶图 /tmp/notchshots/swift-collapsed.png)
 - HTML 基线: #bar grid 1fr/auto(160)/1fr

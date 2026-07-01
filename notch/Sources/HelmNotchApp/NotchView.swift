@@ -929,8 +929,14 @@ struct NotchView: View {
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.09), lineWidth: 0.5))
 
                     HStack(spacing: 10) {
-                        statMini("COMMITS · 本周", value: "37")
-                        statMini("PULL REQUESTS", value: "3 open · 12")
+                        statTile("COMMITS · 本周") { Text(verbatim: "37").font(.system(size: 18, weight: .heavy)) }
+                        statTile("PULL REQUESTS") {
+                            // HTML .sv2 small — big numbers, small unit words.
+                            Text(verbatim: "3").font(.system(size: 18, weight: .heavy))
+                                + Text(verbatim: " open").font(.system(size: 11)).foregroundColor(.white.opacity(0.56))
+                                + Text(verbatim: " · 12").font(.system(size: 18, weight: .heavy))
+                                + Text(verbatim: " merged").font(.system(size: 11)).foregroundColor(.white.opacity(0.56))
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .top)
@@ -938,10 +944,10 @@ struct NotchView: View {
         }
     }
 
-    private func statMini(_ label: String, value: String) -> some View {
+    private func statTile<V: View>(_ label: String, @ViewBuilder _ value: () -> V) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label).font(.system(size: 9, weight: .bold)).tracking(0.5).foregroundStyle(.white.opacity(0.34))
-            Text(value).font(.system(size: 18, weight: .heavy)).foregroundStyle(.white).lineLimit(1)
+            value().foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.85)
         }
         .padding(.horizontal, 12).padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
