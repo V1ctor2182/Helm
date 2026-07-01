@@ -1264,7 +1264,10 @@ struct NotchView: View {
     // MARK: Capture cell ↘
 
     @ViewBuilder private var captureCell: some View {
-        cellHeader("✎ 速记", accentTitle: model.locked, trailing: model.locked ? "● 输入中" : nil, trailingColor: accent)
+        cellHeader(
+            model.captureKind == .focus ? "专注 → Helm" : "速记 → Helm",
+            trailing: model.locked ? "● 输入中" : (model.captureKind == .focus ? nil : "TAB 切换模式"),
+            trailingColor: model.locked ? accent : .white.opacity(0.34))
         HStack(spacing: 6) {
             ForEach(CaptureKind.allCases) { kind in
                 let on = model.captureKind == kind
@@ -1282,29 +1285,62 @@ struct NotchView: View {
         } else {
             // 任务:给自己 / 交给 agent
             if model.captureKind == .task { taskTargetToggle.padding(.top, 8) }
-            HStack(spacing: 8) {
-                TextField(placeholder, text: $model.captureText, axis: .vertical)
-                    .textFieldStyle(.plain).font(.system(size: 12)).foregroundStyle(.white)
-                    .lineLimit(1...3).focused($captureFocused)
-                    .onSubmit { Task { await model.submit() } }
-                    .padding(8)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(model.locked ? 0.1 : 0.07)))
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(accent.opacity(model.locked ? 0.5 : 0), lineWidth: 1))
-                Button { Task { await model.submit() } } label: {
-                    Image(systemName: "arrow.up.circle.fill").font(.system(size: 23))
-                        .foregroundStyle(model.captureText.isEmpty ? .white.opacity(0.25) : accent)
-                }
-                .buttonStyle(.plain).disabled(model.captureText.isEmpty)
-            }
-            .padding(.top, 7)
-            // 时间 / 地点 附件(note/task)
+            // capin — full-width input on its own row (HTML .capin).
+            TextField(placeholder, text: $model.captureText, axis: .vertical)
+                .textFieldStyle(.plain).font(.system(size: 14)).foregroundStyle(.white)
+                .lineLimit(1...3).focused($captureFocused)
+                .onSubmit { Task { await model.submit() } }
+                .padding(11)
+                .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(model.locked ? 0.1 : 0.06)))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(accent.opacity(model.locked ? 0.5 : 0), lineWidth: 1.5))
+                .padding(.top, 7)
             if !model.captureFiles.isEmpty { captureFilesRow.padding(.top, 8) }
-            // 时间/地点附件仅 note/task(HTML capatt 条件),ask/journal 不显示。
-            if model.captureKind == .note || model.captureKind == .task { attachmentRow.padding(.top, 8) }
+            // caprow — 时间/地点 chips(note/task)或 hint,右侧 发送(HTML .caprow).
+            HStack(alignment: .center, spacing: 8) {
+                if model.captureKind == .note || model.captureKind == .task {
+                    attachmentRow
+                } else {
+                    Text(captureHint).font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
+                    Spacer(minLength: 0)
+                }
+                sendButton
+            }
+            .padding(.top, 10)
             statusLabel.padding(.top, 2)
             recentsSection.padding(.top, 6)
         }
         Spacer(minLength: 0)
+    }
+
+    /// The 发送 button (HTML .sendb — plane glyph + kind-specific label, accent capsule).
+    private var sendButton: some View {
+        Button { Task { await model.submit() } } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "paperplane.fill").font(.system(size: 10))
+                Text(sendLabel).font(.system(size: 12, weight: .semibold))
+            }
+            .foregroundStyle(model.captureText.isEmpty ? .white.opacity(0.3) : Color(red: 0.1, green: 0.07, blue: 0.03))
+            .padding(.horizontal, 16).padding(.vertical, 7)
+            .background(Capsule().fill(model.captureText.isEmpty ? .white.opacity(0.08) : accent))
+        }
+        .buttonStyle(.plain).disabled(model.captureText.isEmpty)
+    }
+
+    private var sendLabel: String {
+        if !model.captureFiles.isEmpty { return "发送并归档" }
+        switch model.captureKind {
+        case .ask: return "问"
+        case .task: return model.taskTarget == .agent ? "派发" : "发送"
+        default: return "发送"
+        }
+    }
+
+    private var captureHint: String {
+        if !model.captureFiles.isEmpty { return "写点备注,发送 → Helm 帮你归档这些文件" }
+        switch model.captureKind {
+        case .ask: return "TAB 切换 · 问 Helm 大脑 · ⏎ 发送"
+        default: return "TAB 切换 · ⏎ 发送 · 可加时间/地点上日历"
+        }
     }
 
     /// 专注:未开始 = 输入「在做什么」+ 开始;进行中 = 大计时 + 停止并记录。

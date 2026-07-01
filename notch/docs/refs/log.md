@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 02:44 · swift-align-27-visualdiff-capture-layout
+- 对齐: 视觉 diff · 速记模块布局(靶图 /tmp/html-cap.png)
+- HTML 基线: V.cap(.vh / .capin / .caprow / .sendb)
+- HTML↔实际对比: ① 头部 HTML「速记→Helm」+「TAB 切换模式」,我是「✎ 速记」+「●输入中」。② 输入框 HTML 全宽独立行、发送钮在下面 caprow(和时间/地点同排右对齐),我把 send 塞进 textfield HStack。③ 发送钮 HTML ✈+文字(发送/派发/问/发送并归档),我是 arrow.up.circle 图标。
+- 做了: 头部按 kind 显「速记/专注→Helm」+TAB 提示;输入框全宽独立(font14/r12);新 caprow(note/task 显 attachmentRow、其余 hint,右 sendButton);sendButton=paperplane+sendLabel(按 kind/文件/taskTarget);captureHint 按 kind。
+- Swift 改动: NotchView.swift(captureCell 头部+重构、sendButton/sendLabel/captureHint)
+- VibeHub: record_decision「速记布局对齐 HTML」→ c517a0c1-8f42-4280-b335-4a7ec48a4e5e (ai_proposed)
+- 验证: swift build ✓ / swift test 59 通过 0 失败;视觉:HTML 靶图对比,布局已对齐
+- 状态: ✅ 待 review
+
 ## 2026-07-01 02:36 · swift-align-26-visualdiff-transport-glyphs
 - 对齐: 视觉 diff 首轮(browse 截 HTML dash/media 靶图逐项对比)
 - HTML 基线: V.dash npctrl / V.media mctrl2 / .coverexp(靶图 /tmp/html-dash.png、html-media.png)
