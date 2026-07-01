@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 04:00 · swift-align-36-agenda-scroll
+- 对齐: 议程垂直滚动(修上块周视图溢出遗留)
+- HTML 基线: V.cal .agenda overflow-y:auto
+- HTML↔实际对比: 周视图 240 高议程 4 项裁末项;HTML agenda 内滚。
+- 做了: calAgenda 事件列表外包 ScrollView(.vertical,隐指示器),固定高度内滚动而非裁切;月视图事件多时同样可滚。
+- Swift 改动: NotchView.swift(calAgenda ScrollView)
+- VibeHub: record_decision「议程滚动」→ e19686be-e972-4c11-8115-80df85c5aede (ai_proposed)
+- 验证: swift build ✓ / swift test 59 通过 0 失败
+- 状态: ✅ 待 review
+
 ## 2026-07-01 03:52 · swift-align-35-snapshot-calweek-daynum
 - 对齐: 真机快照 · 周条日号换行(靶图 /tmp/notchshots/swift-cal-week.png)
 - HTML 基线: V.cal wstrip .wnum

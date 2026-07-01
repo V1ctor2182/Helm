@@ -743,29 +743,33 @@ struct NotchView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(items.indices, id: \.self) { i in
-                        let ev = items[i]
-                        HStack(alignment: .top, spacing: 11) {
-                            VStack(alignment: .leading, spacing: 0) {
-                                Text(ev.start.isEmpty ? "·" : ev.start).font(.system(size: 13, weight: .heavy)).foregroundStyle(accent).monospacedDigit()
-                                if !ev.end.isEmpty { Text(ev.end).font(.system(size: 11)).foregroundStyle(.white.opacity(0.34)).monospacedDigit() }
-                            }
-                            .frame(width: 44, alignment: .leading)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(ev.title).font(.system(size: 13, weight: .bold)).foregroundStyle(.white).lineLimit(1)
-                                if !ev.loc.isEmpty {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "mappin").font(.system(size: 8)).foregroundStyle(.white.opacity(0.34))
-                                        Text(ev.loc).font(.system(size: 11)).foregroundStyle(.white.opacity(0.56)).lineLimit(1)
+                // HTML .agenda is overflow-y:auto — scroll when it overflows the
+                // short week view instead of clipping the last event.
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(items.indices, id: \.self) { i in
+                            let ev = items[i]
+                            HStack(alignment: .top, spacing: 11) {
+                                VStack(alignment: .leading, spacing: 0) {
+                                    Text(ev.start.isEmpty ? "·" : ev.start).font(.system(size: 13, weight: .heavy)).foregroundStyle(accent).monospacedDigit()
+                                    if !ev.end.isEmpty { Text(ev.end).font(.system(size: 11)).foregroundStyle(.white.opacity(0.34)).monospacedDigit() }
+                                }
+                                .frame(width: 44, alignment: .leading)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(ev.title).font(.system(size: 13, weight: .bold)).foregroundStyle(.white).lineLimit(1)
+                                    if !ev.loc.isEmpty {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "mappin").font(.system(size: 8)).foregroundStyle(.white.opacity(0.34))
+                                            Text(ev.loc).font(.system(size: 11)).foregroundStyle(.white.opacity(0.56)).lineLimit(1)
+                                        }
                                     }
                                 }
+                                Spacer(minLength: 0)
+                                Circle().fill(ev.color).frame(width: 7, height: 7).padding(.top, 5)
                             }
-                            Spacer(minLength: 0)
-                            Circle().fill(ev.color).frame(width: 7, height: 7).padding(.top, 5)
+                            .padding(.vertical, 9)
+                            .overlay(alignment: .bottom) { if i < items.count - 1 { Rectangle().fill(.white.opacity(0.09)).frame(height: 0.5) } }
                         }
-                        .padding(.vertical, 9)
-                        .overlay(alignment: .bottom) { if i < items.count - 1 { Rectangle().fill(.white.opacity(0.09)).frame(height: 0.5) } }
                     }
                 }
             }
