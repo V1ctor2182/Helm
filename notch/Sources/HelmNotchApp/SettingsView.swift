@@ -17,8 +17,16 @@ struct SettingsView: View {
     private var accent: Color { Color(model.accent) }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
+        ScrollView { content }
+            .background(Color(red: 0.086, green: 0.090, blue: 0.098))
+            .frame(minWidth: 440, minHeight: 520)
+            .onAppear { installed = ClaudeHookInstaller.isInstalled() }
+    }
+
+    /// The settings body sans ScrollView — so it can also be snapshotted
+    /// (ImageRenderer doesn't render ScrollView contents).
+    @ViewBuilder var content: some View {
+        VStack(alignment: .leading, spacing: 0) {
                 header
 
                 section("外观")
@@ -48,12 +56,8 @@ struct SettingsView: View {
                 tapRow("默认播放源", sub: "折叠态控制的播放器", action: "\(model.mediaSource.label) ⌄") {
                     model.cycleMediaSource()
                 }
-            }
-            .padding(18)
         }
-        .background(Color(red: 0.086, green: 0.090, blue: 0.098))
-        .frame(minWidth: 440, minHeight: 520)
-        .onAppear { installed = ClaudeHookInstaller.isInstalled() }
+        .padding(18)
     }
 
     // MARK: Pieces

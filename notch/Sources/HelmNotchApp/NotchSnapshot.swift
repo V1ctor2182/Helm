@@ -60,5 +60,20 @@ enum NotchSnapshot {
             try? png.write(to: url)
             print("wrote \(url.path)")
         }
+
+        // Settings modal (a separate window in the real app).
+        let sModel = NotchModel(backend: HelmClient())
+        let settings = SettingsView(model: sModel).content
+            .frame(width: 440, alignment: .topLeading)
+            .background(Color(red: 0.086, green: 0.090, blue: 0.098))
+        let sr = ImageRenderer(content: settings)
+        sr.scale = 2
+        if let img = sr.nsImage, let tiff = img.tiffRepresentation,
+           let bitmap = NSBitmapImageRep(data: tiff),
+           let png = bitmap.representation(using: .png, properties: [:]) {
+            let url = URL(fileURLWithPath: dir).appendingPathComponent("swift-settings.png")
+            try? png.write(to: url)
+            print("wrote \(url.path)")
+        }
     }
 }

@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 04:34 · swift-align-40-snapshot-settings
+- 对齐: 设置 modal 真机核对(靶图 /tmp/notchshots/swift-settings.png)
+- HTML 基线: settingsHTML
+- HTML↔实际对比(真机渲染): 初次全黑——ImageRenderer 不渲染 ScrollView 内容。重构 SettingsView 抽出 content(去 ScrollView 正文),snapshot 渲 .content。重渲染成功,与 HTML 对齐:标题+版本/外观(材质 4chip+主题色 10dot+配色模式+随机一套+每天随机)/HELM 后端(连接+完整设置)/本机(hook)/媒体(播放源)。
+- 差异: ① HTML 自定义 modal 有 ✕,我原生窗用标题栏关闭钮。② 每天随机 toggle 在 ImageRenderer 渲成 🚫(Toggle 无头限制,非真 bug)。
+- Swift 改动: SettingsView.swift(抽 content)、NotchSnapshot.swift(渲 .content)
+- VibeHub: record_decision「设置可快照+对齐」→ 4de767de-85c4-483b-8200-7ece5a77201e (ai_proposed)
+- 验证: swift build ✓ / swift test 59 通过 0 失败;视觉:真机设置 modal 对齐 HTML
+- 状态: ✅ 待 review  |  harness caveat 汇总:TextField/Material/Toggle/独立 ScrollView 无头渲不出
+
 ## 2026-07-01 04:24 · swift-align-39-snapshot-materials
 - 对齐: Snapshot 扩玻璃材质 + 验证对比 accent(靶图 /tmp/notchshots/swift-mat-lightglass.png)
 - HTML 基线: MATS / randomTheme 对比逻辑
