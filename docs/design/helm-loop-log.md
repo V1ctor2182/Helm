@@ -6,6 +6,15 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 01:41 · design-06-context-telemetry（夜间模式）
+- 对齐: context 遥测面板（阶段1 第6块）——当前项目 + Today 导航 + 会话遥测块 + 坐标 chip + LOCAL 角标
+- 设计基线: helm-pro.html `.ctx`(cproj/slab/nrow/telem/coord/cornertag) / DESIGN.md「ORAGE Chrome 词汇·会话遥测块」（只读对照，未改）
+- Svelte 改动: 新增 `lib/ContextPanel.svelte`（当前项目+Today 导航+SESSION/MODEL/TOKENS 遥测+坐标 chip+LOCAL 角标，走 token，mock）；`lib/Shell.svelte` 用 ContextPanel 替换旧占位、删 MODES/modeLabel 与无用 .ctx-* 样式
+- 取舍: 旧「打开 Tab」占位无测试依赖，安全移除；遥测/导航计数 mock（真实值阶段2 接 orchestration/session 流，保持版式）
+- VibeHub: record_decision「context 遥测面板」→ (F8, ai_proposed)；add_constraint/add_question：无
+- 验证: npm build ✓ / check 0 错 0 警（243 文件）/ test 146 通过；视觉：dev 5174 dark 与 helm-pro context 一致
+- 状态: ✅ 夜间自 commit（feat/design-shell-today）｜里程碑：外壳+Rail+Today+context 全齐，整体达 helm-pro 观感｜❓需确认: 无
+
 ## 2026-07-02 01:37 · design-05-today-readout（夜间模式）
 - 对齐: Today 无卡片仪表读数（阶段1 第5块）——任务/日记/agent 框选视口/项目/邮件/快速动作
 - 设计基线: helm-pro.html `.rd`(rdrow/gut/task/jr/framed/agl/projline/mailn/qa) / DESIGN.md「三招牌动作·无卡片 Today」（只读对照，未改）

@@ -1,5 +1,6 @@
 <script lang="ts">
   import Rail from './Rail.svelte'
+  import ContextPanel from './ContextPanel.svelte'
   import CommandPalette from './CommandPalette.svelte'
   import QuickCapture from './QuickCapture.svelte'
   import Today from './Today.svelte'
@@ -11,13 +12,9 @@
   import Terminal from './cockpit/terminal/Terminal.svelte'
   import { applyShortcut } from './keymap'
   import { cockpit } from './cockpit/cockpit.svelte'
-  import { layout, MODES } from './layout.svelte'
+  import { layout } from './layout.svelte'
 
   let { backendStatus = 'connecting…' }: { backendStatus?: string } = $props()
-
-  const modeLabel = $derived(
-    MODES.find((m) => m.id === layout.mode)?.label ?? layout.mode,
-  )
 
   function onGlobalKey(e: KeyboardEvent) {
     if (applyShortcut(e, layout)) e.preventDefault()
@@ -41,11 +38,7 @@
 
   {#if !layout.contextCollapsed}
     <aside class="context" aria-label="Context panel">
-      <header class="ctx-h">{modeLabel}</header>
-      <p class="hint">{modeLabel} 面板将由对应 Room 提供。</p>
-      <button class="ctx-btn" onclick={() => layout.openTab(`${modeLabel} ${layout.tabs.length + 1}`)}>
-        + 打开一个 {modeLabel} Tab
-      </button>
+      <ContextPanel />
     </aside>
   {/if}
 
@@ -195,35 +188,7 @@
     padding: 14px;
     background: var(--panel);
     border-right: 1px solid var(--hair);
-    overflow: auto;
-  }
-  .ctx-h {
-    font-family: var(--mono);
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--t4);
-    margin-bottom: 8px;
-  }
-  .hint {
-    color: var(--t3);
-    font-size: 12.5px;
-    line-height: 1.5;
-  }
-  .ctx-btn {
-    margin-top: 12px;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--acc-ink);
-    background: transparent;
-    border: 1px solid var(--acc-ink);
-    padding: 6px 11px;
-    cursor: pointer;
-    transition: background var(--dur-micro) var(--ease);
-  }
-  .ctx-btn:hover {
-    background: color-mix(in srgb, var(--acc) 12%, transparent);
+    overflow: hidden;
   }
 
   /* center */
