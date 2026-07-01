@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 01:18 · swift-align-19-background-material
+- 设计源: helm-notch-pro.html(settingsHTML MATS / .mat-* / applyMat)
+- 界面: 背景材质选项(默认纯黑)
+- 做了: Core NotchMaterial(black/darkGlass/lightGlass/vibrant)+ backgroundMaterial(默认 black);App shell 背景改 materialBackground(black 不变;玻璃档 .ultraThinMaterial/.regularMaterial+tint 透壁纸);设置 外观 加材质 picker(色板+选中 accent 边)(+1 测)。
+- 取舍: 与「黑底+accent-only」美学冲突 → 默认纯黑(视觉零变化),玻璃仅可选,开 [needs-human] question dbba2873;玻璃实机效果无头不可验证(NSPanel 透壁纸),TODO 待实机。
+- 改动: HelmNotchCore/Theme.swift(+NotchMaterial)、NotchModel.swift(+backgroundMaterial)、Tests(+1)、HelmNotchApp/NotchView.swift(materialBackground)、SettingsView.swift(materialPicker)
+- VibeHub: record_decision「背景材质选项」→ 15036420-0100-4df0-b8b1-0f66ae8e068a;add_question「[needs-human] 是否开放玻璃材质」→ dbba2873-7dbc-4c45-b27c-13767558a415(均 ai_proposed)
+- 自检: 硬门 swift build + swift test 全绿,52 测 0 失败(+1 材质默认/可切)。默认黑视觉零变化。玻璃实机待用户。
+- 状态: ✅ 待 review  |  ❓需确认: 玻璃材质是否开放(已开 dbba2873)
+
 ## 2026-07-01 01:11 · swift-align-18-dev-vertical-slide
 - 设计源: helm-notch-pro.html(slideDev / switchDev 纵向分页动画)
 - 界面: Dev 子页纵向滑动分页动画

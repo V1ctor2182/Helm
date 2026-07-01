@@ -59,7 +59,7 @@ struct NotchView: View {
             }
         }
         .frame(width: width, height: height, alignment: .top)
-        .background(Color.black)
+        .background(materialBackground)
         .clipShape(NotchShape(bottomRadius: model.expanded ? 24 : 16))
         // Drag a file onto the notch → stage it in 速记 (HTML notch.drag + drop).
         .overlay {
@@ -86,6 +86,21 @@ struct NotchView: View {
         // Animate the height re-flow when the active view changes (HTML --eh transition).
         .animation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.42), value: model.autoExpandedHeight)
         .frame(maxWidth: .infinity, alignment: .top)  // center the shell in the canvas
+    }
+
+    /// Notch background per the chosen material (HTML MATS). `.black` is the
+    /// default solid look; glass options blur the wallpaper behind the panel.
+    @ViewBuilder private var materialBackground: some View {
+        switch model.backgroundMaterial {
+        case .black:
+            Color.black
+        case .darkGlass:
+            Rectangle().fill(.ultraThinMaterial).overlay(Color.black.opacity(0.4))
+        case .lightGlass:
+            Rectangle().fill(.regularMaterial).overlay(Color.white.opacity(0.08))
+        case .vibrant:
+            Rectangle().fill(.ultraThinMaterial).overlay(Color(red: 0.09, green: 0.10, blue: 0.16).opacity(0.5))
+        }
     }
 
     // MARK: Collapsed — one continuous bar (left content · camera gap · right glyph)

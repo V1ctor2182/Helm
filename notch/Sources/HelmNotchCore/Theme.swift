@@ -25,6 +25,26 @@ public struct RGB: Sendable, Equatable {
     }
 }
 
+/// The notch's background material (HTML settings `MATS`). Default `.black` keeps
+/// the established solid-black aesthetic; glass options blur the wallpaper behind.
+public enum NotchMaterial: String, Sendable, CaseIterable, Identifiable {
+    case black
+    case darkGlass
+    case lightGlass
+    case vibrant
+
+    public var id: String { rawValue }
+
+    public var label: String {
+        switch self {
+        case .black: "纯黑"
+        case .darkGlass: "暗玻璃"
+        case .lightGlass: "白玻璃"
+        case .vibrant: "彩色玻璃"
+        }
+    }
+}
+
 /// How the accent color is chosen. Default is `.daily` — a new curated color
 /// each day (stable within the day, switches at local midnight).
 public enum ThemeMode: String, Sendable, CaseIterable, Identifiable {

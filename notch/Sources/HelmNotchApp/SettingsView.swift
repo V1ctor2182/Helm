@@ -22,6 +22,8 @@ struct SettingsView: View {
                 header
 
                 section("外观")
+                rowLabel("背景材质", sub: "玻璃材质会透出壁纸(默认纯黑)")
+                materialPicker.padding(.vertical, 4)
                 rowLabel("主题色", sub: "驱动选中 / 聚焦 / 进度 / 折叠态波形")
                 palette.padding(.vertical, 4)
                 rowLabel("配色模式", sub: "每日轮换 · 连续色相 · 固定")
@@ -86,6 +88,34 @@ struct SettingsView: View {
                     .contentShape(Circle())
                     .onTapGesture { model.themeMode = .fixed; model.fixedColorIndex = i }
             }
+        }
+    }
+
+    private var materialPicker: some View {
+        HStack(spacing: 8) {
+            ForEach(NotchMaterial.allCases) { mat in
+                let on = model.backgroundMaterial == mat
+                Button { model.backgroundMaterial = mat } label: {
+                    HStack(spacing: 6) {
+                        RoundedRectangle(cornerRadius: 5).fill(matSwatch(mat)).frame(width: 16, height: 16)
+                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(.white.opacity(0.18), lineWidth: 0.5))
+                        Text(mat.label).font(.system(size: 11)).foregroundStyle(on ? .white : t2)
+                    }
+                    .padding(.horizontal, 10).padding(.vertical, 6)
+                    .background(RoundedRectangle(cornerRadius: 9).fill(.white.opacity(0.05)))
+                    .overlay(RoundedRectangle(cornerRadius: 9).stroke(on ? accent : .white.opacity(0.09), lineWidth: on ? 1 : 0.5))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func matSwatch(_ mat: NotchMaterial) -> Color {
+        switch mat {
+        case .black: Color.black
+        case .darkGlass: Color(white: 0.16)
+        case .lightGlass: Color.white.opacity(0.55)
+        case .vibrant: Color(red: 0.4, green: 0.3, blue: 0.8)
         }
     }
 

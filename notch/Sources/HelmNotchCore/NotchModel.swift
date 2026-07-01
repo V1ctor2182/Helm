@@ -191,6 +191,8 @@ public final class NotchModel {
 
     // MARK: Theme (daily-rotating accent)
 
+    /// Notch background material (HTML MATS). Default black keeps the current look.
+    public var backgroundMaterial: NotchMaterial = .black
     public var themeMode: ThemeMode = .daily { didSet { refreshTheme() } }
     public var fixedColorIndex = 0 { didSet { refreshTheme() } }
     /// The current accent color (recomputed each poll so it flips at midnight).

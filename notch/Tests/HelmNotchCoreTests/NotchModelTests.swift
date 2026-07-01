@@ -118,6 +118,14 @@ final class NotchModuleTests: XCTestCase {
     }
 
     @MainActor
+    func testBackgroundMaterialDefaultsToBlack() {
+        let model = NotchModel(backend: FakeBackend())
+        XCTAssertEqual(model.backgroundMaterial, .black)
+        model.backgroundMaterial = .darkGlass
+        XCTAssertEqual(model.backgroundMaterial, .darkGlass)
+    }
+
+    @MainActor
     func testModuleSwitchDirectionTracked() {
         let model = NotchModel(backend: FakeBackend())
         model.switchModule(1)
