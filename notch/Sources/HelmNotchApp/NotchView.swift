@@ -489,7 +489,11 @@ struct NotchView: View {
                         if s.phase == .waitingPermission {
                             Text("待批准").font(.system(size: 10)).foregroundStyle(.orange)
                         } else if s.phase == .running {
-                            ShineText(s.activity ?? "思考中", accent: accent, size: 10)
+                            if let act = s.activity, act != "正在思考…" {
+                                Text(act).font(.system(size: 10)).foregroundStyle(.white.opacity(0.34)).lineLimit(1)
+                            } else {
+                                ShineText("思考中", accent: accent, size: 10)
+                            }
                         } else if s.phase == .ended {
                             Text("完成").font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
                         }
@@ -1208,8 +1212,14 @@ struct NotchView: View {
                     Circle().fill(phaseColor(session.phase)).frame(width: 6, height: 6)
                     Text(session.folderName).font(.system(size: 11, weight: .medium)).foregroundStyle(.white.opacity(0.85)).lineLimit(1)
                     if session.phase == .running {
-                        SpinningStar(color: accent).scaleEffect(0.78)
-                        ShineText(session.activity ?? "正在思考…", accent: accent, size: 10)
+                        // HTML: ✻+shimmer only for the "thinking" row; a concrete
+                        // activity (e.g. Bash: …) shows as plain gray.
+                        if let act = session.activity, act != "正在思考…" {
+                            Text(act).font(.system(size: 10)).foregroundStyle(.white.opacity(0.34)).lineLimit(1)
+                        } else {
+                            SpinningStar(color: accent).scaleEffect(0.78)
+                            ShineText("正在思考…", accent: accent, size: 10)
+                        }
                     }
                     Spacer(minLength: 4)
                     Text(phaseShort(session.phase)).font(.system(size: 9)).foregroundStyle(.white.opacity(0.35))
@@ -1628,8 +1638,8 @@ struct NotchView: View {
 
     private func phaseShort(_ phase: LocalSession.Phase) -> String {
         switch phase {
-        case .running: "运行中"
-        case .waitingPermission: "待批准"
+        case .running: "运行中 ›"
+        case .waitingPermission: "待批准 ›"
         case .ended: "完成"
         }
     }

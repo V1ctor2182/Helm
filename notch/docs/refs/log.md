@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 04:08 · swift-align-37-snapshot-agent-rows
+- 对齐: 真机快照 · agent 行 shimmer/stag(靶图 /tmp/notchshots/swift-dev-agents.png)
+- HTML 基线: V.agents srow(.think/.shine/.stag)
+- HTML↔实际对比(真机渲染): ① 我给所有 running 行加 ✻+shine,HTML 只「思考中」行(notch)有,具体活动(app Bash)显纯灰。② HTML stag「运行中 ›」我缺「›」。
+- 做了: agentCell + dashAgentWidget running 行——activity 非空且≠「正在思考…」显纯灰文本,否则 ✻+shimmer;phaseShort running/waiting 加「›」。重渲染 notch=✻思考、app=灰 Bash、都「运行中 ›」。
+- Swift 改动: NotchView.swift(phaseShort、agentCell/dashAgentWidget running 行)
+- VibeHub: record_decision「agent 行 shimmer/stag」→ e3fdb05d-4125-48fe-83f9-bf806eabd920 (ai_proposed)
+- 验证: swift build ✓ / swift test 59 通过 0 失败;视觉:真机重渲染与 HTML dev-agents 一致
+- 状态: ✅ 待 review
+
 ## 2026-07-01 04:00 · swift-align-36-agenda-scroll
 - 对齐: 议程垂直滚动(修上块周视图溢出遗留)
 - HTML 基线: V.cal .agenda overflow-y:auto
