@@ -3,6 +3,11 @@
 > 这条 loop 的本体:**`helm-notch-pro.html` 是锁定的最终设计稿(只读、唯一真相);把它的 UI 一块一块"原样"实现进原生 Swift notch App,直到 Swift App 和 HTML 看起来/用起来一模一样。**
 > 启动命令见 [`notch-loop-prompt.md`](./notch-loop-prompt.md)。这是**真实里程碑开发**(notch-panel room),仿 [`docs/loop-procedure.md`](../../docs/loop-procedure.md) 但聚焦"对齐设计"。
 
+> **🎯 范围(唯一目标):把 Swift 前端做到和 `helm-notch-pro.html` 一模一样(布局/色/字号/间距/尺寸/动画/交互)。后端数据接入不在范围内——**
+> - 数据一律用**和 HTML 同款的种子 / mock**(HTML 里写死什么值就照搬什么值:PORTS、PRS、CLIP、HEAT、SPARK、LYRICS、RECENT、EVENTS 等)。已有真实数据源(连接状态 / 本机 agent hook / 日历 events / 媒体)照用,但**不为「接某个后端端口」而停留、阻塞、或去猜后端接口**。
+> - 真实数据源没有 / 要后端加端口的(api-focus、文件上传、问大脑通道、真实 diff、真实 PR/端口/剪贴板/歌词/per-day 事件…)→ **留 TODO + 用 HTML 同款 mock 顶上**,继续对齐视觉。**绝不为它们停下或去改后端。**
+> - 判断一块"对齐完"只看**视觉/交互和 HTML 一不一样**,不看数据真不真。
+
 > **🌙 夜间模式(可选,完全自主):** 启动命令带【夜间模式】时,下面流程里每一处「停下 review / 问你 / add_question 等人」都改成「**做最忠于 HTML 的暂定实现 + `record_decision`/`add_question` 记下来 + 留 TODO + 继续**」;每块自检过(`swift build`+`test` 全绿)就**自己 commit + push 到 `feat/notch-*` 分支**(仍**不合 main、不改 HTML**),整夜不停。硬门(build/test 绿)与"不可逆操作不猜"不松;只有"全部对齐完 / 全卡住"才停。详见 [`notch-loop-prompt.md`](./notch-loop-prompt.md) 的「🌙 夜间模式」段。
 > **夜间模式唯一不省的是「report」:** 每轮照常产出「每轮 report」(见下「每一轮」第 8 步)——夜间只是**不等你批准**,但**每一块都要写 report**(消息里给一份 + 记进 `refs/log.md`),让你早上一路回看每轮做了什么。
 
@@ -15,11 +20,10 @@
 
 > **目标 = Swift App 和 `helm-notch-pro.html` 一模一样**:布局、模块、配色(每日 accent)、字号层级、间距、手势、动画、尺寸——逐项对齐,**不是"差不多"**。
 
-## 现状差距(loop 要消灭的)
+## 现状(2026-07-01:骨架已对齐,进入保真打磨)
 
-Swift `NotchView` 现在还是**旧的 A×D 2×2**(media/calendar/agent/capture 四格,见 `cell{}`/`mediaCell`/`calendarCell`/`agentCell`/`captureCell`);
-HTML 已是**新的多模块 dock 设计**(折叠条 → hover 展开 → 底部 dock 切 8 模块;dashboard bento、media 歌词放大、Dev 上下分页 + 右轨、日历周条/整月、剪贴板、专注…)。
-loop 的活 = **把 Swift 从旧 2×2 逐块迁到 HTML 的新设计,做到一模一样。**
+Swift `NotchView` 已从旧 2×2 迁到 HTML 的 **dock + 单模块** 设计,主体结构/状态/交互都已落地:折叠条、dock 切 5 模块(dashboard/速记/calendar/dev/clipboard)+ media 全屏、Dev 四子页(agents/ports/reviews/stats,纵向分页)、日历周⇄月+议程、深色设置 modal、等权限/日程提醒两 banner、专注计时、速记 5-kind(含 self-agent/时间地点/最近/拖文件)、滑动手势、per-view 自适应高度、方向性滑入动画。
+loop 现在的活 = **逐块核对「一模一样」并补齐差的细节**:对着 HTML 一处处比像素/色/字号/间距/动画/尺寸,哪不一样就修哪;还没端口的小细节(如某个动画曲线、某处 hover 态、某个 SVG 字形的确切形状)也算块。数据一律用 HTML 同款 mock(见上「范围」),别去接后端。
 
 ---
 
