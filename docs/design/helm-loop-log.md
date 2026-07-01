@@ -6,6 +6,15 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 01:44 · design-07-statusbar-hud（夜间模式）
+- 对齐: 状态栏 CLI 面包屑 HUD 补全（阶段1 第7块）
+- 设计基线: helm-pro.html `.sbar`（seg 分段 / NEXT / 001/009 / tok / RAG）/ DESIGN.md「三招牌·遥测状态栏」（只读对照，未改）
+- Svelte 改动: `lib/Shell.svelte` statusbar——加 CLAUDE·tok 14.2k、60ms·RAG idle、NEXT + 001/009（tabular）、path 段高亮；保留 toggle 与 backendStatus
+- 取舍: tok/latency/NEXT/001/009 mock（真实遥测阶段2 接流）；保留 toggle 按钮与 backendStatus（App.test 依赖）
+- VibeHub: record_decision「状态栏 CLI 面包屑 HUD」→ (F8, ai_proposed)；add_constraint/add_question：无
+- 验证: npm build ✓ / check 0 错 0 警（243 文件）/ test 146 通过；视觉：dev 5174 dark 面包屑 HUD 与 helm-pro 一致
+- 状态: ✅ 夜间自 commit（feat/design-shell-today）｜❓需确认: 无
+
 ## 2026-07-02 01:41 · design-06-context-telemetry（夜间模式）
 - 对齐: context 遥测面板（阶段1 第6块）——当前项目 + Today 导航 + 会话遥测块 + 坐标 chip + LOCAL 角标
 - 设计基线: helm-pro.html `.ctx`(cproj/slab/nrow/telem/coord/cornertag) / DESIGN.md「ORAGE Chrome 词汇·会话遥测块」（只读对照，未改）

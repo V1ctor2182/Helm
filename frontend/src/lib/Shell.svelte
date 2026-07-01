@@ -108,10 +108,14 @@
   <!-- statusbar: CLI 面包屑 / 遥测 HUD（承 helm-pro.html） -->
   <footer class="statusbar">
     <button class="seg" onclick={() => layout.toggleContext()}>⟨ 上下文</button>
-    <span class="seg"><span class="live" aria-hidden="true">●</span> ~/helm</span>
+    <span class="seg path"><span class="live" aria-hidden="true">●</span> ~/helm</span>
     <span class="seg">⎇ main <span class="num">↑0</span></span>
+    <span class="seg">CLAUDE · <span class="num">tok 14.2k</span></span>
+    <span class="seg"><span class="num">60ms</span> · RAG idle</span>
     <span class="seg">{backendStatus}</span>
     <span class="grow"></span>
+    <span class="seg">NEXT</span>
+    <span class="seg num">001/009</span>
     <button class="seg" onclick={() => layout.toggleTerminal()}>终端 ⟩</button>
     <button class="seg k" onclick={() => layout.openPalette()}>⌘K 命令面板</button>
     <button class="seg k" onclick={() => layout.openCapture()}>⌘N 速记</button>
@@ -294,6 +298,9 @@
     border-right: none;
     border-left: 1px solid var(--hair);
     color: var(--t4);
+  }
+  .statusbar .seg.path {
+    color: var(--t2);
   }
   .statusbar .live {
     color: var(--acc-ink);
