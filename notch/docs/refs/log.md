@@ -6,6 +6,17 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 03:00 · swift-align-29-visualdiff-agents-demo
+- 对齐: 视觉 diff · 本机 agent demo 回退(靶图 /tmp/html-dev-agents.png、dev-stats.png)
+- HTML 基线: V.agents / dash agr(demo notch/app/helm)
+- HTML↔实际对比: HTML 显 demo 三条 agent,我用真实 localSessions(无 hook 空)→「无 agent/未装 hook」。stats 页(heatmap/token/tiles)已基本一致。
+- 做了: displaySessions(真实非空用真实,否则回退 HTML demo:notch running「正在思考…」/app running「Bash: swift build」/helm ended);agentCell + dashAgentWidget 改用之,活跃数从 displaySessions 算,去掉空态文案。
+- 取舍: 无 hook 默认显 demo(一模一样),真实 session 顶替;等权限 banner 仍只由真实 localSessions 触发(demo 无 waiting)。PR tile「12 merged」小差留后修。
+- Swift 改动: NotchView.swift(displaySessions、agentCell、dashAgentWidget)
+- VibeHub: record_decision「agent demo 回退」→ 37269084-b1fd-481a-9be5-660ed296ba2a (ai_proposed)
+- 验证: swift build ✓ / swift test 59 通过 0 失败;视觉:HTML 靶图对比,dev agents/dash 已对齐
+- 状态: ✅ 待 review
+
 ## 2026-07-01 02:52 · swift-align-28-visualdiff-calendar-mock
 - 对齐: 视觉 diff · 日历 mock 事件 + 议程布局(靶图 /tmp/html-cal-month.png)
 - HTML 基线: EVENTS / CAL_ITEMS / CAL_EVDAYS / .evr(evtime/evbody/evdot)

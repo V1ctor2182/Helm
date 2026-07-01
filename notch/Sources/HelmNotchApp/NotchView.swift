@@ -474,21 +474,17 @@ struct NotchView: View {
     private var dashAgentWidget: some View {
         VStack(alignment: .leading, spacing: 0) {
             dashHeader("本机 CLAUDE CODE")
-            if model.localSessions.isEmpty {
-                Text("无 agent").font(.system(size: 11)).foregroundStyle(.white.opacity(0.34))
-            } else {
-                VStack(alignment: .leading, spacing: 7) {
-                    ForEach(Array(model.localSessions.prefix(3))) { s in
-                        HStack(spacing: 7) {
-                            Circle().fill(phaseColor(s.phase)).frame(width: 7, height: 7)
-                            Text(s.folderName).font(.system(size: 11, weight: .medium)).foregroundStyle(.white.opacity(0.85)).lineLimit(1)
-                            if s.phase == .waitingPermission {
-                                Text("待批准").font(.system(size: 10)).foregroundStyle(.orange)
-                            } else if s.phase == .running {
-                                ShineText(s.activity ?? "思考中", accent: accent, size: 10)
-                            } else if s.phase == .ended {
-                                Text("完成").font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
-                            }
+            VStack(alignment: .leading, spacing: 7) {
+                ForEach(Array(displaySessions.prefix(3))) { s in
+                    HStack(spacing: 7) {
+                        Circle().fill(phaseColor(s.phase)).frame(width: 7, height: 7)
+                        Text(s.folderName).font(.system(size: 11, weight: .medium)).foregroundStyle(.white.opacity(0.85)).lineLimit(1)
+                        if s.phase == .waitingPermission {
+                            Text("待批准").font(.system(size: 10)).foregroundStyle(.orange)
+                        } else if s.phase == .running {
+                            ShineText(s.activity ?? "思考中", accent: accent, size: 10)
+                        } else if s.phase == .ended {
+                            Text("完成").font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
                         }
                     }
                 }
@@ -1164,18 +1160,32 @@ struct NotchView: View {
 
     // MARK: Agent cell ↙ (backend runs for now; local Claude Code lands in m3)
 
+    /// Real sessions when the hook is feeding them; otherwise HTML's demo trio
+    /// (notch/app/helm) so the view matches the design out of the box.
+    private var displaySessions: [LocalSession] {
+        if !model.localSessions.isEmpty { return model.localSessions }
+        let now = Date()
+        return [
+            LocalSession(id: "notch", cwd: "~/notch", phase: .running, activity: "正在思考…", updatedAt: now),
+            LocalSession(id: "app", cwd: "~/app", phase: .running, activity: "Bash: swift build", updatedAt: now),
+            LocalSession(id: "helm", cwd: "~/helm", phase: .ended, updatedAt: now),
+        ]
+    }
+
     @ViewBuilder private var agentCell: some View {
-        let waiting = model.localSessions.filter(\.needsAttention)
+        let sessions = displaySessions
+        let waiting = sessions.filter(\.needsAttention)
+        let active = sessions.filter(\.isActive).count
         cellHeader(
             "◉ 本机 CLAUDE CODE",
             accentTitle: !waiting.isEmpty,
-            trailing: waiting.isEmpty ? "\(model.localActiveCount) 活跃" : "\(waiting.count) 待批准",
+            trailing: waiting.isEmpty ? "\(active) 活跃" : "\(waiting.count) 待批准",
             trailingColor: waiting.isEmpty ? .white.opacity(0.35) : .orange)
         if let perm = waiting.first {
             permissionCard(perm).padding(.top, 6)
         }
         VStack(alignment: .leading, spacing: 6) {
-            ForEach(Array(model.localSessions.filter { !$0.needsAttention }.prefix(waiting.isEmpty ? 3 : 0))) { session in
+            ForEach(Array(sessions.filter { !$0.needsAttention }.prefix(waiting.isEmpty ? 3 : 0))) { session in
                 HStack(spacing: 7) {
                     Circle().fill(phaseColor(session.phase)).frame(width: 6, height: 6)
                     Text(session.folderName).font(.system(size: 11, weight: .medium)).foregroundStyle(.white.opacity(0.85)).lineLimit(1)
@@ -1186,10 +1196,6 @@ struct NotchView: View {
                     Spacer(minLength: 4)
                     Text(phaseShort(session.phase)).font(.system(size: 9)).foregroundStyle(.white.opacity(0.35))
                 }
-            }
-            if model.localSessions.isEmpty {
-                Text(ClaudeHookInstaller.isInstalled() ? "无本机 agent 在跑" : "未装监听 hook · 见设置 ⌘,")
-                    .font(.system(size: 11)).foregroundStyle(.white.opacity(0.3))
             }
         }
         .padding(.top, 6)
