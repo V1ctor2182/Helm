@@ -6,6 +6,15 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 01:33 · design-04-filament-rail（夜间模式）
+- 对齐: 细丝 Rail（阶段1 第4块）——1px accent 活线 + 锚点滑移 + agent 脉冲 + emoji→单色 SVG
+- 设计基线: helm-pro.html `.rail`(fil/anchor/pulse/ric/logo) / DESIGN.md「三招牌动作·细丝 Rail」（只读对照，未改）
+- Svelte 改动: `lib/Rail.svelte`（重写）——ICONS 单色 SVG 映射（{@html}）、HELM logo、fil/anchor/pulse、$effect 读激活按钮 offset 让锚点滑移对齐、34px ric 走 token
+- 取舍: 落实禁 emoji（不再用 MODES.icon 的 emoji，Rail 自带 SVG 映射）；锚点用 offsetTop 计算而非死值（settings 底部自动跟到）；pulse 常驻 mock（真实 agent 流阶段2）；rail 无 mail（MODES 已禁 mail，按路由 truth）。当天 accent=青 #34D6C0 证明每日变色生效
+- VibeHub: record_decision「细丝 Rail」→ (F8, ai_proposed)；add_constraint/add_question：无
+- 验证: npm build ✓ / check 0 错 0 警（242 文件）/ test 147 通过；视觉：dev 5174 dark，logo/锚点/图标/细丝都对，emoji 全清
+- 状态: ✅ 夜间自 commit（feat/design-shell-today）｜❓需确认: 无
+
 ## 2026-07-02 01:27 · design-03-shell-chrome（夜间模式）
 - 对齐: 外壳 Shell chrome（阶段1 第3块）——titlebar + token 网格 + CLI 面包屑状态栏
 - 设计基线: helm-pro.html `.app` 网格 + titlebar + `.sbar` / DESIGN.md「Spacing 骨架 / Layout」（只读对照，未改）
