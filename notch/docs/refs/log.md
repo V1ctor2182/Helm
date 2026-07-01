@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 04:16 · swift-align-38-snapshot-permission-banner
+- 对齐: Snapshot harness 扩到等权限 banner + 真机核对(靶图 /tmp/notchshots/swift-banner-permission.png)
+- HTML 基线: bannerHTML(等权限横幅)
+- 做了: NotchSnapshot 加 banner-permission(applyHook 注入 PermissionRequest);frame 按 banner 尺寸(560×152 / 620×208)。真机渲染对比 HTML:●Permission Request·notch 橙 + ⌘Y/⌘N + ⚠︎Edit + 路径 + Deny 白/Allow accent——结构配色布局都对。
+- HTML↔实际对比: 唯一差=中间 HTML 是代码 diff(ctx/del/add),我显目标路径——hook 只传 tool/detail 无 diff(已知 TODO,不虚构)。
+- Swift 改动: HelmNotchApp/NotchSnapshot.swift(banner 条目+banner 尺寸)
+- VibeHub: record_decision「harness 扩 banner」→ da6565ad-9db3-47b9-9989-b3dcb6661de8 (ai_proposed)
+- 验证: swift build ✓ / swift test 59 通过 0 失败;视觉:真机 banner 结构对齐 HTML
+- 状态: ✅ 待 review  |  reminder banner 需事件注入(异步),下块补
+
 ## 2026-07-01 04:08 · swift-align-37-snapshot-agent-rows
 - 对齐: 真机快照 · agent 行 shimmer/stag(靶图 /tmp/notchshots/swift-dev-agents.png)
 - HTML 基线: V.agents srow(.think/.shine/.stag)

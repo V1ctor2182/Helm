@@ -21,6 +21,11 @@ enum NotchSnapshot {
             ("dev-stats", { $0.module = .dev; $0.devSection = .stats }),
             ("clip", { $0.module = .clipboard }),
             ("collapsed", { $0.expanded = false }),
+            ("banner-permission", {
+                $0.applyHook(HookMessage(event: "PermissionRequest", session: "notch",
+                                         cwd: "~/notch", tool: "Edit",
+                                         detail: "src/auth/middleware.ts", reply: true))
+            }),
         ]
 
         for entry in views {
@@ -29,8 +34,12 @@ enum NotchSnapshot {
             model.hoverPinned = true
             entry.configure(model)
 
-            let w = CGFloat(model.expandedWidth) + 80
-            let h = CGFloat(model.expanded ? model.autoExpandedHeight : 32) + 60
+            // Banner states override the expanded panel with their own size.
+            let banner: CGSize? = model.reminder != nil
+                ? CGSize(width: 560, height: 152)
+                : (model.localSessions.contains(where: \.needsAttention) ? CGSize(width: 620, height: 208) : nil)
+            let w = (banner?.width ?? CGFloat(model.expandedWidth)) + 80
+            let h = (banner?.height ?? CGFloat(model.expanded ? model.autoExpandedHeight : 32)) + 60
             let content = NotchView(model: model)
                 .frame(width: w, height: h, alignment: .top)
                 .background(Color(white: 0.16))
