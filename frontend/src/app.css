@@ -1,9 +1,105 @@
+/*
+  Helm · 全局设计 token（source of truth: docs/design/helm-pro.html + DESIGN.md）
+  定稿：A · Instrument Readout + ORAGE 监控台皮 + 黑/白双主题（默认跟随系统）。
+  规则：颜色/间距/字体只从这里的 CSS 变量取，组件里别散落 hex（为双主题 + 每日 accent 好切）。
+  主题切换：默认跟随系统（prefers-color-scheme）；theme store 可在 <html> 上写 data-theme="dark|light" 强制。
+  accent（--acc / --acc-ink）默认 #FFC53D，运行时由 theme store 按每日 palette 覆写（浅底自动压暗）。
+*/
+
 :root {
-  font-family: -apple-system, system-ui, "Segoe UI", sans-serif;
-  line-height: 1.5;
-  color: #222;
-  background: #fafafa;
-  -webkit-font-smoothing: antialiased;
+  /* ---- 字体（硬切：SF Pro = 人，SF Mono = 机器）---- */
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Rounded", "Helvetica Neue", sans-serif;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+
+  /* ---- 动效（一条招牌缓动 + 时长）---- */
+  --ease: cubic-bezier(.32, .72, 0, 1);
+  --dur-micro: 120ms;   /* hover/focus */
+  --dur-panel: 220ms;   /* 面板 / Tab */
+  --dur-slide: 420ms;   /* 细丝滑移 */
+  --dur-ignite: 600ms;  /* 每日点火 */
+  --dur-pulse: 700ms;   /* agent 脉冲 */
+
+  /* ---- 骨架尺寸（固定，不做流体稀汤）---- */
+  --rail-w: 58px;
+  --ctx-w: 250px;
+  --term-w: 220px;
+  --titlebar-h: 32px;
+  --statusbar-h: 26px;
+  --gutter-w: 60px;     /* Today 账本左槽 */
+
+  /* ---- accent（默认，运行时由 theme store 覆写为每日色）---- */
+  --acc: #FFC53D;
+  --acc-ink: #FFC53D;
+
+  /* ---- 语义色（配给制，默认深色版；浅主题下方覆写）---- */
+  --green: #34C759;
+  --orange: #FF9F0A;
+  --red: #FF453A;
+  --blue: #0A84FF;
+  --cyan: #34D6C0;
+  --purple: #7B61FF;
+
+  color-scheme: dark;
+}
+
+/* ===== 主题 token ===== */
+/* 默认 = 暗（ORAGE-native）。跟随系统：系统浅色且未强制 dark 时切浅；data-theme 可强制。 */
+:root,
+:root[data-theme="dark"] {
+  --bg: #000000;
+  --chrome: #0a0a0c;
+  --panel: #08080a;
+  --t1: #ffffff;
+  --t2: rgba(255, 255, 255, .82);
+  --t3: rgba(255, 255, 255, .52);
+  --t4: rgba(255, 255, 255, .32);
+  --line: rgba(255, 255, 255, .14);
+  --hair: rgba(255, 255, 255, .07);
+  --tile: #101012;
+  --grid: rgba(255, 255, 255, .035);
+  color-scheme: dark;
+}
+
+/* 暖纸白（纸面仪表）：accent-ink 压暗、语义色压暗保对比 */
+:root[data-theme="light"] {
+  --bg: #efece3;
+  --chrome: #e7e3d8;
+  --panel: #eae6dc;
+  --t1: #17140d;
+  --t2: rgba(23, 20, 13, .74);
+  --t3: rgba(23, 20, 13, .52);
+  --t4: rgba(23, 20, 13, .34);
+  --line: rgba(23, 20, 13, .20);
+  --hair: rgba(23, 20, 13, .10);
+  --tile: #e4dfd2;
+  --grid: rgba(23, 20, 13, .05);
+  --acc-ink: #8a6410;
+  --green: #2a8f43;
+  --orange: #b56b00;
+  --red: #c2331f;
+  color-scheme: light;
+}
+
+/* 跟随系统浅色（未被 data-theme 强制时）：等同 light token */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #efece3;
+    --chrome: #e7e3d8;
+    --panel: #eae6dc;
+    --t1: #17140d;
+    --t2: rgba(23, 20, 13, .74);
+    --t3: rgba(23, 20, 13, .52);
+    --t4: rgba(23, 20, 13, .34);
+    --line: rgba(23, 20, 13, .20);
+    --hair: rgba(23, 20, 13, .10);
+    --tile: #e4dfd2;
+    --grid: rgba(23, 20, 13, .05);
+    --acc-ink: #8a6410;
+    --green: #2a8f43;
+    --orange: #b56b00;
+    --red: #c2331f;
+    color-scheme: light;
+  }
 }
 
 * {
@@ -15,4 +111,37 @@ body,
 #app {
   height: 100%;
   margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--t2);
+  font-family: var(--sans);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--acc) 32%, transparent);
+  color: var(--t1);
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 0;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
 }
