@@ -8,6 +8,10 @@ enum Entry {
         if CommandLine.arguments.contains("--hook") {
             HookRunner.run()  // never returns
         }
+        if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLine.arguments.count {
+            MainActor.assumeIsolated { NotchSnapshot.render(to: CommandLine.arguments[i + 1]) }
+            exit(0)
+        }
         HelmNotchApp.main()
     }
 }

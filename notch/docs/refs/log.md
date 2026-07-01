@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 03:16 · swift-align-31-snapshot-harness
+- 对齐: 无头 Snapshot harness(首次真机对比 Swift vs HTML)+ 波形条形状
+- HTML 基线: 全 view / .mwave
+- 做了: HelmNotchApp 加 --snapshot <dir>(NotchSnapshot.render 用 ImageRenderer scale2 把 10 个 view 渲成 PNG,exit);无需 GUI/权限。实测 10 张全成功。首次真机 Swift 渲染对比 HTML 靶图:dash/media 高度吻合(布局/字号/间距/dock/波形/歌词/进度全对)。
+- HTML↔实际对比(靠真机渲染): 发现波形条我用 Capsule(全圆像圆点),HTML .mwave i border-radius:2px 细条 → 改 RoundedRectangle(cornerRadius:2)。
+- Swift 改动: HelmNotchApp/NotchSnapshot.swift(新)、HelmNotchApp.swift(--snapshot 分支)、NotchView.swift(Waveform Capsule→RoundedRect2)
+- VibeHub: record_decision「Snapshot harness + 波形条」→ 132944eb-b8a2-4c47-85c0-f81a31d002ad (ai_proposed)
+- 验证: swift build ✓ / swift test 59 通过 0 失败;视觉:真机渲染 /tmp/notchshots/*.png,dash/media 对比 HTML 吻合
+- 状态: ✅ 待 review  |  基础设施:后续每轮可 swift-* vs html-* 像素对比
+
 ## 2026-07-01 03:08 · swift-align-30-visualdiff-media-demo
 - 对齐: 视觉 diff · 媒体 demo 回退(折叠左/dash widget/折叠右计数)
 - HTML 基线: renderBar 左媒体 / V.dash NOW PLAYING / renderBar 右 ✻N

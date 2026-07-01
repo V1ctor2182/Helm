@@ -1773,7 +1773,7 @@ private struct Waveform: View {
             HStack(alignment: .bottom, spacing: 3) {
                 ForEach(0..<n, id: \.self) { i in
                     let frac = 0.20 + 0.46 * abs(sin(Double(i) * 0.9 + 1))
-                    Capsule().fill(color).opacity(0.5)
+                    RoundedRectangle(cornerRadius: 2, style: .continuous).fill(color).opacity(0.5)
                         .frame(maxWidth: .infinity)
                         .frame(height: max(2, geo.size.height * frac))
                         .scaleEffect(CGSize(width: 1, height: animate ? 1 : 0.32), anchor: .bottom)
