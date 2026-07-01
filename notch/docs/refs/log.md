@@ -6,6 +6,17 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 03:52 · swift-align-35-snapshot-calweek-daynum
+- 对齐: 真机快照 · 周条日号换行(靶图 /tmp/notchshots/swift-cal-week.png)
+- HTML 基线: V.cal wstrip .wnum
+- HTML↔实际对比(真机渲染): 周条两位日号(30)在窄列换行成「3」「0」两行。
+- 做了: calWeekStrip wnum Text 加 .lineLimit(1).fixedSize() 防换行 + verbatim 防千分位。重渲染「29 30 1 2 3 4 5」一行,今天/事件点对齐 HTML。
+- 取舍: 遗留小项——周视图(240 高)议程 4 项溢出裁末项(HTML agenda scroll),下块可加滚动。
+- Swift 改动: NotchView.swift(calWeekStrip wnum)
+- VibeHub: record_decision「周条日号换行」→ 4dcdedcc-5899-4995-81a1-faf7b078a1aa (ai_proposed)
+- 验证: swift build ✓ / swift test 59 通过 0 失败;视觉:真机重渲染周条一行
+- 状态: ✅ 待 review
+
 ## 2026-07-01 03:44 · swift-align-34-snapshot-stats-pr-tile
 - 对齐: 真机快照 · Stats PR tile 混排(靶图 /tmp/notchshots/swift-dev-stats.png)
 - HTML 基线: V.stats .sv2 / small

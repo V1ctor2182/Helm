@@ -603,7 +603,8 @@ struct NotchView: View {
                     let hasEvent = inMonth && calEventDays.contains(day)
                     VStack(spacing: 6) {
                         Text(calWeekLabels[i]).font(.system(size: 9, weight: .bold)).foregroundStyle(.white.opacity(0.34))
-                        Text("\(day)").font(.system(size: 21, weight: .heavy)).foregroundStyle(isToday ? accent : .white)
+                        Text(verbatim: "\(day)").font(.system(size: 21, weight: .heavy)).foregroundStyle(isToday ? accent : .white)
+                            .lineLimit(1).fixedSize()
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 9)
