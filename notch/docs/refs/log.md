@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 05:00 · swift-fix-scroll-gesture-onestep(实机反馈)
+- 对齐: scroll 手感(用户实机反馈:一下子切过去 + 缺渐变)
+- HTML 基线: notch wheel handler + switchModule 的 animating 锁
+- 根因: 触控板一次 swipe 产生一串 wheel 事件(+momentum 惯性尾),0.35s 冷却挡不住 → 一次划切 2-3 个;多切又盖掉单次淡入淡出。
+- 做了: handleScroll 用 NSEvent.phase/momentumPhase——惯性事件全忽略;.began 重置累积器;累积 delta 过 22px 阈值切一次,gestureSwitched 忽略本手势剩余;.ended 复位。鼠标滚轮仍走 0.35s 冷却。→「一次物理滑动=切一个」。渐变:notchSlide 本有 offset+opacity,一次一切后应显现。
+- Swift 改动: NotchController.swift(handleScroll 重写 + gestureAccum/Switched 状态)
+- VibeHub: record_decision「scroll 一次一切」→ 0011a585-c7b7-41b1-abf6-01835c6bdedd (ai_proposed)
+- 验证: swift build ✓ / swift test 59 通过 0 失败;手感待用户实机复验
+- 状态: ✅ 待用户实机复验(切换是否一次一个 + 渐变是否显现)
+
 ## 2026-07-01 04:42 · swift-align-41-transition-timings
 - 对齐: 展开/折叠过渡时长到 HTML 确切值(用户 #1)
 - HTML 基线: #bar opacity .14s / #panel open opacity .34s ease .12s、close .3s

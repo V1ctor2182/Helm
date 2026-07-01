@@ -19,6 +19,11 @@ final class NotchController {
     /// `nonisolated(unsafe)`: set only on the MainActor, read once in deinit.
     private nonisolated(unsafe) var scrollMonitor: Any?
     private var lastSwitchAt = Date.distantPast
+    // One switch per physical swipe: accumulate the delta of the current trackpad
+    // gesture and fire once; ignore the rest (incl. momentum) until it ends.
+    private var gestureAccumX: CGFloat = 0
+    private var gestureAccumY: CGFloat = 0
+    private var gestureSwitched = false
 
     /// Interactive top strip when collapsed (must clear the slot content).
     private let collapsedHeight: CGFloat = 34
@@ -97,20 +102,41 @@ final class NotchController {
         let shell = NSRect(x: screen.frame.midX - w / 2, y: screen.frame.maxY - h, width: w, height: h)
         guard shell.contains(NSEvent.mouseLocation), panel.isVisible else { return }
 
-        // One step per gesture: ignore further events within the cooldown.
-        let now = Date()
-        guard now.timeIntervalSince(lastSwitchAt) > 0.35 else { return }
-
-        // AppKit scrolling deltas are inverted vs the web's wheel deltas; flip so
+        // AppKit deltas are inverted vs the web's wheel deltas; flip so
         // swipe-right → next module, swipe-down → next Dev page.
         // TODO(align-gesture): sign may need tuning on real hardware.
         let dx = -event.scrollingDeltaX, dy = -event.scrollingDeltaY
-        if model.module == .dev, abs(dy) > abs(dx), abs(dy) > 6 {
-            model.switchDev(dy > 0 ? 1 : -1)
-            lastSwitchAt = now
-        } else if abs(dx) > abs(dy), abs(dx) > 6 {
-            model.switchModule(dx > 0 ? 1 : -1)
-            lastSwitchAt = now
+
+        // Trackpad: one switch per physical swipe. Ignore momentum entirely, and
+        // only fire once the accumulated delta crosses a deliberate threshold —
+        // this stops a single flick from racing through several modules.
+        let isTrackpad = event.phase != [] || event.momentumPhase != []
+        if isTrackpad {
+            if event.momentumPhase != [] { return }        // ignore inertia tail
+            if event.phase.contains(.began) {              // new gesture starts
+                gestureAccumX = 0; gestureAccumY = 0; gestureSwitched = false
+            }
+            if event.phase.contains(.ended) || event.phase.contains(.cancelled) {
+                gestureSwitched = false; return
+            }
+            guard !gestureSwitched else { return }         // already switched this swipe
+            gestureAccumX += dx; gestureAccumY += dy
+            let threshold: CGFloat = 22
+            if model.module == .dev, abs(gestureAccumY) > abs(gestureAccumX), abs(gestureAccumY) > threshold {
+                model.switchDev(gestureAccumY > 0 ? 1 : -1); gestureSwitched = true
+            } else if abs(gestureAccumX) > abs(gestureAccumY), abs(gestureAccumX) > threshold {
+                model.switchModule(gestureAccumX > 0 ? 1 : -1); gestureSwitched = true
+            }
+            return
+        }
+
+        // Mouse wheel (discrete, no phase): a short cooldown paces the steps.
+        let now = Date()
+        guard now.timeIntervalSince(lastSwitchAt) > 0.35 else { return }
+        if model.module == .dev, abs(dy) > abs(dx), abs(dy) > 1 {
+            model.switchDev(dy > 0 ? 1 : -1); lastSwitchAt = now
+        } else if abs(dx) > abs(dy), abs(dx) > 1 {
+            model.switchModule(dx > 0 ? 1 : -1); lastSwitchAt = now
         }
     }
 
