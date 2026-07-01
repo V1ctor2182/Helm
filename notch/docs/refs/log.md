@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 04:24 · swift-align-39-snapshot-materials
+- 对齐: Snapshot 扩玻璃材质 + 验证对比 accent(靶图 /tmp/notchshots/swift-mat-lightglass.png)
+- HTML 基线: MATS / randomTheme 对比逻辑
+- 发现(真机渲染): ① ImageRenderer 无头渲不出 SwiftUI Material(lightglass 成实心黄绿非真模糊,无窗口合成)→ 玻璃观感必须实机验。② 对比 accent 生效——lightglass 上 accent 调暗成深 teal 可读(donut/进度/dock 环)。③ 张力:白玻璃白正文字浅壁纸下对比不足(HTML 同问题)。
+- 做了: NotchSnapshot 加 mat-darkglass/lightglass/vibrant 三档;不改 materialBackground(实机才准)。开 [needs-human] question。
+- Swift 改动: HelmNotchApp/NotchSnapshot.swift(3 材质条目)
+- VibeHub: record_decision「玻璃 harness+对比 accent 生效」→ fdf88d05-5e55-441e-b177-e0212aafc184;add_question「[needs-human] 白玻璃白字对比」→ bae51057-87b7-... (均 ai_proposed)
+- 验证: swift build ✓ / swift test 59 通过 0 失败;视觉:玻璃需实机(harness 渲不出 Material)
+- 状态: ✅ 待 review  |  ⚠️ 玻璃观感待实机;❓白玻璃白字对比待拍板
+
 ## 2026-07-01 04:16 · swift-align-38-snapshot-permission-banner
 - 对齐: Snapshot harness 扩到等权限 banner + 真机核对(靶图 /tmp/notchshots/swift-banner-permission.png)
 - HTML 基线: bannerHTML(等权限横幅)

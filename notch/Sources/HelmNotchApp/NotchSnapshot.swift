@@ -26,6 +26,9 @@ enum NotchSnapshot {
                                          cwd: "~/notch", tool: "Edit",
                                          detail: "src/auth/middleware.ts", reply: true))
             }),
+            ("mat-darkglass", { $0.module = .dashboard; $0.backgroundMaterial = .darkGlass }),
+            ("mat-lightglass", { $0.module = .dashboard; $0.backgroundMaterial = .lightGlass }),
+            ("mat-vibrant", { $0.module = .dashboard; $0.backgroundMaterial = .vibrant }),
         ]
 
         for entry in views {
