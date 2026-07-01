@@ -487,18 +487,20 @@ struct NotchView: View {
                 ForEach(Array(displaySessions.prefix(3))) { s in
                     HStack(spacing: 7) {
                         Circle().fill(phaseColor(s.phase)).frame(width: 7, height: 7)
-                        Text(s.folderName).font(.system(size: 11, weight: .medium)).foregroundStyle(.white.opacity(0.85)).lineLimit(1)
+                        Text(s.folderName).font(.system(size: 11, weight: .medium)).foregroundStyle(.white.opacity(0.85))
+                            .lineLimit(1).layoutPriority(1)
                         if s.phase == .waitingPermission {
                             Text("待批准").font(.system(size: 10)).foregroundStyle(.orange)
                         } else if s.phase == .running {
                             if let act = s.activity, act != "正在思考…" {
-                                Text(act).font(.system(size: 10)).foregroundStyle(.white.opacity(0.34)).lineLimit(1)
+                                Text(act).font(.system(size: 10)).foregroundStyle(.white.opacity(0.34)).lineLimit(1).truncationMode(.tail)
                             } else {
                                 ShineText("思考中", accent: accent, size: 10)
                             }
                         } else if s.phase == .ended {
                             Text("完成").font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
                         }
+                        Spacer(minLength: 0)
                     }
                 }
             }
@@ -1212,19 +1214,20 @@ struct NotchView: View {
             ForEach(Array(sessions.filter { !$0.needsAttention }.prefix(waiting.isEmpty ? 3 : 0))) { session in
                 HStack(spacing: 7) {
                     Circle().fill(phaseColor(session.phase)).frame(width: 6, height: 6)
-                    Text(session.folderName).font(.system(size: 11, weight: .medium)).foregroundStyle(.white.opacity(0.85)).lineLimit(1)
+                    Text(session.folderName).font(.system(size: 11, weight: .medium)).foregroundStyle(.white.opacity(0.85))
+                        .lineLimit(1).layoutPriority(1)
                     if session.phase == .running {
                         // HTML: ✻+shimmer only for the "thinking" row; a concrete
                         // activity (e.g. Bash: …) shows as plain gray.
                         if let act = session.activity, act != "正在思考…" {
-                            Text(act).font(.system(size: 10)).foregroundStyle(.white.opacity(0.34)).lineLimit(1)
+                            Text(act).font(.system(size: 10)).foregroundStyle(.white.opacity(0.34)).lineLimit(1).truncationMode(.tail)
                         } else {
                             SpinningStar(color: accent).scaleEffect(0.78)
                             ShineText("正在思考…", accent: accent, size: 10)
                         }
                     }
                     Spacer(minLength: 4)
-                    Text(phaseShort(session.phase)).font(.system(size: 9)).foregroundStyle(.white.opacity(0.35))
+                    Text(phaseShort(session.phase)).font(.system(size: 9)).foregroundStyle(.white.opacity(0.35)).fixedSize()
                 }
             }
         }

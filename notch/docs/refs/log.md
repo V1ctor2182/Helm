@@ -6,6 +6,15 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 05:12 · swift-fix-agent-row-overflow(实机反馈)
+- 对齐: agent 行长文本溢出裁切(用户实机 hook 真实 session)
+- 根因: 真实 folder/长 bash·git activity 溢出面板右边被裁,非省略号。dashAgentWidget 缺尾 Spacer;agentCell activity 未强制尾截断。
+- 做了: 两处 agent 行——folder layoutPriority(1)、activity lineLimit(1).truncationMode(.tail)、dashAgentWidget 补 Spacer(minLength:0)、agentCell phaseShort fixedSize。demo(短 activity)重渲染无回归。
+- Swift 改动: NotchView.swift(dashAgentWidget/agentCell 行截断)
+- VibeHub: record_decision「agent 行溢出截断」→ 8efdae8b-f759-45a6-ae55-1f2fdb5fd61e (ai_proposed)
+- 验证: swift build ✓ / swift test 59 通过;demo 无回归;真实长文本待实机复验
+- 状态: ✅ 待用户实机复验
+
 ## 2026-07-01 05:00 · swift-fix-scroll-gesture-onestep(实机反馈)
 - 对齐: scroll 手感(用户实机反馈:一下子切过去 + 缺渐变)
 - HTML 基线: notch wheel handler + switchModule 的 animating 锁
