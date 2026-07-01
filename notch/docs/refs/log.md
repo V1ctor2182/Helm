@@ -6,6 +6,14 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 06:05 · swift-fix-panel-hpadding(实机反馈)
+- 对齐: 展开面板左右内容离边太近 → 加 padding
+- 做了: expandedPanel 加 .padding(.horizontal, 8),topBar/模块/dock 统一往里收,不动内部间距。真机渲染 dash 确认 logo/列有更多留白。
+- Swift 改动: NotchView.swift(expandedPanel horizontal padding)
+- VibeHub: record_decision → (见下)
+- 验证: swift build ✓ / swift test 61 通过;真机 dash 留白改善
+- 状态: ✅ 待实机复验
+
 ## 2026-07-01 05:56 · swift-fix-device-batch3(实机 debug)
 - 对齐: 速记切走后不收起 + 折叠条去 demo
 - A(不收起): 根因 hover 收起条件 !locked && captureText.isEmpty,切走后 text 非空一直挡;切走 locked 未清。修:setModule 离 capture 清 locked;hover 条件改「!locked && !(module==.capture && text 非空)」。

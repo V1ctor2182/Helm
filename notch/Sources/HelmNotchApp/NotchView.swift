@@ -240,6 +240,8 @@ struct NotchView: View {
             dockBar
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        // Extra breathing room from the rounded panel edges (device feedback).
+        .padding(.horizontal, 8)
     }
 
     /// Module transition: media zooms (HTML zoomTo — dash↔media), everything else
