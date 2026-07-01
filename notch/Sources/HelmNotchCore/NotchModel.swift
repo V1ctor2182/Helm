@@ -81,6 +81,9 @@ public final class NotchModel {
     public var module: NotchModule = .dashboard
     /// The Dev module's active sub-section (HTML `S.devSec`).
     public var devSection: DevSection = .agents
+    /// Direction of the last module switch — drives the slide-in transition
+    /// (HTML `slideTo(dir)`): true = forward (new enters from the right).
+    public private(set) var moduleSwitchForward = true
     /// The player the transport controls (HTML `S.mediaSrc`).
     public private(set) var mediaSource: MediaSource = .system
 
@@ -139,11 +142,13 @@ public final class NotchModel {
     /// Total expanded panel height for the current view (HTML `--eh`).
     public var autoExpandedHeight: Double { viewHeight() + Self.topBarHeight }
 
-    /// Select a module directly (HTML dock click). Entering Dev resets to its
-    /// first sub-section, matching `if(S.view==='dev')S.devSec=0`.
+    /// Select a module directly (HTML dock click). Slide direction is inferred
+    /// from the dock index delta. Entering Dev resets to its first sub-section.
     public func selectModule(_ m: NotchModule) {
-        module = m
-        if m == .dev { devSection = .agents }
+        let dock = NotchModule.dock
+        let from = dock.firstIndex(of: module) ?? 0
+        let to = dock.firstIndex(of: m) ?? from
+        setModule(m, forward: to >= from)
     }
 
     /// Cycle the docked modules left/right with wrap-around (HTML
@@ -152,7 +157,13 @@ public final class NotchModel {
         let dock = NotchModule.dock
         let count = dock.count
         let i = dock.firstIndex(of: module) ?? 0
-        selectModule(dock[((i + direction) % count + count) % count])
+        setModule(dock[((i + direction) % count + count) % count], forward: direction > 0)
+    }
+
+    private func setModule(_ m: NotchModule, forward: Bool) {
+        moduleSwitchForward = forward
+        module = m
+        if m == .dev { devSection = .agents }
     }
 
     /// Page the Dev sub-sections vertically (HTML `switchDev(dir)`). Clamps at

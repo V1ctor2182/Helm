@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 01:06 · swift-align-17-module-slide-transition
+- 设计源: helm-notch-pro.html(slideTo / switchModule 动画)
+- 界面: 模块切换方向性滑入动画
+- 做了: Core +moduleSwitchForward;selectModule 从 dock 索引差推方向、switchModule 用 dir,统一 setModule(m,forward:)(+1 测)。App moduleBody .id(module)+.transition(asymmetric 方向滑入 forward:trailing 入/leading 出,combined opacity)+.animation(.3s timingCurve, value:module),.clipped 防溢出。
+- 取舍: HTML dash↔media 用 zoomTo 缩放钻入,本块统一 slide(media 缩放特化 TODO);Dev 子页纵向 slideDev 未做(devSection 不改 module,需单独纵向 transition,TODO)。
+- 改动: HelmNotchCore/NotchModel.swift(+moduleSwitchForward/setModule/select·switchModule 重构)、Tests(+1)、HelmNotchApp/NotchView.swift(moduleBody id+transition+animation、moduleTransition)
+- VibeHub: record_decision「模块切换方向性滑入」→ 217bf171-9e92-4ce6-a9f7-a357daa3bc5f (ai_proposed);add_question 无;add_constraint 无
+- 自检: 硬门 swift build + swift test 全绿,50 测 0 失败(+1 方向追踪)。对照 HTML:slideTo 方向性滑入。视觉实机待用户。
+- 状态: ✅ 待 review  |  ❓需确认: media 缩放钻入、Dev 纵向分页动画(均 TODO)
+
 ## 2026-07-01 01:00 · swift-align-16-ask-brain-kind
 - 设计源: helm-notch-pro.html(cap kind 'ask' / CHIPS 五项 / capatt 条件)
 - 界面: 问大脑(ask)速记 kind

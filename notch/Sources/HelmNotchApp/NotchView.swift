@@ -211,11 +211,23 @@ struct NotchView: View {
         VStack(spacing: 0) {
             topBar
             moduleBody
+                .id(model.module)
+                .transition(moduleTransition)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .clipped()
+                .animation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.3), value: model.module)
             dockBar
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    /// Directional slide (HTML slideTo): forward → new enters from the right and
+    /// the old exits left; backward → the reverse.
+    private var moduleTransition: AnyTransition {
+        let f = model.moduleSwitchForward
+        return .asymmetric(
+            insertion: .move(edge: f ? .trailing : .leading).combined(with: .opacity),
+            removal: .move(edge: f ? .leading : .trailing).combined(with: .opacity))
     }
 
     /// `.ntop` — Helm wordmark on the left, an X (when locked) + gear on the right.

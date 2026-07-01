@@ -118,6 +118,20 @@ final class NotchModuleTests: XCTestCase {
     }
 
     @MainActor
+    func testModuleSwitchDirectionTracked() {
+        let model = NotchModel(backend: FakeBackend())
+        model.switchModule(1)
+        XCTAssertTrue(model.moduleSwitchForward)   // forward
+        model.switchModule(-1)
+        XCTAssertFalse(model.moduleSwitchForward)  // backward
+        // dock click: dashboard(0) → dev(3) is forward; → capture(1) back is not
+        model.selectModule(.dev)
+        XCTAssertTrue(model.moduleSwitchForward)
+        model.selectModule(.capture)
+        XCTAssertFalse(model.moduleSwitchForward)
+    }
+
+    @MainActor
     func testEnteringDevResetsSubSection() {
         let model = NotchModel(backend: FakeBackend())
         model.devSection = .stats
