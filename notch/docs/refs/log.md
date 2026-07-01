@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 03:34 · swift-align-33-snapshot-collapsed-width
+- 对齐: 真机快照 · 折叠条侧槽宽度(靶图 /tmp/notchshots/swift-collapsed.png)
+- HTML 基线: #bar grid 1fr/auto(160)/1fr
+- HTML↔实际对比(真机渲染): 曲名截成「C…」——侧槽太窄。HTML 每侧 (360-160)/2=100px,我 collapsedWidth=notchWidth+150 每侧仅 75px,减 art+eq 后文字空间太少。
+- 做了: collapsedWidth 改 notchWidth+200(每侧~100px 对齐 HTML);NotchController activeSize 折叠宽同改。重渲染曲名显「Countin…」(符合 HTML 截断)。
+- Swift 改动: NotchView.swift(collapsedWidth)、NotchController.swift(activeSize 折叠宽)
+- VibeHub: record_decision「折叠条加宽」→ b1a209a5-9138-470a-96b4-356dad1199a1 (ai_proposed)
+- 验证: swift build ✓ / swift test 59 通过 0 失败;视觉:真机重渲染确认曲名不再截成单字
+- 状态: ✅ 待 review
+
 ## 2026-07-01 03:26 · swift-align-32-snapshot-diff-number-grouping
 - 对齐: 真机快照对比 → 修数字千分位 bug(靶图 vs /tmp/notchshots/swift-cal-month.png)
 - HTML 基线: V.cal 年份 / V.ports 端口

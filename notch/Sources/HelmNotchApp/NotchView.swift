@@ -16,7 +16,9 @@ struct NotchView: View {
     private var accent: Color { Color(model.accent) }
 
     private let collapsedBarHeight: CGFloat = 32
-    private var collapsedWidth: CGFloat { CGFloat(model.notchWidth) + 150 }
+    // ~100px per side around the camera gap (HTML #bar: (360−160)/2), so the
+    // media title reads as "Counting My Bless…" instead of truncating hard.
+    private var collapsedWidth: CGFloat { CGFloat(model.notchWidth) + 200 }
 
     var body: some View {
         // Banner states override collapsed/expanded. Reminder (560×152) takes
