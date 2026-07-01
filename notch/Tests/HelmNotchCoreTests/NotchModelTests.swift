@@ -148,6 +148,17 @@ final class NotchModuleTests: XCTestCase {
     }
 
     @MainActor
+    func testRandomThemeAlwaysContrastSafe() {
+        let model = NotchModel(backend: FakeBackend())
+        for _ in 0..<24 {
+            model.randomTheme()
+            XCTAssertEqual(model.themeMode, .fixed)
+            let bg = Theme.materialBackground(model.backgroundMaterial)
+            XCTAssertGreaterThanOrEqual(Theme.contrast(model.accent, bg), 3.0)
+        }
+    }
+
+    @MainActor
     func testAccentBecomesContrastSafeWhenMaterialChanges() {
         let model = NotchModel(backend: FakeBackend())
         model.themeMode = .fixed

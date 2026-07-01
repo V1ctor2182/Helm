@@ -28,6 +28,9 @@ struct SettingsView: View {
                 palette.padding(.vertical, 4)
                 rowLabel("配色模式", sub: "每日轮换 · 连续色相 · 固定")
                 modePicker.padding(.bottom, 6)
+                tapRow("随机一套", sub: "背景+主题随机,自动保证对比清晰", action: "随机 ↻") {
+                    model.randomTheme()
+                }
 
                 section("HELM 后端")
                 connectionRow

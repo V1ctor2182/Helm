@@ -6,6 +6,17 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 02:12 · swift-align-23-random-theme
+- 对齐: 「随机一套」randomTheme(用户「html 里面还有随机什么的」)
+- HTML 基线: randomTheme()(随机材质+随机 palette+while 对比≥3.2+applyMat/applyAccent+flash)
+- HTML↔实际对比: 我没有随机主题功能;Core 已有 contrastSafeAccent → randomTheme 简化为随机 material + 随机 fixed accent(refreshTheme 自动保对比)。
+- 做了: NotchModel.randomTheme()(themeMode=.fixed + 随机 fixedColorIndex + 随机 backgroundMaterial,didSet 触发对比矫正);设置 外观 加「随机一套 ↻」按钮(+1 测)。
+- 取舍: Swift 用 Int.random(运行时 UI 随机 OK);HTML 的 flash 对比值气泡暂不做(TODO toast);dailyRandTheme(每天随机 toggle)下块。
+- Swift 改动: HelmNotchCore/NotchModel.swift(randomTheme)、HelmNotchApp/SettingsView.swift(随机按钮)、Tests(+1)
+- VibeHub: record_decision「随机一套 randomTheme」→ 2aee7ffa-20f0-4f02-88b0-501ddd36ff99 (ai_proposed)
+- 验证: swift build ✓ / swift test 57 通过 0 失败(randomTheme 24 次随机全 contrast≥3.0)
+- 状态: ✅ 待 review
+
 ## 2026-07-01 02:06 · swift-align-22-glass-contrast
 - 对齐: 玻璃背景对比度自适应(用户「玻璃背景+字体必须有对比度」)
 - HTML 基线: MATS[].rep / _lum / _contrast / randomTheme 的 while 对比循环

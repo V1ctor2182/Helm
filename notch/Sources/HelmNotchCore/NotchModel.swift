@@ -308,6 +308,14 @@ public final class NotchModel {
         accent = Theme.contrastSafeAccent(base, on: backgroundMaterial)
     }
 
+    /// 随机一套 (HTML `randomTheme`): a random material + a random palette accent.
+    /// Contrast is guaranteed by `refreshTheme` → `contrastSafeAccent`.
+    public func randomTheme() {
+        themeMode = .fixed
+        fixedColorIndex = Int.random(in: 0..<Theme.palette.count)
+        backgroundMaterial = NotchMaterial.allCases.randomElement() ?? .black  // didSet → refreshTheme
+    }
+
     /// Clamp + apply a user drag-resize of the expanded panel.
     public func resize(width: Double, height: Double) {
         expandedWidth = min(max(width, 480), 1000)
