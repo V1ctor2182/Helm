@@ -82,9 +82,10 @@ struct NotchView: View {
         }
         .onHover { model.hover($0) }
         // iOS-style shell grow (content has its own, delayed, animations above).
-        .animation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.5), value: model.expanded)
-        // Animate the height re-flow when the active view changes (HTML --eh transition).
-        .animation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.42), value: model.autoExpandedHeight)
+        .animation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.46), value: model.expanded)
+        // Animate the height re-flow when the active view changes (HTML notch
+        // width/height transition = .46s cubic-bezier(.32,.72,0,1)).
+        .animation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.46), value: model.autoExpandedHeight)
         .frame(maxWidth: .infinity, alignment: .top)  // center the shell in the canvas
     }
 
@@ -222,10 +223,11 @@ struct NotchView: View {
     /// Directional slide (HTML slideTo): forward → new enters from the right and
     /// the old exits left; backward → the reverse.
     private var moduleTransition: AnyTransition {
+        // HTML slideTo: a subtle ±46px translateX + fade — NOT a full-width move.
         let f = model.moduleSwitchForward
         return .asymmetric(
-            insertion: .move(edge: f ? .trailing : .leading).combined(with: .opacity),
-            removal: .move(edge: f ? .leading : .trailing).combined(with: .opacity))
+            insertion: .notchSlide(dx: f ? 46 : -46, dy: 0),
+            removal: .notchSlide(dx: f ? -46 : 46, dy: 0))
     }
 
     /// `.ntop` — Helm wordmark on the left, an X (when locked) + gear on the right.
@@ -717,10 +719,11 @@ struct NotchView: View {
 
     /// Vertical slide (HTML slideDev): down → new enters from the bottom.
     private var devTransition: AnyTransition {
+        // HTML slideDev: a subtle ±34px translateY + fade.
         let f = model.devSwitchForward
         return .asymmetric(
-            insertion: .move(edge: f ? .bottom : .top).combined(with: .opacity),
-            removal: .move(edge: f ? .top : .bottom).combined(with: .opacity))
+            insertion: .notchSlide(dx: 0, dy: f ? 34 : -34),
+            removal: .notchSlide(dx: 0, dy: f ? -34 : 34))
     }
 
     @ViewBuilder private var devStage: some View {
@@ -1608,6 +1611,25 @@ private struct ShineText: View {
             }
             .fixedSize()
             .onAppear { animate = true }
+    }
+}
+
+/// A subtle fixed-offset slide + fade — matches the HTML `slideTo`/`slideDev`
+/// feel (translate by a few dozen px, not the full frame width like `.move`).
+private struct SlideOffsetModifier: ViewModifier {
+    var dx: CGFloat
+    var dy: CGFloat
+    var faded: Bool
+    func body(content: Content) -> some View {
+        content.offset(x: dx, y: dy).opacity(faded ? 0 : 1)
+    }
+}
+
+private extension AnyTransition {
+    static func notchSlide(dx: CGFloat, dy: CGFloat) -> AnyTransition {
+        .modifier(
+            active: SlideOffsetModifier(dx: dx, dy: dy, faded: true),
+            identity: SlideOffsetModifier(dx: 0, dy: 0, faded: false))
     }
 }
 

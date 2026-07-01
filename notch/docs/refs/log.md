@@ -6,6 +6,17 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 02:00 · swift-align-21-slide-smoothness
+- 对齐: 滑动丝滑度(用户反馈「滑动不够丝滑」)
+- HTML 基线: slideTo / slideDev / .notch width·height transition
+- HTML↔实际对比: ① 我用 .move(edge:) 滑整帧宽,HTML slideTo/slideDev 只平移 46px(横)/34px(纵)——位移量差一个数量级=大跳跃。② HTML notch transition .46s cubic-bezier(.32,.72,0,1),我漂成 grow 0.5/height 0.42。
+- 做了: 新增 SlideOffsetModifier + AnyTransition.notchSlide(dx,dy)(固定 offset+opacity);moduleTransition ±46px 横移、devTransition ±34px 纵移;shell grow+height reflow 统一 0.46s;enter 保持 .3s cubic-bezier。
+- 取舍: 动效丝滑靠逐值对齐 HTML 参数验证(静态截图看不出),非数据问题。
+- Swift 改动: NotchView.swift(moduleTransition/devTransition/SlideOffsetModifier/notchSlide、grow+reflow 时长)
+- VibeHub: record_decision「滑动丝滑度对齐」→ 2556cd8b-b89c-4a57-be44-28b8f053f3fb (ai_proposed)
+- 验证: swift build ✓ / swift test 52 通过 0 失败;视觉:动效待实机手感(参数已逐值对齐 HTML)
+- 状态: ✅ 待 review
+
 ## 2026-07-01 01:40 · swift-align-20-land-decisions-cleanup
 - 对齐: 用户拍板 3 个 [needs-human] 后的落地清理(非新 HTML 块)
 - HTML 基线: —(架构/高度/材质取舍定案)
