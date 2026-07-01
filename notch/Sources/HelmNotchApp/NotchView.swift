@@ -302,6 +302,9 @@ struct NotchView: View {
         }
         .padding(.top, 8).padding(.bottom, 9)
         .frame(maxWidth: .infinity)
+        // Keep the active-state change snappy (HTML .dk transition .12s) instead of
+        // letting it inherit the slow panel height/slide animation on module switch.
+        .animation(.easeOut(duration: 0.12), value: model.module)
     }
 
     private func dockButton(_ m: NotchModule) -> some View {

@@ -6,6 +6,15 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 05:42 · swift-fix-dock-icon-anim(实机反馈)
+- 对齐: dock 图标切换动画(用户:切模块时 dock 图标不该有这种变化,参考 HTML)
+- 根因: 切模块时 module 与 autoExpandedHeight 同变,shell .animation(value:autoExpandedHeight)(.46s)把 dock 激活态(accent 色/背景圆/1.5 环)卷进慢曲线 → dock 图标 0.46s 缓慢 morph;HTML .dk 只 .12s 快切。
+- 做了: dockBar 加 .animation(.easeOut(0.12), value: model.module),激活态用独立 .12s(=HTML .dk),与高度/滑动慢动画解耦。dock 随高度纵移保留(HTML 同)。
+- Swift 改动: NotchView.swift(dockBar 动画)
+- VibeHub: record_decision「dock 图标快切」→ 5e090543-93db-463a-b3f6-fd22dc459363 (ai_proposed)
+- 验证: swift build ✓ / swift test 60 通过;待用户实机复验
+- 状态: ✅ 待用户实机复验
+
 ## 2026-07-01 05:30 · swift-fix-device-batch2(实机反馈三修)
 - 对齐: 折叠曲名截断 / 速记 TAB 循环 / cap 留白
 - 做了: ① 折叠曲名去 maxWidth:90 → lineLimit+tail 用满侧槽。② Core cycleCaptureKind(环绕)+ NotchController keyMonitor(Tab keyCode48,expanded+capture+locked+!focusOn 循环 note→journal→task→focus→ask,Shift 反向,consume;返 Bool 避 NSEvent Sendable)。③ cap 高度调低:note 256→214/task 300→258/focus idle 268→240/showRecent +64(min320),测同步。
