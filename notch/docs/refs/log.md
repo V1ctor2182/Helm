@@ -6,6 +6,14 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 06:44 · swift-fix-scroll-hover-feel(实机反馈)
+- 对齐: 滑动偶发闪跳 + hover 收起慢
+- 做了: ① hover 收起延迟 220ms→80ms(HTML 是立即,留少量防抖)。② scroll 切换加 0.30s 冷却(防新滑动打断在飞的过渡→snap)+ 包 withAnimation(NSEvent 回调有时不触发隐式 .animation → 偶发瞬跳,显式动画兜底)。
+- Swift 改动: NotchModel.swift(hover 延迟 80)、NotchController.swift(冷却+animatedSwitch withAnimation)
+- VibeHub: record_decision → (见下)
+- 验证: swift build ✓ / swift test 61 通过;手感待实机
+- 状态: ✅ 待实机复验
+
 ## 2026-07-01 06:30 · swift-fix-jank(实机反馈)
 - 对齐: 打字/hover/滑动卡顿 + 剪贴板底部被 dock 遮挡(Image #8)
 - 根因(卡): shell 里 collapsedBar 与 expandedPanel 一直在树里(opacity 切),collapsedBar 的 EqualizerBars 等 repeatForever 即使不可见也常跑 → 常驻重渲染 → 卡。

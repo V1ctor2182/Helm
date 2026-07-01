@@ -488,7 +488,9 @@ public final class NotchModel {
             return
         }
         collapseTask = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(220))
+            // Small debounce so a brief pointer slip doesn't flap; HTML collapses
+            // immediately on mouseleave, so keep this short (device feedback).
+            try? await Task.sleep(for: .milliseconds(80))
             guard let self, !Task.isCancelled else { return }
             // Locked (mid-interaction) or with pending text → stay open.
             // Stay open only while locked, or while there's pending 速记 text AND

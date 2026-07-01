@@ -145,22 +145,33 @@ final class NotchController {
             guard !gestureSwitched else { return }         // already switched this swipe
             gestureAccumX += dx; gestureAccumY += dy
             let threshold: CGFloat = 22
+            // Cooldown so a new swipe can't interrupt the in-flight slide → snap.
+            let cooled = Date().timeIntervalSince(lastSwitchAt) > 0.30
             if model.module == .dev, abs(gestureAccumY) > abs(gestureAccumX), abs(gestureAccumY) > threshold {
-                model.switchDev(gestureAccumY > 0 ? 1 : -1); gestureSwitched = true
+                gestureSwitched = true
+                if cooled { animatedSwitch { model.switchDev(gestureAccumY > 0 ? 1 : -1) } }
             } else if abs(gestureAccumX) > abs(gestureAccumY), abs(gestureAccumX) > threshold {
-                model.switchModule(gestureAccumX > 0 ? 1 : -1); gestureSwitched = true
+                gestureSwitched = true
+                if cooled { animatedSwitch { model.switchModule(gestureAccumX > 0 ? 1 : -1) } }
             }
             return
         }
 
         // Mouse wheel (discrete, no phase): a short cooldown paces the steps.
-        let now = Date()
-        guard now.timeIntervalSince(lastSwitchAt) > 0.35 else { return }
+        guard Date().timeIntervalSince(lastSwitchAt) > 0.30 else { return }
         if model.module == .dev, abs(dy) > abs(dx), abs(dy) > 1 {
-            model.switchDev(dy > 0 ? 1 : -1); lastSwitchAt = now
+            animatedSwitch { model.switchDev(dy > 0 ? 1 : -1) }
         } else if abs(dx) > abs(dy), abs(dx) > 1 {
-            model.switchModule(dx > 0 ? 1 : -1); lastSwitchAt = now
+            animatedSwitch { model.switchModule(dx > 0 ? 1 : -1) }
         }
+    }
+
+    /// Run a module/dev switch inside an explicit slide animation — NSEvent
+    /// callbacks don't reliably trigger SwiftUI's implicit `.animation(value:)`,
+    /// which caused occasional instant "jumps" (device feedback).
+    private func animatedSwitch(_ body: () -> Void) {
+        withAnimation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.3)) { body() }
+        lastSwitchAt = Date()
     }
 
     /// Notch width in points: the gap between the two usable menu-bar areas.
