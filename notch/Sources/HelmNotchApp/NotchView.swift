@@ -3,11 +3,11 @@ import HelmNotchCore
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// The notch surface (A×D fusion). Collapsed: two slots hugging the physical
-/// notch, camera gap left clear. Hover → expand into a fixed 2×2 panel
-/// (媒体 ↖ · 日历 ↗ · 本机 agent ↙ · 速记 ↘). The grid never deforms; the active
-/// cell "comes alive": 速记 locks the panel for keyboard input, an agent waiting
-/// on permission lights its cell. Accent color rotates daily.
+/// The notch surface. Collapsed: a bar hugging the physical notch (media left ·
+/// camera gap · status glyph right). Hover → expand into the dock panel: a top
+/// bar, one switchable module (dashboard / 速记 / calendar / dev / clipboard, plus
+/// the media zoom), and a bottom dock. Height auto-fits each module; accent
+/// rotates daily. Ported 1:1 from helm-notch-pro.html.
 struct NotchView: View {
     @Bindable var model: NotchModel
     @FocusState private var captureFocused: Bool
@@ -202,24 +202,7 @@ struct NotchView: View {
         }
     }
 
-    // MARK: Expanded — fixed 2×2
-
-    /// The 2×2 grid, laid out at full size; revealed as the shell grows.
-    private var grid: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 0) { cell { mediaCell }; vline; cell { calendarCell } }
-            hline
-            HStack(spacing: 0) { cell { agentCell }; vline; cell { captureCell } }
-        }
-        // Inset the grid from the rounded edges so nothing hugs the border.
-        .padding(EdgeInsets(top: 14, leading: 9, bottom: 10, trailing: 9))
-    }
-
     // MARK: Expanded — dock + module router (ported from helm-notch-pro.html #panel)
-    //
-    // TODO(align): pending [needs-human] 3edd9817 — this dock+module shell
-    // supersedes the fixed 2×2 `grid` above (kept for rollback). Once confirmed,
-    // delete `grid`/`cell`/`vline`/`hline`/`topControls`.
 
     /// `#panel`: top bar (logo · gear) → switchable module view → dock.
     private var expandedPanel: some View {
@@ -1098,31 +1081,6 @@ struct NotchView: View {
         ("▣", "Screenshot 2026-06-29.png", "20m"),
     ]
 
-    private var topControls: some View {
-        HStack(spacing: 12) {
-            if model.locked {
-                Button { model.collapse() } label: {
-                    Image(systemName: "xmark").font(.system(size: 11, weight: .semibold))
-                }
-                .buttonStyle(.plain).foregroundStyle(.white.opacity(0.45))
-            }
-            Button { model.openSettings?() } label: {
-                Image(systemName: "gearshape.fill").font(.system(size: 11))
-            }
-            .buttonStyle(.plain).foregroundStyle(.white.opacity(0.4))
-        }
-        .padding(.top, 11).padding(.trailing, 13)
-    }
-
-    private func cell<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 0) { content() }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .padding(.horizontal, 12).padding(.vertical, 11)
-    }
-
-    private var vline: some View { Rectangle().fill(.white.opacity(0.08)).frame(width: 0.5) }
-    private var hline: some View { Rectangle().fill(.white.opacity(0.08)).frame(height: 0.5) }
-
     private func cellHeader(_ title: String, accentTitle: Bool = false, trailing: String? = nil, trailingColor: Color = .white.opacity(0.35)) -> some View {
         HStack {
             Text(title)
@@ -1131,121 +1089,6 @@ struct NotchView: View {
             Spacer()
             if let trailing { Text(trailing).font(.system(size: 9, weight: .semibold)).foregroundStyle(trailingColor) }
         }
-    }
-
-    // MARK: Media cell ↖
-
-    @ViewBuilder private var mediaCell: some View {
-        cellHeader("♪ 正在播放")
-        if let np = model.nowPlaying {
-            HStack(spacing: 10) {
-                artwork(np)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(np.title).font(.system(size: 13, weight: .bold)).foregroundStyle(.white).lineLimit(1)
-                    Text(np.subtitle.isEmpty ? " " : np.subtitle)
-                        .font(.system(size: 11, weight: .medium)).foregroundStyle(accent).lineLimit(1)
-                }
-            }
-            .padding(.top, 6)
-            progressBar(np).padding(.top, 8)
-            transport(np).padding(.top, 6)
-        } else {
-            HStack(spacing: 10) {
-                RoundedRectangle(cornerRadius: 9).fill(.white.opacity(0.06)).frame(width: 56, height: 56)
-                    .overlay(Image(systemName: "music.note").font(.system(size: 18)).foregroundStyle(.white.opacity(0.3)))
-                Text("未在播放").font(.system(size: 12)).foregroundStyle(.white.opacity(0.4))
-            }
-            .padding(.top, 8)
-        }
-        Spacer(minLength: 0)
-    }
-
-    private func artwork(_ np: NowPlaying) -> some View {
-        ZStack {
-            if let art = nsArtwork(np) {
-                Image(nsImage: art).resizable().aspectRatio(contentMode: .fill)
-                    .frame(width: 56, height: 56).blur(radius: 12).opacity(0.5).scaleEffect(1.15)
-                Image(nsImage: art).resizable().aspectRatio(contentMode: .fill)
-                    .frame(width: 56, height: 56)
-                    .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-            } else {
-                RoundedRectangle(cornerRadius: 9).fill(.white.opacity(0.08)).frame(width: 56, height: 56)
-                    .overlay(Image(systemName: "music.note").font(.system(size: 16)).foregroundStyle(.white.opacity(0.35)))
-            }
-        }
-        .frame(width: 56, height: 56)
-    }
-
-    @ViewBuilder private func progressBar(_ np: NowPlaying) -> some View {
-        if np.hasProgress {
-            TimelineView(.periodic(from: .now, by: 0.5)) { context in
-                let pos = model.livePosition(at: context.date)
-                let total = np.duration ?? 0
-                let frac = total > 0 ? min(1, pos / total) : 0
-                VStack(spacing: 4) {
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            Capsule().fill(.white.opacity(0.16))
-                            Capsule().fill(accent).frame(width: max(2, geo.size.width * frac))
-                        }
-                    }
-                    .frame(height: 4)
-                    HStack {
-                        Text(timeString(pos)); Spacer(); Text(timeString(total))
-                    }
-                    .font(.system(size: 9, weight: .medium)).foregroundStyle(.white.opacity(0.4))
-                }
-            }
-        }
-    }
-
-    private func transport(_ np: NowPlaying) -> some View {
-        HStack(spacing: 22) {
-            Spacer(minLength: 0)
-            Button { model.previousTrack() } label: { Image(systemName: "backward.fill").font(.system(size: 13)) }
-            Button { model.playPause() } label: { Image(systemName: np.isPlaying ? "pause.fill" : "play.fill").font(.system(size: 19)) }
-            Button { model.nextTrack() } label: { Image(systemName: "forward.fill").font(.system(size: 13)) }
-            Spacer(minLength: 0)
-        }
-        .buttonStyle(.plain).foregroundStyle(.white)
-    }
-
-    // MARK: Calendar cell ↗ (week strip works offline; events land in m2)
-
-    @ViewBuilder private var calendarCell: some View {
-        cellHeader("日历", trailing: monthLabel).padding(.trailing, 22)  // clear the gear
-        HStack(spacing: 0) {
-            ForEach(weekDays(), id: \.offset) { day in
-                VStack(spacing: 2) {
-                    Text(day.weekday).font(.system(size: 9)).foregroundStyle(.white.opacity(0.35))
-                    Text("\(day.number)")
-                        .font(.system(size: 12, weight: day.isToday ? .bold : .semibold))
-                        .foregroundStyle(day.isToday ? .black : .white.opacity(0.7))
-                        .frame(width: 22, height: 22)
-                        .background { if day.isToday { Circle().fill(accent) } }
-                }
-                .frame(maxWidth: .infinity)
-            }
-        }
-        .padding(.vertical, 8)
-        if model.events.isEmpty {
-            Text("今天暂无事件").font(.system(size: 11)).foregroundStyle(.white.opacity(0.3)).padding(.top, 2)
-        } else {
-            VStack(alignment: .leading, spacing: 7) {
-                ForEach(Array(model.events.prefix(3))) { ev in
-                    HStack(spacing: 8) {
-                        RoundedRectangle(cornerRadius: 2).fill(accent).frame(width: 3)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(ev.summary).font(.system(size: 12, weight: .semibold)).foregroundStyle(.white).lineLimit(1)
-                            Text(ev.when).font(.system(size: 10)).foregroundStyle(.white.opacity(0.35))
-                        }
-                    }
-                    .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .padding(.top, 2)
-        }
-        Spacer(minLength: 0)
     }
 
     // MARK: Agent cell ↙ (backend runs for now; local Claude Code lands in m3)
@@ -1610,11 +1453,10 @@ struct NotchView: View {
         }
     }
 
-    // MARK: Resize handle (width only — height is now auto per-view)
+    // MARK: Resize handle (width only — height is auto per-view)
     //
-    // TODO(align): pending [needs-human] — per-view auto-height (HTML viewHeight())
-    // supersedes the persisted drag-resize *height* from decision 09eb9245. Width
-    // stays user-adjustable; height follows the active module.
+    // Confirmed 2026-07-01: height fully follows the active module (HTML
+    // viewHeight); only the width stays user-adjustable.
 
     private var resizeHandle: some View {
         Image(systemName: "arrow.left.and.right")
@@ -1688,24 +1530,6 @@ struct NotchView: View {
         }
     }
 
-    // MARK: Calendar helpers
-
-    private var monthLabel: String {
-        let f = DateFormatter(); f.dateFormat = "MMM yyyy"; f.locale = Locale(identifier: "en_US")
-        return f.string(from: Date()).uppercased()
-    }
-
-    private func weekDays() -> [(offset: Int, weekday: String, number: Int, isToday: Bool)] {
-        let cal = Calendar.current
-        let today = Date()
-        let letters = ["日", "一", "二", "三", "四", "五", "六"]
-        guard let start = cal.dateInterval(of: .weekOfYear, for: today)?.start else { return [] }
-        return (0..<7).compactMap { i in
-            guard let d = cal.date(byAdding: .day, value: i, to: start) else { return nil }
-            let wd = cal.component(.weekday, from: d) - 1
-            return (i, letters[wd], cal.component(.day, from: d), cal.isDateInToday(d))
-        }
-    }
 }
 
 /// The notch silhouette: top edge flush with the screen, small concave corners
@@ -1832,71 +1656,4 @@ private struct Waveform: View {
         }
         .onAppear { animate = true }
     }
-}
-
-/// Open Island-style status glyph for the right slot: three bars + a count whose
-/// motion and color say the state (green dancing = running, amber pulsing = waiting).
-private struct StatusGlyph: View {
-    enum Kind { case running, waiting }
-    var state: Kind
-    var count: Int
-    @State private var animate = false
-
-    private var color: Color { state == .running ? .green : .orange }
-
-    var body: some View {
-        HStack(spacing: 6) {
-            HStack(alignment: .center, spacing: 2.5) {
-                ForEach(0..<3, id: \.self) { i in
-                    Capsule().fill(color)
-                        .frame(width: 2.5, height: barHeight(i))
-                        .opacity(barOpacity(i))
-                        .animation(barAnimation(i), value: animate)
-                }
-            }
-            .frame(height: 13)
-            Text("\(count)")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(state == .waiting ? color : .white)
-                .monospacedDigit()
-        }
-        .onAppear { animate = true }
-    }
-
-    private func barHeight(_ i: Int) -> CGFloat {
-        switch state {
-        case .running: animate ? [9, 5, 11][i] : 4
-        case .waiting: i == 1 ? 4 : 11
-        }
-    }
-    private func barOpacity(_ i: Int) -> Double {
-        guard state == .waiting else { return 1 }
-        if i == 1 { return 0.4 }
-        return animate ? 1 : 0.5
-    }
-    private func barAnimation(_ i: Int) -> Animation {
-        switch state {
-        case .running: .easeInOut(duration: 0.42 + Double(i) * 0.08).repeatForever(autoreverses: true)
-        case .waiting: .easeInOut(duration: 1.4).repeatForever(autoreverses: true)
-        }
-    }
-}
-
-/// Breathing amber outline around the whole right slot when an agent is waiting.
-private struct GlowPill: ViewModifier {
-    @State private var on = false
-    func body(content: Content) -> some View {
-        content
-            .padding(.horizontal, 9).padding(.vertical, 3)
-            .overlay(
-                Capsule().stroke(Color.orange, lineWidth: 1)
-                    .opacity(on ? 0.85 : 0.3))
-            .shadow(color: .orange.opacity(on ? 0.3 : 0), radius: on ? 6 : 0)
-            .animation(.easeInOut(duration: 0.85).repeatForever(autoreverses: true), value: on)
-            .onAppear { on = true }
-    }
-}
-
-private extension View {
-    func glowingPill() -> some View { modifier(GlowPill()) }
 }

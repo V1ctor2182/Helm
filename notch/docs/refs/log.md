@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 01:40 · swift-align-20-land-decisions-cleanup
+- 对齐: 用户拍板 3 个 [needs-human] 后的落地清理(非新 HTML 块)
+- HTML 基线: —(架构/高度/材质取舍定案)
+- 做了: ① 全面转 dock,删死代码(grid/cell/vline/hline/topControls + mediaCell/calendarCell + artwork/progressBar/transport/monthLabel/weekDays + StatusGlyph/GlowPill/glowingPill);保留 EqualizerBars/cellHeader/agentCell/captureCell。② 全自适应高度,删拖拽高度持久化(Controller heightKey load/save + 常量删;resize 仅宽)。③ 材质保留 4 档默认纯黑(block19 已是,无改)。NotchView 顶 doc 改 dock 描述。
+- 取舍: scroll 方向留用户实机校准。死代码删除逐个 grep 确认只被死代码引用再删,零回归。
+- 改动: HelmNotchApp/NotchView.swift(删 ~250 行死代码+顶 doc+resize 注释)、NotchController.swift(删 heightKey 持久化)
+- VibeHub: record_decision「3 个 needs-human 定案+落地」→ daff6e2f-e296-4b85-a6c4-d8d95043c66e (ai_proposed)(对应关闭 question 3edd9817/7597d8c5/dbba2873)
+- 验证: swift build ✓ / swift test 52 通过 0 失败;视觉:删死代码不影响运行路径,待用户实机
+- 状态: ✅ 已落地 3 拍板  |  ❓剩:scroll 方向实机校准 + 后端 TODO 群
+
 ## 2026-07-01 01:18 · swift-align-19-background-material
 - 设计源: helm-notch-pro.html(settingsHTML MATS / .mat-* / applyMat)
 - 界面: 背景材质选项(默认纯黑)

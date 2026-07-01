@@ -27,7 +27,7 @@ final class NotchController {
 
     private let defaults = UserDefaults.standard
     private let widthKey = "notch.expandedWidth"
-    private let heightKey = "notch.expandedHeight.v2"  // v2: drop the old 300 default
+    // Height is auto per-view (HTML viewHeight); only the width is user-resizable.
 
     init(model: NotchModel) {
         self.model = model
@@ -45,7 +45,6 @@ final class NotchController {
             model.notchWidth = detectNotchWidth(screen)
         }
         if let w = defaults.object(forKey: widthKey) as? Double { model.expandedWidth = w }
-        if let h = defaults.object(forKey: heightKey) as? Double { model.expandedHeight = h }
 
         let panel = makePanel()
         self.panel = panel
@@ -189,6 +188,5 @@ final class NotchController {
 
     private func persistSize() {
         defaults.set(model.expandedWidth, forKey: widthKey)
-        defaults.set(model.expandedHeight, forKey: heightKey)
     }
 }
