@@ -116,7 +116,9 @@ final class NotchController {
     }
 
     private func handleScroll(_ event: NSEvent) {
-        guard model.expanded, !model.locked, let panel else { return }
+        // Note: no `!locked` guard — swiping away while typing 速记 is allowed;
+        // setModule() clears the lock so the panel can then collapse on hover-out.
+        guard model.expanded, let panel else { return }
         // Only when the pointer is over the visible top-centered shell.
         guard let screen = NSScreen.main else { return }
         let w = CGFloat(model.expandedWidth), h = CGFloat(model.autoExpandedHeight)

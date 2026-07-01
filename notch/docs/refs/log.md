@@ -6,6 +6,14 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 06:14 · swift-fix-scroll-while-typing(实机反馈)
+- 对齐: 速记打字时切不走(上轮 !locked 拦截引入的回归)
+- 根因: 上轮给 handleScroll 加了 !model.locked guard,打字时 locked=true → scroll 全被挡。
+- 做了: 去掉 handleScroll 的 !locked guard。打字时也能滑切模块;setModule 清锁(上轮)让切走后能收起。TAB 走独立 keyMonitor 不受影响。
+- Swift 改动: NotchController.swift(handleScroll guard 去 !locked)
+- 验证: swift build ✓ / swift test 61 通过
+- 状态: ✅ 待实机复验
+
 ## 2026-07-01 06:05 · swift-fix-panel-hpadding(实机反馈)
 - 对齐: 展开面板左右内容离边太近 → 加 padding
 - 做了: expandedPanel 加 .padding(.horizontal, 8),topBar/模块/dock 统一往里收,不动内部间距。真机渲染 dash 确认 logo/列有更多留白。
