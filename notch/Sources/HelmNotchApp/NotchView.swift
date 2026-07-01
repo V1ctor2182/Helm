@@ -50,14 +50,16 @@ struct NotchView: View {
             } else {
                 collapsedBar
                     .opacity(model.expanded ? 0 : 1)
-                    .animation(.easeOut(duration: model.expanded ? 0.12 : 0.22), value: model.expanded)
+                    // HTML #bar: transition opacity .14s.
+                    .animation(.easeOut(duration: 0.14), value: model.expanded)
 
                 expandedPanel
                     .frame(width: model.expandedWidth, height: model.autoExpandedHeight, alignment: .top)
                     .opacity(model.expanded ? 1 : 0)
                     .offset(y: model.expanded ? 0 : -10)
                     .allowsHitTesting(model.expanded)
-                    .animation(.easeOut(duration: 0.3).delay(model.expanded ? 0.12 : 0), value: model.expanded)
+                    // HTML #panel: open = opacity .34s ease .12s delay; close = .3s.
+                    .animation(.easeOut(duration: model.expanded ? 0.34 : 0.3).delay(model.expanded ? 0.12 : 0), value: model.expanded)
             }
         }
         .frame(width: width, height: height, alignment: .top)

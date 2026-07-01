@@ -6,6 +6,17 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 04:42 · swift-align-41-transition-timings
+- 对齐: 展开/折叠过渡时长到 HTML 确切值(用户 #1)
+- HTML 基线: #bar opacity .14s / #panel open opacity .34s ease .12s、close .3s
+- HTML↔实际对比: 我 collapsedBar .12/.22、expandedPanel .3 delay .12 —— 和 HTML 确切值有微差。
+- 做了: collapsedBar 动画统一 .14s;expandedPanel 展开 .34s(收起 .3s)delay .12。折叠↔展开淡入淡出时长对齐 HTML。
+- 取舍: reminder banner 无法快照(snapshot 无 runloop 跑不了 async 事件注入);其 UI 与已验证的 permission banner 同构,信其正确。
+- Swift 改动: NotchView.swift(shell collapsedBar/expandedPanel 动画时长)
+- VibeHub: record_decision「过渡时长对齐」→ 37c8ce19-66f3-403e-b5e2-c8e817985a60 (ai_proposed)
+- 验证: swift build ✓ / swift test 59 通过 0 失败;时长参数逐值对齐 HTML(手感需实机)
+- 状态: ✅ 待 review
+
 ## 2026-07-01 04:34 · swift-align-40-snapshot-settings
 - 对齐: 设置 modal 真机核对(靶图 /tmp/notchshots/swift-settings.png)
 - HTML 基线: settingsHTML
