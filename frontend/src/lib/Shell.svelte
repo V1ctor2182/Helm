@@ -43,6 +43,14 @@
   {/if}
 
   <main class="center" aria-label="Workspace">
+    <!-- ORAGE chrome: 散落准星 fiducial + 坐标 chip（弱默认，强模式拉满） -->
+    <div class="chrome" class:strong={layout.chromeStrong} aria-hidden="true">
+      <span class="coord">X:0512PX Y:0267PX</span>
+      <span class="fid f1">+</span>
+      <span class="fid f2">+</span>
+      <span class="fid f3">+</span>
+      <span class="fid f4">×</span>
+    </div>
     {#if layout.mode === 'today'}
       <Today />
     {:else if layout.mode === 'cockpit'}
@@ -116,6 +124,7 @@
     <span class="grow"></span>
     <span class="seg">NEXT</span>
     <span class="seg num">001/009</span>
+    <button class="seg" title="监控 chrome 强/弱" onclick={() => layout.toggleChrome()}>◇ chrome</button>
     <button class="seg" onclick={() => layout.toggleTerminal()}>终端 ⟩</button>
     <button class="seg k" onclick={() => layout.openPalette()}>⌘K 命令面板</button>
     <button class="seg k" onclick={() => layout.openCapture()}>⌘N 速记</button>
@@ -195,14 +204,53 @@
     overflow: hidden;
   }
 
-  /* center */
+  /* center + ORAGE 点阵底纹（背景层，避免 z-index 覆盖内容） */
   .center {
     grid-area: center;
+    position: relative;
     display: flex;
     flex-direction: column;
     min-width: 0;
-    background: var(--bg);
+    background:
+      radial-gradient(var(--grid) 1px, transparent 1px) 0 0 / 22px 22px,
+      var(--bg);
   }
+  /* 散落准星 + 坐标 chip：pointer-events none，弱默认只显少量 */
+  .chrome {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .chrome .fid {
+    position: absolute;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1;
+    color: var(--t4);
+    opacity: 0.5;
+  }
+  .chrome .coord {
+    position: absolute;
+    right: 20px;
+    top: 10px;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: .5px;
+    color: var(--t4);
+    background: var(--chrome);
+    border: 1px solid var(--hair);
+    padding: 2px 5px;
+    opacity: 0.7;
+  }
+  .chrome .f1 { left: 42%; top: 12px; }
+  .chrome .f2 { right: 30px; top: 44%; }
+  /* 强模式才显的额外准星 */
+  .chrome .f3,
+  .chrome .f4 { display: none; }
+  .chrome.strong .f3 { display: block; left: 60px; bottom: 70px; }
+  .chrome.strong .f4 { display: block; right: 40%; bottom: 40px; }
+  .chrome.strong .fid { opacity: 0.7; }
   .tabbar {
     display: flex;
     gap: 2px;

@@ -44,6 +44,9 @@ export class LayoutStore {
   activeTabId = $state<string | null>(null)
   paletteOpen = $state(false)
   captureOpen = $state(false)
+  // ORAGE 监控 chrome 强度：false = 弱（日常默认，仅点阵+少量 fiducial）；
+  // true = 强（散落准星 + 坐标 chip 拉满，展示用）。承 DESIGN.md「强度可切，日常默认偏弱」。
+  chromeStrong = $state(false)
 
   #seq = 0
 
@@ -86,6 +89,10 @@ export class LayoutStore {
 
   toggleTerminal(): void {
     this.terminalCollapsed = !this.terminalCollapsed
+  }
+
+  toggleChrome(): void {
+    this.chromeStrong = !this.chromeStrong
   }
 
   openTab(title: string, mode: ModeId = this.mode): Tab {

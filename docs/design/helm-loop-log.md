@@ -6,6 +6,15 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 01:48 · design-08-orage-chrome（夜间模式）· 阶段1 核心八块收官
+- 对齐: ORAGE chrome（阶段1 第8块）——点阵底纹 + 散落准星 fiducial + 坐标 chip + 强弱切
+- 设计基线: helm-pro.html `.app::before` 点阵 / `.fidmark` / `.coord` / `.weak` / DESIGN.md「ORAGE Chrome 词汇 + 强度可切」（只读对照，未改）
+- Svelte 改动: `lib/Shell.svelte`（.center 点阵背景层 + .chrome overlay 准星/坐标，弱默认强可切）；`lib/layout.svelte.ts`（+chromeStrong/toggleChrome）；状态栏加「◇ chrome」切
+- 取舍: 点阵做成 background 层避 z-index 坑；弱默认（f1/f2）符合「日常偏弱」，强模式（.strong）显 f3/f4；强度切暂在状态栏，未来挪设置（TODO）
+- VibeHub: record_decision「ORAGE chrome + 阶段1 收官」→ (F8, ai_proposed)；add_constraint/add_question：无
+- 验证: npm build ✓ / check 0 错 0 警（243 文件）/ test 146 通过；视觉：dev 5174 dark 弱默认点阵+坐标+准星到位，整体=helm-pro A+ORAGE
+- 状态: ✅ 夜间自 commit（feat/design-shell-today）｜里程碑：阶段1 Shell/Today 核心八块全对齐｜剩余（loop 可续）：各模式视图/命令面板/速记/设置 modal 上妆；之后阶段2 接后端+notch｜❓需确认: 无
+
 ## 2026-07-02 01:44 · design-07-statusbar-hud（夜间模式）
 - 对齐: 状态栏 CLI 面包屑 HUD 补全（阶段1 第7块）
 - 设计基线: helm-pro.html `.sbar`（seg 分段 / NEXT / 001/009 / tok / RAG）/ DESIGN.md「三招牌·遥测状态栏」（只读对照，未改）
