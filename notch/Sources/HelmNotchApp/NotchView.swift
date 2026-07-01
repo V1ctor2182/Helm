@@ -525,7 +525,7 @@ struct NotchView: View {
             // calhd2 — month/year · Today · view toggle · ‹ ›
             HStack(spacing: 7) {
                 Text(calMonthName(dm)).font(.system(size: 17, weight: .heavy)).foregroundStyle(.white)
-                Text("\(cal.component(.year, from: dm))").font(.system(size: 12, weight: .semibold)).foregroundStyle(.white.opacity(0.34))
+                Text(verbatim: String(cal.component(.year, from: dm))).font(.system(size: 12, weight: .semibold)).foregroundStyle(.white.opacity(0.34))
                 if model.calMonthOffset != 0 {
                     Button { model.calToday() } label: {
                         Text("Today").font(.system(size: 10, weight: .bold)).foregroundStyle(.white.opacity(0.56))
@@ -589,7 +589,7 @@ struct NotchView: View {
         return HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(calMonthName(dm, short: true)).font(.system(size: 30, weight: .heavy)).foregroundStyle(.white)
-                Text("\(cal.component(.year, from: dm))").font(.system(size: 12, weight: .semibold)).foregroundStyle(.white.opacity(0.34))
+                Text(verbatim: String(cal.component(.year, from: dm))).font(.system(size: 12, weight: .semibold)).foregroundStyle(.white.opacity(0.34))
             }
             HStack(spacing: 4) {
                 ForEach(0..<7, id: \.self) { i in
@@ -835,7 +835,7 @@ struct NotchView: View {
                 let p = portSeed[i]
                 HStack(spacing: 11) {
                     Circle().fill(p.color).frame(width: 7, height: 7)
-                    Text(":\(p.port)").font(.system(size: 12, weight: .bold, design: .monospaced))
+                    Text(verbatim: ":\(p.port)").font(.system(size: 12, weight: .bold, design: .monospaced))
                         .foregroundStyle(.white).frame(minWidth: 56, alignment: .leading)
                     Text(p.name).font(.system(size: 12)).foregroundStyle(.white.opacity(0.56)).lineLimit(1)
                     Spacer(minLength: 6)

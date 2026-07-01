@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 03:26 · swift-align-32-snapshot-diff-number-grouping
+- 对齐: 真机快照对比 → 修数字千分位 bug(靶图 vs /tmp/notchshots/swift-cal-month.png)
+- HTML 基线: V.cal 年份 / V.ports 端口
+- HTML↔实际对比(真机渲染): ① cap 输入框 ImageRenderer 渲成黄条+🚫 = TextField 无头限制(非真 bug,harness caveat)。② cal-month 年份显示「2,026」——SwiftUI Text("\(Int)") 加千分位分组;端口同理会「:3,000」。
+- 做了: 年份 + 端口改 Text(verbatim: String(...))/Text(verbatim: ":\(port)") 绕本地化。重渲染确认「2026」「:3000」正确。cal-month 修后与 HTML 基本像素吻合。
+- Swift 改动: NotchView.swift(calendarModule/calWeekStrip 年份、devPorts 端口 verbatim)
+- VibeHub: record_decision「数字千分位 bug」→ 194c22d5-6259-4cb6-b398-1ef164c26aa7 (ai_proposed)
+- 验证: swift build ✓ / swift test 59 通过 0 失败;视觉:真机 cal-month 重渲染确认年份对
+- 状态: ✅ 待 review  |  harness caveat:TextField 无头渲染是黄条(非真 bug)
+
 ## 2026-07-01 03:16 · swift-align-31-snapshot-harness
 - 对齐: 无头 Snapshot harness(首次真机对比 Swift vs HTML)+ 波形条形状
 - HTML 基线: 全 view / .mwave
