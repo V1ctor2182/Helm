@@ -6,6 +6,17 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 02:36 · swift-align-26-visualdiff-transport-glyphs
+- 对齐: 视觉 diff 首轮(browse 截 HTML dash/media 靶图逐项对比)
+- HTML 基线: V.dash npctrl / V.media mctrl2 / .coverexp(靶图 /tmp/html-dash.png、html-media.png)
+- HTML↔实际对比: ① 媒体控制 HTML 用文本字形 ◀◀/❚❚(播)·▶(停)/▶▶,我用了 SF Symbols(形状不同)。② dash 封面 HTML 有 .coverexp 小展开图标(bottom-right),我漏了。
+- 做了: dash + media 控制改 HTML 同款文本字形(dash 12/media 15·pp21);dash 封面加展开字形(19×19 圆角黑底 + SF arrow.up.left.and.arrow.down.right)。
+- 取舍: 文本字形单色非 emoji 守规则;展开图标用 SF 近似 HTML 4 角括号 SVG。
+- Swift 改动: NotchView.swift(dashMediaWidget/mediaModule 控制、dashCover coverexp)
+- VibeHub: record_decision「媒体控制文本字形+封面展开图标」→ 093fda1a-e73b-4526-9eb4-5ce8f22399c6 (ai_proposed)
+- 验证: swift build ✓ / swift test 59 通过 0 失败;视觉:HTML 靶图已截对比,Swift 已对齐字形
+- 状态: ✅ 待 review
+
 ## 2026-07-01 02:28 · swift-align-25-media-zoom
 - 对齐: 媒体 zoomTo 缩放钻入(用户 #1 列了 zoomTo)
 - HTML 基线: zoomTo(scale .97 淡出 .16s → scale .955→1 淡入 .34s cubic-bezier)

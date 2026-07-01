@@ -371,9 +371,9 @@ struct NotchView: View {
                         Text(np.subtitle.isEmpty ? " " : np.subtitle).font(.system(size: 10)).foregroundStyle(.white.opacity(0.56)).lineLimit(1)
                         dashMiniBar(np).padding(.top, 6)
                         HStack(spacing: 16) {
-                            Button { model.previousTrack() } label: { Image(systemName: "backward.fill") }
-                            Button { model.playPause() } label: { Image(systemName: np.isPlaying ? "pause.fill" : "play.fill") }
-                            Button { model.nextTrack() } label: { Image(systemName: "forward.fill") }
+                            Button { model.previousTrack() } label: { Text("◀◀") }
+                            Button { model.playPause() } label: { Text(np.isPlaying ? "❚❚" : "▶") }
+                            Button { model.nextTrack() } label: { Text("▶▶") }
                         }
                         .font(.system(size: 12)).buttonStyle(.plain).foregroundStyle(.white).padding(.top, 8)
                     }
@@ -403,6 +403,15 @@ struct NotchView: View {
         }
         .frame(width: 64, height: 64)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        // HTML .coverexp — a small "expand to lyrics" glyph, bottom-right of the cover.
+        .overlay(alignment: .bottomTrailing) {
+            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                .font(.system(size: 8, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.75))
+                .frame(width: 19, height: 19)
+                .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(.black.opacity(0.5)))
+                .padding(4)
+        }
     }
 
     @ViewBuilder private func dashMiniBar(_ np: NowPlaying) -> some View {
@@ -963,9 +972,9 @@ struct NotchView: View {
                         Text(artist).font(.system(size: 11)).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
                         mediaProgress(np).padding(.top, 9)
                         HStack(spacing: 22) {
-                            Button { model.previousTrack() } label: { Image(systemName: "backward.fill").font(.system(size: 15)) }
-                            Button { model.playPause() } label: { Image(systemName: (np?.isPlaying ?? true) ? "pause.fill" : "play.fill").font(.system(size: 21)) }
-                            Button { model.nextTrack() } label: { Image(systemName: "forward.fill").font(.system(size: 15)) }
+                            Button { model.previousTrack() } label: { Text("◀◀").font(.system(size: 15)) }
+                            Button { model.playPause() } label: { Text((np?.isPlaying ?? true) ? "❚❚" : "▶").font(.system(size: 21)) }
+                            Button { model.nextTrack() } label: { Text("▶▶").font(.system(size: 15)) }
                         }
                         .buttonStyle(.plain).foregroundStyle(.white).padding(.top, 8)
                         Spacer(minLength: 0)
