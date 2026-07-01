@@ -101,7 +101,15 @@
     {/if}
   </main>
 
-  {#if !layout.terminalCollapsed}
+  {#if layout.terminalCollapsed}
+    <!-- 折叠态终端边条（承 helm-pro.html 40px `.edge`）：点击展开 -->
+    <button
+      class="term-edge"
+      aria-label="展开终端"
+      title="展开终端"
+      onclick={() => layout.toggleTerminal()}
+    >TERMINAL ⟩</button>
+  {:else}
     <aside class="terminal" aria-label="Terminal panel">
       {#if layout.mode === 'cockpit'}
         {#key cockpit.cwd}
@@ -309,6 +317,25 @@
     font-size: 11px;
   }
   .term-hint { color: var(--t4); }
+
+  /* 折叠态终端边条（40px 竖排 TERMINAL ⟩） */
+  .term-edge {
+    grid-area: terminal;
+    width: 40px;
+    background: var(--panel);
+    border: 0;
+    border-left: 1px solid var(--hair);
+    color: var(--t4);
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    writing-mode: vertical-rl;
+    cursor: pointer;
+    transition: color var(--dur-micro) var(--ease);
+  }
+  .term-edge:hover {
+    color: var(--t2);
+  }
 
   /* statusbar · CLI 面包屑 HUD */
   .statusbar {

@@ -6,6 +6,15 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 01:57 · design-11-terminal-edge（夜间模式）· F8 外壳收官
+- 对齐: 折叠态终端边条（40px 竖排 TERMINAL ⟩）——补齐外壳网格第4列
+- 设计基线: helm-pro.html 外壳 40px `.edge` / grid 58 250 1fr 40（只读对照，未改）
+- Svelte 改动: `lib/Shell.svelte`（折叠态渲 .term-edge 竖排按钮点击展开，展开态仍原 aside；+.term-edge 样式走 token）
+- 取舍: 补上后外壳网格与 helm-pro 精确一致（此前默认折叠第4列不渲染）；这是 F8 外壳最后一个具体设计稿细节
+- VibeHub: record_decision「折叠态终端边条 + F8 外壳收官」→ (F8, ai_proposed)；add_constraint/add_question：无
+- 验证: npm build ✓ / check 0 错 0 警（243 文件）/ test 146 通过；视觉：dev 5174 dark 右侧竖排 TERMINAL ⟩ 到位
+- 状态: ✅ 夜间自 commit（feat/design-shell-today）｜里程碑：F8 工作台外壳+全局 overlay 全对齐 helm-pro，阶段1 在 F8 范畴收官（剩各模式归各 Room + 阶段2 接后端）｜❓需确认: 无
+
 ## 2026-07-02 01:54 · design-10-quick-capture（夜间模式）
 - 对齐: 速记 ⌘N QuickCapture token 化（次级表面·全局入口）
 - 设计基线: DESIGN.md 双主题 token + helm-pro.html 模态观感（只读对照，未改）
