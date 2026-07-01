@@ -44,6 +44,13 @@ public final class NotchModel {
 
     public func removeFile(_ id: String) { captureFiles.removeAll { $0.id == id } }
 
+    /// Cycle the capture kind (HTML: TAB in 速记 cycles note→journal→task→focus→ask).
+    public func cycleCaptureKind(_ direction: Int = 1) {
+        let all = CaptureKind.allCases
+        let i = all.firstIndex(of: captureKind) ?? 0
+        captureKind = all[((i + direction) % all.count + all.count) % all.count]
+    }
+
     // Focus session (HTML focusOn / focusWhat / focusSec) — a forward timer that
     // records to Helm on stop. Elapsed is derived from a start time so the UI can
     // tick without mutating state.
@@ -132,13 +139,14 @@ public final class NotchModel {
             case .reviews: 252
             case .stats: 252
             }
-        // HTML cap: focus→300/268, task→300, note/journal→256; +64 with recents.
+        // Tightened vs the HTML prototype — the Swift content is more compact, so
+        // the taller HTML budgets left too much empty space below (device feedback).
         case .capture:
             captureKind == .focus
-                ? (focusOn ? 300 : 268)
+                ? (focusOn ? 300 : 240)
                 : (captureShowRecent
-                    ? min(360, (captureKind == .task ? 300 : 256) + 64)
-                    : (captureKind == .task ? 300 : 256))
+                    ? min(320, (captureKind == .task ? 258 : 214) + 64)
+                    : (captureKind == .task ? 258 : 214))
         }
     }
 

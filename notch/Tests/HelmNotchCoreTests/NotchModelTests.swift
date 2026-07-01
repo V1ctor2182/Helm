@@ -316,9 +316,9 @@ final class NotchModuleTests: XCTestCase {
         XCTAssertEqual(model.viewHeight(), 240)
         model.module = .capture
         model.captureKind = .task
-        XCTAssertEqual(model.viewHeight(), 300)
+        XCTAssertEqual(model.viewHeight(), 258)
         model.captureKind = .note
-        XCTAssertEqual(model.viewHeight(), 256)
+        XCTAssertEqual(model.viewHeight(), 214)
     }
 
     @MainActor
@@ -329,13 +329,26 @@ final class NotchModuleTests: XCTestCase {
     }
 
     @MainActor
+    func testCycleCaptureKindWrapsBothWays() {
+        let model = NotchModel(backend: FakeBackend())
+        model.captureKind = .note
+        model.cycleCaptureKind()
+        XCTAssertEqual(model.captureKind, .journal)
+        model.captureKind = .ask
+        model.cycleCaptureKind()
+        XCTAssertEqual(model.captureKind, .note)   // wraps forward
+        model.cycleCaptureKind(-1)
+        XCTAssertEqual(model.captureKind, .ask)    // wraps back
+    }
+
+    @MainActor
     func testCaptureRecentsExpandGrowsHeight() {
         let model = NotchModel(backend: FakeBackend())
         model.module = .capture
         model.captureKind = .note
-        XCTAssertEqual(model.viewHeight(), 256)
+        XCTAssertEqual(model.viewHeight(), 214)
         model.captureShowRecent = true
-        XCTAssertEqual(model.viewHeight(), 320)  // 256 + 64
+        XCTAssertEqual(model.viewHeight(), 278)  // 214 + 64
     }
 
     @MainActor
@@ -387,7 +400,7 @@ final class NotchModuleTests: XCTestCase {
         let model = NotchModel(backend: FakeBackend())
         model.module = .capture
         model.captureKind = .focus
-        XCTAssertEqual(model.viewHeight(), 268)  // idle
+        XCTAssertEqual(model.viewHeight(), 240)  // idle
         model.captureText = "x"
         model.startFocus()
         XCTAssertEqual(model.viewHeight(), 300)  // running

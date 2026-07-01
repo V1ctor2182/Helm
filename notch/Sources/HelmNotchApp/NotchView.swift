@@ -163,7 +163,7 @@ struct NotchView: View {
                     Image(systemName: "pause.fill").font(.system(size: 9)).foregroundStyle(.white.opacity(0.5))
                 }
                 Text(np.title).font(.system(size: 10)).foregroundStyle(.white.opacity(0.56))
-                    .lineLimit(1).frame(maxWidth: 90, alignment: .leading)
+                    .lineLimit(1).truncationMode(.tail)
             }
         }
     }

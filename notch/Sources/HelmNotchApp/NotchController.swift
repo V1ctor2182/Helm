@@ -18,6 +18,7 @@ final class NotchController {
     /// Trackpad swipe → switch module / page Dev (HTML wheel handler).
     /// `nonisolated(unsafe)`: set only on the MainActor, read once in deinit.
     private nonisolated(unsafe) var scrollMonitor: Any?
+    private nonisolated(unsafe) var keyMonitor: Any?
     private var lastSwitchAt = Date.distantPast
     // One switch per physical swipe: accumulate the delta of the current trackpad
     // gesture and fire once; ignore the rest (incl. momentum) until it ends.
@@ -69,6 +70,7 @@ final class NotchController {
         }
         observeState()
         installScrollMonitor()
+        installKeyMonitor()
 
         // The panel only becomes key when the capture field is focused, so losing
         // key = the user clicked away — collapse (keeping any typed text).
@@ -82,6 +84,25 @@ final class NotchController {
     deinit {
         pollTask?.cancel()
         if let scrollMonitor { NSEvent.removeMonitor(scrollMonitor) }
+        if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
+    }
+
+    /// TAB (Shift+TAB) while typing a 速记 cycles the capture kind (HTML keydown Tab).
+    private func installKeyMonitor() {
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            var consume = false
+            MainActor.assumeIsolated { consume = self?.handleKeyDown(event) ?? false }
+            return consume ? nil : event
+        }
+    }
+
+    /// Returns true to consume the event. keyCode 48 = Tab: cycle the 速记 kind
+    /// while the capture field is active (not during a running focus timer).
+    private func handleKeyDown(_ event: NSEvent) -> Bool {
+        guard event.keyCode == 48, model.expanded, model.module == .capture,
+              model.locked, !model.focusOn else { return false }
+        model.cycleCaptureKind(event.modifierFlags.contains(.shift) ? -1 : 1)
+        return true
     }
 
     /// Map a trackpad two-finger swipe over the expanded panel to a module switch

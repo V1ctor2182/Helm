@@ -6,6 +6,14 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 05:30 · swift-fix-device-batch2(实机反馈三修)
+- 对齐: 折叠曲名截断 / 速记 TAB 循环 / cap 留白
+- 做了: ① 折叠曲名去 maxWidth:90 → lineLimit+tail 用满侧槽。② Core cycleCaptureKind(环绕)+ NotchController keyMonitor(Tab keyCode48,expanded+capture+locked+!focusOn 循环 note→journal→task→focus→ask,Shift 反向,consume;返 Bool 避 NSEvent Sendable)。③ cap 高度调低:note 256→214/task 300→258/focus idle 268→240/showRecent +64(min320),测同步。
+- Swift 改动: NotchView.swift(折叠曲名)、NotchModel.swift(cycleCaptureKind+cap 高度)、NotchController.swift(keyMonitor)、Tests(+1,高度值更新)
+- VibeHub: record_decision「实机三修」→ b3a91778-a15f-415b-b4dc-8445705c4cea (ai_proposed)
+- 验证: swift build ✓ / swift test 60 通过;待用户实机复验
+- 状态: ✅ 待用户实机复验
+
 ## 2026-07-01 05:12 · swift-fix-agent-row-overflow(实机反馈)
 - 对齐: agent 行长文本溢出裁切(用户实机 hook 真实 session)
 - 根因: 真实 folder/长 bash·git activity 溢出面板右边被裁,非省略号。dashAgentWidget 缺尾 Spacer;agentCell activity 未强制尾截断。
