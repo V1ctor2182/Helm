@@ -6,6 +6,15 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 01:24 · design-02-theme-store（夜间模式）
+- 对齐: 主题/accent 系统（阶段1 第2块）——dark/light/跟随系统 + 每日 accent + 对比压暗
+- 设计基线: helm-pro.html 的 theme 切换/darken()/palette + DESIGN.md「Themes / Color 每日变色」（只读对照，未改）
+- Svelte 改动: 新增 `lib/theme.svelte.ts`（runes 单例 theme：mode/accent、apply→<html> data-theme+--acc/--acc-ink、dailyAccent/darken、init 监听系统翻转、jsdom 守卫）；`main.ts` mount 前 theme.init()；新增 `lib/theme.test.ts`（+3 测）
+- 取舍: 每日 accent 走 palette[dayIndex%10]（当天稳定午夜轮换）；darken 复刻 helm-pro r*.5 g*.5 b*.42；system 模式移除 data-theme 交给 @media。视觉门本块仍有限（组件未消费，仅 body 变暗），下块外壳起对比。TODO: MODES emoji 图标留给 Rail 块换 SVG
+- VibeHub: record_decision「主题/accent 系统 theme store」→ (F8, ai_proposed)；add_constraint/add_question：无
+- 验证: npm build ✓ / check 0 错 0 警（242 文件）/ test 147 通过（+3）；视觉：待下块外壳组件消费后 dark/light 对比
+- 状态: ✅ 夜间自 commit（feat/design-shell-today）｜❓需确认: 无
+
 ## 2026-07-02 01:20 · design-01-tokens（夜间模式）
 - 对齐: 设计 token 系统（阶段1 第1块）——把 helm-pro.html/DESIGN.md 的 token 落进全局 CSS
 - 设计基线: helm-pro.html `:root`+`[data-theme]` 双主题 / DESIGN.md「Themes / Typography / Spacing / Motion」（只读对照，未改）
