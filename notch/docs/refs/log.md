@@ -6,6 +6,17 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 02:52 · swift-align-28-visualdiff-calendar-mock
+- 对齐: 视觉 diff · 日历 mock 事件 + 议程布局(靶图 /tmp/html-cal-month.png)
+- HTML 基线: EVENTS / CAL_ITEMS / CAL_EVDAYS / .evr(evtime/evbody/evdot)
+- HTML↔实际对比: 我议程用 model.events(后端空)→ 空态,HTML 显 4 demo 事件;月/周格无事件点(HTML 有橙点)。
+- 做了: calMockItems 复刻 EVENTS/CAL_ITEMS(今天 4 项+邻近几天 demo,(_td±n)%28+1)、calEventDays 复刻 CAL_EVDAYS;calAgenda 完整行布局(evtime start 大 accent+end 小灰 / title+location PIN mappin / 每事件独立色点);月格+周条加事件点(accent 4px)。
+- 取舍: 议程/点用 mock(HTML 一模一样优先);折叠条下个日程/提醒仍用 model.events(小不一致,可后续统一)。
+- Swift 改动: NotchView.swift(CalMockItem/calMockItems/calEventDays/calAgenda 重写、calMonthCell+calWeekStrip 事件点)
+- VibeHub: record_decision「日历 mock 事件+议程布局」→ d81c4dff-667e-4423-8e61-9ac1ddf47db0 (ai_proposed)
+- 验证: swift build ✓ / swift test 59 通过 0 失败;视觉:HTML 靶图对比,议程+事件点已对齐
+- 状态: ✅ 待 review
+
 ## 2026-07-01 02:44 · swift-align-27-visualdiff-capture-layout
 - 对齐: 视觉 diff · 速记模块布局(靶图 /tmp/html-cap.png)
 - HTML 基线: V.cap(.vh / .capin / .caprow / .sendb)

@@ -597,12 +597,16 @@ struct NotchView: View {
                     let inMonth = cal.component(.month, from: d) == dmMonth
                     let isToday = cal.isDateInToday(d)
                     let selected = inMonth && day == model.calSelectedDay
+                    let hasEvent = inMonth && calEventDays.contains(day)
                     VStack(spacing: 6) {
                         Text(calWeekLabels[i]).font(.system(size: 9, weight: .bold)).foregroundStyle(.white.opacity(0.34))
                         Text("\(day)").font(.system(size: 21, weight: .heavy)).foregroundStyle(isToday ? accent : .white)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 9)
+                    .overlay(alignment: .bottom) {
+                        if hasEvent { Circle().fill(accent).frame(width: 4, height: 4).padding(.bottom, 3) }
+                    }
                     .background {
                         if isToday { RoundedRectangle(cornerRadius: 13).fill(.white.opacity(0.06)) }
                         else if selected { RoundedRectangle(cornerRadius: 13).stroke(accent, lineWidth: 1.5) }
@@ -664,6 +668,7 @@ struct NotchView: View {
         let out = cal.component(.month, from: d) != displayedMonth
         let isToday = cal.isDateInToday(d)
         let selected = !out && day == model.calSelectedDay
+        let hasEvent = !out && calEventDays.contains(day)
         return ZStack {
             if isToday { Circle().fill(.white).frame(width: 26, height: 26) }
             else if selected { Circle().stroke(accent, lineWidth: 1.5).frame(width: 26, height: 26) }
@@ -672,26 +677,60 @@ struct NotchView: View {
                 .foregroundStyle(isToday ? Color(red: 0.05, green: 0.06, blue: 0.07) : (out ? .white.opacity(0.2) : .white.opacity(0.86)))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(alignment: .bottom) {
+            if hasEvent { Circle().fill(accent).frame(width: 4, height: 4).padding(.bottom, 1) }
+        }
         .contentShape(Rectangle())
         .onTapGesture { if !out { model.calSelectDay(day) } }
     }
 
-    // Agenda (calR): selected-day header + events. Per-day events need a backend
-    // date-range query; for now today's events show, other days are empty.
-    // TODO(align-cal): wire per-day events once the backend exposes them.
+    // Calendar demo data (HTML EVENTS / CAL_ITEMS). Per-day real events need a
+    // backend date-range query — out of scope; we mirror the HTML mock.
+    private struct CalMockItem { let start: String; let end: String; let title: String; let loc: String; let color: Color }
+
+    private func calMockItems(day: Int) -> [CalMockItem] {
+        guard model.calMonthOffset == 0 else { return [] }
+        let td = Calendar.current.component(.day, from: Date())
+        let blue = Color(red: 0.04, green: 0.52, blue: 1), purple = Color(red: 0.48, green: 0.38, blue: 1)
+        let d2 = ((td - 2 + 27) % 28) + 1, d3 = ((td + 2) % 28) + 1, d4 = ((td + 7) % 28) + 1
+        if day == td {
+            return [
+                .init(start: "09:00", end: "09:30", title: "Team standup", loc: "Zoom · Building 2, Floor 3", color: blue),
+                .init(start: "11:00", end: "12:00", title: "Product review", loc: "Conference Room A · 1st floor", color: blue),
+                .init(start: "13:00", end: "14:00", title: "Lunch with Sarah", loc: "The Green Kitchen · 42 Main St", color: .green),
+                .init(start: "15:00", end: "16:30", title: "Deep work block", loc: "Focus Room B", color: purple),
+            ]
+        }
+        if day == d2 { return [.init(start: "09:00", end: "", title: "交周报", loc: "", color: .orange)] }
+        if day == d3 {
+            return [.init(start: "", end: "", title: "随手记:刘海配色换 teal", loc: "", color: purple),
+                    .init(start: "14:00", end: "15:00", title: "设计评审", loc: "Zoom", color: blue)]
+        }
+        if day == d4 { return [.init(start: "", end: "", title: "发布 Helm v0.2", loc: "", color: .green)] }
+        return []
+    }
+
+    /// Days-of-month carrying items → event dots in the grid/strip (HTML CAL_EVDAYS).
+    private var calEventDays: Set<Int> {
+        guard model.calMonthOffset == 0 else { return [] }
+        let td = Calendar.current.component(.day, from: Date())
+        return [td, ((td - 2 + 27) % 28) + 1, ((td + 2) % 28) + 1, ((td + 7) % 28) + 1]
+    }
+
+    // Agenda (calR): selected-day header + events (start/end · title · location · dot).
     private func calAgenda(_ dm: Date) -> some View {
         let cal = Calendar.current
         let isToday = model.calMonthOffset == 0 && model.calSelectedDay == cal.component(.day, from: Date())
-        let events = isToday ? model.events : []
+        let items = calMockItems(day: model.calSelectedDay)
         return VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline) {
                 Text("\(isToday ? "今天 · " : "")\(cal.component(.month, from: dm))月\(model.calSelectedDay)日")
                     .font(.system(size: 13, weight: .heavy)).foregroundStyle(.white)
                 Spacer()
-                Text(events.isEmpty ? "无安排" : "\(events.count) 项").font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
+                Text(items.isEmpty ? "无安排" : "\(items.count) 项").font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
             }
             .padding(.bottom, 4)
-            if events.isEmpty {
+            if items.isEmpty {
                 VStack(spacing: 9) {
                     Spacer()
                     Text("这天没有安排").font(.system(size: 12)).foregroundStyle(.white.opacity(0.34))
@@ -701,18 +740,28 @@ struct NotchView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(events) { ev in
+                    ForEach(items.indices, id: \.self) { i in
+                        let ev = items[i]
                         HStack(alignment: .top, spacing: 11) {
-                            Text(ev.when).font(.system(size: 12, weight: .heavy)).foregroundStyle(accent)
-                                .frame(width: 44, alignment: .leading).monospacedDigit()
+                            VStack(alignment: .leading, spacing: 0) {
+                                Text(ev.start.isEmpty ? "·" : ev.start).font(.system(size: 13, weight: .heavy)).foregroundStyle(accent).monospacedDigit()
+                                if !ev.end.isEmpty { Text(ev.end).font(.system(size: 11)).foregroundStyle(.white.opacity(0.34)).monospacedDigit() }
+                            }
+                            .frame(width: 44, alignment: .leading)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(ev.summary).font(.system(size: 13, weight: .bold)).foregroundStyle(.white).lineLimit(1)
+                                Text(ev.title).font(.system(size: 13, weight: .bold)).foregroundStyle(.white).lineLimit(1)
+                                if !ev.loc.isEmpty {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "mappin").font(.system(size: 8)).foregroundStyle(.white.opacity(0.34))
+                                        Text(ev.loc).font(.system(size: 11)).foregroundStyle(.white.opacity(0.56)).lineLimit(1)
+                                    }
+                                }
                             }
                             Spacer(minLength: 0)
-                            Circle().fill(accent).frame(width: 7, height: 7).padding(.top, 5)
+                            Circle().fill(ev.color).frame(width: 7, height: 7).padding(.top, 5)
                         }
                         .padding(.vertical, 9)
-                        .overlay(alignment: .bottom) { Rectangle().fill(.white.opacity(0.09)).frame(height: 0.5) }
+                        .overlay(alignment: .bottom) { if i < items.count - 1 { Rectangle().fill(.white.opacity(0.09)).frame(height: 0.5) } }
                     }
                 }
             }
