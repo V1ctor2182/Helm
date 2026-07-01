@@ -31,6 +31,7 @@ struct SettingsView: View {
                 tapRow("随机一套", sub: "背景+主题随机,自动保证对比清晰", action: "随机 ↻") {
                     model.randomTheme()
                 }
+                toggleRow("每天随机一套", sub: "背景+主题每天自动换,保证对比清晰", isOn: $model.dailyRandomTheme)
 
                 section("HELM 后端")
                 connectionRow
@@ -177,6 +178,19 @@ struct SettingsView: View {
                         .buttonStyle(.plain).font(.system(size: 11, weight: .semibold)).foregroundStyle(accent)
                 }
             }
+        }
+        .padding(.vertical, 9)
+        .overlay(alignment: .bottom) { Rectangle().fill(hair).frame(height: 0.5) }
+    }
+
+    private func toggleRow(_ name: String, sub: String, isOn: Binding<Bool>) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name).font(.system(size: 13, weight: .semibold)).foregroundStyle(t1)
+                Text(sub).font(.system(size: 10)).foregroundStyle(t3)
+            }
+            Spacer()
+            Toggle("", isOn: isOn).labelsHidden().toggleStyle(.switch).tint(accent)
         }
         .padding(.vertical, 9)
         .overlay(alignment: .bottom) { Rectangle().fill(hair).frame(height: 0.5) }

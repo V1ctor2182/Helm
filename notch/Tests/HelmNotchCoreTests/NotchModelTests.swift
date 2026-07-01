@@ -147,6 +147,25 @@ final class NotchModuleTests: XCTestCase {
         XCTAssertLessThan(Theme.luminance(safe), Theme.luminance(amber))  // darkened
     }
 
+    func testDailyThemeChoiceIsDeterministicPerDay() {
+        let d1 = Date(timeIntervalSince1970: 1_800_000_000)  // some fixed day
+        let a = NotchModel.dailyThemeChoice(for: d1)
+        let b = NotchModel.dailyThemeChoice(for: d1.addingTimeInterval(3600))  // same day
+        XCTAssertEqual(a.0, b.0)
+        XCTAssertEqual(a.1, b.1)
+        let c = NotchModel.dailyThemeChoice(for: d1.addingTimeInterval(86_400 * 3))  // 3 days later
+        XCTAssertTrue(a.0 != c.0 || a.1 != c.1)  // different day → (very likely) different set
+    }
+
+    @MainActor
+    func testDailyRandomThemeIsContrastSafeAndOwnsTheme() {
+        let model = NotchModel(backend: FakeBackend())
+        model.dailyRandomTheme = true
+        XCTAssertEqual(model.themeMode, .fixed)
+        let bg = Theme.materialBackground(model.backgroundMaterial)
+        XCTAssertGreaterThanOrEqual(Theme.contrast(model.accent, bg), 3.0)
+    }
+
     @MainActor
     func testRandomThemeAlwaysContrastSafe() {
         let model = NotchModel(backend: FakeBackend())

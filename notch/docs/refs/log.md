@@ -6,6 +6,17 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-01 02:20 · swift-align-24-daily-random-theme
+- 对齐: 「每天随机一套」dailyRandTheme(随机主题最后一块)
+- HTML 基线: dailyRandTheme()(di 日种子 LCG 选材质+palette+while 对比≥3.2)+ cfg.dailytheme toggle
+- HTML↔实际对比: 我有 randomTheme 但没每天自动版。
+- 做了: Core +dailyRandomTheme cfg + nonisolated dailyThemeChoice(di 种子 LCG,当天稳定/午夜变);refreshTheme 重构(开时走日种子+applyingTheme 重入守卫);randomTheme 先关 dailyRandomTheme。设置加 toggleRow(.switch tint accent)(+2 测)。
+- 取舍: 开时 daily 接管(盖过手动 mode/material,合 HTML 语义);日种子确定性(每天稳定+变化即可)。
+- Swift 改动: HelmNotchCore/NotchModel.swift(dailyRandomTheme/refreshTheme/dailyThemeChoice)、HelmNotchApp/SettingsView.swift(toggleRow+开关)、Tests(+2)
+- VibeHub: record_decision「每天随机一套」→ 31c94ee2-19cd-4d97-b94d-c81ae0163810 (ai_proposed)
+- 验证: swift build ✓ / swift test 59 通过 0 失败(修 1 轮 nonisolated);视觉:逻辑对齐 HTML,实机待用户
+- 状态: ✅ 待 review  |  随机主题(randomTheme+dailyRandTheme)全端口完
+
 ## 2026-07-01 02:12 · swift-align-23-random-theme
 - 对齐: 「随机一套」randomTheme(用户「html 里面还有随机什么的」)
 - HTML 基线: randomTheme()(随机材质+随机 palette+while 对比≥3.2+applyMat/applyAccent+flash)

@@ -193,6 +193,11 @@ public final class NotchModel {
 
     /// Notch background material (HTML MATS). Default black keeps the current look.
     public var backgroundMaterial: NotchMaterial = .black { didSet { refreshTheme() } }
+    /// 每天随机一套 (HTML cfg.dailytheme): a day-seeded material + accent, refreshed
+    /// on midnight rollover. When on, it owns the theme (overrides mode/material).
+    public var dailyRandomTheme = false { didSet { refreshTheme() } }
+    /// Guards `refreshTheme` re-entrancy (it assigns material, whose didSet re-calls it).
+    private var applyingTheme = false
     public var themeMode: ThemeMode = .daily { didSet { refreshTheme() } }
     public var fixedColorIndex = 0 { didSet { refreshTheme() } }
     /// The current accent color (recomputed each poll so it flips at midnight).
@@ -301,19 +306,45 @@ public final class NotchModel {
         }
     }
 
-    /// Recompute the accent for today under the current mode, then nudge it to
-    /// stay readable on the current background material (HTML contrast guarantee).
+    /// Recompute the accent for today, then nudge it to stay readable on the
+    /// current background material (HTML contrast guarantee). When 每天随机一套 is
+    /// on, a day-seeded material + accent takes over (HTML dailyRandTheme).
     public func refreshTheme() {
-        let base = Theme.accent(for: Date(), mode: themeMode, fixedIndex: fixedColorIndex)
-        accent = Theme.contrastSafeAccent(base, on: backgroundMaterial)
+        guard !applyingTheme else { return }
+        applyingTheme = true
+        defer { applyingTheme = false }
+        if dailyRandomTheme {
+            let (m, idx) = Self.dailyThemeChoice(for: Date())
+            backgroundMaterial = m          // didSet re-enters → guarded no-op
+            themeMode = .fixed
+            fixedColorIndex = idx
+            accent = Theme.contrastSafeAccent(Theme.palette[idx], on: m)
+        } else {
+            let base = Theme.accent(for: Date(), mode: themeMode, fixedIndex: fixedColorIndex)
+            accent = Theme.contrastSafeAccent(base, on: backgroundMaterial)
+        }
     }
 
     /// 随机一套 (HTML `randomTheme`): a random material + a random palette accent.
     /// Contrast is guaranteed by `refreshTheme` → `contrastSafeAccent`.
     public func randomTheme() {
+        dailyRandomTheme = false  // manual random overrides the daily-auto theme
         themeMode = .fixed
         fixedColorIndex = Int.random(in: 0..<Theme.palette.count)
         backgroundMaterial = NotchMaterial.allCases.randomElement() ?? .black  // didSet → refreshTheme
+    }
+
+    /// Deterministic per-day (material, palette index) — HTML `dailyRandTheme`'s
+    /// `di`-seeded LCG (stable within a day, changes at midnight).
+    nonisolated static func dailyThemeChoice(for date: Date) -> (NotchMaterial, Int) {
+        let di = Theme.dayIndex(date)
+        var seed = UInt64(UInt32(truncatingIfNeeded: di) &* 2_654_435_761) % 2_147_483_647
+        if seed == 0 { seed = 1 }
+        func rnd() -> Double { seed = (seed &* 48_271) % 2_147_483_647; return Double(seed) / 2_147_483_647 }
+        let mats = NotchMaterial.allCases
+        let m = mats[Int(rnd() * Double(mats.count)) % mats.count]
+        let idx = Int(rnd() * Double(Theme.palette.count)) % Theme.palette.count
+        return (m, idx)
     }
 
     /// Clamp + apply a user drag-resize of the expanded panel.
