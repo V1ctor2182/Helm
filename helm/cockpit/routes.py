@@ -25,7 +25,7 @@ from helm.cockpit.git import status as git_status
 from helm.cockpit.models import TerminalSession
 from fastapi import Request
 
-from helm.cockpit import fsops, thumbs
+from helm.cockpit import fsops, search as cksearch, thumbs
 from helm.cockpit.preview import WriteConflict, list_zip, read_text, write_text
 from helm.cockpit.service import ProjectService, list_dir, record_change
 from helm.cockpit.terminal import PtyProcess
@@ -195,6 +195,14 @@ def file_text_write(body: WriteTextBody) -> dict:
             detail={"error": "modified externally", "mtime": exc.mtime},
         ) from None
     return {"path": str(Path(body.path).expanduser()), "mtime": mtime}
+
+
+@router.get("/search")
+def cockpit_search(q: str, root: str, mode: str = "name") -> dict:
+    """⌘K 文件名/内容搜索(承 FanBox)。mode=name|content。"""
+    if mode == "content":
+        return cksearch.search_content(q, root)
+    return cksearch.search_files(q, root)
 
 
 @router.get("/thumb")

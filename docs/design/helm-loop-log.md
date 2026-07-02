@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-03 04:25 · phase3-round10-cmdk-search(夜间模式)· P1 第9条
+- 对齐: 阶段3 轮10——⌘K 文件名模糊+「内容:」全文搜索(FanBox app:1817-1914/srv:269-392)
+- 改动: 后端 +cockpit/search.py(fuzzyScore 原样移植:连续/词首/靠前加分+短名优先;search_files walk 60k/4s 预算+跳噪声目录+目录 +6/近期修改加权;search_content=mdfind 优先(runner 注入)→grep 兜底 ≤512KB 文本 mtime 倒序行级预览)+GET /api/cockpit/search(mode=name|content);前端 CommandPalette(命令+文件命中合并列/150ms 防抖+token 守卫/内容: 前缀切模式/Tab 切 当前目录↔全机/截断橙色提示/HIT·DIR·FILE mono 标+短路径/Enter→驾驶舱 openPath)
+- 功能可用性: e2e 真机:name 搜 DESIGN 命中(目录加权可见);内容:收敛规则 经真 mdfind 命中 loop 文档;UI 面板 HIT 行渲染;Enter 关面板直达驾驶舱预览命中文件
+- 取舍: mdfind 引擎无行级预览(FanBox 同);⌘↵ 编辑器整包打开(code CLI)留 P2 新条
+- 契约/notch 影响: 无(新增端点)
+- VibeHub: record_decision(F1)→ 见下条;矩阵 P1 9/14
+- 验证: 前端 build ✓/check 0/0(256 文件)/test 184(+2);后端 pytest 198(+3:fuzzy/grep 兜底/路由双模);视觉 dark 截图
+- 状态: ✅ 夜间自 commit(feat/cockpit-fanbox,未合 main)｜❓需确认: 无
+
 ## 2026-07-03 03:55 · phase3-round9-term-feel(夜间模式)· P1 第8条
 - 对齐: 阶段3 轮9——终端手感三小件(FanBox 1.11.2/1.11.3 手感级修复合集)
 - 改动: 前端 Terminal(xterm 选项:macOptionClickForcesSelection——TUI 鼠标上报吃拖拽,Option+拖拽强制选中;minimumContrastRatio 4.5——深色 agent 输出浅皮肤不隐形;Nerd Font 栈原样——starship 字形不出 tofu);后端 terminal_ws 抽 shell_argv_env 纯函数(login shell -l 找回 .zprofile 的 Homebrew/nvm PATH——「普通终端能找到 claude、helm 找不到」的病根;TERM=xterm-256color;GUI 无 locale 兜底 zh_CN.UTF-8 防中文路径乱码;已有 UTF-8 不动)

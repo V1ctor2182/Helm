@@ -436,3 +436,44 @@ def test_shell_argv_env_login_and_utf8():
     assert "LANG" not in env2 or "UTF-8" in (env2.get("LANG") or env2["LC_ALL"])
     assert env2["LC_ALL"] == "en_US.UTF-8"
 
+# ---- ⌘K search(阶段3 FanBox 对齐:fuzzy/grep/mdfind 兜底) -----------------
+
+
+def test_search_files_fuzzy(config, tmp_path):
+    from helm.cockpit.search import fuzzy_score, search_files
+
+    assert fuzzy_score("abc", "a/b/c.md") > 0
+    assert fuzzy_score("xyz", "abc") == -1
+    (tmp_path / "helm-notes").mkdir()
+    (tmp_path / "helm-notes" / "readme.md").write_text("x", encoding="utf-8")
+    (tmp_path / "other.txt").write_text("x", encoding="utf-8")
+    r = search_files("helm", str(tmp_path))
+    names = [m["name"] for m in r["results"]]
+    assert "helm-notes" in names  # 目录加权浮出
+    assert "other.txt" not in names
+
+
+def test_search_content_grep_fallback(config, tmp_path):
+    import subprocess as sp
+
+    from helm.cockpit.search import search_content
+
+    (tmp_path / "note.md").write_text("line one\n收敛规则在这里\n", encoding="utf-8")
+
+    def no_mdfind(argv, **kw):
+        return sp.CompletedProcess(argv, 1, stdout="", stderr="not available")
+
+    r = search_content("收敛规则", str(tmp_path), runner=no_mdfind)
+    assert r["engine"] == "grep"
+    assert r["results"][0]["path"].endswith("note.md")
+    assert "收敛规则" in r["results"][0]["line"] and r["results"][0]["line_no"] == 2
+
+
+def test_search_route_modes(config, tmp_path):
+    c = TestClient(create_app(config))
+    (tmp_path / "target.md").write_text("hello helm search", encoding="utf-8")
+    r = c.get("/api/cockpit/search", params={"q": "target", "root": str(tmp_path)}).json()
+    assert any(m["name"] == "target.md" for m in r["results"])
+    r2 = c.get("/api/cockpit/search", params={"q": "hello helm", "root": str(tmp_path), "mode": "content"}).json()
+    assert r2["results"] and r2["results"][0]["path"].endswith("target.md")
+
