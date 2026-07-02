@@ -6,8 +6,9 @@ export interface IconSpec {
   color: string
 }
 
-const FOLDER: IconSpec = { glyph: '📁', color: '#8a8f98' }
-const GENERIC: IconSpec = { glyph: '📄', color: '#8a8f98' }
+// 禁 emoji(DESIGN.md 硬规):目录/通用文件用等宽字形
+const FOLDER: IconSpec = { glyph: 'DIR', color: '#8a8f98' }
+const GENERIC: IconSpec = { glyph: '·', color: '#8a8f98' }
 
 const BY_EXT: Record<string, IconSpec> = {
   pdf: { glyph: 'PDF', color: '#e5484d' },

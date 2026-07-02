@@ -94,6 +94,23 @@
 
   const parent = $derived(cockpit.cwd ? parentOf(cockpit.cwd) : null)
 
+  // 排序:目录永远在前;name=zh locale+numeric,mtime/size 降序(承 FanBox)
+  const sortedEntries = $derived(
+    [...cockpit.entries].sort((a, b) => {
+      if (a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1
+      if (cockpit.sortKey === 'mtime') return (b.mtime ?? 0) - (a.mtime ?? 0)
+      if (cockpit.sortKey === 'size') return b.size - a.size
+      return a.name.localeCompare(b.name, 'zh', { numeric: true, sensitivity: 'base' })
+    }),
+  )
+
+  function fmtTime(mtime?: number): string {
+    if (!mtime) return '—'
+    const d = new Date(mtime * 1000)
+    const p = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+  }
+
   function fmtSize(n: number): string {
     if (n < 1024) return `${n} B`
     if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`
@@ -132,6 +149,36 @@
     {/if}
   </form>
 
+  {#if cockpit.cwd}
+    <div class="viewbar">
+      <span class="vseg" role="tablist" aria-label="视图">
+        <button class="vact" class:on={cockpit.viewMode === 'grid'} role="tab" aria-selected={cockpit.viewMode === 'grid'} onclick={() => cockpit.setViewMode('grid')}>网格</button>
+        <button class="vact" class:on={cockpit.viewMode === 'list'} role="tab" aria-selected={cockpit.viewMode === 'list'} onclick={() => cockpit.setViewMode('list')}>列表</button>
+      </span>
+      {#if cockpit.viewMode === 'grid'}
+        <span class="vseg" role="radiogroup" aria-label="网格尺寸">
+          {#each ['sm', 'md', 'lg'] as g (g)}
+            <button class="vact" class:on={cockpit.gridSize === g} role="radio" aria-checked={cockpit.gridSize === g} onclick={() => cockpit.setGridSize(g as 'sm' | 'md' | 'lg')}>{g.toUpperCase()}</button>
+          {/each}
+        </span>
+      {/if}
+      <select
+        class="vsel"
+        aria-label="排序"
+        value={cockpit.sortKey}
+        onchange={(e) => cockpit.setSortKey((e.target as HTMLSelectElement).value as 'name' | 'mtime' | 'size')}
+      >
+        <option value="name">按名称</option>
+        <option value="mtime">按修改时间</option>
+        <option value="size">按大小</option>
+      </select>
+      <label class="vhid">
+        <input type="checkbox" class="vcbx" checked={cockpit.showHidden} onchange={() => void cockpit.toggleHidden()} aria-label="显示隐藏文件" />
+        隐藏文件
+      </label>
+    </div>
+  {/if}
+
   {#if cockpit.error}
     <p class="error">{cockpit.error}</p>
   {/if}
@@ -153,8 +200,30 @@
       </div>
     {/if}
   {:else}
-    <div class="grid">
-      {#each cockpit.entries as e (e.path)}
+    {#if cockpit.viewMode === 'list'}
+      <div class="flist" role="table" aria-label="文件列表">
+        <div class="fhead" role="row">
+          <span class="fname">名称</span><span class="ftime">修改时间</span><span class="fsize">大小</span>
+        </div>
+        {#each sortedEntries as e (e.path)}
+          {@const ic = iconFor(e)}
+          <button
+            class="frow"
+            class:selected={cockpit.selected?.path === e.path}
+            class:changed={cockpit.changedPaths.has(e.path)}
+            onclick={() => cockpit.select(e)}
+            oncontextmenu={(ev) => openMenu(ev, e)}
+            role="row"
+          >
+            <span class="fname"><span class="icon" style="color:{ic.color}">{ic.glyph}</span> {e.name}</span>
+            <span class="ftime">{fmtTime(e.mtime)}</span>
+            <span class="fsize">{e.is_dir ? '—' : fmtSize(e.size)}</span>
+          </button>
+        {/each}
+      </div>
+    {:else}
+    <div class="grid g-{cockpit.gridSize}">
+      {#each sortedEntries as e (e.path)}
         {@const ic = iconFor(e)}
         <button
           class="card"
@@ -169,6 +238,7 @@
         </button>
       {/each}
     </div>
+    {/if}
   {/if}
 
   {#if menu}
@@ -388,6 +458,136 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 8px;
+  }
+  .grid.g-sm {
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  }
+  .grid.g-lg {
+    grid-template-columns: repeat(auto-fill, minmax(156px, 1fr));
+  }
+  .viewbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .vseg {
+    display: flex;
+    gap: 6px;
+  }
+  .vact {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: .5px;
+    color: var(--t4);
+    background: transparent;
+    border: 1px solid var(--line);
+    padding: 2px 8px;
+    cursor: pointer;
+    transition: color .12s var(--ease);
+  }
+  .vact:hover {
+    color: var(--t1);
+  }
+  .vact.on {
+    color: var(--acc-ink);
+    border-color: var(--acc-ink);
+  }
+  .vsel {
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--hair);
+    color: var(--t3);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 2px 0 4px;
+  }
+  .vsel option {
+    background: var(--panel);
+    color: var(--t1);
+  }
+  .vsel:focus {
+    outline: none;
+    border-bottom-color: var(--acc-ink);
+  }
+  .vhid {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--t3);
+    cursor: pointer;
+    margin-left: auto;
+  }
+  .vcbx {
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border: 1.4px solid var(--t4);
+    background: transparent;
+    cursor: pointer;
+    margin: 0;
+  }
+  .vcbx:checked {
+    border-color: var(--acc-ink);
+    background: var(--acc);
+  }
+  /* 列表视图:发丝行 + mono 列 */
+  .flist {
+    display: flex;
+    flex-direction: column;
+  }
+  .fhead {
+    display: grid;
+    grid-template-columns: 1fr 150px 80px;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    color: var(--t4);
+    padding: 3px 6px 5px;
+    border-bottom: 1px solid var(--hair);
+  }
+  .frow {
+    display: grid;
+    grid-template-columns: 1fr 150px 80px;
+    gap: 10px;
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--hair);
+    padding: 4px 6px;
+    cursor: pointer;
+    text-align: left;
+    font-size: 12.5px;
+    color: var(--t2);
+  }
+  .frow:hover {
+    color: var(--t1);
+  }
+  .frow.selected {
+    border-left: 2px solid var(--acc);
+    padding-left: 4px;
+  }
+  .frow.changed {
+    animation: flash 1.2s ease-out;
+  }
+  .frow .fname {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .frow .ftime,
+  .frow .fsize,
+  .fhead .ftime,
+  .fhead .fsize {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--t4);
+    font-variant-numeric: tabular-nums;
   }
   /* 文件瓦片:1px 线框、零圆角(仪表瓦片,非填充卡) */
   .card {

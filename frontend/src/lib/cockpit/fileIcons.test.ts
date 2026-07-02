@@ -3,7 +3,7 @@ import { iconFor } from './fileIcons'
 
 describe('iconFor', () => {
   it('folders get the folder icon', () => {
-    expect(iconFor({ is_dir: true, ext: '' }).glyph).toBe('📁')
+    expect(iconFor({ is_dir: true, ext: '' }).glyph).toBe('DIR')
   })
 
   it('known extensions get strong-color specs', () => {
@@ -13,6 +13,6 @@ describe('iconFor', () => {
   })
 
   it('unknown extension falls back to generic', () => {
-    expect(iconFor({ is_dir: false, ext: 'xyz' }).glyph).toBe('📄')
+    expect(iconFor({ is_dir: false, ext: 'xyz' }).glyph).toBe('·')
   })
 })

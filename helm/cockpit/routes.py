@@ -44,9 +44,9 @@ def _project_dict(p) -> dict:
 
 
 @router.get("/files")
-def browse(path: str, session: Session = Depends(db_session)) -> dict:
+def browse(path: str, hidden: bool = False, session: Session = Depends(db_session)) -> dict:
     try:
-        entries = list_dir(path)
+        entries = list_dir(path, show_hidden=hidden)
     except (NotADirectoryError, FileNotFoundError):
         raise HTTPException(status_code=404, detail="not a directory") from None
     except PermissionError:
@@ -60,6 +60,7 @@ def browse(path: str, session: Session = Depends(db_session)) -> dict:
                 "is_dir": e.is_dir,
                 "size": e.size,
                 "ext": e.ext,
+                "mtime": e.mtime,
             }
             for e in entries
         ],

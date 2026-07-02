@@ -343,3 +343,14 @@ def test_fs_trash_via_finder(config, tmp_path):
     with _pytest.raises(PermissionError):
         fsops.move_to_trash(str(f), runner=fail_run)
 
+def test_files_hidden_toggle_and_mtime(config, tmp_path):
+    c = TestClient(create_app(config))
+    (tmp_path / "a.txt").write_text("x", encoding="utf-8")
+    (tmp_path / ".secret").write_text("x", encoding="utf-8")
+    names = [e["name"] for e in c.get("/api/cockpit/files", params={"path": str(tmp_path)}).json()["entries"]]
+    assert "a.txt" in names and ".secret" not in names  # 默认隐藏点文件
+    names2 = [e["name"] for e in c.get("/api/cockpit/files", params={"path": str(tmp_path), "hidden": "true"}).json()["entries"]]
+    assert ".secret" in names2
+    ent = next(e for e in c.get("/api/cockpit/files", params={"path": str(tmp_path)}).json()["entries"] if e["name"] == "a.txt")
+    assert ent["mtime"] > 0
+

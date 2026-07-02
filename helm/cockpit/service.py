@@ -58,6 +58,7 @@ class DirEntry:
     is_dir: bool
     size: int
     ext: str
+    mtime: float = 0.0
 
 
 def detect_badges(folder: Path) -> list[str]:
@@ -69,16 +70,21 @@ def detect_badges(folder: Path) -> list[str]:
     return badges
 
 
-def list_dir(path: str) -> list[DirEntry]:
-    """List a directory: dirs first, then files, each alphabetical."""
+def list_dir(path: str, show_hidden: bool = False) -> list[DirEntry]:
+    """List a directory: dirs first, then files, each alphabetical.
+    Hidden (dot) entries are skipped unless ``show_hidden``(承 FanBox 开关)."""
     base = Path(path).expanduser()
     if not base.is_dir():
         raise NotADirectoryError(path)
     entries: list[DirEntry] = []
     for child in base.iterdir():
+        if not show_hidden and child.name.startswith("."):
+            continue
         try:
+            st = child.stat()
             is_dir = child.is_dir()
-            size = 0 if is_dir else child.stat().st_size
+            size = 0 if is_dir else st.st_size
+            mtime = st.st_mtime
         except OSError:
             continue  # unreadable entry — skip rather than fail the listing
         entries.append(
@@ -88,6 +94,7 @@ def list_dir(path: str) -> list[DirEntry]:
                 is_dir=is_dir,
                 size=size,
                 ext="" if is_dir else child.suffix.lower().lstrip("."),
+                mtime=mtime,
             )
         )
     entries.sort(key=lambda e: (not e.is_dir, e.name.lower()))

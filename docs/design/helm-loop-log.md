@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 23:35 · phase3-round6-views-sort(夜间模式)· P1 第5条
+- 对齐: 阶段3 轮6——列表/网格双视图+排序+隐藏文件开关(FanBox app:340-401/2132-2146)
+- 改动: 后端 list_dir(+show_hidden 参数,默认隐藏点文件——旧行为是全显;DirEntry+mtime,/files 响应带 mtime);前端 cockpit store(viewMode/gridSize/sortKey/showHidden 四偏好 localStorage 持久化+toggleHidden refetch);FileBrowser(viewbar:网格|列表切换/SM·MD·LG 三档/排序 select 名称·mtime·size/隐藏 checkbox;列表视图=mono 表头+发丝行+tabular 时间列;排序 zh locale+numeric、目录永远在前、时间/大小降序);顺手修 fileIcons 📁📄 emoji 违规(→DIR/·)
+- 功能可用性: e2e 真机(helm 仓):默认 0 个点文件→开关后 11 个;列表视图表头+20 行;mtime 排序目录在前;偏好持久化(list,mtime);pytest 覆盖 hidden 参数+mtime
+- 取舍: 默认隐藏点文件是行为变化(对齐 FanBox/Finder 习惯),开关在手;列表视图未做点击表头排序(select 已覆盖,FanBox 也是工具栏切)
+- 契约/notch 影响: 无(响应加字段/加可选参数,向后兼容)
+- VibeHub: record_decision(F1)→ 见下条;矩阵 P1 5/14
+- 验证: 前端 build ✓/check 0/0(254 文件)/test 178(+2);后端 pytest 191(+1);视觉 dark 列表截图
+- 状态: ✅ 夜间自 commit(feat/cockpit-fanbox,未合 main)｜❓需确认: 无
+
 ## 2026-07-02 23:00 · phase3-round5-fs-ops(夜间模式)· P1 第4条
 - 对齐: 阶段3 轮5——文件操作三件套+右键菜单(FanBox app:1384-1453/1638-1677/srv:436-480)
 - 改动: 后端 +cockpit/fsops.py(valid_name 拒分隔符与 ../make_dir/make_file/rename_path/move_to_trash——macOS Finder AppleScript,路径走 argv 防注入+as alias,-1743/-600 授权人话,TimeoutExpired 超时人话,非 mac 拒绝不硬删)+4 个 /fs/* 路由(400/404/409/403/500 映射);前端 cockpit store +mkdir/newFile(建即选中)/renameEntry/trash(server detail 透出);FileBrowser +右键菜单(卡片按类型/空白处新建,钳制窗口内,点外/Esc 关)+自绘对话框(重命名/新建/文件夹删除轻确认,Enter/Esc)

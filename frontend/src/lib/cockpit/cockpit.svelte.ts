@@ -11,6 +11,7 @@ export interface Entry {
   is_dir: boolean
   size: number
   ext: string
+  mtime?: number
 }
 
 export interface Project {
@@ -21,10 +22,58 @@ export interface Project {
 }
 
 export class CockpitStore {
+  constructor() {
+    try {
+      const v = localStorage.getItem('helm-ck-view')
+      if (v === 'list' || v === 'grid') this.viewMode = v
+      const g = localStorage.getItem('helm-ck-gridsize')
+      if (g === 'sm' || g === 'md' || g === 'lg') this.gridSize = g
+      const k = localStorage.getItem('helm-ck-sort')
+      if (k === 'name' || k === 'mtime' || k === 'size') this.sortKey = k
+      this.showHidden = localStorage.getItem('helm-ck-hidden') === '1'
+    } catch {
+      /* jsdom */
+    }
+  }
+
+  #savePref(key: string, val: string): void {
+    try {
+      localStorage.setItem(key, val)
+    } catch {
+      /* jsdom */
+    }
+  }
+
+  setViewMode(v: 'grid' | 'list'): void {
+    this.viewMode = v
+    this.#savePref('helm-ck-view', v)
+  }
+
+  setGridSize(g: 'sm' | 'md' | 'lg'): void {
+    this.gridSize = g
+    this.#savePref('helm-ck-gridsize', g)
+  }
+
+  setSortKey(k: 'name' | 'mtime' | 'size'): void {
+    this.sortKey = k
+    this.#savePref('helm-ck-sort', k)
+  }
+
+  async toggleHidden(): Promise<void> {
+    this.showHidden = !this.showHidden
+    this.#savePref('helm-ck-hidden', this.showHidden ? '1' : '0')
+    if (this.cwd) await this.browse(this.cwd)
+  }
+
   cwd = $state<string | null>(null)
   entries = $state<Entry[]>([])
   projects = $state<Project[]>([])
   selected = $state<Entry | null>(null)
+  // 视图偏好(承 FanBox:双视图/三档网格/排序/隐藏开关,localStorage 持久化)
+  viewMode = $state<'grid' | 'list'>('grid')
+  gridSize = $state<'sm' | 'md' | 'lg'>('md')
+  sortKey = $state<'name' | 'mtime' | 'size'>('name')
+  showHidden = $state(false)
   error = $state<string | null>(null)
   changedPaths = $state<Set<string>>(new Set())
   followMode = $state(false)
@@ -34,7 +83,7 @@ export class CockpitStore {
 
   async browse(path: string): Promise<void> {
     try {
-      const res = await fetch(`/api/cockpit/files?path=${encodeURIComponent(path)}`)
+      const res = await fetch(`/api/cockpit/files?path=${encodeURIComponent(path)}${this.showHidden ? '&hidden=true' : ''}`)
       if (!res.ok) {
         this.error = '无法打开该目录'
         return
