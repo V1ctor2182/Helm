@@ -6,6 +6,18 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 15:35 · phase2-round10-agentview（夜间模式）· F5 编排切片
+- 对齐: 阶段2 第10轮——AgentView 座舱化(清 backlog P1;此前 10 个 emoji 图标违禁最重)
+- 设计基线: DESIGN.md(框选视口=活的输出/mono 标签/语义色配给/禁 emoji;未改)
+- 改动: `orchestration/AgentView.svelte`(重写:AGENT 观测 tag+状态描边徽章、caret 指令输入、ACP 事件流=框选视口+mono 类型标签 SESS/MSG/TOOL/OK/ERR/PERM/RATE/END+语义色调、历史发丝行;事件文案与 reducer 一字未动)
+- 功能可用性: 视图渲染+空态 e2e 核过;真跑 agent=付费 Claude Code 不实跑(m3 stub 测试链覆盖;真实格式核对归既有 needs-human df66321e);只读消费 /api/orchestration/runs(notch 共用端点未改)
+- 取舍: tool_call 联动驾驶舱高亮(既有)保留;多后端/多 agent Teams 仍 P1 期(用户已拍板)
+- 复查: 清 P1×1;全部 8 个模式视图至此全部座舱化完毕
+- 契约/notch 影响: 无(未改共用端点,只读消费)
+- VibeHub: record_decision「阶段2·轮10 AgentView 座舱化」→ 27dbe441 (ai_proposed, F5)
+- 验证: npm build ✓/check 0 错 0 警(248 文件)/test 155;视觉 dev 5174 dark+light 核过
+- 状态: ✅ 夜间自 commit(feat/design-shell-today,未合 main)｜❓需确认: 无
+
 ## 2026-07-02 15:20 · phase2-round9-cockpit（夜间模式）· F1 驾驶舱切片1
 - 对齐: 阶段2 第9轮——驾驶舱主视图(分栏/文件瓦片/预览)座舱化 + Monaco Diff 跟随双主题
 - 设计基线: DESIGN.md(瓦片零圆角/发丝/accent 底线 tab/语义绿=活动;未改)
