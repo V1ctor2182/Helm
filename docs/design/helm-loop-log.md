@@ -1,7 +1,7 @@
 # Helm 主工作台 对齐 Loop · 处理流水
 
 > 每把 `helm-pro.html`(锁定设计稿/只读)+ `DESIGN.md`(token/规则)的一块对齐进 Svelte 前端,loop 在这里追加一条。格式见 `helm-loop-procedure.md` 附录 C。
-> 设计稿只读、不改。**阶段 1**(前端保真):改 `frontend/src/`,硬门 `npm run build`+`check`+`test`。**阶段 2**(后端接入+暴露给 notch):把 mock 换真数据、做 notch 共用契约,硬门追加 `pytest`(改后端)/ `cd notch && swift build && swift test`(改 notch 契约)。视觉门:browse 靶图对比(dark+light),真数据不许破版。
+> 设计稿只读、不改。**阶段 1**(前端外壳保真,已完成/合入 main):改 `frontend/src/`,硬门 `npm run build`+`check`+`test`。**阶段 2**(逐模块完善·让所有功能真能用):每个模式从占位做成端到端可用——设计视图(按 DESIGN.md 系统)+ 建 Svelte UI + 接真 `/api` + 守 notch 契约;硬门追加 `pytest`(改后端)/ `cd notch && swift build && swift test`(改 notch 契约)。视觉门:browse dark/light,做成真能用不是画壳。
 > 最新在最上面。
 
 <!-- 新条目追加到这条注释下面 -->
