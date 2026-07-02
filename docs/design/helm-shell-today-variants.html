@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Helm · Shell + Today · 三方向变体</title>
+<style>
+  :root{
+    /* accent + daily shift (single source of truth) */
+    --accent:#FFC53D;
+    --green:#34C759;--orange:#FF9F0A;--cyan:#34D6C0;--blue:#0A84FF;--red:#FF453A;--purple:#7B61FF;
+    /* text tiers */
+    --t1:#ffffff;--t2:rgba(255,255,255,.82);--t3:rgba(255,255,255,.56);--t4:rgba(255,255,255,.35);
+    --hair:rgba(255,255,255,.06);--hair2:rgba(255,255,255,.09);
+    --tile:#131315;--tile2:#1a1a1c;--tile3:#262628;
+    --ease:cubic-bezier(.32,.72,0,1);
+    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Rounded","Helvetica Neue",sans-serif;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#08080a;color:var(--t2);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+  a{color:inherit}
+
+  /* ---------- page scaffold ---------- */
+  .page{max-width:1320px;margin:0 auto;padding:34px 28px 90px}
+  .masthead{display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap;margin-bottom:6px}
+  .brandmark{width:34px;height:34px;color:var(--accent)}
+  .masthead h1{font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--t1);margin:0}
+  .masthead .sub{font-size:12px;color:var(--t4);font-family:var(--mono);margin-bottom:3px}
+  .northstar{margin:14px 0 22px;font-size:13px;color:var(--t3);line-height:1.6;max-width:900px}
+  .northstar b{color:var(--t1);font-weight:600}
+  .northstar .amber{color:var(--accent)}
+
+  /* legend / tokens strip */
+  .legend{display:flex;gap:26px;flex-wrap:wrap;align-items:center;padding:14px 16px;border:.5px solid var(--hair2);
+    border-radius:12px;background:linear-gradient(180deg,#0e0e10,#0a0a0c);margin-bottom:12px}
+  .legblock{display:flex;flex-direction:column;gap:6px}
+  .legh{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.6px;color:var(--t4);text-transform:uppercase}
+  .swatches{display:flex;gap:6px;align-items:center}
+  .sw{width:16px;height:16px;border-radius:5px;box-shadow:inset 0 0 0 .5px rgba(255,255,255,.14)}
+  .legrow{font-size:11px;color:var(--t3);font-family:var(--mono)}
+  .legrow .k{color:var(--t2)}
+  .dailybtn{margin-left:auto;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.4px;color:#0b0e0f;
+    background:var(--accent);border:none;border-radius:8px;padding:8px 13px;cursor:pointer;transition:transform .12s var(--ease),filter .12s}
+  .dailybtn:hover{filter:brightness(1.08)}.dailybtn:active{transform:scale(.96)}
+
+  /* ---------- variant frame ---------- */
+  .variant{margin-top:30px}
+  .vhead{display:flex;align-items:baseline;gap:12px;margin-bottom:4px}
+  .vtag{font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.5px;color:#0b0e0f;background:var(--accent);
+    border-radius:6px;padding:2px 8px}
+  .vhead h2{font-size:16px;font-weight:700;color:var(--t1);margin:0;letter-spacing:-.01em}
+  .vhead .vzh{font-size:13px;color:var(--t4)}
+  .vdesc{font-size:12.5px;color:var(--t3);line-height:1.6;margin:0 0 12px;max-width:960px}
+  .vdesc .gain{color:var(--green)}.vdesc .lose{color:var(--orange)}
+
+  /* the app window itself */
+  .win{height:660px;border:.5px solid var(--hair2);border-radius:14px;overflow:hidden;background:#000;
+    box-shadow:0 24px 70px rgba(0,0,0,.6);display:grid}
+  .titlebar{height:30px;background:#0c0c0e;border-bottom:.5px solid var(--hair);display:flex;align-items:center;
+    gap:7px;padding:0 12px;grid-column:1/-1}
+  .tl{width:11px;height:11px;border-radius:50%}
+  .tl.r{background:#ff5f57}.tl.y{background:#febc2e}.tl.g{background:#28c840}
+  .titlebar .tt{margin-left:10px;font-family:var(--mono);font-size:11px;color:var(--t4);letter-spacing:.3px}
+
+  /* rail */
+  .rail{width:56px;background:#000;position:relative;display:flex;flex-direction:column;align-items:center;
+    padding:12px 0;gap:3px;border-right:.5px solid transparent}
+  .rail .fil{position:absolute;top:8px;bottom:8px;right:0;width:1px;background:var(--hair2)}
+  .rail .anchor{position:absolute;right:-.5px;width:2px;height:40px;background:var(--accent);border-radius:2px;
+    box-shadow:0 0 12px -1px var(--accent);transition:top .42s var(--ease)}
+  .rail .pulse{position:absolute;right:-.5px;width:2px;height:12px;border-radius:2px;
+    background:linear-gradient(180deg,transparent,var(--accent),transparent);
+    filter:blur(.3px);animation:filpulse 2.6s var(--ease) infinite}
+  @keyframes filpulse{0%{top:78%;opacity:0}12%{opacity:.9}80%{opacity:.5}100%{top:12%;opacity:0}}
+  .ric{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+    color:var(--t4);cursor:pointer;transition:color .12s,background .12s;position:relative}
+  .ric svg{width:18px;height:18px}
+  .ric:hover{color:var(--t2);background:rgba(255,255,255,.05)}
+  .ric.on{color:var(--t1)}
+  .ric .bdg{position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--orange);box-shadow:0 0 0 2px #000}
+  .rail .spacer{flex:1}
+  .rlogo{width:22px;height:22px;color:var(--accent);margin-bottom:8px}
+
+  /* context panel */
+  .ctx{width:248px;background:#0a0a0c;border-right:.5px solid var(--hair);padding:14px 14px;overflow:hidden}
+  .ctxproj{display:flex;align-items:center;gap:9px;padding:8px 9px;border:.5px solid var(--hair2);border-radius:9px;background:#0f0f12;margin-bottom:14px}
+  .ctxproj .pic{width:24px;height:24px;border-radius:7px;background:linear-gradient(135deg,#e8a07a,#b56a8f 55%,#6a4f8f);flex:none}
+  .ctxproj .pn{font-size:13px;font-weight:700;color:var(--t1)}
+  .ctxproj .pb{font-family:var(--mono);font-size:10px;color:var(--t4);margin-top:1px}
+  .seclabel{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.6px;color:var(--t4);text-transform:uppercase;margin:16px 0 8px}
+  .navrow{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--t3);padding:6px 8px;border-radius:7px;cursor:pointer}
+  .navrow:hover{background:rgba(255,255,255,.04);color:var(--t2)}
+  .navrow.on{color:var(--t1);background:rgba(255,255,255,.05)}
+  .navrow .dot{width:5px;height:5px;border-radius:50%;background:var(--t4)}
+  .navrow.on .dot{background:var(--accent);box-shadow:0 0 6px var(--accent)}
+  .navrow .ct{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--t4)}
+
+  /* center + statusbar (shared) */
+  .center{background:#000;overflow:hidden;position:relative;min-width:0}
+  .statusbar{height:24px;background:#0a0a0c;border-top:.5px solid var(--hair);display:flex;align-items:center;gap:14px;
+    padding:0 12px;grid-column:1/-1;font-family:var(--mono);font-size:11px;color:var(--t4);letter-spacing:.2px}
+  .statusbar .live{color:var(--accent)}
+  .statusbar .seg{display:flex;align-items:center;gap:6px}
+  .statusbar .num{color:var(--t3);font-variant-numeric:tabular-nums}
+  .statusbar .right{margin-left:auto;display:flex;gap:14px}
+  .statusbar .k{color:var(--t3)}
+
+  /* section tag used across variants */
+  .stag{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.6px;color:var(--t4);text-transform:uppercase}
+  .accn{color:var(--accent)}
+  .mono{font-family:var(--mono)}
+  .tn{font-variant-numeric:tabular-nums}
+
+  /* spinning star for agent thinking */
+  .cstar{color:var(--accent);display:inline-block;animation:cspin 1.1s ease-in-out infinite}
+  @keyframes cspin{0%{transform:rotate(0) scale(.85);opacity:.6}50%{transform:rotate(180deg) scale(1.12);opacity:1}100%{transform:rotate(360deg) scale(.85);opacity:.6}}
+  .shine{background:linear-gradient(90deg,rgba(255,255,255,.35),#fff 20%,var(--accent) 50%,#fff 80%,rgba(255,255,255,.35));
+    background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 1.7s linear infinite}
+  @keyframes shine{0%{background-position:120% 0}100%{background-position:-120% 0}}
+
+  /* ============ VARIANT A — instrument readout ============ */
+  .A .win{grid-template-columns:56px 248px 1fr 46px;grid-template-rows:30px 1fr 24px}
+  .A .term{background:#050506;border-left:.5px solid var(--hair);writing-mode:vertical-rl;display:flex;align-items:center;justify-content:center;color:var(--t4);font-family:var(--mono);font-size:10px;letter-spacing:2px;cursor:pointer}
+  .rd{padding:20px 26px 20px 0;height:100%;overflow:hidden}
+  .rdhead{display:flex;align-items:baseline;gap:12px;padding-left:64px;margin-bottom:6px}
+  .rdhead h3{font-size:26px;font-weight:800;letter-spacing:-.02em;color:var(--t1);margin:0}
+  .rdhead .date{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:600}
+  .rdhead .meta{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--t4)}
+  .rdrow{display:grid;grid-template-columns:64px 1fr;border-top:.5px solid var(--hair);padding:11px 0}
+  .rdrow:first-of-type{border-top:none}
+  .gutter{font-family:var(--mono);font-size:10px;color:var(--t4);line-height:1.5;padding-top:2px}
+  .gutter .tm{color:var(--t3)}
+  .rditem{font-size:13px;color:var(--t2);line-height:1.5}
+  .rditem .h{font-size:11px;color:var(--t4);font-family:var(--mono);letter-spacing:.4px;text-transform:uppercase;margin-bottom:7px;display:flex;gap:8px;align-items:center}
+  .taskline{display:flex;align-items:center;gap:10px;padding:3px 0}
+  .cbx{width:14px;height:14px;border-radius:4px;border:1.4px solid var(--t4);flex:none}
+  .cbx.done{border-color:var(--accent);background:var(--accent)}
+  .taskline .due{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--t4)}
+  .taskline .due.hot{color:var(--orange)}
+  .jr{display:flex;align-items:center;gap:9px;color:var(--t4);font-size:13px}
+  .jr .car{width:2px;height:15px;background:var(--accent);display:inline-block;animation:bl 1s steps(1) infinite}
+  @keyframes bl{50%{opacity:0}}
+  .jr .aisum{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--accent);border:.5px solid rgba(255,197,61,.4);border-radius:6px;padding:3px 8px;cursor:pointer}
+  .projline,.agentline,.mailline{display:flex;align-items:center;gap:10px;padding:4px 0;font-size:12.5px}
+  .projline .pd{width:14px;height:14px;border-radius:4px;background:linear-gradient(135deg,#e8a07a,#6a4f8f);flex:none}
+  .projline .pp{color:var(--t2)}.projline .br{font-family:var(--mono);font-size:10px;color:var(--t4);margin-left:auto}
+  .agentline .nm{color:var(--t2);font-weight:600;font-size:12px}
+  .agentline .ac{font-family:var(--mono);font-size:11px;color:var(--t3)}
+  .agentline .st{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--t4)}
+  .sdot{width:6px;height:6px;border-radius:50%;flex:none}
+  .sdot.ok{background:var(--green)}.sdot.run{background:var(--accent)}.sdot.wait{background:var(--orange)}
+  .mailline .from{color:var(--t2);font-size:12px}.mailline .sj{color:var(--t4);font-size:12px}
+  .mailline .fl{width:6px;height:6px;border-radius:50%;background:var(--red);flex:none}
+  .qacts{padding-left:64px;margin-top:16px;display:flex;gap:8px}
+  .qa{font-family:var(--mono);font-size:11px;color:var(--t3);border:.5px solid var(--hair2);border-radius:7px;padding:6px 11px;cursor:pointer}
+  .qa:hover{color:var(--t1);border-color:var(--t4)}
+  .qa.pri{color:var(--accent);border-color:rgba(255,197,61,.45)}
+
+  /* ============ VARIANT B — command deck (tiles) ============ */
+  .B .win{grid-template-columns:56px 248px 1fr 260px;grid-template-rows:30px 1fr 24px}
+  .B .center{padding:18px 18px}
+  .deckhead{display:flex;align-items:baseline;gap:12px;margin-bottom:14px}
+  .deckhead h3{font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--t1);margin:0}
+  .deckhead .date{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:600}
+  .deckhead .qa{margin-left:auto}
+  .deck{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:min-content;gap:12px}
+  .tileC{background:var(--tile);border:.5px solid var(--hair2);border-radius:12px;padding:13px 14px}
+  .tileC.wide{grid-column:1/-1}
+  .tileh{display:flex;align-items:center;gap:8px;margin-bottom:11px}
+  .tileh .stag{margin:0}
+  .tileh .more{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--t4);cursor:pointer}
+  .tt2{display:flex;align-items:center;gap:9px;padding:5px 0;font-size:12.5px;color:var(--t2)}
+  .tt2 + .tt2{border-top:.5px solid var(--hair)}
+  .tt2 .due{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--t4)}
+  .tt2 .due.hot{color:var(--orange)}
+  .big{font-size:30px;font-weight:800;color:var(--t1);letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+  .bigsub{font-family:var(--mono);font-size:10px;color:var(--t4);margin-top:5px;letter-spacing:.4px}
+  .miniproj{display:flex;gap:8px;margin-top:2px}
+  .mp{flex:1;background:#0d0d0f;border:.5px solid var(--hair);border-radius:9px;padding:9px}
+  .mp .pd{width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg,#e8a07a,#6a4f8f);margin-bottom:7px}
+  .mp .pn{font-size:11px;font-weight:700;color:var(--t2)}
+  .mp .pb{font-family:var(--mono);font-size:9px;color:var(--t4);margin-top:2px}
+  .jtile textarea{width:100%;height:44px;background:transparent;border:none;resize:none;color:var(--t3);font-family:var(--sans);font-size:12.5px;outline:none}
+  .jtile .row{display:flex;align-items:center;margin-top:6px}
+  .jtile .aisum{font-family:var(--mono);font-size:10px;color:var(--accent);border:.5px solid rgba(255,197,61,.4);border-radius:6px;padding:3px 8px;cursor:pointer}
+
+  /* ============ VARIANT C — focus column ============ */
+  .C .win{grid-template-columns:56px 210px 1fr;grid-template-rows:30px 1fr 24px}
+  .C .rail{opacity:.62}.C .ctx{opacity:.52;background:#060608}
+  .C .center{display:flex;justify-content:center;padding:44px 0}
+  .fcol{width:560px}
+  .fcol .fdate{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:600;letter-spacing:.4px}
+  .fcol h3{font-size:38px;font-weight:800;letter-spacing:-.03em;color:var(--t1);margin:6px 0 4px}
+  .fcol .fgreet{font-size:14px;color:var(--t3);margin-bottom:30px}
+  .fsec{margin-bottom:26px}
+  .fsec .stag{display:block;margin-bottom:12px}
+  .fbig{display:flex;align-items:baseline;gap:12px;margin-bottom:14px}
+  .fbig .n{font-size:34px;font-weight:800;color:var(--t1);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .fbig .l{font-size:13px;color:var(--t3)}
+  .frow{display:flex;align-items:center;gap:12px;padding:9px 0;border-top:.5px solid var(--hair);font-size:13.5px;color:var(--t2)}
+  .frow:first-of-type{border-top:none}
+  .frow .cbx{width:15px;height:15px}
+  .frow .due{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--t4)}
+  .fcol .qacts{padding:0;margin-top:8px;display:flex;gap:8px}
+  .fagent{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13px}
+
+  .foot{margin-top:60px;padding-top:20px;border-top:.5px solid var(--hair);font-size:12px;color:var(--t4);line-height:1.7}
+  .foot b{color:var(--t3)}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="masthead">
+    <span class="brandmark"><svg viewBox="0 0 24 24"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5" fill="currentColor"/><path d="M8 7.5v9M16 7.5v9M8 12h8" stroke="#0b0e0f" stroke-width="2" stroke-linecap="round"/></svg></span>
+    <h1>Helm · Shell + Today</h1>
+    <span class="sub">设计咨询 · 三方向变体对比 · v0</span>
+  </div>
+  <p class="northstar">
+    北极星：<b>一窗掌全局 — 左手 agent，右手大脑，掌控感 &gt; 装饰</b>。
+    黑色座舱玻璃罩，静默仪表；唯一活着的是那根 <span class="amber">琥珀细丝</span>——你的这一天、agent 的心跳都走在这一根线上。
+    三个变体共享同一基座，只在<b>密度 / 温度</b>上分叉：A 纯仪表 · B 瓦片 · C 沉浸。
+  </p>
+
+  <div class="legend">
+    <div class="legblock">
+      <span class="legh">Accent · 每日变色</span>
+      <div class="swatches">
+        <span class="sw" style="background:var(--accent)"></span>
+        <span class="legrow"><span class="k" id="acchex">#FFC53D</span> · 单一强调色</span>
+      </div>
+    </div>
+    <div class="legblock">
+      <span class="legh">语义色 · 配给制</span>
+      <div class="swatches">
+        <span class="sw" style="background:var(--green)" title="成功/在线"></span>
+        <span class="sw" style="background:var(--orange)" title="警告/未读"></span>
+        <span class="sw" style="background:var(--cyan)"></span>
+        <span class="sw" style="background:var(--blue)"></span>
+        <span class="sw" style="background:var(--red)" title="紧急"></span>
+        <span class="sw" style="background:var(--purple)"></span>
+      </div>
+    </div>
+    <div class="legblock">
+      <span class="legh">字体 · 硬切</span>
+      <span class="legrow"><span class="k">SF Pro</span> = 人 · <span class="k mono">SF Mono</span> = 机器</span>
+    </div>
+    <div class="legblock">
+      <span class="legh">缓动</span>
+      <span class="legrow mono">cubic-bezier(.32,.72,0,1)</span>
+    </div>
+    <button class="dailybtn" id="daily">换今日色 →</button>
+  </div>
+
+  <!-- ============================ VARIANT A ============================ -->
+  <section class="variant A">
+    <div class="vhead"><span class="vtag">A</span><h2>Instrument Readout</h2><span class="vzh">纯仪表 · 无卡片账本</span></div>
+    <p class="vdesc">
+      Today 是<b>单列仪表读数</b>，不是仪表盘：左槽 mono 时间戳 + 发丝横线拉出「账本边距」，零阴影零圆角零卡片，密度全靠排版和线。
+      <span class="gain">得：密度最高、最克制、最「像学会了排版的终端」，一眼扫完全天。</span>
+      <span class="lose">失：信息层级靠排版功力撑，弱内容会显空；对习惯卡片的用户第一眼门槛略高。</span>
+    </p>
+    <div class="win">
+      <div class="titlebar"><span class="tl r"></span><span class="tl y"></span><span class="tl g"></span><span class="tt">Helm — ~/helm</span></div>
+      <!-- rail -->
+      <nav class="rail" data-active="0">
+        <span class="rlogo"><svg viewBox="0 0 24 24"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5" fill="currentColor"/><path d="M8 7.5v9M16 7.5v9M8 12h8" stroke="#0b0e0f" stroke-width="2" stroke-linecap="round"/></svg></span>
+        <div class="fil"></div><div class="anchor" style="top:56px"></div><div class="pulse"></div>
+        <div class="ric on" title="Today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></div>
+        <div class="ric" title="Chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 5h16v11H8l-4 4z"/></svg></div>
+        <div class="ric" title="Research"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg></div>
+        <div class="ric" title="Memory"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="6" cy="7" r="2.3"/><circle cx="17" cy="6" r="2.3"/><circle cx="13" cy="17" r="2.3"/><path d="M8 8l4 8M15 8l-2 8"/></svg></div>
+        <div class="ric" title="Journal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 4h11l3 3v13H5z"/><path d="M8 9h7M8 13h7"/></svg></div>
+        <div class="ric" title="Mail"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><span class="bdg"></span></div>
+        <div class="ric" title="Cockpit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg></div>
+        <div class="spacer"></div>
+        <div class="ric" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.8 7.8 0 000-3l2-1.5-2-3.4-2.3 1a7.7 7.7 0 00-2.6-1.5L14 1.5h-4l-.5 2.6a7.7 7.7 0 00-2.6 1.5l-2.3-1-2 3.4 2 1.5a7.8 7.8 0 000 3l-2 1.5 2 3.4 2.3-1a7.7 7.7 0 002.6 1.5l.5 2.6h4l.5-2.6a7.7 7.7 0 002.6-1.5l2.3 1 2-3.4z"/></svg></div>
+      </nav>
+      <!-- context -->
+      <aside class="ctx">
+        <div class="ctxproj"><span class="pic"></span><div><div class="pn">helm</div><div class="pb">⎇ feat/notch-media</div></div></div>
+        <div class="seclabel">Today</div>
+        <div class="navrow on"><span class="dot"></span>今日概览<span class="ct">⌘1</span></div>
+        <div class="navrow"><span class="dot"></span>任务<span class="ct tn">3</span></div>
+        <div class="navrow"><span class="dot"></span>Agent 收件箱<span class="ct tn">2</span></div>
+        <div class="navrow"><span class="dot"></span>邮件<span class="ct tn">1</span></div>
+        <div class="seclabel">最近项目</div>
+        <div class="navrow"><span class="dot"></span>odysseus-dev</div>
+        <div class="navrow"><span class="dot"></span>fanbox-master</div>
+      </aside>
+      <!-- center readout -->
+      <main class="center">
+        <div class="rd">
+          <div class="rdhead"><h3>Today</h3><span class="date">周三 · 07-01</span><span class="meta">08:41 · 全部本地</span></div>
+
+          <div class="rdrow">
+            <div class="gutter"><span class="tm">今日</span><br>3 未完</div>
+            <div class="rditem">
+              <div class="h stag">任务</div>
+              <div class="taskline"><span class="cbx"></span>对齐 notch scroll 手感（实机复验）<span class="due hot">今天</span></div>
+              <div class="taskline"><span class="cbx"></span>写 F8 Shell 设计稿 → loop 进 Svelte<span class="due">今天</span></div>
+              <div class="taskline"><span class="cbx done"></span><span style="color:var(--t4);text-decoration:line-through">回 Odysseus RAG 迁移的问题</span><span class="due">已完成</span></div>
+            </div>
+          </div>
+
+          <div class="rdrow">
+            <div class="gutter"><span class="tm">08:41</span></div>
+            <div class="rditem">
+              <div class="h stag">日记</div>
+              <div class="jr"><span class="car"></span>写两行今天…<span class="aisum">AI 今日小结</span></div>
+            </div>
+          </div>
+
+          <div class="rdrow">
+            <div class="gutter"><span class="tm">刚刚</span><br>2 活跃</div>
+            <div class="rditem">
+              <div class="h stag">Agent 收件箱</div>
+              <div class="agentline"><span class="sdot run"></span><span class="nm">notch</span><span class="ac"><span class="cstar">✻</span> <span class="shine">正在思考…</span></span><span class="st">Claude Code</span></div>
+              <div class="agentline"><span class="sdot ok"></span><span class="nm">helm</span><span class="ac">Bash: swift build ✓ · 3 文件改动待看</span><span class="st">2 分钟前</span></div>
+            </div>
+          </div>
+
+          <div class="rdrow">
+            <div class="gutter"><span class="tm">本周</span></div>
+            <div class="rditem">
+              <div class="h stag">最近项目</div>
+              <div class="projline"><span class="pd"></span><span class="pp">helm</span><span class="br mono">⎇ feat/notch · ↑2</span></div>
+              <div class="projline"><span class="pd"></span><span class="pp">odysseus-dev</span><span class="br mono">⎇ main</span></div>
+            </div>
+          </div>
+
+          <div class="rdrow">
+            <div class="gutter"><span class="tm">收件</span><br>AI 已分诊</div>
+            <div class="rditem">
+              <div class="h stag">邮件</div>
+              <div class="mailline"><span class="fl"></span><span class="from">Anthropic</span><span class="sj">— 你的 API 用量本月…</span><span class="due" style="margin-left:auto">紧急</span></div>
+            </div>
+          </div>
+
+          <div class="qacts">
+            <span class="qa pri">＋ 新 Chat</span>
+            <span class="qa">发起研究</span>
+            <span class="qa">记一条 · ⌘N</span>
+          </div>
+        </div>
+      </main>
+      <div class="term" title="终端 · 驾驶舱模式常驻">TERMINAL ⟩</div>
+      <!-- statusbar -->
+      <div class="statusbar">
+        <span class="seg"><span class="live">●</span> CLAUDE</span>
+        <span class="seg">~/helm</span>
+        <span class="seg">⎇ feat/notch</span>
+        <span class="seg num">↑2</span>
+        <span class="seg">tok <span class="num">14.2k</span> · <span class="num">60ms</span></span>
+        <span class="seg">◐ RAG idle</span>
+        <span class="right"><span class="k">⌘K 命令面板</span><span class="k">⌘N 速记</span></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ VARIANT B ============================ -->
+  <section class="variant B">
+    <div class="vhead"><span class="vtag">B</span><h2>Command Deck</h2><span class="vzh">瓦片仪表盘 · 最贴 notch dash</span></div>
+    <p class="vdesc">
+      保留黑 + 琥珀 + 细丝 Rail，但 Today 用<b>低阶瓦片</b>组织（把 notch 的 dash widget 放大成任务/项目/agent/邮件瓦片），右侧常驻终端。
+      <span class="gain">得：最好扫读、最暖、和 notch 自己的 dash 一脉相承，弱内容也不显空。</span>
+      <span class="lose">失：瓦片＝容器，多少回到「深色仪表盘」品类共性，招牌的克制感被稀释一点。</span>
+    </p>
+    <div class="win">
+      <div class="titlebar"><span class="tl r"></span><span class="tl y"></span><span class="tl g"></span><span class="tt">Helm — ~/helm</span></div>
+      <nav class="rail">
+        <span class="rlogo"><svg viewBox="0 0 24 24"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5" fill="currentColor"/><path d="M8 7.5v9M16 7.5v9M8 12h8" stroke="#0b0e0f" stroke-width="2" stroke-linecap="round"/></svg></span>
+        <div class="fil"></div><div class="anchor" style="top:56px"></div><div class="pulse"></div>
+        <div class="ric on" title="Today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></div>
+        <div class="ric" title="Chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 5h16v11H8l-4 4z"/></svg></div>
+        <div class="ric" title="Research"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg></div>
+        <div class="ric" title="Memory"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="6" cy="7" r="2.3"/><circle cx="17" cy="6" r="2.3"/><circle cx="13" cy="17" r="2.3"/><path d="M8 8l4 8M15 8l-2 8"/></svg></div>
+        <div class="ric" title="Journal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 4h11l3 3v13H5z"/><path d="M8 9h7M8 13h7"/></svg></div>
+        <div class="ric" title="Mail"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><span class="bdg"></span></div>
+        <div class="ric" title="Cockpit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg></div>
+        <div class="spacer"></div>
+        <div class="ric" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.8 7.8 0 000-3l2-1.5-2-3.4-2.3 1a7.7 7.7 0 00-2.6-1.5L14 1.5h-4l-.5 2.6a7.7 7.7 0 00-2.6 1.5l-2.3-1-2 3.4 2 1.5a7.8 7.8 0 000 3l-2 1.5 2 3.4 2.3-1a7.7 7.7 0 002.6 1.5l.5 2.6h4l.5-2.6a7.7 7.7 0 002.6-1.5l2.3 1 2-3.4z"/></svg></div>
+      </nav>
+      <aside class="ctx">
+        <div class="ctxproj"><span class="pic"></span><div><div class="pn">helm</div><div class="pb">⎇ feat/notch-media</div></div></div>
+        <div class="seclabel">模式</div>
+        <div class="navrow on"><span class="dot"></span>Today<span class="ct">⌘1</span></div>
+        <div class="navrow"><span class="dot"></span>Chat<span class="ct">⌘2</span></div>
+        <div class="navrow"><span class="dot"></span>Deep Research<span class="ct">⌘3</span></div>
+        <div class="navrow"><span class="dot"></span>记忆<span class="ct">⌘4</span></div>
+        <div class="navrow"><span class="dot"></span>驾驶舱<span class="ct">⌘7</span></div>
+      </aside>
+      <main class="center">
+        <div class="deckhead"><h3>Today</h3><span class="date">周三 · 07-01</span>
+          <span class="qa pri" style="margin-left:auto;font-family:var(--mono);font-size:11px;border:.5px solid rgba(255,197,61,.45);color:var(--accent);border-radius:7px;padding:6px 11px">＋ 新 Chat</span>
+        </div>
+        <div class="deck">
+          <div class="tileC">
+            <div class="tileh"><span class="stag accn">今日任务</span><span class="more mono">3 · ⌘T</span></div>
+            <div class="tt2"><span class="cbx"></span>对齐 notch scroll 手感<span class="due hot">今天</span></div>
+            <div class="tt2"><span class="cbx"></span>写 F8 Shell 设计稿<span class="due">今天</span></div>
+            <div class="tt2"><span class="cbx done"></span><span style="color:var(--t4);text-decoration:line-through">回 RAG 迁移问题</span></div>
+          </div>
+          <div class="tileC jtile">
+            <div class="tileh"><span class="stag">日记</span><span class="more mono">08:41</span></div>
+            <textarea placeholder="写两行今天…"></textarea>
+            <div class="row"><span class="aisum">AI 今日小结 →</span></div>
+          </div>
+          <div class="tileC">
+            <div class="tileh"><span class="stag">Agent 活动</span><span class="more mono">2 活跃</span></div>
+            <div class="tt2"><span class="sdot run"></span><span style="font-weight:600">notch</span><span class="ac mono" style="font-size:11px;color:var(--t3)"><span class="cstar">✻</span> <span class="shine">思考中</span></span></div>
+            <div class="tt2"><span class="sdot ok"></span><span style="font-weight:600">helm</span><span class="mono" style="font-size:11px;color:var(--t3)">swift build ✓ · 3 改动</span></div>
+          </div>
+          <div class="tileC">
+            <div class="tileh"><span class="stag">邮件 · AI 分诊</span><span class="more mono">1 紧急</span></div>
+            <div class="tt2"><span class="sdot" style="background:var(--red)"></span><span style="font-weight:600">Anthropic</span><span style="color:var(--t4);font-size:12px">API 用量…</span></div>
+            <div class="tt2"><span class="sdot" style="background:var(--t4)"></span><span style="font-weight:600">GitHub</span><span style="color:var(--t4);font-size:12px">CI 通过</span></div>
+          </div>
+          <div class="tileC wide">
+            <div class="tileh"><span class="stag">最近项目</span><span class="more mono">⌘P 切换</span></div>
+            <div class="miniproj">
+              <div class="mp"><div class="pd"></div><div class="pn">helm</div><div class="pb">⎇ feat/notch · ↑2</div></div>
+              <div class="mp"><div class="pd" style="background:linear-gradient(135deg,#7aa0e8,#4f6a8f)"></div><div class="pn">odysseus-dev</div><div class="pb">⎇ main</div></div>
+              <div class="mp"><div class="pd" style="background:linear-gradient(135deg,#8fe8a0,#4f8f6a)"></div><div class="pn">fanbox-master</div><div class="pb">⎇ main</div></div>
+            </div>
+          </div>
+        </div>
+      </main>
+      <aside class="ctx" style="border-left:.5px solid var(--hair);border-right:none;background:#050506;padding:0">
+        <div style="height:100%;display:flex;flex-direction:column">
+          <div style="padding:10px 12px;border-bottom:.5px solid var(--hair)" class="stag">终端 · ~/helm</div>
+          <div class="mono" style="flex:1;padding:11px 12px;font-size:11px;color:var(--t3);line-height:1.7">
+            <div><span style="color:var(--green)">➜</span> helm <span class="accn">git:(</span>feat/notch<span class="accn">)</span> swift build</div>
+            <div style="color:var(--t4)">Compiling HelmNotch…</div>
+            <div style="color:var(--green)">Build complete! (4.21s)</div>
+            <div><span style="color:var(--green)">➜</span> helm <span style="color:var(--accent)">claude</span> <span class="car" style="display:inline-block;width:7px;height:14px;background:var(--accent);vertical-align:-2px;animation:bl 1s steps(1) infinite"></span></div>
+          </div>
+        </div>
+      </aside>
+      <div class="statusbar">
+        <span class="seg"><span class="live">●</span> CLAUDE</span><span class="seg">~/helm</span><span class="seg">⎇ feat/notch</span>
+        <span class="seg num">↑2</span><span class="seg">tok <span class="num">14.2k</span> · <span class="num">60ms</span></span><span class="seg">◐ RAG idle</span>
+        <span class="right"><span class="k">⌘K 命令面板</span><span class="k">⌘N 速记</span></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ VARIANT C ============================ -->
+  <section class="variant C">
+    <div class="vhead"><span class="vtag">C</span><h2>Focus Column</h2><span class="vzh">沉浸中栏 · 更「大脑」</span></div>
+    <p class="vdesc">
+      巨大黑场中一条居中窄栏，大 Today 标题 + 琥珀日期，大量留白，Rail 与面板退隐。
+      <span class="gain">得：最静、最有「坐进温热驾驶舱」的仪式感，chat/research 优先的沉浸体验一流。</span>
+      <span class="lose">失：牺牲密度——一屏信息量最少，重度多任务/驾驶舱场景要靠切模式补回来。</span>
+    </p>
+    <div class="win">
+      <div class="titlebar"><span class="tl r"></span><span class="tl y"></span><span class="tl g"></span><span class="tt">Helm — ~/helm</span></div>
+      <nav class="rail">
+        <span class="rlogo"><svg viewBox="0 0 24 24"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5" fill="currentColor"/><path d="M8 7.5v9M16 7.5v9M8 12h8" stroke="#0b0e0f" stroke-width="2" stroke-linecap="round"/></svg></span>
+        <div class="fil"></div><div class="anchor" style="top:56px"></div><div class="pulse"></div>
+        <div class="ric on" title="Today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></div>
+        <div class="ric" title="Chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 5h16v11H8l-4 4z"/></svg></div>
+        <div class="ric" title="Research"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg></div>
+        <div class="ric" title="Memory"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="6" cy="7" r="2.3"/><circle cx="17" cy="6" r="2.3"/><circle cx="13" cy="17" r="2.3"/><path d="M8 8l4 8M15 8l-2 8"/></svg></div>
+        <div class="ric" title="Journal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 4h11l3 3v13H5z"/><path d="M8 9h7M8 13h7"/></svg></div>
+        <div class="ric" title="Mail"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><span class="bdg"></span></div>
+        <div class="ric" title="Cockpit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg></div>
+        <div class="spacer"></div>
+        <div class="ric" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.8 7.8 0 000-3l2-1.5-2-3.4-2.3 1a7.7 7.7 0 00-2.6-1.5L14 1.5h-4l-.5 2.6a7.7 7.7 0 00-2.6 1.5l-2.3-1-2 3.4 2 1.5a7.8 7.8 0 000 3l-2 1.5 2 3.4 2.3-1a7.7 7.7 0 002.6 1.5l.5 2.6h4l.5-2.6a7.7 7.7 0 002.6-1.5l2.3 1 2-3.4z"/></svg></div>
+      </nav>
+      <aside class="ctx">
+        <div class="ctxproj"><span class="pic"></span><div><div class="pn">helm</div><div class="pb">⎇ feat/notch</div></div></div>
+        <div class="seclabel">跳转</div>
+        <div class="navrow on"><span class="dot"></span>Today</div>
+        <div class="navrow"><span class="dot"></span>Chat</div>
+        <div class="navrow"><span class="dot"></span>研究</div>
+        <div class="navrow"><span class="dot"></span>记忆</div>
+      </aside>
+      <main class="center">
+        <div class="fcol">
+          <div class="fdate">周三 · 2026-07-01 · 08:41</div>
+          <h3>晚上好，Victor</h3>
+          <div class="fgreet">3 件今天的事 · 2 个 agent 在跑 · 一切本地。</div>
+
+          <div class="fsec">
+            <span class="stag accn">今天</span>
+            <div class="frow"><span class="cbx"></span>对齐 notch scroll 手感（实机复验）<span class="due">今天</span></div>
+            <div class="frow"><span class="cbx"></span>写 F8 Shell 设计稿 → loop 进 Svelte<span class="due">今天</span></div>
+            <div class="frow"><span class="cbx done"></span><span style="color:var(--t4);text-decoration:line-through">回 Odysseus RAG 迁移的问题</span></div>
+          </div>
+
+          <div class="fsec">
+            <span class="stag">Agent</span>
+            <div class="fagent"><span class="sdot run"></span><span style="font-weight:600;color:var(--t1)">notch</span><span class="mono" style="font-size:12px;color:var(--t3)"><span class="cstar">✻</span> <span class="shine">正在思考…</span></span></div>
+            <div class="fagent"><span class="sdot ok"></span><span style="font-weight:600;color:var(--t1)">helm</span><span class="mono" style="font-size:12px;color:var(--t3)">swift build ✓ · 3 文件待看</span></div>
+          </div>
+
+          <div class="fsec">
+            <span class="stag">写两行</span>
+            <div class="jr" style="font-size:14px;color:var(--t3)"><span class="car" style="height:17px"></span>今天…<span class="aisum" style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--accent);border:.5px solid rgba(255,197,61,.4);border-radius:6px;padding:4px 9px">AI 今日小结</span></div>
+          </div>
+
+          <div class="qacts">
+            <span class="qa pri" style="font-family:var(--mono);font-size:12px;color:var(--accent);border:.5px solid rgba(255,197,61,.45);border-radius:8px;padding:7px 13px">＋ 新 Chat</span>
+            <span class="qa" style="font-family:var(--mono);font-size:12px;color:var(--t3);border:.5px solid var(--hair2);border-radius:8px;padding:7px 13px">发起研究</span>
+            <span class="qa" style="font-family:var(--mono);font-size:12px;color:var(--t3);border:.5px solid var(--hair2);border-radius:8px;padding:7px 13px">记一条 · ⌘N</span>
+          </div>
+        </div>
+      </main>
+      <div class="statusbar">
+        <span class="seg"><span class="live">●</span> CLAUDE</span><span class="seg">~/helm</span><span class="seg">⎇ feat/notch</span>
+        <span class="seg num">↑2</span><span class="seg">tok <span class="num">14.2k</span> · <span class="num">60ms</span></span><span class="seg">◐ RAG idle</span>
+        <span class="right"><span class="k">⌘K 命令面板</span><span class="k">⌘\\ 沉浸</span></span>
+      </div>
+    </div>
+  </section>
+
+  <div class="foot">
+    <b>怎么读这三张：</b>它们共享同一套 token（黑底 · 单一琥珀 accent · SF Pro/SF Mono 硬切 · 发丝线 · 招牌缓动 · 细丝 Rail · 遥测状态栏），只在 <b>Today 中央区的密度/温度</b>上分叉。<br>
+    <b>细丝 Rail</b> 在三张里都活着：左缘 1px 琥珀线，激活段锚在 Today，一个光点从 Cockpit 向上脉冲 = agent 在干活（余光可感，无需 toast/badge）。<br>
+    <b>每日变色</b>：点右上「换今日色」——只有细丝、状态栏那个点、Today 日期、活跃态会跟着变，其余全程单色。这就是「克制 = 醒目」。<br>
+    <b>下一步</b>：选一个方向（或 A 的骨架 + B 的某块），我把它落成 DESIGN.md + 更新 CLAUDE.md，之后照 notch 的 loop 打法逐块进 Svelte。
+  </div>
+</div>
+
+<script>
+  // daily accent shift — cycles a few day-hues to *feel* the shift
+  const DAYS = ['#FFC53D','#FFB454','#F7A072','#E8C25A','#FFCF4D','#F5B841','#FFB86B'];
+  let di = 0;
+  document.getElementById('daily').addEventListener('click', () => {
+    di = (di + 1) % DAYS.length;
+    document.documentElement.style.setProperty('--accent', DAYS[di]);
+    document.getElementById('acchex').textContent = DAYS[di];
+  });
+</script>
+</body>
+</html>
