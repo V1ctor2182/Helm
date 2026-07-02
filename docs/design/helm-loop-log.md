@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 22:05 · phase3-round4-term-status(夜间模式)· P1 第3条
+- 对齐: 阶段3 轮4——终端状态感知+完成提醒(FanBox app:2692-2801 忠实单会话移植,含 TERM_ASK_RE 与 E5→B5 合成音原味)
+- 改动: +terminal/termStatus.svelte.ts(busy/idle/dead;回显过滤<400ms 只续命不刷工时;2.5s 静默判闲;esc to interrupt 30s 假静默护栏;still running 页脚压制报喜;ask=工时>600ms+审批正则→单音;done=工时>4s→双音;「轮到你」呼吸 6.5s;SND 静音 localStorage;系统通知仅已授权+隐藏时);Terminal.svelte(onData/output/exit 挂钩+tailProvider 读缓冲区尾+右上 HUD:状态点 busy=accent 脉冲/idle=绿/dead=红+SND 钮+termwrap 呼吸框)
+- 功能可用性: e2e 真机:spawn 输出→点 busy(accent 脉冲)→静默→idle(绿);SND 切换持久化并已复原;音/通知路径 jsdom 守卫
+- 取舍: 完成涟漪打到文件区(rippleFileArea)与多标签 unread 徽章依赖多标签(P2)未做;通知点击拉前台是 electron 能力(wontfix 账上)
+- 契约/notch 影响: 无(纯前端)
+- VibeHub: record_decision(F1)→ 见下条;矩阵 P1 3/14
+- 验证: 前端 build ✓/check 0/0(254 文件)/test 174(+6);后端未动;视觉 dark 截图
+- 状态: ✅ 夜间自 commit(feat/cockpit-fanbox,未合 main)｜❓需确认: 无
+
 ## 2026-07-02 21:30 · phase3-round3-term-path-links(夜间模式)· P1 第2条
 - 对齐: 阶段3 轮3——终端路径点击四层识别+点开定位(FanBox app:2528-2644/srv:937-1018 行为)
 - 改动: 后端 +POST /api/cockpit/paths/resolve(批量 stat,cwd 基准,file:// 前缀/目录尾 / 兜底,50 上限);前端 +terminal/pathLinks.ts(纯函数:URL>引号串(救空格路径)>斜杠 token>裸文件名扩展白名单,全角标点切断集,--flag=/path 取 = 后,LRU 验证缓存);Terminal.svelte 注册 linkProvider(折行 isWrapped 拼回逻辑行,index↔row/col 按 cols 映射,验证过才划线);cockpit.openPath(目录→browse/文件→选中预览)+点击切 cockpit 模式;URL 系统浏览器开

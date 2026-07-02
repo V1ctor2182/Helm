@@ -7,6 +7,7 @@
   import { layout } from '../../layout.svelte'
   import { inputMsg, parseServer, resizeMsg, terminalWsUrl } from './termClient'
   import { extractCandidates, resolveCandidates } from './pathLinks'
+  import { termStatus } from './termStatus.svelte'
 
   let el = $state<HTMLDivElement>()
   let term: Terminal | undefined
@@ -94,10 +95,30 @@
     ws.onopen = () => term && send(resizeMsg(term.cols, term.rows))
     ws.onmessage = (e) => {
       const m = parseServer(e.data as string)
-      if (m.type === 'output') term?.write(m.data)
-      else if (m.type === 'exit') term?.write(`\r\n[process exited: ${m.code}]\r\n`)
+      if (m.type === 'output') {
+        term?.write(m.data)
+        termStatus.onOutput()
+      } else if (m.type === 'exit') {
+        term?.write(`\r\n[process exited: ${m.code}]\r\n`)
+        termStatus.onExit()
+      }
     }
-    term.onData((d) => send(inputMsg(d)))
+    term.onData((d) => {
+      termStatus.onInput()
+      send(inputMsg(d))
+    })
+    // 状态评估要看缓冲区尾部(审批框/忙碌页脚画在底部)
+    termStatus.tailProvider = (n: number) => {
+      if (!term) return ''
+      const buf = term.buffer.active
+      let t = ''
+      for (let i = Math.max(0, buf.length - n); i < buf.length; i++) {
+        const ln = buf.getLine(i)
+        if (ln) t += ln.translateToString(true) + '\n'
+      }
+      return t
+    }
+    termStatus.reset()
     window.addEventListener('resize', onWindowResize)
   })
 
@@ -108,9 +129,80 @@
   })
 </script>
 
-<div class="term" bind:this={el}></div>
+<div class="termwrap" class:awaiting={termStatus.awaiting}>
+  <div class="thud">
+    <span
+      class="tdot"
+      class:busy={termStatus.status === 'busy'}
+      class:dead={termStatus.status === 'dead'}
+      title={termStatus.status}
+      aria-label={`终端状态 ${termStatus.status}`}
+    ></span>
+    <button class="tsnd" class:off={termStatus.muted} onclick={() => termStatus.toggleMute()} aria-label="提示音开关">
+      {termStatus.muted ? 'SND OFF' : 'SND'}
+    </button>
+  </div>
+  <div class="term" bind:this={el}></div>
+</div>
 
 <style>
+  .termwrap {
+    position: relative;
+    height: 100%;
+    width: 100%;
+  }
+  /* 「轮到你」边缘呼吸(6.5s 自动退,承 FanBox term-awaiting) */
+  .termwrap.awaiting {
+    animation: tawait 1.6s ease-in-out infinite;
+  }
+  @keyframes tawait {
+    0%, 100% { box-shadow: inset 0 0 0 1px transparent; }
+    50% { box-shadow: inset 0 0 0 1.4px var(--acc); }
+  }
+  .thud {
+    position: absolute;
+    top: 4px;
+    right: 10px;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .tdot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green); /* idle */
+  }
+  .tdot.busy {
+    background: var(--acc);
+    animation: tpulse 1s ease-in-out infinite;
+  }
+  .tdot.dead {
+    background: var(--red);
+    animation: none;
+  }
+  @keyframes tpulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .35; }
+  }
+  .tsnd {
+    font-family: var(--mono);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--t4);
+    background: transparent;
+    border: 1px solid var(--line);
+    padding: 0 5px;
+    cursor: pointer;
+  }
+  .tsnd:hover {
+    color: var(--t1);
+  }
+  .tsnd.off {
+    color: var(--orange);
+    border-color: var(--orange);
+  }
   .term {
     height: 100%;
     width: 100%;
