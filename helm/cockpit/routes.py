@@ -21,7 +21,7 @@ from helm.cockpit import models  # noqa: F401  (register models on Base.metadata
 from helm.cockpit.git import NotInRepo, file_diff
 from helm.cockpit.git import status as git_status
 from helm.cockpit.models import TerminalSession
-from helm.cockpit.preview import list_zip, read_text
+from helm.cockpit.preview import MAX_TEXT_BYTES, WriteConflict, list_zip, read_text, write_text
 from helm.cockpit.service import ProjectService, list_dir, record_change
 from helm.cockpit.terminal import PtyProcess
 from helm.cockpit.watcher import DirWatcher
@@ -73,7 +73,37 @@ def file_text(path: str) -> dict:
         raise HTTPException(status_code=404, detail="not a file") from None
     except PermissionError:
         raise HTTPException(status_code=403, detail="permission denied") from None
-    return {"path": str(Path(path).expanduser()), "content": content, "truncated": truncated}
+    return {
+        "path": str(Path(path).expanduser()),
+        "content": content,
+        "truncated": truncated,
+        "mtime": Path(path).expanduser().stat().st_mtime,
+    }
+
+
+class WriteTextBody(BaseModel):
+    path: str
+    content: str
+    # 编辑器加载时的 mtime;磁盘更新则 409(agent 外改,覆盖需显式确认)
+    expected_mtime: float | None = None
+
+
+@router.post("/text")
+def file_text_write(body: WriteTextBody) -> dict:
+    try:
+        mtime = write_text(body.path, body.content, body.expected_mtime)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="not a file") from None
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="permission denied") from None
+    except ValueError:
+        raise HTTPException(status_code=413, detail="content too large") from None
+    except WriteConflict as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"error": "modified externally", "mtime": exc.mtime},
+        ) from None
+    return {"path": str(Path(body.path).expanduser()), "mtime": mtime}
 
 
 @router.get("/raw")

@@ -226,3 +226,54 @@ def test_git_diff_not_in_repo(config, tmp_path):
     f.write_text("x")
     c = TestClient(create_app(config))
     assert c.get("/api/cockpit/git/diff", params={"path": str(f)}).status_code == 404
+
+# ---- edit-in-preview: atomic write + conflict (阶段3 FanBox 对齐) ----------
+
+
+def test_text_write_roundtrip_and_mtime(config, tmp_path):
+    c = TestClient(create_app(config))
+    f = tmp_path / "note.md"
+    f.write_text("v1", encoding="utf-8")
+    got = c.get("/api/cockpit/text", params={"path": str(f)}).json()
+    assert got["content"] == "v1" and "mtime" in got
+
+    w = c.post(
+        "/api/cockpit/text",
+        json={"path": str(f), "content": "v2", "expected_mtime": got["mtime"]},
+    )
+    assert w.status_code == 200
+    assert f.read_text(encoding="utf-8") == "v2"
+    # 连续写:用新 mtime 继续写不冲突
+    w2 = c.post(
+        "/api/cockpit/text",
+        json={"path": str(f), "content": "v3", "expected_mtime": w.json()["mtime"]},
+    )
+    assert w2.status_code == 200 and f.read_text(encoding="utf-8") == "v3"
+
+
+def test_text_write_conflict_409(config, tmp_path):
+    import os
+
+    c = TestClient(create_app(config))
+    f = tmp_path / "a.txt"
+    f.write_text("base", encoding="utf-8")
+    stale = c.get("/api/cockpit/text", params={"path": str(f)}).json()["mtime"]
+    # 模拟 agent 外改(mtime 前移,确保与 stale 差异超过容差)
+    f.write_text("external", encoding="utf-8")
+    os.utime(f, (f.stat().st_atime, f.stat().st_mtime + 5))
+    r = c.post(
+        "/api/cockpit/text",
+        json={"path": str(f), "content": "mine", "expected_mtime": stale},
+    )
+    assert r.status_code == 409
+    assert f.read_text(encoding="utf-8") == "external"  # 没被覆盖
+    # 不带 expected_mtime = 显式覆盖
+    r2 = c.post("/api/cockpit/text", json={"path": str(f), "content": "mine"})
+    assert r2.status_code == 200 and f.read_text(encoding="utf-8") == "mine"
+
+
+def test_text_write_guards(config, tmp_path):
+    c = TestClient(create_app(config))
+    assert c.post("/api/cockpit/text", json={"path": str(tmp_path / "nope.txt"), "content": "x"}).status_code == 404
+    assert c.post("/api/cockpit/text", json={"path": str(tmp_path), "content": "x"}).status_code == 404
+

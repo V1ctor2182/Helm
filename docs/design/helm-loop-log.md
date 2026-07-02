@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 20:45 · phase3-round2-edit-in-preview(夜间模式)· P1 首条
+- 对齐: 阶段3 轮2——预览即编辑+停笔 0.8s 自动落盘+并发覆盖保护(FanBox app:1179-1382/srv:409-433 行为,皮肤守 DESIGN.md)
+- 改动: 后端 `cockpit/preview.py`(+write_text 原子写 tmp+fsync+rename/WriteConflict/5MB 上限,隐藏 tmp 名避监听噪声)、`cockpit/routes.py`(+POST /api/cockpit/text,409 带磁盘 mtime;GET /text +mtime);前端 `PreviewPane.svelte`(code 预览即编辑 textarea/md +「源码」tab/0.8s 防抖+⌘S+写盘串行化/「xx 前已保存」秒级刷新/409→「文件被外部修改」重载|覆盖/guardDirty 切文件静默 flush/截断只读)
+- 抓修真 bug: 守卫 $effect 读 dirty 造成反应性泄漏——每敲一字重新 load 冲掉编辑态(诊断实锤 3 连 GET)→ untrack 隔离;Svelte 5 事件代理在 jsdom 不触发→编辑器监听改 action 直挂
+- 功能可用性: e2e 真机:开项目→点 hello.py→打字→0.8s 后磁盘落盘+「0 秒前已保存」;外部改文件(模拟 agent)→再打字→409 冲突条(磁盘未被覆盖)→重载取回外部内容
+- 契约/notch 影响: 无(cockpit 端点 notch 不消费;POST /text 为新增)
+- VibeHub: record_decision(F1)见下条 id;矩阵勾 P1 1/14,新增 P2(Monaco 编辑器升级)
+- 验证: 前端 build ✓/check 0/0(250 文件)/test 161(+2);后端 pytest 187(+3:往返/409/守卫);视觉 dark+light 核过
+- 状态: ✅ 夜间自 commit(feat/cockpit-fanbox,未合 main)｜❓需确认: 无
+
 ## 2026-07-02 19:50 · phase3-round1-parity-matrix(夜间模式)· 阶段3 开跑
 - 对齐: 阶段3 轮1——刷参考仓(victor-context 已最新,两份 fanbox-master 一致 @1.11.3)+ 全量盘点 FanBox 行为(90+ 条,子 agent 深读 CHANGELOG+app.js+server.js)+ 建对照矩阵
 - 产出: docs/design/fanbox-cockpit-parity.md——P1×14(最大缺口:预览即编辑/终端路径点击/终端状态感知/文件操作三件套/列表排序/缩略图/双击灯箱/终端手感三小件/内容搜索/键盘导航/变更收件箱/拖拽进终端/噪声过滤/跟随升级)、P2×26、wontfix×5(注理由);procedure 新增阶段3 大节、prompt 瘦身为点火器

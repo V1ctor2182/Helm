@@ -24,17 +24,17 @@ describe('PreviewPane', () => {
     expect(screen.getByText('选择一个文件以预览')).toBeInTheDocument()
   })
 
-  it('renders code in a <pre> from the text endpoint', async () => {
+  it('renders code as an editable textarea (preview IS edit)', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({ content: 'print(1)', truncated: false }),
+        json: () => Promise.resolve({ content: 'print(1)', truncated: false, mtime: 111 }),
       }),
     )
     render(PreviewPane)
     cockpit.selected = entry({ name: 'a.py', path: '/p/a.py', ext: 'py' })
-    expect(await screen.findByText('print(1)')).toBeInTheDocument()
+    expect(await screen.findByDisplayValue('print(1)')).toBeInTheDocument()
   })
 
   it('renders markdown as sanitized HTML', async () => {
@@ -70,7 +70,7 @@ describe('PreviewPane', () => {
       .mockReturnValueOnce(aPending) // A: stays pending
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ content: 'B-content', truncated: false }),
+        json: () => Promise.resolve({ content: 'B-content', truncated: false, mtime: 1 }),
       })
     vi.stubGlobal('fetch', f)
     render(PreviewPane)
@@ -79,19 +79,89 @@ describe('PreviewPane', () => {
     flushSync() // load(A) starts, awaits aPending
     cockpit.selected = entry({ name: 'b.py', path: '/p/b.py', ext: 'py' })
     flushSync() // load(B) starts, resolves
-    expect(await screen.findByText('B-content')).toBeInTheDocument()
+    expect(await screen.findByDisplayValue('B-content')).toBeInTheDocument()
 
     // A resolves late — the token guard must drop its result.
-    resolveA({ ok: true, json: () => Promise.resolve({ content: 'A-content', truncated: false }) })
+    resolveA({ ok: true, json: () => Promise.resolve({ content: 'A-content', truncated: false, mtime: 2 }) })
     await Promise.resolve()
     await Promise.resolve()
-    expect(screen.queryByText('A-content')).toBeNull()
-    expect(screen.getByText('B-content')).toBeInTheDocument()
+    expect(screen.queryByDisplayValue('A-content')).toBeNull()
+    expect(screen.getByDisplayValue('B-content')).toBeInTheDocument()
   })
 
   it('shows a no-preview message for unknown types', async () => {
     render(PreviewPane)
     cockpit.selected = entry({ name: 'a.exe', path: '/p/a.exe', ext: 'exe' })
     expect(await screen.findByText(/暂不支持预览/)).toBeInTheDocument()
+  })
+})
+
+describe('PreviewPane · 预览即编辑', () => {
+  it('typing marks dirty and ⌘S saves with expected_mtime', async () => {
+    const calls: { url: string; init?: RequestInit }[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, init?: RequestInit) => {
+        calls.push({ url, init })
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve(
+              init?.method === 'POST' ? { mtime: 222 } : { content: 'v1', truncated: false, mtime: 111 },
+            ),
+        })
+      }),
+    )
+    render(PreviewPane)
+    cockpit.selected = entry({ name: 'a.py', path: '/p/a.py', ext: 'py' })
+    const box = (await screen.findByDisplayValue('v1')) as HTMLTextAreaElement
+    const { fireEvent } = await import('@testing-library/dom')
+    await fireEvent.input(box, { target: { value: 'v2' } })
+    expect(await screen.findByText('编辑中…')).toBeInTheDocument() // dirty 标记生效
+    await fireEvent.keyDown(box, { key: 's', metaKey: true }) // ⌘S 立即落盘
+    await vi.waitFor(() => {
+      expect(calls.some((c) => c.init?.method === 'POST')).toBe(true)
+    })
+    const post = calls.find((c) => c.init?.method === 'POST')!
+    expect(JSON.parse(post.init!.body as string)).toEqual({
+      path: '/p/a.py',
+      content: 'v2',
+      expected_mtime: 111,
+    })
+    await vi.waitFor(async () => {
+      expect(await screen.findByText(/秒前已保存/)).toBeInTheDocument()
+    })
+  })
+
+  it('409 shows the conflict bar; 覆盖 posts without expected_mtime', async () => {
+    const calls: { url: string; init?: RequestInit }[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, init?: RequestInit) => {
+        calls.push({ url, init })
+        if (init?.method === 'POST') {
+          const body = JSON.parse(init.body as string)
+          if (body.expected_mtime != null) {
+            return Promise.resolve({ ok: false, status: 409, json: () => Promise.resolve({}) })
+          }
+          return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ mtime: 999 }) })
+        }
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ content: 'base', truncated: false, mtime: 5 }) })
+      }),
+    )
+    render(PreviewPane)
+    cockpit.selected = entry({ name: 'b.ts', path: '/p/b.ts', ext: 'ts' })
+    const box = (await screen.findByDisplayValue('base')) as HTMLTextAreaElement
+    const { fireEvent } = await import('@testing-library/dom')
+    await fireEvent.input(box, { target: { value: 'mine' } })
+    await fireEvent.keyDown(box, { key: 's', metaKey: true })
+    expect(await screen.findByText('文件被外部修改')).toBeInTheDocument()
+    await fireEvent.click(screen.getByRole('button', { name: '覆盖' }))
+    await vi.waitFor(() => {
+      const posts = calls.filter((c) => c.init?.method === 'POST')
+      expect(posts.length).toBeGreaterThan(1)
+      expect(JSON.parse(posts.at(-1)!.init!.body as string).expected_mtime).toBeNull()
+    })
   })
 })
