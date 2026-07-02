@@ -354,3 +354,53 @@ def test_files_hidden_toggle_and_mtime(config, tmp_path):
     ent = next(e for e in c.get("/api/cockpit/files", params={"path": str(tmp_path)}).json()["entries"] if e["name"] == "a.txt")
     assert ent["mtime"] > 0
 
+# ---- thumbnails(阶段3 FanBox 对齐:sips+缓存+去重键) ----------------------
+
+
+def test_thumb_pipeline(config, tmp_path, monkeypatch):
+    import subprocess as sp
+    from pathlib import Path
+
+    from helm.cockpit import thumbs
+
+    img = tmp_path / "pic.jpg"
+    img.write_bytes(b"\xff\xd8fakejpeg")
+    calls: list[list[str]] = []
+
+    def fake_sips(argv, **kw):
+        calls.append(argv)
+        Path(argv[argv.index("--out") + 1]).write_bytes(b"THUMB")
+        return sp.CompletedProcess(argv, 0, stdout="", stderr="")
+
+    cache = tmp_path / "cache"
+    out, mime = thumbs.ensure_thumb(str(img), 240, cache, runner=fake_sips)
+    assert out.read_bytes() == b"THUMB" and mime == "image/jpeg"
+    # 缓存命中:第二次不再调 sips
+    thumbs.ensure_thumb(str(img), 240, cache, runner=fake_sips)
+    assert len(calls) == 1
+    # 改文件(mtime 变)→ 新键 → 重新生成
+    import os as _os
+
+    _os.utime(img, (img.stat().st_atime, img.stat().st_mtime + 10))
+    thumbs.ensure_thumb(str(img), 240, cache, runner=fake_sips)
+    assert len(calls) == 2
+    # 透明格式出 png
+    png = tmp_path / "logo.png"
+    png.write_bytes(b"\x89PNGfake")
+    _, mime2 = thumbs.ensure_thumb(str(png), 240, cache, runner=fake_sips)
+    assert mime2 == "image/png"
+    # 非图片 → ValueError;路由层 400/404
+    import pytest as _pytest
+
+    (tmp_path / "a.txt").write_text("x", encoding="utf-8")
+    with _pytest.raises(ValueError):
+        thumbs.ensure_thumb(str(tmp_path / "a.txt"), 240, cache, runner=fake_sips)
+
+
+def test_thumb_route_guards(config, tmp_path):
+    c = TestClient(create_app(config))
+    assert c.get("/api/cockpit/thumb", params={"path": str(tmp_path / "no.png")}).status_code == 404
+    t = tmp_path / "doc.txt"
+    t.write_text("x", encoding="utf-8")
+    assert c.get("/api/cockpit/thumb", params={"path": str(t)}).status_code == 400
+

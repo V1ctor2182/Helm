@@ -12,7 +12,7 @@
 - [x] **终端状态感知:busy/idle/dead 圆点 + 完成提醒** → 轮4 搬入(回显过滤/esc 护栏/still-running 压制/ask 单音/done 双音 E5→B5/呼吸 6.5s/SND 静音持久化;系统通知仅在已授权+页面隐藏时,涟漪归属文件区联动留 P2) | 输出→busy(脉冲)、静默 2.5s→idle、进程退→dead;回显过滤(<400ms 不算 agent 干活);busy>4s 收工→涟漪+双音+通知;「esc to interrupt」30s 护栏;「等你拍板」检测单音 | app:2692-2801
 - [x] **文件操作三件套:新建/重命名/删除(废纸篓)+ 右键菜单** → 轮5 搬入(右键按类型组装/自绘对话框/文件秒删文件夹轻确认/AppleScript argv 防注入+授权与超时人话/新建文件即选中;「在终端打开」「Finder 显示」依赖多标签与壳能力留 P2) | 右键按类型组装菜单(打开/预览/在终端打开/Finder 显示/复制路径/重命名/废纸篓);新建文件即编辑;删除走废纸篓(AppleScript,argv 防注入);重命名拒分隔符 | app:1384-1453, 1638-1677, srv:436-480
 - [x] **列表/网格双视图 + 排序 + 隐藏文件开关** → 轮6 搬入(网格 SM/MD/LG 三档/列表表头名称·时间·大小/排序 zh locale+numeric 目录在前 mtime·size 降序/隐藏默认藏+开关 refetch/全偏好 localStorage;顺手清掉 fileIcons 的 📁📄 emoji 违规) | 网格三档尺寸;列表带表头名称/时间/大小;排序 zh locale+numeric、目录在前;隐藏文件 checkbox 落 localStorage | app:340-401, 2132-2146
-- [ ] **缩略图管线(图片先行)** | 图片 sips 生成、md5(路径+mtime+尺寸) 缓存、并发去重、LRU 裁剪;失败回退矢量字形不留裂图;heic/tiff 永远走缩略图 | app:414-429, srv:1174-1229
+- [x] **缩略图管线(图片先行)** → 轮7 搬入(sips+md5(路径:mtime:尺寸) 缓存+per-key 锁去重+200MB LRU 裁剪+透明出 png/其余 jpeg+onerror 回退字形;预览图先走 w=1000 缩略图(heic/tiff 可看);视频/PDF qlmanage 帧留 P2) | 图片 sips 生成、md5(路径+mtime+尺寸) 缓存、并发去重、LRU 裁剪;失败回退矢量字形不留裂图;heic/tiff 永远走缩略图 | app:414-429, srv:1174-1229
 - [ ] **双击语义 + 图片灯箱** | 单击=分栏预览、双击文本→全屏、pdf/压缩包/二进制→系统 App;图片点击进灯箱(滚轮 0.2-8x、Esc/点空白关) | app:520-536, 759-771
 - [ ] **终端手感三小件:Option 拖拽选中 + login shell + Nerd Font 栈** | macOptionClickForcesSelection(TUI 鼠标上报吃拖拽);pty 用 zsh -l 读 .zprofile 找回 claude;JetBrainsMono/MesloLGS Nerd 字体栈防 tofu;低对比自动提亮 minimumContrastRatio 4.5 | app:2459-2510, CHANGELOG 1.11.2/1.11.3
 - [ ] **⌘K 内容搜索(`内容:` 前缀)** | mdfind Spotlight 优先(覆盖 PDF/OCR)、回退 grep(512KB 内文本);命中补行级预览+高亮;范围切换 全机/当前目录(Tab 键) | app:1817-1914, srv:269-392
@@ -24,6 +24,7 @@
 
 ## P2 · 打磨(P1 清完或顺手时做)
 
+- [ ] 视频/PDF 缩略图(qlmanage 抽帧,承 FanBox generateThumb 非图分支) | srv:1181
 - [ ] 路径定位兜底:scrollback 回扫 + basename 搜索 + Spotlight(FanBox app:2373-2431/srv:973-1018;轮3 只做 cwd 解析层) | srv:973
 - [ ] 编辑器升级 Monaco(语法高亮/撤销栈灰显;现为 mono textarea) | app:1258-1273
 - [ ] 面包屑逐级可点(根电脑图标/挤压滚到末尾/SVG vertical-align:middle) | app:303-338
@@ -70,4 +71,5 @@
 | 3 | 终端路径点击+点开定位 | 7d1dab6 |
 | 4 | 终端状态感知+完成提醒 | b73c43e |
 | 5 | 文件操作三件套+右键菜单 | 31164cc |
-| 6 | 双视图+排序+隐藏开关 | (见 git log 轮6) |
+| 6 | 双视图+排序+隐藏开关 | 952f293 |
+| 7 | 缩略图管线(图片) | (见 git log 轮7) |

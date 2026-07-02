@@ -252,7 +252,18 @@
     {:else if view.kind === 'code'}
       <pre class="code">{view.text}</pre>
     {:else if view.kind === 'image'}
-      <img class="img" src={rawUrl(view.entry.path)} alt={view.entry.name} />
+      <!-- 先走 w=1000 缩略图秒开(heic/tiff 也能看),失败回退原图(承 FanBox) -->
+      {@const imgPath = view.entry.path}
+      <img
+        class="img"
+        src={`/api/cockpit/thumb?path=${encodeURIComponent(imgPath)}&w=1000`}
+        alt={view.entry.name}
+        onerror={(ev) => {
+          const img = ev.currentTarget as HTMLImageElement
+          const raw = rawUrl(imgPath)
+          if (!img.src.endsWith(raw)) img.src = raw
+        }}
+      />
     {:else if view.kind === 'pdf'}
       <iframe class="pdf" src={rawUrl(view.entry.path)} title={view.entry.name}></iframe>
     {:else if view.kind === 'zip'}

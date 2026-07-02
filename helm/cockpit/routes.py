@@ -8,6 +8,7 @@ import asyncio
 import json
 import os
 import shutil
+import subprocess
 import zipfile
 from pathlib import Path
 
@@ -21,7 +22,9 @@ from helm.cockpit import models  # noqa: F401  (register models on Base.metadata
 from helm.cockpit.git import NotInRepo, file_diff
 from helm.cockpit.git import status as git_status
 from helm.cockpit.models import TerminalSession
-from helm.cockpit import fsops
+from fastapi import Request
+
+from helm.cockpit import fsops, thumbs
 from helm.cockpit.preview import WriteConflict, list_zip, read_text, write_text
 from helm.cockpit.service import ProjectService, list_dir, record_change
 from helm.cockpit.terminal import PtyProcess
@@ -185,6 +188,21 @@ def file_text_write(body: WriteTextBody) -> dict:
             detail={"error": "modified externally", "mtime": exc.mtime},
         ) from None
     return {"path": str(Path(body.path).expanduser()), "mtime": mtime}
+
+
+@router.get("/thumb")
+def file_thumb(path: str, request: Request, w: int = 240) -> FileResponse:
+    """图片缩略图(sips+缓存,承 FanBox);失败前端回退字形不留裂图。"""
+    cache = thumbs.cache_dir_for(request.app.state.config.data_dir)
+    try:
+        out, mime = thumbs.ensure_thumb(path, w, cache)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="not a file") from None
+    except ValueError:
+        raise HTTPException(status_code=400, detail="not an image") from None
+    except (RuntimeError, subprocess.TimeoutExpired) as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from None
+    return FileResponse(out, media_type=mime, headers={"Cache-Control": "max-age=604800"})
 
 
 @router.get("/raw")

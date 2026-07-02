@@ -56,7 +56,8 @@ describe('PreviewPane', () => {
     render(PreviewPane)
     cockpit.selected = entry({ name: 'p.png', path: '/p/p.png', ext: 'png' })
     const img = await screen.findByRole('img', { name: 'p.png' })
-    expect(img.getAttribute('src')).toContain('/api/cockpit/raw?path=')
+    // 先走缩略图秒开,onerror 才回退 raw
+    expect(img.getAttribute('src')).toContain('/api/cockpit/thumb?path=')
     expect(f).not.toHaveBeenCalled() // images don't hit the text endpoint
   })
 

@@ -6,6 +6,17 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-03 00:10 · phase3-round7-thumbnails(夜间模式)· P1 第6条
+- 对齐: 阶段3 轮7——图片缩略图管线(FanBox app:414-429/srv:1174-1229)
+- 改动: 后端 +cockpit/thumbs.py(sips 生成/md5(路径:mtime:尺寸) 键——改图换键/per-key threading 锁并发去重/48-1600 尺寸钳制/透明 png 其余 jpeg/200MB LRU 摊还裁剪/runner 注入可测)+GET /api/cockpit/thumb(Cache-Control 7d;404/400/500 映射);前端网格卡片图片走 thumb(尺寸随三档 200/280/360,lazy,onerror 加 dead 类回退字形不留裂图);PreviewPane 图片先走 w=1000 缩略图秒开(heic/tiff 也能看),onerror 回退 raw
+- 抓修: fileIcons 又扫出 🖼🎞🗜 emoji 违规(轮6 只清了 📁📄)→ IMG/VID/ZIP 等宽字形,正则全扫确认清零
+- 功能可用性: e2e 真机:真 sips 生成(200 image/png,缓存文件落 data_dir/thumbs)→ 网格两图 loaded 非 dead → 预览走 thumb loaded;烟测项目已清
+- 取舍: 视频/PDF 的 qlmanage 抽帧留 P2 新条;灯箱缩放归"双击语义+灯箱"那条 P1
+- 契约/notch 影响: 无(新增端点)
+- VibeHub: record_decision(F1)→ 见下条;矩阵 P1 6/14
+- 验证: 前端 build ✓/check 0/0(254 文件)/test 178;后端 pytest 193(+2:管线缓存/键翻新/透明分流/路由守卫);视觉 dark 截图
+- 状态: ✅ 夜间自 commit(feat/cockpit-fanbox,未合 main)｜❓需确认: 无
+
 ## 2026-07-02 23:35 · phase3-round6-views-sort(夜间模式)· P1 第5条
 - 对齐: 阶段3 轮6——列表/网格双视图+排序+隐藏文件开关(FanBox app:340-401/2132-2146)
 - 改动: 后端 list_dir(+show_hidden 参数,默认隐藏点文件——旧行为是全显;DirEntry+mtime,/files 响应带 mtime);前端 cockpit store(viewMode/gridSize/sortKey/showHidden 四偏好 localStorage 持久化+toggleHidden refetch);FileBrowser(viewbar:网格|列表切换/SM·MD·LG 三档/排序 select 名称·mtime·size/隐藏 checkbox;列表视图=mono 表头+发丝行+tabular 时间列;排序 zh locale+numeric、目录永远在前、时间/大小降序);顺手修 fileIcons 📁📄 emoji 违规(→DIR/·)

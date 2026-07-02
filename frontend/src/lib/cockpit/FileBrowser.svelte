@@ -104,6 +104,12 @@
     }),
   )
 
+  const THUMB_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'heic', 'heif', 'tif', 'tiff'])
+  const thumbW = $derived(cockpit.gridSize === 'sm' ? 200 : cockpit.gridSize === 'lg' ? 360 : 280)
+  function thumbUrl(path: string): string {
+    return `/api/cockpit/thumb?path=${encodeURIComponent(path)}&w=${thumbW}`
+  }
+
   function fmtTime(mtime?: number): string {
     if (!mtime) return '—'
     const d = new Date(mtime * 1000)
@@ -232,7 +238,19 @@
           onclick={() => cockpit.select(e)}
           oncontextmenu={(ev) => openMenu(ev, e)}
         >
-          <span class="icon" style="color:{ic.color}">{ic.glyph}</span>
+          {#if !e.is_dir && THUMB_EXTS.has(e.ext)}
+            <!-- 缩略图,失败回退字形不留裂图(承 FanBox) -->
+            <img
+              class="thumb"
+              src={thumbUrl(e.path)}
+              alt=""
+              loading="lazy"
+              onerror={(ev) => (ev.currentTarget as HTMLImageElement).classList.add('dead')}
+            />
+            <span class="icon thumbfall" style="color:{ic.color}">{ic.glyph}</span>
+          {:else}
+            <span class="icon" style="color:{ic.color}">{ic.glyph}</span>
+          {/if}
           <span class="card-name" title={e.name}>{e.name}</span>
           <span class="meta">{e.is_dir ? '文件夹' : fmtSize(e.size)}</span>
         </button>
@@ -634,6 +652,25 @@
     font-family: var(--mono);
     font-weight: 700;
     font-size: 13px;
+  }
+  .thumb {
+    width: 100%;
+    height: 72px;
+    object-fit: cover;
+    display: block;
+    background: var(--tile);
+  }
+  .grid.g-sm .thumb {
+    height: 54px;
+  }
+  .grid.g-lg .thumb {
+    height: 100px;
+  }
+  .thumb.dead {
+    display: none;
+  }
+  .thumb:not(.dead) + .thumbfall {
+    display: none;
   }
   .card-name {
     font-size: 12.5px;
