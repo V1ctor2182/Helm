@@ -17,7 +17,10 @@ UTC = timezone.utc
 def test_compute_next_run_cron():
     after = datetime(2026, 6, 27, 8, 0, tzinfo=UTC)
     nxt = compute_next_run("cron", {"expr": "0 9 * * *"}, after)
-    assert nxt == datetime(2026, 6, 27, 9, 0, tzinfo=UTC)
+    # cron 语义 = 本地墙钟(question 8d6ac767 决议):下一个「本地 9 点」
+    assert nxt is not None and nxt > after
+    local = nxt.astimezone()
+    assert (local.hour, local.minute) == (9, 0)
     assert compute_next_run("cron", {"expr": "not a cron"}, after) is None
 
 

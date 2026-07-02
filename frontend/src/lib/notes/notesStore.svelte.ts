@@ -107,6 +107,20 @@ export class NotesStore {
     return ok !== null
   }
 
+  /** 编辑速记/日记内容(PATCH,backlog: 笔记不可编辑)。 */
+  async update(id: number, content: string): Promise<boolean> {
+    if (!content.trim()) return false
+    this.error = null
+    const ok = await this.#json(`/api/notes/${id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ content }),
+    })
+    if (ok) await this.load()
+    else this.error = '保存失败'
+    return ok !== null
+  }
+
   async remove(id: number): Promise<void> {
     const ok = await this.#json(`/api/notes/${id}`, { method: 'DELETE' })
     if (ok) await this.load()
@@ -119,7 +133,7 @@ export class NotesStore {
     if (xs) this.providers = xs
   }
 
-  async summarizeToday(date: string): Promise<void> {
+  async summarizeToday(date: string, days = 1): Promise<void> {
     const p = this.providers[0]
     if (!p) {
       this.error = '没有可用的模型 provider — 先在 Chat 里配置一个'
@@ -131,9 +145,9 @@ export class NotesStore {
       const body = (await this.#json('/api/notes/journal/summary', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ provider_id: p.id, model: p.models[0] ?? '', journal_date: date, save: false }),
+        body: JSON.stringify({ provider_id: p.id, model: p.models[0] ?? '', journal_date: date, days, save: false }),
       })) as { summary: string } | null
-      this.summary = body ? body.summary : '小结生成失败(无当天日记或 provider 不可用)'
+      this.summary = body ? body.summary : '小结生成失败(区间无日记或 provider 不可用)'
     } finally {
       this.summarizing = false
     }

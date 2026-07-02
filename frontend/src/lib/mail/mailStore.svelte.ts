@@ -141,7 +141,8 @@ export class MailStore {
 
   async toEvent(id: number, start: string): Promise<void> {
     if (!start) return
-    const r = await this.#post(`/api/mail/emails/${id}/to-event`, { start })
+    // datetime 本地墙钟→UTC ISO,与日历事件约定一致(裸 ISO=UTC)
+    const r = await this.#post(`/api/mail/emails/${id}/to-event`, { start: new Date(start).toISOString() })
     this.convertMsg = r ? '已加入日历(可在 日历 查看)' : '转日历事件失败'
   }
 }

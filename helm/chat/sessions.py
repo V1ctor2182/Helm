@@ -51,6 +51,11 @@ class ChatService:
     def add_message(self, session_id: int, role: str, content: str) -> Message:
         row = Message(session_id=session_id, role=role, content=content)
         self._s.add(row)
+        # 自动命名:无标题会话用首条用户消息前 30 字当标题(替代「会话 N」)
+        if role == "user":
+            sess = self._s.get(ChatSession, session_id)
+            if sess is not None and not sess.title:
+                sess.title = content.strip().replace("\n", " ")[:30] or None
         self._s.flush()
         return row
 

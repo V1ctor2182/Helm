@@ -78,7 +78,10 @@ describe('MailStore.toEvent', () => {
     const s = new MailStore()
     await s.toEvent(4, '2026-06-29T10:00')
     expect(fetchMock.mock.calls[0][0]).toContain('/emails/4/to-event')
-    expect(JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string)).toEqual({ start: '2026-06-29T10:00' })
+    // 本地墙钟已转 UTC ISO(与日历约定一致)
+    expect(JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string)).toEqual({
+      start: new Date('2026-06-29T10:00').toISOString(),
+    })
     expect(s.convertMsg).toContain('日历')
   })
 })

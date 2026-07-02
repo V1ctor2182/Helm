@@ -9,25 +9,33 @@
 
 <!-- 新发现追加到对应严重度下；修掉移到「Done」或就地改 [x] -->
 
-- [ ] [记录][P1][bug] cron next_run 后端按 UTC 计算：用户写 `0 9 * * *` 期望本地 9 点，实际 09:00 UTC 触发。前端已如实显示本地时间（会显 17:00 暴露错位），但语义修正需后端定 tz 策略（/api/tasks 为 notch 共用契约，不擅动）→ 已 add_question 待人定  (轮1/2026-07-02)
-- [ ] [驾驶舱][P2][polish] xterm 终端保持惯例黑底(未接双主题 token,浅色模式下是黑岛,终端惯例可接受待定);Monaco Diff 主题已跟随但初始化后不随切换热更  (轮9/2026-07-02)
-- [ ] [设置][P2][gap] 本机 hook / 媒体源设置属 notch 伴侣侧未纳入 Web 设置;通用 settings K/V 与 secrets 管理 UI 未做;accent 手动选择不持久化(设计定当日轮换,待产品确认)  (轮11/2026-07-02)
-- [ ] [研究][P2][polish] 无 provider 时 provider/model 下拉是光秃 chevron,应给「先配置 provider」占位/禁用提示  (轮8/2026-07-02)
-- [ ] [大脑][P2][gap] Skills 触发计数恒 0(无 agent 真实遥测钩子)、启停只持久化 Helm 侧不真禁 Claude Code 加载——既有已知限制,归 F5 agent-orchestration 集成  (轮7/2026-07-02 复确认)
-- [ ] [Chat][P2][polish] 对比 lane 会话在侧栏无「对比」视觉标记；对比历史不可从会话列表重新打开成对比视图（现只能当普通会话看）  (轮5/2026-07-02)
-- [ ] [Chat][P2][gap] 会话无自动命名（title 一直 null 显示"会话 N"）；新会话表单未暴露 system_prompt；对话未接 RAG/项目上下文（intent 56910be6）  (轮4/2026-07-02)
-- [ ] [外壳][P2][polish] Rail.svelte:60 `bind:this={btns['settings']}` 绑非响应式属性（Svelte dev 警告 binding_property_non_reactive）  (轮2/2026-07-02)
-- [ ] [日历][P2][gap] 日程只有账本 agenda 列表，模块表提的周/月网格视图未做（agenda 已可用，网格视图待产品优先级）  (轮3/2026-07-02)
-- [ ] [邮件][P2][bug] Mail.svelte（模式现禁用）toEvent 的 window.prompt 时间仍按裸本地串直发，重新启用邮件时需与日历 UTC 约定对齐  (轮3/2026-07-02)
-- [ ] [记录][P2][gap] 任务表单只暴露 cron；后端 at/every/execution_mode(existing|new_conversation) 未露出  (轮1/2026-07-02)
-- [ ] [记录][P2][gap] note→task 成功后速记行无「已转任务」标记（server 非破坏保留 note），可重复转出多任务；标记方式待产品定  (轮1/2026-07-02)
-- [ ] [记录][P2][polish] Today↔JournalView 账本 CSS（head/row/gut/framed/cbx/act.pri ≈100 行）手抄两份已现漂移（framed padding、.pg tabular-nums），抽共享 ledger 样式/组件  (轮1/2026-07-02)
-- [ ] [记录][P2][gap] 笔记不可编辑（后端 PATCH 有）、pinned/tags 未露出；日记附图（intent#2）与周/月回顾未做  (轮1/2026-07-02)
-- [ ] [记录][P2][polish] 输入区 ⌘Enter 提交缺失；删除无确认/undo  (轮1/2026-07-02)
+- [ ] [记录][P2][gap] 日记附图(intent#2)未做——Note 无附件字段,需 schema 迁移(不可逆),留人拍板  (轮1/2026-07-02;清账轮复确认)
+- [ ] [Chat][P2][gap] 对话接 RAG/项目上下文(intent 56910be6)未做——上下文注入点(持久化语义/token 预算)是架构切片,建议单独一轮设计后做  (轮4/2026-07-02;清账轮复确认)
+- [ ] [大脑][P2][gap] Skills 触发计数恒 0、启停不真禁 Claude Code——需 Claude Code hook 集成(F5 大件),既有已知限制  (轮7/2026-07-02)
+- [ ] [设置][P2][gap] 本机 hook / 媒体源设置属 notch 伴侣侧;K/V settings 与 secrets 管理 UI 未做;accent 手动选择不持久化(设计定当日轮换,待产品确认)  (轮11/2026-07-02)
+- [ ] [Chat][P2][polish] 对比历史不可从会话列表重新打开成对比视图(侧栏 CMP 标已加)  (轮5/2026-07-02;清账轮部分消化)
 
 ## Done（已修 / 已判定）
 
 <!-- 修掉/wontfix 的条目归到这里，保留可追溯 -->
+
+- [x] [记录][P1][bug] cron next_run 按 UTC 计算(question 8d6ac767)→ 修于 清账轮 commit(用户授权「全部完成」:cron 表达式按本地墙钟解释,croniter 在本地 tz 迭代,返回 tz-aware;e2e 验证 `0 9 * * *`→次日本地 09:00(+08:00);DTO 形状不变 notch 契约无影响;测试改锁本地语义)  (轮1→清账轮/2026-07-02)
+- [x] [Chat][P2][gap] 会话自动命名 → 修于 清账轮 commit(首条用户消息前 30 字设为无标题会话标题,后端 add_message;测试钉住)  (轮4→清账轮/2026-07-02)
+- [x] [Chat][P2][gap] 新会话未暴露 system_prompt → 修于 清账轮 commit(新会话表单 +system prompt 输入)  (轮4→清账轮/2026-07-02)
+- [x] [Chat][P2][polish] 对比会话侧栏无标记 → 修于 清账轮 commit(标题「对比 ·」前缀显 CMP mono 徽章)  (轮5→清账轮/2026-07-02)
+- [x] [外壳][P2][polish] Rail bind:this 非响应式警告 → 修于 清账轮 commit(btns 改 $state({}))  (轮2→清账轮/2026-07-02)
+- [x] [日历][P2][gap] 周/月网格视图 → 修于 清账轮 commit(列表|月 双视图:周一起 7 列月网格+今日 accent+事件条 accent 左沿+«»翻月;测试+e2e)  (轮3→清账轮/2026-07-02)
+- [x] [邮件][P2][bug] Mail toEvent 裸本地串直发 → 修于 清账轮 commit(转 UTC ISO 与日历约定一致;测试同步)  (轮3→清账轮/2026-07-02)
+- [x] [记录][P2][gap] 任务只暴露 cron → 修于 清账轮 commit(调度模式 select:cron/every(秒)/at(本地时间转 UTC);→任务 pin 流同用)  (轮1→清账轮/2026-07-02)
+- [x] [记录][P2][gap] note→task 无已转标记 → 修于 清账轮 commit(linked_note_id 派生「已转任务」mono 徽章)  (轮1→清账轮/2026-07-02)
+- [x] [记录][P2][gap] 笔记/日记不可编辑 → 修于 清账轮 commit(notesStore.update PATCH + 行内编辑(编辑→textarea→保存/取消);e2e 实测)  (轮1→清账轮/2026-07-02)
+- [x] [记录][P2][polish] ⌘Enter 提交缺失 → 修于 清账轮 commit(速记/日记 textarea ⌘/Ctrl+Enter 提交)  (轮1→清账轮/2026-07-02)
+- [x] [记录][P2][polish] 删除无确认 → 修于 清账轮 commit(ConfirmGate 二段确认:×→「确认」3s 内再点放行;覆盖速记/日记/任务/日历/记忆;e2e 实测武装→确认→删)  (轮1→清账轮/2026-07-02)
+- [x] [记录][P2][gap] 周/月回顾未做 → 修于 清账轮 commit(summary 端点 +days 窗口(周回顾=7 天区间),前端「周回顾」按钮;后端测试)  (轮1→清账轮/2026-07-02)
+- [x] [驾驶舱][P2][polish] Monaco 不随主题热更 → 修于 清账轮 commit($effect setTheme)  (轮9→清账轮/2026-07-02)
+- [x] [研究][P2][polish] 无 provider 下拉光秃 → 修于 清账轮 commit(「去 Chat 的 PROVIDERS 配一个」提示)  (轮8→清账轮/2026-07-02)
+- ~~wontfix~~ [记录] Today↔Journal 账本 CSS 全量抽共享 — 判定不抽:Svelte scoped style 是惯例,机械抽全局类反增耦合;漂移实处已修(framed padding 对齐 + Today .pg 补 tabular-nums 达 DESIGN 规)  (轮1→清账轮/2026-07-02)
+- ~~wontfix~~ [驾驶舱] xterm 黑底不接双主题 — 终端惯例黑底,保留(轮9 已记决策)  (轮9/2026-07-02)
 
 - [x] [设置][P1][gap] settings 模式只有通用 tab 占位、主题切换无 UI 入口、主题模式不持久化 → 修于 轮11 commit（Settings.svelte:主题三态(跟随系统/暗/亮,持久化 localStorage,init 恢复)+今日 accent 10 色现场换+后端连接状态(healthz 点+版本)+MCP 注入状态/注入按钮(合并+备份);Shell 挂 settings 模式;theme store +持久化+测试;e2e:切暗→reload 仍暗→换 accent 生效→复原跟随系统）  (轮11/2026-07-02)
 - [x] [驾驶舱][P1][gap] AgentView 旧样式+10 个 emoji 图标(🟢💬🔧⚠️🔐⏳📊🏁🔴🤖,违禁 emoji 硬规) → 修于 轮10 commit（ACP 事件流=框选视口+mono 类型标签(SESS/MSG/TOOL/OK/ERR/PERM/RATE/END)+语义色调;caret 指令输入;状态/历史描边徽章;文案与事件逻辑不动测试全保)  (轮9→轮10/2026-07-02)

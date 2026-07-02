@@ -21,7 +21,7 @@
 
   let railEl: HTMLElement | undefined = $state()
   let anchorTop = $state(46)
-  const btns: Partial<Record<ModeId, HTMLElement>> = {}
+  const btns: Partial<Record<ModeId, HTMLElement>> = $state({})
 
   // 细丝锚点跟随激活图标：读其 offset 让锚点滑移对齐（settings 在底部也自动跟到）。
   $effect(() => {

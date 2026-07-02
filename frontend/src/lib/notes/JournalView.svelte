@@ -6,16 +6,24 @@
   import { tasks } from './tasksStore.svelte'
   import { calendar } from '../mail/calendarStore.svelte'
   import { localHHMM, localDateTime } from '../time'
+  import { ConfirmGate } from '../confirm.svelte'
   import Calendar from './Calendar.svelte'
 
   let view = $state<'notes' | 'journal' | 'tasks' | 'calendar'>('notes')
   let draft = $state('')
   let taskPrompt = $state('')
+  let taskKind = $state<'cron' | 'every' | 'at'>('cron')
   let taskCron = $state('0 9 * * *')
+  let taskEvery = $state('3600')
+  let taskAt = $state('')
+  const del = new ConfirmGate()
   // note→task flow: →任务 jumps here with the note pinned; submit uses
   // /to-task so linked_note_id survives (server takes the note's content).
   // The prompt shown is derived — cancelling the pin restores the typed draft.
   let fromNote = $state<Note | null>(null)
+  // 行内编辑:editingId + 草稿
+  let editingId = $state<number | null>(null)
+  let editDraft = $state('')
   const promptValue = $derived(fromNote ? fromNote.content : taskPrompt)
 
   onMount(() => {
@@ -42,10 +50,22 @@
     return new Date().toISOString().slice(0, 10)
   }
 
+  // 三模式调度值(cron 表达式=本地墙钟;at 的本地时间转 UTC ISO)
+  function scheduleValue(): Record<string, unknown> | null {
+    if (taskKind === 'cron') return taskCron.trim() ? { expr: taskCron.trim() } : null
+    if (taskKind === 'every') {
+      const n = Number(taskEvery)
+      return Number.isFinite(n) && n > 0 ? { seconds: n } : null
+    }
+    return taskAt ? { at: new Date(taskAt).toISOString() } : null
+  }
+
   async function addTask() {
+    const value = scheduleValue()
+    if (!value) return
     if (fromNote) {
       const pinned = fromNote
-      const ok = await notes.toTask(pinned.id, 'cron', { expr: taskCron })
+      const ok = await notes.toTask(pinned.id, taskKind, value)
       if (ok) {
         fromNote = null
         await tasks.load()
@@ -56,8 +76,31 @@
       return
     }
     if (!taskPrompt.trim()) return
-    const ok = await tasks.create('', taskPrompt, 'cron', { expr: taskCron })
+    const ok = await tasks.create('', taskPrompt, taskKind, value)
     if (ok) taskPrompt = ''
+  }
+
+  // 已转任务标记:tasks 里 linked_note_id 指向的速记
+  const linkedNoteIds = $derived(new Set(tasks.tasks.map((t) => t.linked_note_id).filter((x): x is number => x != null)))
+
+  function cmdEnter(e: KeyboardEvent) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault()
+      void add()
+    }
+  }
+
+  function startEdit(n: Note) {
+    editingId = n.id
+    editDraft = n.content
+  }
+
+  async function saveEdit() {
+    if (editingId == null) return
+    if (await notes.update(editingId, editDraft)) {
+      editingId = null
+      editDraft = ''
+    }
   }
 
   function noteToTask(n: Note) {
@@ -129,6 +172,7 @@
           bind:value={draft}
           aria-label={view === 'notes' ? '速记内容' : '日记内容'}
           rows={view === 'notes' ? 1 : 3}
+          onkeydown={cmdEnter}
         ></textarea>
         <button class="act pri" type="submit" disabled={!draft.trim()}>{view === 'notes' ? '记一笔' : '写入今天'}</button>
       </form>
@@ -147,13 +191,28 @@
             {#each noteItems as n (n.id)}
               <li class="note">
                 <span class="nt">{localHHMM(n.created_at)}</span>
+                {#if editingId === n.id}
+                  <textarea class="editbox" bind:value={editDraft} aria-label="编辑内容" rows="2"></textarea>
+                  <span class="acts">
+                    <button class="act pri" onclick={saveEdit} disabled={!editDraft.trim()}>保存</button>
+                    <button class="act" onclick={() => (editingId = null)}>取消</button>
+                  </span>
+                {:else}
                 <span class="body">{n.content}</span>
                 <span class="acts">
+                  {#if linkedNoteIds.has(n.id)}<span class="linked">已转任务</span>{/if}
+                  <button class="act" title="编辑" aria-label={`编辑 ${n.content}`} onclick={() => startEdit(n)}>编辑</button>
                   <button class="act" title="转为今天的日记" onclick={() => notes.toJournal(n.id)}>→日记</button>
                   <button class="act" title="存入记忆" onclick={() => notes.toMemory(n.id)}>→记忆</button>
                   <button class="act" title="转为定时任务" onclick={() => noteToTask(n)}>→任务</button>
-                  <button class="act del" aria-label={`删除 ${n.content}`} onclick={() => notes.remove(n.id)}>×</button>
+                  <button
+                    class="act del"
+                    class:armed={del.pending === `note-${n.id}`}
+                    aria-label={`删除 ${n.content}`}
+                    onclick={() => del.confirm(`note-${n.id}`) && notes.remove(n.id)}
+                  >{del.pending === `note-${n.id}` ? '确认' : '×'}</button>
                 </span>
+                {/if}
               </li>
             {/each}
           </ul>
@@ -165,9 +224,12 @@
       <div class="gut"><span class="tm">AI</span></div>
       <div>
         <div class="h">今日小结 / SUMMARY</div>
-        <button class="act pri" onclick={() => notes.summarizeToday(today())} disabled={notes.summarizing}>
-          {notes.summarizing ? '生成中…' : 'AI 今日小结'}
-        </button>
+        <span class="sumbtns">
+          <button class="act pri" onclick={() => notes.summarizeToday(today())} disabled={notes.summarizing}>
+            {notes.summarizing ? '生成中…' : 'AI 今日小结'}
+          </button>
+          <button class="act" onclick={() => notes.summarizeToday(today(), 7)} disabled={notes.summarizing}>周回顾</button>
+        </span>
         {#if notes.summary}
           <div class="framed"><p class="summary">{notes.summary}</p></div>
         {/if}
@@ -186,8 +248,22 @@
                 <h3>{day}</h3>
                 {#each entries as e (e.id)}
                   <article class="entry">
+                    {#if editingId === e.id}
+                      <textarea class="editbox" bind:value={editDraft} aria-label="编辑日记" rows="4"></textarea>
+                      <span class="acts">
+                        <button class="act pri" onclick={saveEdit} disabled={!editDraft.trim()}>保存</button>
+                        <button class="act" onclick={() => (editingId = null)}>取消</button>
+                      </span>
+                    {:else}
                     <div class="md">{@html renderMd(e.content)}</div>
-                    <button class="act del" aria-label="删除日记" onclick={() => notes.remove(e.id)}>×</button>
+                    <button class="act" aria-label="编辑日记" onclick={() => startEdit(e)}>编辑</button>
+                    <button
+                      class="act del"
+                      class:armed={del.pending === `jr-${e.id}`}
+                      aria-label="删除日记"
+                      onclick={() => del.confirm(`jr-${e.id}`) && notes.remove(e.id)}
+                    >{del.pending === `jr-${e.id}` ? '确认' : '×'}</button>
+                    {/if}
                   </article>
                 {/each}
               </section>
@@ -229,8 +305,19 @@
           aria-label="任务指令"
           readonly={fromNote !== null}
         />
-        <input class="cron" placeholder="cron 表达式" bind:value={taskCron} aria-label="cron 表达式" />
-        <button class="act pri" type="submit" disabled={fromNote ? false : !taskPrompt.trim()}>加定时</button>
+        <select class="kind" bind:value={taskKind} aria-label="调度模式">
+          <option value="cron">cron</option>
+          <option value="every">every</option>
+          <option value="at">at</option>
+        </select>
+        {#if taskKind === 'cron'}
+          <input class="cron" placeholder="cron 表达式" bind:value={taskCron} aria-label="cron 表达式" />
+        {:else if taskKind === 'every'}
+          <input class="cron" type="number" min="1" placeholder="间隔秒" bind:value={taskEvery} aria-label="间隔秒" />
+        {:else}
+          <input class="cron at" type="datetime-local" bind:value={taskAt} aria-label="触发时间" />
+        {/if}
+        <button class="act pri" type="submit" disabled={(fromNote ? false : !taskPrompt.trim()) || !scheduleValue()}>加定时</button>
       </form>
     </div>
     {#if tasks.error}<p class="err" role="alert">{tasks.error}</p>{/if}
@@ -256,7 +343,12 @@
                       aria-expanded={tasks.runsFor === t.id}
                       onclick={() => tasks.toggleRuns(t.id)}
                     >{t.run_count} 次{#if t.last_status}&nbsp;· {t.last_status}{/if}</button>
-                    <button class="act del" aria-label={`删除 ${t.name}`} onclick={() => tasks.remove(t.id)}>×</button>
+                    <button
+                      class="act del"
+                      class:armed={del.pending === `task-${t.id}`}
+                      aria-label={`删除 ${t.name}`}
+                      onclick={() => del.confirm(`task-${t.id}`) && tasks.remove(t.id)}
+                    >{del.pending === `task-${t.id}` ? '确认' : '×'}</button>
                   </span>
                 </div>
                 {#if tasks.runsFor === t.id}
@@ -471,8 +563,55 @@
     border-color: var(--line);
     cursor: default;
   }
-  .act.del:hover {
+  .act.del:hover,
+  .act.del.armed {
     color: var(--red);
+  }
+  .sumbtns {
+    display: inline-flex;
+    gap: 8px;
+  }
+  .editbox {
+    flex: 1;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--acc-ink);
+    color: var(--t1);
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 3px 0 6px;
+    resize: vertical;
+    min-width: 0;
+  }
+  .editbox:focus {
+    outline: none;
+  }
+  .linked {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: .5px;
+    color: var(--t4);
+    border: 1px solid var(--hair);
+    padding: 0 4px;
+    flex: none;
+  }
+  .compose select.kind {
+    flex: none;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--hair);
+    color: var(--t1);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 0 5px;
+  }
+  .compose select.kind option {
+    background: var(--panel);
+    color: var(--t1);
+  }
+  .compose input.at {
+    width: 170px;
+    color-scheme: dark light;
   }
   .list {
     list-style: none;
@@ -565,7 +704,7 @@
   .framed {
     position: relative;
     border: 1px solid var(--line);
-    padding: 8px 12px;
+    padding: 10px 12px; /* 与 Today .framed 对齐,消漂移 */
     margin-top: 8px;
   }
   .framed::before,

@@ -161,6 +161,9 @@ def test_journal_summary_route(config, monkeypatch):
     c.post("/api/notes", json={"content": "今天写了定时任务", "kind": "journal", "journal_date": "2026-06-27"})
 
     res = c.post("/api/notes/journal/summary", json={"provider_id": pid, "model": "m", "journal_date": "2026-06-27", "save": True})
+    # 周回顾:days=7 覆盖含当日往前 7 天的条目(同一 fake LLM 路径)
+    wk = c.post("/api/notes/journal/summary", json={"provider_id": pid, "model": "m", "journal_date": "2026-06-27", "days": 7})
+    assert wk.status_code == 200 and wk.json()["summary"]
     assert res.status_code == 200
     assert "m5" in res.json()["summary"]
     assert res.json()["saved_note_id"] is not None

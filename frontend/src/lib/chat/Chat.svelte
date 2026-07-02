@@ -12,6 +12,7 @@
   let showCompare = $state(false)
   let newProviderId = $state<number | null>(null)
   let newModel = $state('')
+  let newSystem = $state('')
   let msgsEl = $state<HTMLElement | null>(null)
 
   onMount(() => {
@@ -49,7 +50,8 @@
 
   async function startSession() {
     if (newProviderId == null || !newModel.trim()) return
-    await chat.createSession(newProviderId, newModel.trim())
+    await chat.createSession(newProviderId, newModel.trim(), newSystem.trim() || null)
+    newSystem = ''
     showProviders = false
   }
 </script>
@@ -66,6 +68,7 @@
       <datalist id="model-list">
         {#each newProvider?.models ?? [] as m (m)}<option value={m}></option>{/each}
       </datalist>
+      <input bind:value={newSystem} placeholder="system prompt(可选)" aria-label="系统提示词" />
       <button class="act pri" onclick={startSession} disabled={newProviderId == null || !newModel.trim()}>开始</button>
     </section>
 
@@ -77,7 +80,10 @@
         {#each chat.sessions as s (s.id)}
           <li class="srow">
             <button class="sess" class:active={chat.current?.id === s.id} onclick={() => chat.openSession(s.id)}>
-              <span class="st">{s.title || `会话 ${s.id}`}</span>
+              <span class="strow">
+                {#if s.title?.startsWith('对比 ·')}<span class="cmptag">CMP</span>{/if}
+                <span class="st">{s.title || `会话 ${s.id}`}</span>
+              </span>
               <span class="sm">{s.model}</span>
             </button>
             <button class="sdel" aria-label={`删除会话 ${s.title || s.id}`} onclick={() => chat.deleteSession(s.id)}>×</button>
@@ -269,6 +275,21 @@
     border-left: 2px solid transparent;
     padding: 5px 8px;
     cursor: pointer;
+  }
+  .strow {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+  }
+  .cmptag {
+    font-family: var(--mono);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--acc-ink);
+    border: 1px solid var(--acc-ink);
+    padding: 0 3px;
+    flex: none;
   }
   .sess .st {
     color: var(--t2);

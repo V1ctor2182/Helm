@@ -40,6 +40,12 @@
     editor.setModel({ original, modified })
   })
 
+  // 主题切换时热更 Monaco(初始化只设一次不够)
+  $effect(() => {
+    const dark = theme.isDark
+    if (editor) monaco.editor.setTheme(dark ? 'vs-dark' : 'vs')
+  })
+
   onDestroy(() => {
     editor?.dispose()
     models.forEach((m) => m.dispose()) // models aren't freed by editor.dispose()

@@ -6,6 +6,15 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 17:55 · phase2-cleanup-round（清账轮)· backlog open 全处置
+- 对齐: 用户指示「把 pause 前遇到的问题全部完成」——backlog open P1×1+P2×15 全处置:可动的 15 项全修,5 项判 defer/wontfix 并注明理由
+- 后端: cron 改本地墙钟语义(收口 question 8d6ac767,e2e 验 0 9 * * *→本地 09:00 +08:00,DTO 不变 notch 无影响);会话自动命名(首条用户消息);summary +days 窗口(周回顾)
+- 前端: 笔记/日记行内编辑(PATCH);任务三模式调度(cron/every/at,at 本地转 UTC);已转任务徽章;⌘Enter 提交;ConfirmGate 二段删除(速记/日记/任务/日历/记忆,共享 util);日历月网格(列表|月 双视图);Chat system_prompt 暴露+CMP 徽章;Research 无 provider 提示;Monaco 主题热更;Rail bind 警告;Mail toEvent UTC;Today .pg tabular 合规+framed 漂移对齐
+- 仍留人(open P2×5): 日记附图(schema 迁移不猜)/Chat 接 RAG 上下文(架构切片)/Skills 真遥测(需 CC hook)/notch 侧设置/对比历史重开
+- 验证: 前端 build ✓/check 0 错 0 警(250 文件)/test 158(+2);后端 pytest 184 绿;e2e:cron 本地时间/编辑往返/二段删除武装→确认/月网格 dark 截图
+- VibeHub: record_decision F6「cron 本地语义+记录清账」→ 591d9140;F8「跨模块扫尾」→ a75a45ec (ai_proposed)
+- 状态: ✅ commit(feat/design-shell-today,未合 main)｜❓需确认: cron 本地语义为代拍板,VibeHub 待你确认
+
 ## 2026-07-02 16:35 · phase2-round11-settings（夜间模式·pause 前末轮）· 设置模式
 - 对齐: 阶段2 第11轮——Settings 模式落地(主题三态持久化+今日 accent 换色+后端/MCP 状态);用户「pause」后本轮收尾即停
 - 设计基线: DESIGN.md(账本行/mono act/色块 3px 例外/LOCAL 角标;未改)

@@ -48,6 +48,9 @@
       ></textarea>
     </div>
     <div class="controls">
+      {#if research.providers.length === 0}
+        <span class="noprov">还没有模型 provider — 去 Chat 的 PROVIDERS 配一个</span>
+      {/if}
       <select
         aria-label="模型 provider"
         value={research.providerId ?? ''}
@@ -243,6 +246,12 @@
     gap: 12px;
     margin-top: 8px;
     padding-left: 11px;
+  }
+  .noprov {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--t4);
+    align-self: center;
   }
   .controls select {
     background: transparent;

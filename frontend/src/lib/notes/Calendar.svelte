@@ -4,8 +4,13 @@
   // is currently disabled but the calendar capability stands alone.
   import { calendar, type CalEvent } from '../mail/calendarStore.svelte'
   import { localDate, localHHMM } from '../time'
+  import { ConfirmGate } from '../confirm.svelte'
 
   let evSummary = $state('')
+  const del = new ConfirmGate()
+  // 列表(agenda)/ 月网格 双视图
+  let calView = $state<'list' | 'month'>('list')
+  let monthCursor = $state(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
   let evStart = $state('')
   let showCaldav = $state(false)
   let cdav = $state({ name: '', url: '', username: '', password: '' })
@@ -47,6 +52,37 @@
     if (!ev.start) return '未定'
     return ev.all_day ? ev.start.slice(0, 10) : localDate(ev.start)
   }
+  const pad2 = (n: number) => String(n).padStart(2, '0')
+  const fmtDay = (y: number, m: number, d: number) => `${y}-${pad2(m + 1)}-${pad2(d)}`
+  const todayStr = $derived(fmtDay(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()))
+  const monthLabel = $derived(`${monthCursor.getFullYear()}-${pad2(monthCursor.getMonth() + 1)}`)
+
+  function shiftMonth(delta: number) {
+    monthCursor = new Date(monthCursor.getFullYear(), monthCursor.getMonth() + delta, 1)
+  }
+
+  // 月网格:周一开头,前置空位 + 当月各天(挂上当日事件)
+  const monthCells = $derived(
+    (() => {
+      const y = monthCursor.getFullYear()
+      const m = monthCursor.getMonth()
+      const byDay = new Map<string, CalEvent[]>()
+      for (const ev of calendar.events) {
+        const k = dayKey(ev)
+        ;(byDay.get(k) ?? byDay.set(k, []).get(k)!).push(ev)
+      }
+      const lead = (new Date(y, m, 1).getDay() + 6) % 7
+      const days = new Date(y, m + 1, 0).getDate()
+      const cells: { date: string | null; day: number; events: CalEvent[] }[] = []
+      for (let i = 0; i < lead; i++) cells.push({ date: null, day: 0, events: [] })
+      for (let d = 1; d <= days; d++) {
+        const key = fmtDay(y, m, d)
+        cells.push({ date: key, day: d, events: byDay.get(key) ?? [] })
+      }
+      return cells
+    })(),
+  )
+
   const eventsByDay = $derived(
     (() => {
       const groups = new Map<string, CalEvent[]>()
@@ -61,7 +97,13 @@
 </script>
 
 <div class="cal">
-  <div class="h">日程 / AGENDA</div>
+  <div class="toolrow">
+    <div class="h">日程 / AGENDA</div>
+    <span class="vsel" role="tablist" aria-label="日程视图">
+      <button class="act" class:on={calView === 'list'} role="tab" aria-selected={calView === 'list'} onclick={() => (calView = 'list')}>列表</button>
+      <button class="act" class:on={calView === 'month'} role="tab" aria-selected={calView === 'month'} onclick={() => (calView = 'month')}>月</button>
+    </span>
+  </div>
 
   <div class="tools">
     <button class="act" onclick={doImport}>导入 .ics</button>
@@ -93,7 +135,29 @@
   {#if calendar.error}<p class="err" role="alert">{calendar.error}</p>{/if}
   {#if calendar.syncMsg}<p class="cmsg">{calendar.syncMsg}</p>{/if}
 
-  {#if calendar.events.length === 0}
+  {#if calView === 'month'}
+    <div class="mnav">
+      <button class="act" aria-label="上一月" onclick={() => shiftMonth(-1)}>‹</button>
+      <span class="mlabel">{monthLabel}</span>
+      <button class="act" aria-label="下一月" onclick={() => shiftMonth(1)}>›</button>
+    </div>
+    <div class="mgrid">
+      {#each ['一', '二', '三', '四', '五', '六', '日'] as w (w)}
+        <div class="mw">{w}</div>
+      {/each}
+      {#each monthCells as c, i (i)}
+        <div class="mc" class:blank={!c.date} class:istoday={c.date === todayStr}>
+          {#if c.date}
+            <span class="mnum">{c.day}</span>
+            {#each c.events.slice(0, 2) as ev (ev.id)}
+              <span class="mev" title={ev.summary}>{ev.summary}</span>
+            {/each}
+            {#if c.events.length > 2}<span class="mmore">+{c.events.length - 2}</span>{/if}
+          {/if}
+        </div>
+      {/each}
+    </div>
+  {:else if calendar.events.length === 0}
     <p class="empty">还没有日程 — 加一个事件,或导入 .ics。</p>
   {:else}
     {#each eventsByDay as [day, evs] (day)}
@@ -105,7 +169,12 @@
             <span class="esum">{ev.summary}</span>
             {#if ev.location}<span class="eloc">{ev.location}</span>{/if}
             <span class="esrc">{ev.source === 'caldav' ? 'CALDAV' : 'LOCAL'}</span>
-            <button class="act del" aria-label={`删除 ${ev.summary}`} onclick={() => calendar.remove(ev.id)}>×</button>
+            <button
+              class="act del"
+              class:armed={del.pending === `ev-${ev.id}`}
+              aria-label={`删除 ${ev.summary}`}
+              onclick={() => del.confirm(`ev-${ev.id}`) && calendar.remove(ev.id)}
+            >{del.pending === `ev-${ev.id}` ? '确认' : '×'}</button>
           </div>
         {/each}
       </section>
@@ -163,7 +232,8 @@
     border: 0;
     padding: 2px 4px;
   }
-  .act.del:hover {
+  .act.del:hover,
+  .act.del.armed {
     color: var(--red);
   }
   .compose {
@@ -290,5 +360,84 @@
     color: var(--t4);
     font-size: 13px;
     margin: 2px 0;
+  }
+  .toolrow {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .vsel {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+  }
+  .act.on {
+    color: var(--acc-ink);
+    border-color: var(--acc-ink);
+  }
+  .mnav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .mlabel {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--acc-ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .mgrid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+  .mw {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: .5px;
+    color: var(--t4);
+    text-align: center;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--hair);
+  }
+  .mc {
+    min-height: 64px;
+    border-right: 1px solid var(--hair);
+    border-bottom: 1px solid var(--hair);
+    padding: 3px 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .mc:nth-child(7n) {
+    border-right: none;
+  }
+  .mc.blank {
+    background: transparent;
+  }
+  .mc.istoday .mnum {
+    color: var(--acc-ink);
+    font-weight: 700;
+  }
+  .mnum {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--t3);
+    font-variant-numeric: tabular-nums;
+  }
+  .mev {
+    font-size: 10.5px;
+    color: var(--t2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-left: 2px solid var(--acc);
+    padding-left: 4px;
+  }
+  .mmore {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--t4);
   }
 </style>

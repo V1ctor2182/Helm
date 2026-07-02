@@ -64,6 +64,18 @@ describe('NotesStore', () => {
     })
   })
 
+  it('update PATCHes content and reloads', async () => {
+    const fetchMock = vi.fn((url: string, init?: RequestInit) =>
+      Promise.resolve({ ok: true, json: () => Promise.resolve(init?.method === 'PATCH' ? { id: 6 } : { notes: [] }) }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const s = new NotesStore()
+    expect(await s.update(6, 'edited text')).toBe(true)
+    const patch = fetchMock.mock.calls.find((c) => (c[1] as RequestInit)?.method === 'PATCH')
+    expect(patch![0]).toBe('/api/notes/6')
+    expect(JSON.parse((patch![1] as RequestInit).body as string)).toEqual({ content: 'edited text' })
+  })
+
   it('toMemory posts and reports failure', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: () => Promise.resolve({}) }))
     const s = new NotesStore()

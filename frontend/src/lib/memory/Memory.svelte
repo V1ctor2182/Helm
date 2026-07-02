@@ -1,8 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { memory, CATEGORIES, type Category } from './memoryStore.svelte'
+  import { ConfirmGate } from '../confirm.svelte'
 
   let draft = $state('')
+  const del = new ConfirmGate()
   let draftCat = $state<Category>('fact')
 
   // The browse list, or search results when a query is active.
@@ -112,7 +114,12 @@
               title={m.pinned ? '取消置顶' : '置顶'}
               onclick={() => memory.togglePin(m)}>PIN</button
             >
-            <button class="act del" aria-label={`删除 ${m.text}`} onclick={() => memory.remove(m.id)}>×</button>
+            <button
+              class="act del"
+              class:armed={del.pending === `m-${m.id}`}
+              aria-label={`删除 ${m.text}`}
+              onclick={() => del.confirm(`m-${m.id}`) && memory.remove(m.id)}
+            >{del.pending === `m-${m.id}` ? '确认' : '×'}</button>
           </span>
         </li>
       {/each}
@@ -300,7 +307,8 @@
   .act.pin.on {
     color: var(--acc-ink);
   }
-  .act.del:hover {
+  .act.del:hover,
+  .act.del.armed {
     color: var(--red);
   }
   .err {

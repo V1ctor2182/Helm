@@ -37,5 +37,9 @@ def compute_next_run(kind: str, value: dict, after: datetime) -> datetime | None
         expr = value.get("expr")
         if not expr or not croniter.is_valid(expr):
             return None
-        return _aware(croniter(expr, after).get_next(datetime))
+        # cron 表达式按用户本地墙钟解释("0 9 * * *"=本地 9 点,而非 09:00 UTC)。
+        # 在本地时区迭代;返回值仍 tz-aware,与 UTC now 的比较/存储不受影响。
+        # (question 8d6ac767 决议;DTO 形状不变,notch 契约不受影响)
+        local_after = after.astimezone()
+        return _aware(croniter(expr, local_after).get_next(datetime))
     return None

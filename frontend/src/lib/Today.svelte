@@ -146,6 +146,7 @@
     font-size: 10px;
     color: var(--t4);
     letter-spacing: .5px;
+    font-variant-numeric: tabular-nums; /* DESIGN:数据/计数一律 tabular */
   }
   .rdrow {
     display: grid;

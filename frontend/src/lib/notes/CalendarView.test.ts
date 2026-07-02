@@ -35,6 +35,15 @@ describe('Calendar agenda view', () => {
     expect(screen.getByRole('button', { name: '删除 Standup' })).toBeInTheDocument()
   })
 
+  it('month view lays out a grid with events on their local day', async () => {
+    calendar.events = [EV({ id: 5, uid: 'u5', summary: '发布会', start: '2026-07-02T06:00:00+00:00' })]
+    render(Calendar)
+    const { fireEvent } = await import('@testing-library/dom')
+    await fireEvent.click(screen.getByRole('tab', { name: '月' }))
+    expect(screen.getByText('2026-07')).toBeInTheDocument()
+    expect(screen.getByText('发布会')).toBeInTheDocument()
+  })
+
   it('shows the empty state without events', () => {
     render(Calendar)
     expect(screen.getByText(/还没有日程/)).toBeInTheDocument()

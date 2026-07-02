@@ -262,9 +262,11 @@ def test_chat_ws_streams_persists_restores(config, monkeypatch):
         assert "".join(deltas) == "Hello"
 
     # restore
-    msgs = c.get(f"/api/sessions/{sid}").json()["messages"]
-    pairs = [(m["role"], m["content"]) for m in msgs]
+    got = c.get(f"/api/sessions/{sid}").json()
+    pairs = [(m["role"], m["content"]) for m in got["messages"]]
     assert pairs == [("user", "hi"), ("assistant", "Hello")]
+    # 自动命名:首条用户消息成为无标题会话的标题
+    assert got["session"]["title"] == "hi"
 
 
 def test_chat_ws_unknown_session_closes(config):

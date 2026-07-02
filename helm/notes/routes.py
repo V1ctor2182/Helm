@@ -136,6 +136,8 @@ class JournalSummaryBody(BaseModel):
     provider_id: int
     model: str
     journal_date: date | None = None
+    # 回顾窗口:1=当日小结;7=周回顾(自 journal_date 往前含当日)。
+    days: int = 1
     save: bool = False
 
 
@@ -149,12 +151,18 @@ def journal_summary(
     call is paid but user-initiated. Optionally save the summary as a note."""
     day = body.journal_date
     if day is not None:
-        entries = [
-            n.content
-            for n in session.scalars(
-                select(Note).where(Note.kind == "journal", Note.journal_date == day)
+        if body.days > 1:
+            from datetime import timedelta
+
+            start = day - timedelta(days=body.days - 1)
+            stmt = select(Note).where(
+                Note.kind == "journal",
+                Note.journal_date >= start,
+                Note.journal_date <= day,
             )
-        ]
+        else:
+            stmt = select(Note).where(Note.kind == "journal", Note.journal_date == day)
+        entries = [n.content for n in session.scalars(stmt)]
     else:
         entries = [n.content for n in NoteService(session).list(kind="journal")]
     if not entries:
