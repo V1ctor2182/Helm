@@ -188,7 +188,7 @@ notch 已是 Helm 后端的原生客户端(`HelmClient` → `http://127.0.0.1:87
 
 模块大,一个模块通常拆成几轮(先视图骨架、再接数据、再补交互),每轮仍是一个能提交的完整小块。节奏:
 
-1. **选一个模块 / 该模块的一个可用切片**(按上表顺序或你的判断)。别和 log 重复。
+1. **选活(先清 backlog,再拿新的)**:开工前先看 `docs/design/helm-review-backlog.md` 的 **open 项**——**有 blocking(bug / 缺口)的先修**(修一条在 backlog 标 `[x]` + 记 commit);没 blocking 才**选一个新模块 / 新切片**(按上表顺序或你的判断)。别和 log 重复。
 2. **拉这个 Room 的 context**:`get_feature_context(<该模块 room>)` + `get_file_context` + 读后端对应 router(`helm/<feature>/*` + `helm/app.py` mount)拿真实端点/DTO + 读参考实现(AionUi/FanBox/Odysseus,见该 Room 决策)+ 读现状 Svelte 占位。
 3. **设计该模块视图**(helm-pro 没画→按 `DESIGN.md` 系统新设计,和外壳一致:双主题 token、座舱观感、无卡片优先、禁 emoji)。复杂的先手搓/`/design-consultation` 出一张该模块设计稿放 `docs/design/`,当该模块的视觉基线;简单的直接照系统建。
 4. **建 Svelte UI**(真组件,不是占位)——布局/交互做出来,数据先可空态。走 app.css token、走 theme store、禁 emoji。
@@ -196,8 +196,12 @@ notch 已是 Helm 后端的原生客户端(`HelmClient` → `http://127.0.0.1:87
 6. **端到端可用**:这个切片**真能用**(点得动、跑得通、错误有兜底、无数据有空态)。不是画个壳。
 7. **硬门**:前端 `npm run build`+`check`+`test` 全绿;改了后端跑 `pytest` 全绿;改了 notch 契约跑 `cd notch && swift build && swift test` 全绿。**非全绿绝不 commit。**
 8. **视觉门**:`npm run dev`(5174)截图 dark/light,视图和该模块设计稿/系统一致、空态好看;改了共用端点验证 **notch 仍正常**。
-9. **记 context(记进该模块 Room,不只 F8)+ 写 log + 每轮 report**(report 多一行「功能可用性:能用/差什么」+「契约/notch 影响」)。
-10. **commit**(夜间自 commit 到 `feat/<模块>-*` 或统一 `feat/modules-*` 分支;不合 main)。
+9. **复查(每轮必做,两路)** — 见下「复查与迭代」大节:
+   - **代码 review**:对本轮 diff 跑 `/code-review`(或派 `code-reviewer` 子 agent),抓 bug / 正确性 / 简化。
+   - **完整性复查**:对照该模块「做成可用 = 什么」+ 参考实现,列出**还缺什么**(没接的子功能 / 边界 / 错误态 / 空态 / 无障碍 / 该模块和 notch 契约的缺口)。
+   - **记 backlog**:把 review + 完整性的发现写进 `docs/design/helm-review-backlog.md`(格式见下);当轮能顺手修的 blocking 就修掉并标 `[x]`,其余留 open 排队。
+10. **记 context(记进该模块 Room,不只 F8)+ 写 log + 每轮 report**(report 多两行:「功能可用性:能用/差什么」+「复查:review 结论 + 新增/剩余 backlog 条数」+「契约/notch 影响」)。
+11. **commit**(夜间自 commit 到 `feat/<模块>-*` 或统一 `feat/modules-*` 分支;不合 main)。backlog 文件随本轮一起提交,让下一轮/早上能看见。
 
 ## 阶段 2 硬规则(在阶段 1 硬规则之上加)
 
@@ -209,6 +213,27 @@ notch 已是 Helm 后端的原生客户端(`HelmClient` → `http://127.0.0.1:87
 - **小步提交**:一次一个可用切片,别一轮动一大片(前端+后端+notch 全翻);大改先拆。
 - **实时优先**:agent 活动 / 会话遥测 / 媒体这类"活"的,做成 WS/SSE 流,主前端与 notch **吃同一条流**。
 - **不可逆/破坏操作不猜**(删数据、迁 schema、动别的 Room 已交付的东西)→ `add_question` 等人。
+
+## 阶段 2 · 复查与迭代(每轮必做,让 loop 持续收敛)
+
+> 每做完一个切片**不是就走**——先复查"这块写对没 / 这个模块还缺什么",把发现记成一份**活的 backlog**,喂回下一轮先修。这样 loop 从"往前铺"变成"边铺边收敛",最后每个模块都真的完整、能用、没明显缺口。
+
+**两路复查(每轮第 9 步都做):**
+1. **代码 review(写对没)**:对本轮 diff 跑 `/code-review`(默认 medium;想更狠用 high),或派一个 `code-reviewer` 子 agent。抓 bug、正确性、错误处理、简化/复用。**高置信的 bug 当轮修**(修完再过硬门)。
+2. **完整性复查(还缺什么)**:拿该模块的「做成可用 = 什么」(模块清单那列)+ 参考实现(AionUi/FanBox/Odysseus)+ 该模块 Room 的 specs 对照,逐项问:**没接的子功能?边界/错误态/空态?加载态?键盘/无障碍?和 notch 契约的缺口?设计和 DESIGN.md 一致吗?** 列出差距。
+
+**backlog(单一真相,持续迭代的账本):** `docs/design/helm-review-backlog.md`
+- 每条一行:`- [ ] [模块][严重度 P0/P1/P2][类型 bug|gap|polish] 描述  (发现 <轮次/日期>)`
+- 修掉就改 `[x]` 并在行尾补 `→ 修于 <commit>`;判定不做的标 `~~wontfix~~ + 理由`。
+- **P0=blocking**(功能不能用/有 bug)、P1=该有没有(重要缺口)、P2=打磨。
+- 每轮**第 1 步先读它、清 P0/P1**;第 9 步把新发现**追加**进去。文件随每轮 commit。
+
+**收敛规则(别让 backlog 无限涨):**
+- **P0 优先于一切**:有 open P0 就先修,别拿新模块。
+- **一个模块"算完"的定义**:该模块的 open P0/P1 清空 + 完整性复查说"这个模块真能用、没明显缺口" + 硬门/视觉门过。达标才在 log 记「<模块> 完成」并转下一个模块。
+- **loop-until-clean**:一个模块可能"建切片 → 复查 → 修 → 再复查"转几轮才算完,这是对的;别没复查干净就跳走。
+- **P2 攒着**:打磨项排队,等某模块 P0/P1 清完、或全部模块都可用后再统一扫。
+- **发现越界的**(别的 Room 已交付的东西有问题)→ 记 backlog 标该 Room + `add_question`,别擅自动。
 
 ---
 
