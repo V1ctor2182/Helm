@@ -82,7 +82,19 @@
   }
 
   onMount(() => {
-    term = new Terminal({ fontSize: 13, cursorBlink: true, convertEol: false })
+    term = new Terminal({
+      fontSize: 13,
+      cursorBlink: true,
+      convertEol: false,
+      // 终端手感三小件(承 FanBox 1.11.2/1.11.3):
+      // ① TUI 开鼠标上报会吃掉拖拽,Option+拖拽强制选中复制(iTerm 同款约定)
+      macOptionClickForcesSelection: true,
+      // ② 深色配色的 agent 输出在浅皮肤上不隐形
+      minimumContrastRatio: 4.5,
+      // ③ Nerd Font 栈:starship/powerline 字形不出 tofu,没装回退系统等宽
+      fontFamily:
+        '"JetBrainsMono Nerd Font", "MesloLGS NF", "FiraCode Nerd Font", "Hack Nerd Font", "Symbols Nerd Font Mono", ui-monospace, "SF Mono", Menlo, monospace',
+    })
     fit = new FitAddon()
     term.loadAddon(fit)
     term.registerLinkProvider({

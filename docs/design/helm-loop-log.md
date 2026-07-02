@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-03 03:55 · phase3-round9-term-feel(夜间模式)· P1 第8条
+- 对齐: 阶段3 轮9——终端手感三小件(FanBox 1.11.2/1.11.3 手感级修复合集)
+- 改动: 前端 Terminal(xterm 选项:macOptionClickForcesSelection——TUI 鼠标上报吃拖拽,Option+拖拽强制选中;minimumContrastRatio 4.5——深色 agent 输出浅皮肤不隐形;Nerd Font 栈原样——starship 字形不出 tofu);后端 terminal_ws 抽 shell_argv_env 纯函数(login shell -l 找回 .zprofile 的 Homebrew/nvm PATH——「普通终端能找到 claude、helm 找不到」的病根;TERM=xterm-256color;GUI 无 locale 兜底 zh_CN.UTF-8 防中文路径乱码;已有 UTF-8 不动)
+- 功能可用性: e2e 真机:ps 实证 /bin/zsh -l 进程;.xterm-rows 计算样式=Nerd 栈;纯函数测锁 -l/TERM/LANG 兜底/已有 locale 不动
+- 取舍: Option 选中/对比提亮为 xterm 构造参数,视觉手感待人目视(headless 无法拖拽)
+- 契约/notch 影响: 无
+- VibeHub: record_decision(F1)→ 见下条;矩阵 P1 8/14
+- 验证: 前端 build ✓/check 0/0(256 文件)/test 182;后端 pytest 195(+1);既有 WS 终端测试真跑 login shell 仍绿
+- 状态: ✅ 夜间自 commit(feat/cockpit-fanbox,未合 main)｜❓待目视: Option 拖拽选中手感
+
 ## 2026-07-03 03:35 · phase3-round8-dblclick-lightbox(夜间模式)· P1 第7条
 - 对齐: 阶段3 轮8——双击语义+图片灯箱(FanBox app:520-536/759-771)
 - 改动: 后端 fsops+open_with_system(macOS open,argv 无 shell)+POST /api/cockpit/fs/open;前端 cockpit store(+lightboxPath/openWithSystem);新增 Lightbox.svelte(滚轮 scale-=deltaY*0.002 clamp 0.2-8 原公式/点空白与 Esc 关/原生格式 raw·heic/tiff 走 w=1600 thumb/换图重置缩放/mono 提示条);FileBrowser 网格+列表 dblclick 分流(图片→选中+灯箱,pdf/zip/未知→系统 App,文本保持分栏);PreviewPane 图片点击 zoom-in 进灯箱

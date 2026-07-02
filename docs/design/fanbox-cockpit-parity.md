@@ -14,7 +14,7 @@
 - [x] **列表/网格双视图 + 排序 + 隐藏文件开关** → 轮6 搬入(网格 SM/MD/LG 三档/列表表头名称·时间·大小/排序 zh locale+numeric 目录在前 mtime·size 降序/隐藏默认藏+开关 refetch/全偏好 localStorage;顺手清掉 fileIcons 的 📁📄 emoji 违规) | 网格三档尺寸;列表带表头名称/时间/大小;排序 zh locale+numeric、目录在前;隐藏文件 checkbox 落 localStorage | app:340-401, 2132-2146
 - [x] **缩略图管线(图片先行)** → 轮7 搬入(sips+md5(路径:mtime:尺寸) 缓存+per-key 锁去重+200MB LRU 裁剪+透明出 png/其余 jpeg+onerror 回退字形;预览图先走 w=1000 缩略图(heic/tiff 可看);视频/PDF qlmanage 帧留 P2) | 图片 sips 生成、md5(路径+mtime+尺寸) 缓存、并发去重、LRU 裁剪;失败回退矢量字形不留裂图;heic/tiff 永远走缩略图 | app:414-429, srv:1174-1229
 - [x] **双击语义 + 图片灯箱** → 轮8 搬入(双击图片→灯箱/pdf·zip·二进制→系统 App(open argv)/文本保持分栏(全屏预览 P2 账上);灯箱=滚轮 0.2-8x(FanBox 公式)+点空白/Esc 关+原生格式 raw·heic 走 w=1600 thumb) | 单击=分栏预览、双击文本→全屏、pdf/压缩包/二进制→系统 App;图片点击进灯箱(滚轮 0.2-8x、Esc/点空白关) | app:520-536, 759-771
-- [ ] **终端手感三小件:Option 拖拽选中 + login shell + Nerd Font 栈** | macOptionClickForcesSelection(TUI 鼠标上报吃拖拽);pty 用 zsh -l 读 .zprofile 找回 claude;JetBrainsMono/MesloLGS Nerd 字体栈防 tofu;低对比自动提亮 minimumContrastRatio 4.5 | app:2459-2510, CHANGELOG 1.11.2/1.11.3
+- [x] **终端手感三小件:Option 拖拽选中 + login shell + Nerd Font 栈** → 轮9 搬入(macOptionClickForcesSelection/minimumContrastRatio 4.5/Nerd 栈原样;后端 zsh -l+TERM+UTF-8 locale 兜底,shell_argv_env 纯函数直测;e2e 实证 zsh -l 进程+字体栈应用) | macOptionClickForcesSelection(TUI 鼠标上报吃拖拽);pty 用 zsh -l 读 .zprofile 找回 claude;JetBrainsMono/MesloLGS Nerd 字体栈防 tofu;低对比自动提亮 minimumContrastRatio 4.5 | app:2459-2510, CHANGELOG 1.11.2/1.11.3
 - [ ] **⌘K 内容搜索(`内容:` 前缀)** | mdfind Spotlight 优先(覆盖 PDF/OCR)、回退 grep(512KB 内文本);命中补行级预览+高亮;范围切换 全机/当前目录(Tab 键) | app:1817-1914, srv:269-392
 - [ ] **主区键盘导航 + Esc 分层退出** | ↑↓←→ 按实测列数移动、Enter 打开、Space 收藏、F2 重命名、⌘⌫ 废纸篓;Esc 菜单→cmdk→灯箱→全屏→blur→关预览逐层退 | app:402-408, 539-559, 2152-2185
 - [ ] **变更收件箱(改·N)** | 顶栏变更徽标;面板列本会话 100 条(去重计数、最新置顶),点行直达预览,可清空;卡片「改·N」热度发光+tooltip 子路径+4.5s 消退(helm 现只有闪一下) | app:437-454, 3193-3253
@@ -73,4 +73,5 @@
 | 5 | 文件操作三件套+右键菜单 | 31164cc |
 | 6 | 双视图+排序+隐藏开关 | 952f293 |
 | 7 | 缩略图管线(图片) | fd8c412 |
-| 8 | 双击语义+图片灯箱 | (见 git log 轮8) |
+| 8 | 双击语义+图片灯箱 | cb7873e |
+| 9 | 终端手感三小件 | (见 git log 轮9) |

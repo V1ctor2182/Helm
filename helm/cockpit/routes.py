@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import shutil
 import subprocess
 import zipfile
@@ -254,6 +255,21 @@ def _record_session(ws: WebSocket, cwd: str | None) -> None:
         s.add(TerminalSession(project_path=cwd))
 
 
+def shell_argv_env(environ: dict | None = None) -> tuple[list[str], dict]:
+    """终端 shell 启动参数(承 FanBox 1.11.2):
+    login shell(-l)——GUI 启动只继承精简 PATH、不读 .zprofile,用户在那里配的
+    Homebrew/nvm 路径(claude 等)会丢;GUI 无 locale 时兜底 UTF-8,防中文路径乱码。"""
+    base = dict(os.environ if environ is None else environ)
+    shell = base.get("SHELL") or shutil.which("bash") or "/bin/sh"
+    argv = [shell] if shell.endswith("powershell.exe") else [shell, "-l"]
+    base["TERM"] = "xterm-256color"
+    if not re.search(
+        r"UTF-8", base.get("LC_ALL") or base.get("LC_CTYPE") or base.get("LANG") or "", re.I
+    ):
+        base["LANG"] = "zh_CN.UTF-8"
+    return argv, base
+
+
 @router.websocket("/terminal/ws")
 async def terminal_ws(
     ws: WebSocket, path: str | None = None, cols: int = 80, rows: int = 24
@@ -263,8 +279,8 @@ async def terminal_ws(
     server → {type:'output',data} / {type:'exit',code}."""
     await ws.accept()
     cwd = path if path and os.path.isdir(path) else None
-    shell = os.environ.get("SHELL") or shutil.which("bash") or "/bin/sh"
-    pty_proc = PtyProcess([shell], cwd=cwd, cols=cols, rows=rows)
+    argv, env = shell_argv_env()
+    pty_proc = PtyProcess(argv, cwd=cwd, cols=cols, rows=rows, env=env)
     _record_session(ws, cwd)
 
     loop = asyncio.get_running_loop()

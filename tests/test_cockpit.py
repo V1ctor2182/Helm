@@ -424,3 +424,15 @@ def test_fs_open_with_system(config, tmp_path):
     with _pytest.raises(FileNotFoundError):
         fsops.open_with_system(str(tmp_path / "nope.pdf"), runner=fake_run)
 
+def test_shell_argv_env_login_and_utf8():
+    from helm.cockpit.routes import shell_argv_env
+
+    argv, env = shell_argv_env({"SHELL": "/bin/zsh"})
+    assert argv == ["/bin/zsh", "-l"]  # login shell 找回 .zprofile 的 PATH
+    assert env["TERM"] == "xterm-256color"
+    assert "UTF-8" in env["LANG"]  # GUI 无 locale 兜底
+    # 已有 UTF-8 locale 时不动
+    argv2, env2 = shell_argv_env({"SHELL": "/bin/zsh", "LC_ALL": "en_US.UTF-8"})
+    assert "LANG" not in env2 or "UTF-8" in (env2.get("LANG") or env2["LC_ALL"])
+    assert env2["LC_ALL"] == "en_US.UTF-8"
+
