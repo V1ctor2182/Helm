@@ -4,6 +4,7 @@
 
 import { commands } from '../commands.svelte'
 import { layout } from '../layout.svelte'
+import { isNoisyChange } from './watchFilter'
 
 export interface Entry {
   name: string
@@ -76,6 +77,10 @@ export class CockpitStore {
   showHidden = $state(false)
   /** 图片灯箱(null=关);点预览图/双击网格图片打开。 */
   lightboxPath = $state<string | null>(null)
+  // 「改·N」热度:变更按 cwd 顶层项聚合(count+子路径),4.5s 无新事件消退
+  changeHeat = $state<Record<string, { count: number; files: string[] }>>({})
+  // 变更收件箱:本会话去重计数、最新置顶、封顶 100
+  inbox = $state<{ path: string; name: string; count: number; ts: number }[]>([])
   error = $state<string | null>(null)
   changedPaths = $state<Set<string>>(new Set())
   followMode = $state(false)
@@ -140,8 +145,44 @@ export class CockpitStore {
     this.followMode = !this.followMode
   }
 
+  #heatTimers = new Map<string, ReturnType<typeof setTimeout>>()
+
+  /** 变更归到 cwd 顶层项:计数+热度+子路径 tooltip,4.5s 无新事件消退(承 FanBox 改·N)。 */
+  #rollupHeat(path: string): void {
+    const cwd = this.cwd
+    if (!cwd || !path.startsWith(cwd + '/')) return
+    const rel = path.slice(cwd.length + 1)
+    const top = cwd + '/' + rel.split('/')[0]
+    const cur = this.changeHeat[top] ?? { count: 0, files: [] }
+    const files = cur.files.includes(rel) ? cur.files : [...cur.files.slice(-9), rel]
+    this.changeHeat = { ...this.changeHeat, [top]: { count: cur.count + 1, files } }
+    const prev = this.#heatTimers.get(top)
+    if (prev) clearTimeout(prev)
+    this.#heatTimers.set(
+      top,
+      setTimeout(() => {
+        const next = { ...this.changeHeat }
+        delete next[top]
+        this.changeHeat = next
+        this.#heatTimers.delete(top)
+      }, 4500),
+    )
+  }
+
+  #pushInbox(path: string): void {
+    const name = path.split('/').pop() ?? path
+    const hit = this.inbox.find((i) => i.path === path)
+    const rest = this.inbox.filter((i) => i.path !== path)
+    this.inbox = [{ path, name, count: (hit?.count ?? 0) + 1, ts: Date.now() }, ...rest].slice(0, 100)
+  }
+
+  clearInbox(): void {
+    this.inbox = []
+  }
+
   // Live dashboard: flash a card briefly when its file changes.
   markChanged(path: string): void {
+    this.#rollupHeat(path)
     const next = new Set(this.changedPaths)
     next.add(path)
     this.changedPaths = next
@@ -235,7 +276,11 @@ export class CockpitStore {
   // Apply a watch event: always flash; in follow mode also track the file
   // (browse to its dir if needed + preview it).
   applyChange(ev: { path: string; kind: string }): void {
+    // 噪声过滤(高亮/收件箱/跟随共用):相对 cwd 判,不在 cwd 下按全路径判
+    const rel = this.cwd && ev.path.startsWith(this.cwd + '/') ? ev.path.slice(this.cwd.length + 1) : ev.path
+    if (isNoisyChange(rel)) return
     this.markChanged(ev.path)
+    this.#pushInbox(ev.path)
     if (this.followMode && ev.kind !== 'deleted') {
       const name = ev.path.split('/').pop() ?? ev.path
       const dot = name.lastIndexOf('.')

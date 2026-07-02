@@ -158,3 +158,25 @@ describe('cockpit 双击语义 + 灯箱', () => {
   })
 })
 
+describe('cockpit 改·N 热度 + 收件箱', () => {
+  it('applyChange 聚合到 cwd 顶层项并进收件箱;噪声全程被拦', () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) }))
+    const c = new CockpitStore()
+    c.cwd = '/proj'
+    c.applyChange({ path: '/proj/src/a.ts', kind: 'modified' })
+    c.applyChange({ path: '/proj/src/b.ts', kind: 'modified' })
+    c.applyChange({ path: '/proj/node_modules/x.js', kind: 'modified' }) // 噪声
+    expect(c.changeHeat['/proj/src']?.count).toBe(2)
+    expect(c.changeHeat['/proj/src'].files).toEqual(['src/a.ts', 'src/b.ts'])
+    expect(c.changeHeat['/proj/node_modules']).toBeUndefined()
+    expect(c.inbox).toHaveLength(2)
+    expect(c.inbox[0].name).toBe('b.ts') // 最新置顶
+    // 同文件再改:去重计数+置顶
+    c.applyChange({ path: '/proj/src/a.ts', kind: 'modified' })
+    expect(c.inbox[0]).toMatchObject({ name: 'a.ts', count: 2 })
+    expect(c.inbox).toHaveLength(2)
+    c.clearInbox()
+    expect(c.inbox).toHaveLength(0)
+  })
+})
+

@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-03 05:25 · phase3-round12-inbox-noise(夜间模式)· P1 第11+12条(并轮)
+- 对齐: 阶段3 轮12——变更收件箱(改·N)+监听噪声过滤(FanBox app:437-454/3183-3253;相邻共享代码并轮)
+- 改动: +watchFilter.ts(isNoisyChange 原样移植:CHANGE_IGNORE 构建/依赖/系统目录集、点文件点目录、中段 .tmp 原子写、sqlite -journal/-shm/-wal、~/.swp);cockpit store(applyChange 首行过滤——高亮/收件箱/跟随共用;#rollupHeat 聚合到 cwd 顶层项 count+files(留 10)+4.5s 消退重臂;inbox 100 条去重计数最新置顶+clearInbox);FileBrowser(卡片/列表行「改·N」徽章:--heat 绿光随 count 变强+子路径 tooltip;viewbar「变更 N」钮+右侧收件箱面板:行=名+×N+HH:MM,点行 openPath 直达预览,可清空)
+- 功能可用性: e2e 真机真监听:外部 echo >> src/a.md → src 目录「改」徽章+「变更 1」;同时写 node_modules/x.js 被拦(收件箱只有 a.md);面板点行→预览打开;烟测项目清净
+- 取舍: 会话回放(3000 笔时间线压缩播放)仍在 P2;跟随升级(归属双判定/优先级/变动行高亮)是最后一条 P1 下轮做
+- 契约/notch 影响: 无(纯前端)
+- VibeHub: record_decision(F1)→ 见下条;矩阵 P1 12/14
+- 验证: 前端 build ✓/check 0/0(257 文件)/test 191(+4:过滤 3 组+聚合/去重/清空);后端未动;视觉 dark 收件箱截图
+- 状态: ✅ 夜间自 commit(feat/cockpit-fanbox,未合 main)｜❓需确认: 无
+
 ## 2026-07-03 04:55 · phase3-round11-kbnav(夜间模式)· P1 第10条
 - 对齐: 阶段3 轮11——主区键盘导航+Esc 分层退出(FanBox app:402-408/539-559/2152-2185)
 - 改动: FileBrowser(+键盘光标 cursorIdx——与选中分离,扫过目录不误入;measureCols 按 offsetTop 实测网格列数(列表=1);↑↓±cols/←→±1/Enter=select 语义/F2 重命名/⌘⌫ 走废纸篓(文件秒删目录轻确认)/Backspace 上一级;光标虚线 accent 外框+scrollIntoView;目录变更光标复位;Esc 全序:菜单→对话框→面板自管→灯箱让位→输入 blur→关预览);Lightbox Esc 加 .ctx/.dlg 让位守卫(一次只退一层)

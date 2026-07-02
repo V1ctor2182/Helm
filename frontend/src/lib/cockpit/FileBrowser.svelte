@@ -4,6 +4,7 @@
   import { iconFor } from './fileIcons'
   import { previewKind } from './previewKind'
   import { layout } from '../layout.svelte'
+  import { localHHMM } from '../time'
 
   let pathInput = $state('')
 
@@ -17,6 +18,7 @@
   // 键盘光标(承 FanBox:光标≠选中,Enter 才打开;目录不因光标扫过而误入)
   let cursorIdx = $state(-1)
   let gridEl = $state<HTMLElement | null>(null)
+  let inboxOpen = $state(false)
   interface Dialog {
     kind: 'rename' | 'newfile' | 'newdir' | 'trashdir'
     target?: string // rename/trashdir 的路径
@@ -289,6 +291,9 @@
         <option value="mtime">按修改时间</option>
         <option value="size">按大小</option>
       </select>
+      <button class="vact inboxbtn" class:on={inboxOpen} onclick={() => (inboxOpen = !inboxOpen)} aria-label="变更收件箱">
+        变更{cockpit.inbox.length ? ` ${cockpit.inbox.length}` : ''}
+      </button>
       <label class="vhid">
         <input type="checkbox" class="vcbx" checked={cockpit.showHidden} onchange={() => void cockpit.toggleHidden()} aria-label="显示隐藏文件" />
         隐藏文件
@@ -335,7 +340,12 @@
             oncontextmenu={(ev) => openMenu(ev, e)}
             role="row"
           >
-            <span class="fname"><span class="icon" style="color:{ic.color}">{ic.glyph}</span> {e.name}</span>
+            <span class="fname"><span class="icon" style="color:{ic.color}">{ic.glyph}</span> {e.name}
+              {#if cockpit.changeHeat[e.path]}
+                {@const h = cockpit.changeHeat[e.path]}
+                <span class="chg inline" title={'刚变更:\n' + h.files.join('\n')} style={`--heat:${Math.min(1, 0.4 + h.count * 0.12).toFixed(2)}`}>{h.count > 1 ? `改·${h.count}` : '改'}</span>
+              {/if}
+            </span>
             <span class="ftime">{fmtTime(e.mtime)}</span>
             <span class="fsize">{e.is_dir ? '—' : fmtSize(e.size)}</span>
           </button>
@@ -355,6 +365,12 @@
           ondblclick={() => onOpen(e)}
           oncontextmenu={(ev) => openMenu(ev, e)}
         >
+          {#if cockpit.changeHeat[e.path]}
+            {@const h = cockpit.changeHeat[e.path]}
+            <span class="chg" title={'刚变更:\n' + h.files.join('\n')} style={`--heat:${Math.min(1, 0.4 + h.count * 0.12).toFixed(2)}`}>
+              {h.count > 1 ? `改·${h.count}` : '改'}
+            </span>
+          {/if}
           {#if !e.is_dir && THUMB_EXTS.has(e.ext)}
             <!-- 缩略图,失败回退字形不留裂图(承 FanBox) -->
             <img
@@ -374,6 +390,33 @@
       {/each}
     </div>
     {/if}
+  {/if}
+
+  {#if inboxOpen}
+    <div class="inbox" role="region" aria-label="变更收件箱">
+      <div class="ih">
+        <span>变更 / CHANGES({cockpit.inbox.length})</span>
+        <button class="vact" onclick={() => cockpit.clearInbox()} disabled={!cockpit.inbox.length}>清空</button>
+        <button class="vact" onclick={() => (inboxOpen = false)}>×</button>
+      </div>
+      {#if cockpit.inbox.length === 0}
+        <p class="iempty">本会话还没有变更 — agent 写文件会记在这里。</p>
+      {:else}
+        {#each cockpit.inbox as it (it.path)}
+          <button
+            class="irow"
+            onclick={() => {
+              cockpit.openPath(it.path, false)
+              inboxOpen = false
+            }}
+          >
+            <span class="in">{it.name}</span>
+            {#if it.count > 1}<span class="ic">×{it.count}</span>{/if}
+            <span class="it">{localHHMM(new Date(it.ts).toISOString())}</span>
+          </button>
+        {/each}
+      {/if}
+    </div>
   {/if}
 
   {#if menu}
@@ -746,6 +789,98 @@
   }
   .card.changed {
     animation: flash 1.2s ease-out;
+  }
+  /* 「改·N」热度徽章:绿光随 count 变强,4.5s 消退(承 FanBox --heat) */
+  .chg {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: .5px;
+    color: var(--green);
+    border: 1px solid var(--green);
+    padding: 0 4px;
+    background: var(--bg);
+    box-shadow: 0 0 calc(var(--heat, .4) * 10px) rgba(52, 199, 89, calc(var(--heat, .4) * .8));
+  }
+  .chg.inline {
+    position: static;
+    margin-left: 6px;
+  }
+  .card {
+    position: relative;
+  }
+  .inboxbtn.on {
+    color: var(--acc-ink);
+    border-color: var(--acc-ink);
+  }
+  .inbox {
+    position: fixed;
+    top: 70px;
+    right: 16px;
+    z-index: 55;
+    width: 300px;
+    max-height: 50vh;
+    overflow: auto;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    padding: 8px 0;
+  }
+  .ih {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px 6px;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: .5px;
+    color: var(--t3);
+    border-bottom: 1px solid var(--hair);
+  }
+  .ih span {
+    margin-right: auto;
+  }
+  .irow {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    width: 100%;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--hair);
+    padding: 5px 12px;
+    cursor: pointer;
+    text-align: left;
+    font-size: 12px;
+    color: var(--t2);
+  }
+  .irow:hover {
+    color: var(--t1);
+  }
+  .irow .in {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .irow .ic {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--green);
+    flex: none;
+  }
+  .irow .it {
+    margin-left: auto;
+    flex: none;
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--t4);
+    font-variant-numeric: tabular-nums;
+  }
+  .iempty {
+    padding: 10px 12px;
+    font-size: 12px;
+    color: var(--t4);
   }
   .card.cursor,
   .frow.cursor {
