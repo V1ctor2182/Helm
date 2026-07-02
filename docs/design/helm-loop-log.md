@@ -6,6 +6,15 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-03 · phase3.5-round1-ondemand-preview(夜间模式)· P0·结构 #1
+- 对齐: 阶段3.5 轮1——预览按需面板(2026-07-03 FanBox 真机并排对比结论#1:文件区必须是主角)
+- 前置: 阶段3.5 全节已立法进 helm-loop-procedure.md(P0·结构五件套账本);矩阵加「P0·结构」层
+- 改动: CockpitView 重构(showRight=选中或 rightTab==='agent';无右栏时 grid 单列铺满;divider 可拖 28-72% 存 helm-ck-split,localStorage try/catch 兜底;× 关闭清选中回全宽);store +rightTab;FileBrowser viewbar +AGENT 钮(无选中也能开观察台)
+- 功能可用性: e2e 真机:无选中网格 3 列→7 列铺满;点 DESIGN.md 面板滑出(divider 在);×→回全宽;Esc 走既有分层(清选中=关面板)
+- 契约/notch 影响: 无(纯前端)
+- 验证: 前端 build ✓/check 0/0(258 文件)/test 196(+1:按需渲染/×关闭/agent 独立开);后端未动;dark 全宽+面板双截图
+- 状态: ✅ 夜间自 commit(feat/cockpit-fanbox,未合 main)｜下一件:结构#2 左侧栏
+
 ## 2026-07-03 06:20 · phase3-round14-follow-upgrade(夜间模式)· P1 第14条·矩阵 P1 收官
 - 对齐: 阶段3 轮14——跟随模式升级(FanBox app:3360-3661,末条 P1)
 - 改动: cockpit store(#agentActive 归属门=busy 或 8s 内输出(单终端版 boundAgentActive);#followChange 节流非防抖——定时器只设一次到点取最新、首切 120/已跟随 900ms、低优先级不顶排队的 md/html(followPrio 3/2/1);同文件→followTick 只刷视图;editorBusy 不抢屏;manualTakeover 点文件/openPath/编辑即停;toggleFollow 开启回溯 5min 内最近 inbox);PreviewPane(followTick 刷新:干净时重载,代码滚到首变动行(公共前缀行)+绿脉冲边框,md 尾部变更贴底/中间保持视口;dirty 同步 store)

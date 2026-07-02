@@ -3,6 +3,7 @@ import { fireEvent } from '@testing-library/dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AgentView from './AgentView.svelte'
 import CockpitView from '../cockpit/CockpitView.svelte'
+import { cockpit } from '../cockpit/cockpit.svelte'
 import { agent } from './agentStore.svelte'
 
 beforeEach(() => {
@@ -44,12 +45,24 @@ describe('AgentView', () => {
   })
 })
 
-describe('CockpitView', () => {
-  it('toggles the right pane between 预览 and Agent', async () => {
-    render(CockpitView)
-    // both segmented tabs present; agent tab switches the pane
+describe('CockpitView(预览按需面板,阶段3.5 结构#1)', () => {
+  it('无选中时文件区铺满(右栏不渲染);选中滑出;×关闭回全宽', async () => {
+    const { container } = render(CockpitView)
+    expect(screen.queryByRole('tab', { name: '预览' })).toBeNull() // 按需:默认无右栏
+    cockpit.selected = { name: 'a.md', path: '/p/a.md', is_dir: false, size: 1, ext: 'md', mtime: 0 }
     const agentTab = await screen.findByRole('tab', { name: 'Agent' })
+    expect(container.querySelector('.divider')).not.toBeNull() // 可拖中缝
     await fireEvent.click(agentTab)
     expect(screen.getByLabelText('Agent 指令')).toBeInTheDocument()
+    await fireEvent.click(screen.getByLabelText('关闭面板'))
+    expect(cockpit.selected).toBeNull()
+    expect(screen.queryByRole('tab', { name: 'Agent' })).toBeNull()
+  })
+
+  it('rightTab=agent 时无选中也能开观察台', async () => {
+    cockpit.rightTab = 'agent'
+    render(CockpitView)
+    expect(await screen.findByLabelText('Agent 指令')).toBeInTheDocument()
+    cockpit.rightTab = 'preview'
   })
 })

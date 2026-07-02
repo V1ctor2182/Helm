@@ -302,6 +302,14 @@
         <option value="mtime">按修改时间</option>
         <option value="size">按大小</option>
       </select>
+      <button
+        class="vact"
+        class:on={cockpit.rightTab === 'agent'}
+        onclick={() => (cockpit.rightTab = cockpit.rightTab === 'agent' ? 'preview' : 'agent')}
+        aria-label="Agent 观察台"
+      >
+        AGENT
+      </button>
       <button class="vact inboxbtn" class:on={inboxOpen} onclick={() => (inboxOpen = !inboxOpen)} aria-label="变更收件箱">
         变更{cockpit.inbox.length ? ` ${cockpit.inbox.length}` : ''}
       </button>
@@ -826,6 +834,7 @@
   .card {
     position: relative;
   }
+  .vact.on,
   .inboxbtn.on {
     color: var(--acc-ink);
     border-color: var(--acc-ink);
