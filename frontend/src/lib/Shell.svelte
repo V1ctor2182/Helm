@@ -22,7 +22,7 @@
   }
 </script>
 
-<svelte:window onkeydown={onGlobalKey} />
+<svelte:window onkeydown={onGlobalKey}  ondragover={(e) => e.preventDefault()} ondrop={(e) => e.preventDefault()} />
 
 <div class="shell" class:immersive={layout.immersive}>
   <!-- titlebar: 交通灯 + wordmark + 路径 + 会话 meta（承 helm-pro.html） -->

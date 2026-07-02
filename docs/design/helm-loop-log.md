@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-03 05:50 · phase3-round13-drag-to-term(夜间模式)· P1 第13条
+- 对齐: 阶段3 轮13——拖文件进终端(FanBox app:465-511/2060-2090)
+- 改动: termClient(+shQuote 单引号转义原样/dropPath 自家类型优先 text/plain 兜底,含测);Terminal.svelte(termwrap dragover 类型过滤+copy 效果+drophot accent 内框+「松手把路径喂给 agent」mono 提示,drop→shQuote+空格 send,termStatus.onInput 视同用户输入防 busy 误报,dragleave 复位);FileBrowser(卡片/列表行 draggable+dragstart 三类型:text/plain、application/x-helm-path、图片额外 text/html 原路径——防浏览器默认抓低清 thumb 链接);Shell svelte:window dragover/drop preventDefault 全局兜底(防拖到别处松手导航走)
+- 功能可用性: e2e 真机:合成 DataTransfer dragover→drophot 提示亮;drop→真 pty 回显 '/tmp/my file.md'(含空格路径转义正确);2 个纯函数测锁转义与类型优先级
+- 取舍: Finder 外部文件拖入落盘(file-promise/同名 foo 2.png)在 P2;skill 行拖入(/name 注入)依赖 skill 面板集成,记 P2 新条
+- 契约/notch 影响: 无(纯前端)
+- VibeHub: record_decision(F1)→ 见下条;矩阵 P1 13/14
+- 验证: 前端 build ✓/check 0/0(258 文件)/test 193(+2);后端未动;视觉 dark 截图
+- 状态: ✅ 夜间自 commit(feat/cockpit-fanbox,未合 main)｜❓需确认: 无
+
 ## 2026-07-03 05:25 · phase3-round12-inbox-noise(夜间模式)· P1 第11+12条(并轮)
 - 对齐: 阶段3 轮12——变更收件箱(改·N)+监听噪声过滤(FanBox app:437-454/3183-3253;相邻共享代码并轮)
 - 改动: +watchFilter.ts(isNoisyChange 原样移植:CHANGE_IGNORE 构建/依赖/系统目录集、点文件点目录、中段 .tmp 原子写、sqlite -journal/-shm/-wal、~/.swp);cockpit store(applyChange 首行过滤——高亮/收件箱/跟随共用;#rollupHeat 聚合到 cwd 顶层项 count+files(留 10)+4.5s 消退重臂;inbox 100 条去重计数最新置顶+clearInbox);FileBrowser(卡片/列表行「改·N」徽章:--heat 绿光随 count 变强+子路径 tooltip;viewbar「变更 N」钮+右侧收件箱面板:行=名+×N+HH:MM,点行 openPath 直达预览,可清空)

@@ -32,3 +32,15 @@ export function terminalWsUrl(
   q.set('rows', String(rows))
   return `${proto}://${loc.host}/api/cockpit/terminal/ws?${q}`
 }
+
+/** shell 单引号转义(承 FanBox shQuote):含引号/空格/中文的路径拖进终端不炸。 */
+export function shQuote(s: string): string {
+  return `'${String(s).replace(/'/g, `'\\''`)}'`
+}
+
+/** 从 DataTransfer 取拖入路径(自家类型优先,text/plain 兜底);无则 null。 */
+export function dropPath(dt: DataTransfer | null): string | null {
+  if (!dt) return null
+  const p = dt.getData('application/x-helm-path') || dt.getData('text/plain')
+  return p && p.startsWith('/') ? p : p || null
+}

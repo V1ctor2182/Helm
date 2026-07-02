@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { inputMsg, parseServer, resizeMsg, terminalWsUrl } from './termClient'
+import {inputMsg, parseServer, resizeMsg, terminalWsUrl, shQuote, dropPath } from './termClient'
 
 describe('termClient protocol', () => {
   it('inputMsg / resizeMsg encode the wire format', () => {
@@ -24,3 +24,21 @@ describe('termClient protocol', () => {
     ).toBe('wss://x/api/cockpit/terminal/ws?cols=100&rows=40')
   })
 })
+
+describe('拖拽进终端(shQuote/dropPath)', () => {
+  it('shQuote 单引号转义:空格/引号/中文都安全', () => {
+    expect(shQuote('/a/b c.md')).toBe("'/a/b c.md'")
+    expect(shQuote("/a/it's.md")).toBe("'/a/it'\\''s.md'")
+    expect(shQuote('/项目/设计稿.png')).toBe("'/项目/设计稿.png'")
+  })
+
+  it('dropPath 自家类型优先,text/plain 兜底', () => {
+    const dt = (data: Record<string, string>) =>
+      ({ getData: (k: string) => data[k] ?? '' }) as unknown as DataTransfer
+    expect(dropPath(dt({ 'application/x-helm-path': '/a/b', 'text/plain': '/x' }))).toBe('/a/b')
+    expect(dropPath(dt({ 'text/plain': '/only/plain' }))).toBe('/only/plain')
+    expect(dropPath(dt({}))).toBeNull()
+    expect(dropPath(null)).toBeNull()
+  })
+})
+

@@ -5,14 +5,33 @@
   import '@xterm/xterm/css/xterm.css'
   import { cockpit } from '../cockpit.svelte'
   import { layout } from '../../layout.svelte'
-  import { inputMsg, parseServer, resizeMsg, terminalWsUrl } from './termClient'
+  import { dropPath, inputMsg, parseServer, resizeMsg, shQuote, terminalWsUrl } from './termClient'
   import { extractCandidates, resolveCandidates } from './pathLinks'
   import { termStatus } from './termStatus.svelte'
 
   let el = $state<HTMLDivElement>()
+  let dropHot = $state(false)
   let term: Terminal | undefined
   let ws: WebSocket | undefined
   let fit: FitAddon | undefined
+
+  // 拖文件进终端:插入 shell 转义路径+空格,喂给 coding agent(承 FanBox)
+  function onDragOver(e: DragEvent) {
+    const t = e.dataTransfer?.types ?? []
+    if (![...t].some((x) => x === 'application/x-helm-path' || x === 'text/plain' || x === 'Files')) return
+    e.preventDefault()
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
+    dropHot = true
+  }
+
+  function onDrop(e: DragEvent) {
+    e.preventDefault()
+    dropHot = false
+    const p = dropPath(e.dataTransfer)
+    if (!p) return
+    termStatus.onInput() // 视同用户输入,回显不算 agent 干活
+    send(inputMsg(shQuote(p) + ' '))
+  }
 
   function send(msg: string) {
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(msg)
@@ -141,7 +160,16 @@
   })
 </script>
 
-<div class="termwrap" class:awaiting={termStatus.awaiting}>
+<div
+  class="termwrap"
+  class:awaiting={termStatus.awaiting}
+  class:drophot={dropHot}
+  role="region"
+  aria-label="终端"
+  ondragover={onDragOver}
+  ondragleave={() => (dropHot = false)}
+  ondrop={onDrop}
+>
   <div class="thud">
     <span
       class="tdot"
@@ -164,6 +192,26 @@
     width: 100%;
   }
   /* 「轮到你」边缘呼吸(6.5s 自动退,承 FanBox term-awaiting) */
+  /* 拖拽悬停:accent 虚线框提示可投喂 */
+  .termwrap.drophot {
+    box-shadow: inset 0 0 0 1.4px var(--acc);
+  }
+  .termwrap.drophot::after {
+    content: '松手把路径喂给 agent';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .5px;
+    color: var(--acc-ink);
+    background: var(--bg);
+    border: 1px dashed var(--acc-ink);
+    padding: 6px 12px;
+    pointer-events: none;
+    z-index: 4;
+  }
   .termwrap.awaiting {
     animation: tawait 1.6s ease-in-out infinite;
   }

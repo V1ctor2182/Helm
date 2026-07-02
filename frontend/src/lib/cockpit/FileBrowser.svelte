@@ -206,6 +206,17 @@
 
   // 双击分流(承 FanBox onItemOpen):图片→灯箱;pdf/压缩包/未知→系统 App;
   // 文本/代码保持分栏预览(全屏预览在 P2 账上)。
+  // 拖拽源:路径喂终端;图片额外带 text/html 原路径(否则浏览器抓低清 thumb 链接)
+  function onDragStart(ev: DragEvent, e: import('./cockpit.svelte').Entry) {
+    if (!ev.dataTransfer) return
+    ev.dataTransfer.setData('text/plain', e.path)
+    ev.dataTransfer.setData('application/x-helm-path', e.path)
+    if (!e.is_dir && THUMB_EXTS.has(e.ext)) {
+      ev.dataTransfer.setData('text/html', `<img src="${encodeURI(e.path)}" alt="${e.name}">`)
+    }
+    ev.dataTransfer.effectAllowed = 'copy'
+  }
+
   function onOpen(e: import('./cockpit.svelte').Entry) {
     if (e.is_dir) return
     const k = previewKind(e.ext)
@@ -332,6 +343,8 @@
           <button
             class="frow"
             data-idx={idx}
+            draggable="true"
+            ondragstart={(ev) => onDragStart(ev, e)}
             class:cursor={cursorIdx === idx}
             class:selected={cockpit.selected?.path === e.path}
             class:changed={cockpit.changedPaths.has(e.path)}
@@ -358,6 +371,8 @@
         <button
           class="card"
           data-idx={idx}
+          draggable="true"
+          ondragstart={(ev) => onDragStart(ev, e)}
           class:cursor={cursorIdx === idx}
           class:selected={cockpit.selected?.path === e.path}
           class:changed={cockpit.changedPaths.has(e.path)}
