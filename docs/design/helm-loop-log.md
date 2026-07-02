@@ -6,6 +6,18 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 13:42 · phase2-round2-backlog-p1（夜间模式）· 清 P1×2
+- 对齐: 阶段2 第2轮——按收敛规则先清 backlog open P1:task_runs 运行历史 UI(F6)+ jsonFetch 列表守卫基建(跨模块)
+- 设计基线: DESIGN.md（mono 子账本/语义色配给/发丝分隔;未改）
+- Svelte 改动: `lib/api.ts`(+jsonList<T> 类型化列表守卫:null=请求失败/[]=形状缺失);9 个 store 16 处直取全迁移 + skillsStore 就地守卫;`tasksStore`(+TaskRun/runsFor/toggleRuns);`JournalView`(任务行「N 次」→ 展开按钮 + mono 运行抽屉:状态点/本地时间/输出省略/空态);tasks.test +1
+- 功能可用性: e2e 实测(真后端):建任务→展开抽屉(空态兜底)→收起→删除联动收抽屉;全模式(Chat/Research/Memory/Cockpit/Today)回归点击无报错
+- 取舍: 运行抽屉有数据态走 vitest mock 覆盖(真运行=到点付费触发 agent,不在夜间实跑);skillsStore 混合形状不套 jsonList 就地守卫
+- 复查: 自查 + 回归扫(迁移语义严格更安全:旧行为 200 缺 key 赋 undefined 后崩,新为 []);新发现 P2×1(Rail bind:this dev 警告)记 backlog;本轮清 P1×2 标 [x]
+- 契约/notch 影响: 无(只新消费既有 GET /api/tasks/{id}/runs)
+- VibeHub: record_decision「阶段2·轮2 清 backlog P1×2」→ 5a07641d (ai_proposed)
+- 验证: npm build ✓ / check 0 错 0 警(243 文件)/ test 149 通过(+1);视觉: dev 5174 dark+light 抽屉截图核过
+- 状态: ✅ 夜间自 commit(feat/design-shell-today,未合 main)｜❓需确认: 无(cron tz question 8d6ac767 仍待人)
+
 ## 2026-07-02 13:30 · phase2-round1-journal-module（夜间模式）· F6 记录模块 切片1
 - 对齐: 阶段2 第1轮——记录模式(速记/日记/任务/日历壳)从旧浅色线框做成 DESIGN.md 座舱账本 + 端到端真能用
 - 设计基线: DESIGN.md（账本读数/框选视口/mono-sans 硬切/禁 emoji/双主题 token）+ Today.svelte 既有 ledger 语汇（helm-pro 未画此模式，按系统新设计；设计稿未改）

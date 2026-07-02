@@ -3,7 +3,7 @@
 // reducer (`handle`) is split out so it's unit-testable; live streaming uses an
 // injectable global WebSocket (stubbed in tests), mirroring chatStore.
 
-import { jsonFetch } from '../api'
+import { jsonFetch, jsonList } from '../api'
 import { cockpit } from '../cockpit/cockpit.svelte'
 
 export interface AcpEvent {
@@ -41,8 +41,8 @@ export class AgentStore {
   }
 
   async loadRuns(): Promise<void> {
-    const body = (await this.#json('/api/orchestration/runs')) as { runs: AgentRun[] } | null
-    if (body) this.runs = body.runs
+    const xs = await jsonList<AgentRun>('/api/orchestration/runs', 'runs')
+    if (xs) this.runs = xs
   }
 
   start(prompt: string, cwd: string | null = null, agent = 'claude-code'): void {

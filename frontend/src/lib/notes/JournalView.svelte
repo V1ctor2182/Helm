@@ -259,14 +259,40 @@
         {:else}
           <ul class="list">
             {#each tasks.tasks as t (t.id)}
-              <li class="task" class:off={!t.enabled}>
-                <input type="checkbox" class="cbx" checked={t.enabled} aria-label={`启用 ${t.name}`} onchange={() => tasks.toggle(t)} />
-                <span class="tname">{t.name}</span>
-                <span class="tsched">{t.schedule_kind} · 下次 {nextRunLabel(t.next_run)}</span>
-                <span class="acts">
-                  <span class="runs">{t.run_count} 次{#if t.last_status}&nbsp;· {t.last_status}{/if}</span>
-                  <button class="act del" aria-label={`删除 ${t.name}`} onclick={() => tasks.remove(t.id)}>×</button>
-                </span>
+              <li class="taskli">
+                <div class="task" class:off={!t.enabled}>
+                  <input type="checkbox" class="cbx" checked={t.enabled} aria-label={`启用 ${t.name}`} onchange={() => tasks.toggle(t)} />
+                  <span class="tname">{t.name}</span>
+                  <span class="tsched">{t.schedule_kind} · 下次 {nextRunLabel(t.next_run)}</span>
+                  <span class="acts">
+                    <button
+                      class="act runs"
+                      class:open={tasks.runsFor === t.id}
+                      aria-label={`运行记录 ${t.name}`}
+                      aria-expanded={tasks.runsFor === t.id}
+                      onclick={() => tasks.toggleRuns(t.id)}
+                    >{t.run_count} 次{#if t.last_status}&nbsp;· {t.last_status}{/if}</button>
+                    <button class="act del" aria-label={`删除 ${t.name}`} onclick={() => tasks.remove(t.id)}>×</button>
+                  </span>
+                </div>
+                {#if tasks.runsFor === t.id}
+                  <div class="rundrawer">
+                    {#if tasks.runsLoading}
+                      <p class="empty">读取运行记录…</p>
+                    {:else if tasks.runs.length === 0}
+                      <p class="empty">还没有运行记录 — 到点触发后结果会记在这里。</p>
+                    {:else}
+                      {#each tasks.runs as r (r.id)}
+                        <div class="runrow">
+                          <span class="rdot" class:ok={r.status === 'ok'} class:err={r.status === 'error'} aria-hidden="true"></span>
+                          <span class="rtime">{nextRunLabel(r.started_at)}</span>
+                          <span class="rstatus">{r.status}</span>
+                          <span class="rout" title={r.output ?? ''}>{r.output ?? ''}</span>
+                        </div>
+                      {/each}
+                    {/if}
+                  </div>
+                {/if}
               </li>
             {/each}
           </ul>
@@ -470,17 +496,20 @@
     padding: 0;
   }
   .note,
+  .taskli {
+    border-top: 1px solid var(--hair);
+  }
+  .note:first-child,
+  .taskli:first-child {
+    border-top: none;
+  }
+  .note,
   .task {
     display: flex;
     align-items: center;
     gap: 10px;
     padding: 4px 0;
-    border-top: 1px solid var(--hair);
     font-size: 13px;
-  }
-  .note:first-child,
-  .task:first-child {
-    border-top: none;
   }
   .note .nt {
     font-family: var(--mono);
@@ -607,11 +636,51 @@
     color: var(--t4);
     font-variant-numeric: tabular-nums;
   }
-  .task .runs {
+  .act.runs {
+    font-variant-numeric: tabular-nums;
+  }
+  .act.runs.open {
+    color: var(--acc-ink);
+  }
+  /* 运行历史抽屉:mono 子账本行 */
+  .rundrawer {
+    margin: 0 0 6px 23px;
+    padding-left: 10px;
+    border-left: 1px solid var(--hair);
+  }
+  .runrow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 0;
     font-family: var(--mono);
     font-size: 10px;
-    color: var(--t4);
+    color: var(--t3);
     font-variant-numeric: tabular-nums;
+  }
+  .rdot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--t4);
+    flex: none;
+  }
+  .rdot.ok {
+    background: var(--green);
+  }
+  .rdot.err {
+    background: var(--red);
+  }
+  .rstatus {
+    color: var(--t4);
+  }
+  .rout {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--t4);
   }
   .task .acts {
     margin-left: auto;

@@ -3,7 +3,7 @@
 // (unit-tested); live streaming uses an injectable global WebSocket (stubbed in
 // tests), mirroring chatStore/agentStore.
 
-import { jsonFetch } from '../api'
+import { jsonFetch, jsonList } from '../api'
 
 export interface Claim {
   text: string
@@ -91,11 +91,11 @@ export class ResearchStore {
   }
 
   async loadProviders(): Promise<void> {
-    const body = (await this.#json('/api/providers')) as { providers: Provider[] } | null
-    if (body) {
-      this.providers = body.providers
-      if (this.providerId === null && body.providers.length) {
-        this.selectProvider(body.providers[0].id)
+    const xs = await jsonList<Provider>('/api/providers', 'providers')
+    if (xs) {
+      this.providers = xs
+      if (this.providerId === null && xs.length) {
+        this.selectProvider(xs[0].id)
       }
     }
   }
@@ -107,8 +107,8 @@ export class ResearchStore {
   }
 
   async loadSessions(): Promise<void> {
-    const body = (await this.#json('/api/research')) as { sessions: ResearchSession[] } | null
-    if (body) this.sessions = body.sessions
+    const xs = await jsonList<ResearchSession>('/api/research', 'sessions')
+    if (xs) this.sessions = xs
   }
 
   async openSession(id: number): Promise<void> {

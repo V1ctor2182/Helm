@@ -2,7 +2,7 @@
 // WebSocket. Server-message handling (`handle`) is split out so it's unit-
 // testable; live streaming is exercised via an injectable global WebSocket.
 
-import { jsonFetch } from '../api'
+import { jsonFetch, jsonList } from '../api'
 
 export interface Provider {
   id: number
@@ -57,13 +57,13 @@ export class ChatStore {
   }
 
   async loadTemplates(): Promise<void> {
-    const body = (await this.#json('/api/providers/templates')) as { templates: Template[] } | null
-    if (body) this.templates = body.templates
+    const xs = await jsonList<Template>('/api/providers/templates', 'templates')
+    if (xs) this.templates = xs
   }
 
   async loadProviders(): Promise<void> {
-    const body = (await this.#json('/api/providers')) as { providers: Provider[] } | null
-    if (body) this.providers = body.providers
+    const xs = await jsonList<Provider>('/api/providers', 'providers')
+    if (xs) this.providers = xs
   }
 
   async addProvider(p: {
@@ -92,8 +92,8 @@ export class ChatStore {
   }
 
   async loadSessions(): Promise<void> {
-    const body = (await this.#json('/api/sessions')) as { sessions: ChatSessionT[] } | null
-    if (body) this.sessions = body.sessions
+    const xs = await jsonList<ChatSessionT>('/api/sessions', 'sessions')
+    if (xs) this.sessions = xs
   }
 
   async createSession(

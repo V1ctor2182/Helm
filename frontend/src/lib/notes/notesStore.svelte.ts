@@ -4,7 +4,7 @@
 
 import { capture } from '../capture.svelte'
 
-import { jsonFetch } from '../api'
+import { jsonFetch, jsonList } from '../api'
 
 export interface Note {
   id: number
@@ -53,8 +53,8 @@ export class NotesStore {
 
   async load(kind?: string): Promise<void> {
     const q = kind ? `?kind=${kind}` : ''
-    const body = (await this.#json(`/api/notes${q}`)) as { notes?: Note[] } | null
-    if (body) this.notes = body.notes ?? []
+    const xs = await jsonList<Note>(`/api/notes${q}`, 'notes')
+    if (xs) this.notes = xs
   }
 
   async create(
@@ -115,8 +115,8 @@ export class NotesStore {
   // ── AI 今日小结 (intent#2) ──────────────────────────────────────────────
 
   async loadProviders(): Promise<void> {
-    const body = (await this.#json('/api/providers')) as { providers: NoteProvider[] } | null
-    if (body) this.providers = body.providers
+    const xs = await jsonList<NoteProvider>('/api/providers', 'providers')
+    if (xs) this.providers = xs
   }
 
   async summarizeToday(date: string): Promise<void> {

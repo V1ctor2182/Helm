@@ -3,7 +3,7 @@
 // indexes synchronously server-side, so a `busy` flag guards the UI while a
 // large directory is being indexed (background indexing is ticketed for later).
 
-import { jsonFetch } from '../api'
+import { jsonFetch, jsonList } from '../api'
 
 export interface RagSource {
   id: number
@@ -45,8 +45,8 @@ export class RagStore {
   }
 
   async load(): Promise<void> {
-    const body = (await this.#json('/api/rag/sources')) as { sources: RagSource[] } | null
-    if (body) this.sources = body.sources
+    const xs = await jsonList<RagSource>('/api/rag/sources', 'sources')
+    if (xs) this.sources = xs
     await this.loadStats()
   }
 
@@ -99,10 +99,8 @@ export class RagStore {
       this.results = null
       return
     }
-    const body = (await this.#json(
-      `/api/rag/search?q=${encodeURIComponent(q)}`,
-    )) as { results: RagHit[] } | null
-    this.results = body ? body.results : []
+    this.results =
+      (await jsonList<RagHit>(`/api/rag/search?q=${encodeURIComponent(q)}`, 'results')) ?? []
   }
 
   clearSearch(): void {

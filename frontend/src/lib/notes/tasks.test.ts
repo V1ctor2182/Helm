@@ -83,4 +83,30 @@ describe('JournalView tasks view', () => {
     expect(await screen.findByText('mail digest')).toBeInTheDocument()
     expect(screen.getByText(/2 次/)).toBeInTheDocument()
   })
+
+  it('expands the runs drawer and lists task_runs', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve(
+              String(url).includes('/runs')
+                ? { runs: [{ id: 1, task_id: 1, status: 'ok', output: 'digest sent', started_at: '2026-07-01T01:00:00+00:00', ended_at: null }] }
+                : String(url).includes('/api/tasks')
+                  ? { tasks: [T({ name: 'mail digest', run_count: 2 })] }
+                  : { notes: [], providers: [] },
+            ),
+        }),
+      ),
+    )
+    tasks.tasks = [T({ name: 'mail digest', run_count: 2 })]
+    render(JournalView)
+    await fireEvent.click(screen.getByRole('tab', { name: '任务' }))
+    await fireEvent.click(await screen.findByRole('button', { name: '运行记录 mail digest' }))
+    expect(await screen.findByText('digest sent')).toBeInTheDocument()
+    expect(screen.getByText('ok')).toBeInTheDocument()
+    tasks.runsFor = null
+  })
 })

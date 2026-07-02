@@ -31,10 +31,10 @@ export class SkillsStore {
       | { skills: Skill[]; total: number; healthy: number; unhealthy: number }
       | null
     if (body) {
-      this.skills = body.skills
-      this.total = body.total
-      this.healthy = body.healthy
-      this.unhealthy = body.unhealthy
+      this.skills = Array.isArray(body.skills) ? body.skills : []
+      this.total = body.total ?? 0
+      this.healthy = body.healthy ?? 0
+      this.unhealthy = body.unhealthy ?? 0
     }
   }
 

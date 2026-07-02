@@ -1,6 +1,6 @@
 // Calendar store (email-calendar m5): local events + .ics import/export.
 
-import { jsonFetch } from '../api'
+import { jsonFetch, jsonList } from '../api'
 
 export interface CalEvent {
   id: number
@@ -41,8 +41,8 @@ export class CalendarStore {
   }
 
   async loadCaldav(): Promise<void> {
-    const b = (await this.#json('/api/calendar/accounts')) as { accounts: CalDavAccount[] } | null
-    if (b) this.caldavAccounts = b.accounts
+    const xs = await jsonList<CalDavAccount>('/api/calendar/accounts', 'accounts')
+    if (xs) this.caldavAccounts = xs
   }
 
   async addCaldav(a: { name: string; url: string; username: string; password: string }): Promise<boolean> {
@@ -75,8 +75,8 @@ export class CalendarStore {
   }
 
   async load(): Promise<void> {
-    const b = (await this.#json('/api/calendar/events')) as { events: CalEvent[] } | null
-    if (b) this.events = b.events
+    const xs = await jsonList<CalEvent>('/api/calendar/events', 'events')
+    if (xs) this.events = xs
   }
 
   async add(summary: string, start: string): Promise<boolean> {

@@ -11,3 +11,14 @@ export async function jsonFetch(path: string, init?: RequestInit): Promise<unkno
     return null
   }
 }
+
+// List endpoints all answer `{ <key>: T[] }`. This guards the shape once for
+// every store: null = request failed (keep stale data / show error), [] = the
+// body arrived but the key was missing or not an array (defensive default),
+// so a 200 error-envelope can never crash a view with `undefined.map`.
+export async function jsonList<T>(path: string, key: string, init?: RequestInit): Promise<T[] | null> {
+  const body = await jsonFetch(path, init)
+  if (body === null || typeof body !== 'object') return null
+  const xs = (body as Record<string, unknown>)[key]
+  return Array.isArray(xs) ? (xs as T[]) : []
+}

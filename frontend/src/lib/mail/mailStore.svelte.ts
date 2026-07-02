@@ -1,7 +1,7 @@
 // Mail store (email-calendar m3): accounts, inbox, email detail + AI triage.
 // Mirrors the resilient `#json`/`#post` pattern used elsewhere.
 
-import { jsonFetch } from '../api'
+import { jsonFetch, jsonList } from '../api'
 
 export interface MailAccount {
   id: number
@@ -62,18 +62,18 @@ export class MailStore {
   }
 
   async loadAccounts(): Promise<void> {
-    const b = (await this.#json('/api/mail/accounts')) as { accounts: MailAccount[] } | null
-    if (b) this.accounts = b.accounts
+    const xs = await jsonList<MailAccount>('/api/mail/accounts', 'accounts')
+    if (xs) this.accounts = xs
   }
 
   async loadEmails(): Promise<void> {
-    const b = (await this.#json('/api/mail/emails')) as { emails: EmailItem[] } | null
-    if (b) this.emails = b.emails
+    const xs = await jsonList<EmailItem>('/api/mail/emails', 'emails')
+    if (xs) this.emails = xs
   }
 
   async loadProviders(): Promise<void> {
-    const b = (await this.#json('/api/providers')) as { providers: MailProvider[] } | null
-    if (b) this.providers = b.providers
+    const xs = await jsonList<MailProvider>('/api/providers', 'providers')
+    if (xs) this.providers = xs
   }
 
   async openEmail(id: number): Promise<void> {

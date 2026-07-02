@@ -4,7 +4,7 @@
 // via `error`). Search results are kept separate from the full list so the
 // browse view is never lost while searching.
 
-import { jsonFetch } from '../api'
+import { jsonFetch, jsonList } from '../api'
 
 export interface Memory {
   id: number
@@ -35,8 +35,8 @@ export class MemoryStore {
 
   async load(): Promise<void> {
     const q = this.filter === 'all' ? '' : `?category=${this.filter}`
-    const body = (await this.#json(`/api/memories${q}`)) as { memories: Memory[] } | null
-    if (body) this.items = body.memories
+    const xs = await jsonList<Memory>(`/api/memories${q}`, 'memories')
+    if (xs) this.items = xs
   }
 
   setFilter(f: Category | 'all'): void {
@@ -82,10 +82,11 @@ export class MemoryStore {
       return
     }
     const cat = this.filter === 'all' ? '' : `&category=${this.filter}`
-    const body = (await this.#json(
-      `/api/memories/search?q=${encodeURIComponent(q)}${cat}`,
-    )) as { results: (Memory & { score: number })[] } | null
-    this.results = body ? body.results : []
+    this.results =
+      (await jsonList<Memory & { score: number }>(
+        `/api/memories/search?q=${encodeURIComponent(q)}${cat}`,
+        'results',
+      )) ?? []
   }
 
   clearSearch(): void {
