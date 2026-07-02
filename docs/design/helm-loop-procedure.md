@@ -237,6 +237,41 @@ notch 已是 Helm 后端的原生客户端(`HelmClient` → `http://127.0.0.1:87
 
 ---
 
+# 阶段 3 · 驾驶舱 × FanBox 行为对齐(持续优化)
+
+> **触发时机:** 阶段 2 各模块已端到端可用。本阶段专攻 **F1 驾驶舱**:把 FanBox(参考实现,~3800 行打磨过的文件浏览/预览/终端体验)的**行为精华**逐条搬进 helm 驾驶舱,直到"行为不输 FanBox"。
+>
+> **关键立场:FanBox 是行为参考,不是视觉参考。** 交互/手感/细节照搬精华;皮肤永远守 DESIGN.md 座舱(双主题 token/禁 emoji/零圆角),两者冲突时 DESIGN.md 赢。承既有决策 6601af17(复用精华逻辑、UI 重画,不 vendor)。
+
+## 参考仓
+
+- `reference/fanbox-master` — vendored 快照(仓内只读;唯一允许的写=从源同步更新)。
+- `~/work/victor-context/fanbox-master` — 源,随 victor-context 仓 `git pull` 更新。
+- 2026-07-02 核对:两份一致,最新 1.11.3;CHANGELOG 满是值得搬的打磨(终端路径可点击/Option 拖拽选中/面包屑对齐…)。
+
+## 对照矩阵(本阶段的账本,替代"模块清单")
+
+`docs/design/fanbox-cockpit-parity.md` — **首轮建立**:通读 FanBox `CHANGELOG.md` + `public/app.js` + `server.js` + 样式,逐条列「FanBox 有 / helm 驾驶舱缺或更差」的行为(文件卡手感/预览细节/终端体验/跟随模式/diff/路径点击/搜索/键盘流…),标 **P1(核心体验差距)/ P2(打磨)**。每轮从矩阵挑未勾的最高优先级一条;搬完打勾+记 commit;判"不该搬"(Electron 特有/与座舱定位冲突)标 ~~wontfix~~+理由。缺陷复查仍记 `helm-review-backlog.md`([驾驶舱] 标签),P0/P1 缺陷优先于拿新条。
+
+## 阶段 3 每一轮
+
+1. **刷参考**:`git -C ~/work/victor-context pull --ff-only`;diff 两份 fanbox-master,有更新先同步 vendored 快照 + 读新 CHANGELOG 条目(可能新增矩阵条目)。
+2. **选条**:backlog 有 open 驾驶舱 P0/P1 先修;否则从矩阵挑未勾的最高优先级一条。
+3. **拉 context**:`get_feature_context(35da1ada-8d45-48c8-961d-e99b8941179b)`(F1 room)+ 读 helm 现状(`frontend/src/lib/cockpit/*` + `helm/cockpit/*`)+ 精读 FanBox 里该行为的实现。
+4. **移植成原生**:Svelte/Python(Electron IPC→REST/WS,vanilla DOM→runes 组件,精华逻辑抽框架无关 ts),**不 vendor FanBox 代码**;皮肤走 token。
+5. **端到端真能用**:dev 5174 开真项目实操验证该行为;空态/错误兜底。
+6. **硬门**(同阶段 2):前端 build+check+test 绿;改后端 pytest 绿;动 notch 消费的 `/api` 必同次更 `HelmBackend.swift`+notch swift 绿(cockpit 端点 notch 现不消费,新开共用端点前先 record)。
+7. **视觉门**:dark/light 截图;确认没把 FanBox 的皮带进来。
+8. **复查**:本轮 diff 自查 + 完整性(FanBox 该行为的边界 case 搬全了吗)→ 记 backlog。
+9. **记账**:矩阵勾条 + `helm-loop-log.md` + `record_decision`(F1 room:搬了哪个行为/怎么映射/哪里故意不同)+ 每轮 report。
+10. **commit**(夜间自 commit+push 到 `feat/cockpit-fanbox-*`,不合 main;日间停下等 review)。
+
+## 阶段 3 硬规则(在阶段 1/2 硬规则之上)
+
+- **性能红线守 F1 约束**:>1000 项目录滚动/点击 <0.1s、agent 写文件高亮 <500ms(FanBox 体验基线正是出处,搬行为不许搬慢)。
+- `reference/` 只读(同步快照除外);卡住某条修 3 轮不绿 → 矩阵标 blocked + `add_question` + 换下一条。
+- **收敛/收官**:矩阵 P1 全勾(或 wontfix 注明理由)+ backlog 无 open 驾驶舱 P0/P1 → 报告并停。
+
 ## 附录 A:构建 / 测试 / 截靶图
 
 ```bash

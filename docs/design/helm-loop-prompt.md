@@ -66,8 +66,19 @@
 把上面命令前面加 `/loop 5m` 且带【夜间模式】:每做完一个可用切片不停下等我,硬门全绿就自己 commit 到 feat/modules-* 并 push、接着下一块。**每轮照做复查(第 9 步):跑 /code-review + 完整性复查 → 记 backlog;下一轮开头先清 backlog 的 P0/P1**。这样整夜 loop 会自己"建→复查→修→再复查"地收敛,不只往前铺。每个本该停下/问我的点改成"做最忠于 DESIGN.md 的暂定 + record/add_question + 代码留 TODO + 继续"。硬底线不松:非全绿绝不 commit、不合 main、不改坏 notch、不可逆操作不猜、DESIGN.md 只读。每轮照出 report。所有模块都可用(各自 open P0/P1 清空、复查说没明显缺口)或 全卡住 才报告并停。
 
 ```
-/loop 5m 读 docs/design/helm-loop-procedure.md 的「阶段 2 · 逐模块完善」+「复查与迭代」全节 + 模块清单,以【夜间模式】把各模式一个个做成端到端真能用、并每轮复查收敛,整夜不停、完全自主。① 选活:先读 docs/design/helm-review-backlog.md,有 open P0/P1 先修(标 [x]+记 commit),没 blocking 才挑新模块/切片;② 拉该 Room context(get_feature_context + 后端 router + 参考实现 + 现状占位);③ 按 DESIGN.md 系统设计该模块视图(座舱/双主题/禁 emoji,复杂的先手搓设计稿);④ 建真 Svelte 组件(走 token);⑤ 接真 /api(缺端点在对应 router 补,守 notch 契约:改共用端点必同次更新 HelmBackend.swift+record+notch swift 绿);⑥ 端到端可用(点得动/跑得通/空态兜底);⑦ 硬门 前端 npm build+check+test 绿、改后端 pytest 绿、改 notch swift 绿(某切片修 3 轮不绿就 skip+add_question+切下一个);⑧ dev 5174 截 dark/light 视觉门+改共用端点验 notch 仍正常;⑨ 复查两路:对本轮 diff 跑 /code-review 或派 code-reviewer 子 agent(bug 高置信当轮修)+ 完整性复查(对照「做成可用=什么」+参考实现+Room specs 列还缺什么)→ 按 P0/P1/P2 记进 docs/design/helm-review-backlog.md;⑩ record_decision 进对应 feature room + 写 helm-loop-log.md + 每轮 report(收尾消息+log,多两行「功能可用性」+「复查:结论+新增/剩余 backlog」+「契约/notch 影响」)→ 自己 commit(含 backlog)到 feat/modules-* 并 push,接着下一块(下一块优先清 backlog P0/P1)。关键:每个本该停下 review/问我的点都改成"做最忠于 DESIGN.md 的暂定 + record/add_question + 代码留 TODO + 继续",不停下等我。硬底线:做成真能用不是画壳;非全绿绝不 commit;不合 main(合并留我);不改坏 notch;不可逆/破坏操作(删数据/迁 schema/动别 Room 交付物)不猜;DESIGN.md/helm-pro.html 只读。收敛:P0 优先于拿新活;一个模块 open P0/P1 清空+复查说没明显缺口才算完。所有模块可用 或 全卡住 才报告并停。
+/loop 1m 读 docs/design/helm-loop-procedure.md 的「阶段 2 · 逐模块完善」+「复查与迭代」全节 + 模块清单,以【夜间模式】把各模式一个个做成端到端真能用、并每轮复查收敛,整夜不停、完全自主。① 选活:先读 docs/design/helm-review-backlog.md,有 open P0/P1 先修(标 [x]+记 commit),没 blocking 才挑新模块/切片;② 拉该 Room context(get_feature_context + 后端 router + 参考实现 + 现状占位);③ 按 DESIGN.md 系统设计该模块视图(座舱/双主题/禁 emoji,复杂的先手搓设计稿);④ 建真 Svelte 组件(走 token);⑤ 接真 /api(缺端点在对应 router 补,守 notch 契约:改共用端点必同次更新 HelmBackend.swift+record+notch swift 绿);⑥ 端到端可用(点得动/跑得通/空态兜底);⑦ 硬门 前端 npm build+check+test 绿、改后端 pytest 绿、改 notch swift 绿(某切片修 3 轮不绿就 skip+add_question+切下一个);⑧ dev 5174 截 dark/light 视觉门+改共用端点验 notch 仍正常;⑨ 复查两路:对本轮 diff 跑 /code-review 或派 code-reviewer 子 agent(bug 高置信当轮修)+ 完整性复查(对照「做成可用=什么」+参考实现+Room specs 列还缺什么)→ 按 P0/P1/P2 记进 docs/design/helm-review-backlog.md;⑩ record_decision 进对应 feature room + 写 helm-loop-log.md + 每轮 report(收尾消息+log,多两行「功能可用性」+「复查:结论+新增/剩余 backlog」+「契约/notch 影响」)→ 自己 commit(含 backlog)到 feat/modules-* 并 push,接着下一块(下一块优先清 backlog P0/P1)。关键:每个本该停下 review/问我的点都改成"做最忠于 DESIGN.md 的暂定 + record/add_question + 代码留 TODO + 继续",不停下等我。硬底线:做成真能用不是画壳;非全绿绝不 commit;不合 main(合并留我);不改坏 notch;不可逆/破坏操作(删数据/迁 schema/动别 Room 交付物)不猜;DESIGN.md/helm-pro.html 只读。收敛:P0 优先于拿新活;一个模块 open P0/P1 清空+复查说没明显缺口才算完。所有模块可用 或 全卡住 才报告并停。
 ```
+
+## 🛩 阶段 3 · 驾驶舱 × FanBox 持续优化(行为对齐参考实现)
+
+专攻 F1 驾驶舱:把 FanBox 的行为精华逐条搬进 helm,直到"行为不输 FanBox"。**流程/矩阵/硬规则全在 [`helm-loop-procedure.md`](./helm-loop-procedure.md) 的「阶段 3」大节**,prompt 只点火:
+
+```
+/loop 1m 读 docs/design/helm-loop-procedure.md 的「阶段 3 · 驾驶舱 × FanBox 行为对齐」全节,以【夜间模式】照它跑:每轮先刷参考仓,首轮建对照矩阵 fanbox-cockpit-parity.md,之后每轮搬一条 FanBox 行为进 helm 驾驶舱(行为照搬/皮肤守 DESIGN.md),硬门全绿自 commit 到 feat/cockpit-fanbox-*(不合 main),每轮出 report,矩阵 P1 全勾或全卡住才报告并停。
+```
+
+- **日间档**:去掉 `/loop 1m` 与【夜间模式】,每搬完一条停下 review、不自动 commit。
+- **指定起点**:加一句"先搬 <终端路径可点击 / Option 选中 / …>"。
 
 ## 调参
 
