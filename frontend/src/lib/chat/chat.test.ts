@@ -100,3 +100,23 @@ describe('ChatStore', () => {
     expect(c.messages.filter((m) => m.role === 'user')).toHaveLength(1)
   })
 })
+
+describe('ChatStore.deleteSession', () => {
+  it('deletes, clears current when it was open, and reloads', async () => {
+    const fetchMock = vi.fn((url: string, init?: RequestInit) =>
+      Promise.resolve({
+        ok: true,
+        status: (init?.method === 'DELETE' ? 204 : 200),
+        json: () => Promise.resolve({ sessions: [] }),
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const s = new ChatStore()
+    s.current = { id: 3, title: 't', provider_id: 1, model: 'm', system_prompt: null }
+    s.messages = [{ role: 'user', content: 'x' }]
+    await s.deleteSession(3)
+    expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('/api/sessions/3') && (c[1] as RequestInit)?.method === 'DELETE')).toBe(true)
+    expect(s.current).toBeNull()
+    expect(s.messages).toEqual([])
+  })
+})

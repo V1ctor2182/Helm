@@ -99,6 +99,13 @@ def delete_provider(
     session: Session = Depends(db_session),
     box: SecretBox = Depends(get_secret_box),
 ) -> None:
+    from sqlalchemy import select
+
+    # 有会话引用时 FK 会炸 500 —— 显式挡成 409,让前端能给出可行动的提示。
+    if session.scalars(
+        select(ChatSession.id).where(ChatSession.provider_id == provider_id).limit(1)
+    ).first() is not None:
+        raise HTTPException(status_code=409, detail="provider 有会话引用,先删除其会话")
     if not ProviderService(session, box).delete(provider_id):
         raise HTTPException(status_code=404, detail="provider not found")
 
@@ -131,6 +138,12 @@ def create_session(body: SessionBody, session: Session = Depends(db_session)) ->
 @router.get("/sessions")
 def list_sessions(session: Session = Depends(db_session)) -> dict:
     return {"sessions": [session_public(s) for s in ChatService(session).list_sessions()]}
+
+
+@router.delete("/sessions/{session_id}", status_code=204)
+def delete_session(session_id: int, session: Session = Depends(db_session)) -> None:
+    if not ChatService(session).delete_session(session_id):
+        raise HTTPException(status_code=404, detail="session not found")
 
 
 @router.get("/sessions/{session_id}")

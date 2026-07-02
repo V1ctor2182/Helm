@@ -54,6 +54,19 @@ class ChatService:
         self._s.flush()
         return row
 
+    def delete_session(self, session_id: int) -> bool:
+        """Delete a session and its messages. Returns False if it doesn't exist."""
+        row = self._s.get(ChatSession, session_id)
+        if row is None:
+            return False
+        for m in self.messages(session_id):
+            self._s.delete(m)
+        # 没有 ORM relationship 帮忙排序,先 flush 子行再删父行,否则 FK 崩。
+        self._s.flush()
+        self._s.delete(row)
+        self._s.flush()
+        return True
+
 
 def session_public(s: ChatSession) -> dict:
     return {

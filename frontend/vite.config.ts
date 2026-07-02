@@ -11,7 +11,8 @@ export default defineConfig({
   plugins: [svelte(), svelteTesting()],
   server: {
     proxy: {
-      '/api': BACKEND,
+      // ws: true 让 /api/chat/ws 等 WebSocket 升级也走代理(字符串简写不代理 WS)。
+      '/api': { target: BACKEND, ws: true },
       '/healthz': BACKEND,
     },
   },

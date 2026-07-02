@@ -91,6 +91,21 @@ export class ChatStore {
     return (body as { ok: boolean } | null) ?? { ok: false, error: '请求失败' }
   }
 
+  async deleteProvider(id: number): Promise<void> {
+    // 204 no-content:jsonFetch 对空 body 会 parse 失败返回 null,用裸 fetch 看状态码。
+    try {
+      const res = await fetch(`/api/providers/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        await this.loadProviders()
+        return
+      }
+      const detail = (await res.json().catch(() => null)) as { detail?: string } | null
+      this.error = detail?.detail ?? '删除 provider 失败'
+    } catch {
+      this.error = '删除 provider 失败'
+    }
+  }
+
   async loadSessions(): Promise<void> {
     const xs = await jsonList<ChatSessionT>('/api/sessions', 'sessions')
     if (xs) this.sessions = xs
@@ -115,6 +130,26 @@ export class ChatStore {
     return s
   }
 
+  async deleteSession(id: number): Promise<void> {
+    try {
+      const res = await fetch(`/api/sessions/${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        this.error = '删除会话失败'
+        return
+      }
+    } catch {
+      this.error = '删除会话失败'
+      return
+    }
+    if (this.current?.id === id) {
+      this.disconnect()
+      this.current = null
+      this.messages = []
+      this.streaming = false
+    }
+    await this.loadSessions()
+  }
+
   async openSession(id: number): Promise<void> {
     const body = (await this.#json(`/api/sessions/${id}`)) as
       | { session: ChatSessionT; messages: Msg[] }
@@ -135,9 +170,16 @@ export class ChatStore {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws'
     const ws = new WebSocket(`${proto}://${location.host}/api/chat/ws?session_id=${id}`)
     ws.onmessage = (e: MessageEvent) => this.handle(JSON.parse(e.data as string))
-    // If the socket drops without a terminal frame, don't strand the composer.
+    // If the socket drops (or never connects) without a terminal frame, don't
+    // strand the composer with streaming stuck true.
     ws.onclose = () => {
       if (this.#ws === ws) this.streaming = false
+    }
+    ws.onerror = () => {
+      if (this.#ws === ws && this.streaming) {
+        this.streaming = false
+        this.error = '连接聊天服务失败(WS)'
+      }
     }
     this.#ws = ws
   }

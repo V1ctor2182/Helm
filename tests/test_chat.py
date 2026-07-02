@@ -213,6 +213,31 @@ def test_session_crud(config):
     assert c.get("/api/sessions/999").status_code == 404
 
 
+def test_session_delete_removes_messages(config, monkeypatch):
+    async def fake_stream(**kwargs):
+        yield "ok"
+
+    monkeypatch.setattr(adapters, "chat_stream", fake_stream)
+    c = TestClient(create_app(config))
+    pid = _make_provider(c)
+    sid = c.post("/api/sessions", json={"provider_id": pid, "model": "m"}).json()["id"]
+    # persist a user+assistant turn so the delete has FK children to clear
+    with c.websocket_connect(f"/api/chat/ws?session_id={sid}") as ws:
+        ws.send_text(_json.dumps({"type": "message", "content": "hi"}))
+        for _ in range(20):
+            if _json.loads(ws.receive_text())["type"] in ("done", "stopped", "error"):
+                break
+    assert len(c.get(f"/api/sessions/{sid}").json()["messages"]) == 2
+    assert c.delete("/api/sessions/999").status_code == 404
+    # a provider with sessions refuses deletion (409, not FK 500)
+    assert c.delete(f"/api/providers/{pid}").status_code == 409
+    assert c.delete(f"/api/sessions/{sid}").status_code == 204
+    assert c.get("/api/sessions").json()["sessions"] == []
+    assert c.get(f"/api/sessions/{sid}").status_code == 404
+    # with its sessions gone the provider deletes cleanly
+    assert c.delete(f"/api/providers/{pid}").status_code == 204
+
+
 def test_chat_ws_streams_persists_restores(config, monkeypatch):
     async def fake_stream(**kwargs):
         for t in ["Hel", "lo"]:

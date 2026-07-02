@@ -6,6 +6,19 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 14:10 · phase2-round4-chat（夜间模式）· F2 Chat 切片
+- 对齐: 阶段2 第4轮——Chat/ProviderSettings 座舱化 + 会话/provider 删除全链路 + e2e 抓修 3 个真 bug
+- 设计基线: DESIGN.md(账本无气泡/mono-sans 硬切/accent 活栏/语义色配给;未改)
+- 改动: 前端 `chat/Chat.svelte`+`ProviderSettings.svelte`(重写:侧栏会话列表 accent 活栏、账本消息流 YOU/MODEL、assistant Markdown、流式 caret、自动贴底、composer、KEY 标、×删除)、`chatStore`(+deleteSession/deleteProvider/onerror 兜底)、`vite.config.ts`(proxy ws:true);后端 `chat/sessions.py`(+delete_session,先 flush 子行)、`chat/routes.py`(+DELETE /api/sessions/{id};provider 有会话引用 409);tests(前端 +1 后端补场景)
+- 功能可用性: e2e(真后端):模板→加 Ollama provider→测试(错误路径)→建会话→发消息→WS error 帧回显→删会话/删 provider 204;流式协议(delta/done/stopped)后端 fake-stream 测试+store 单测覆盖(真流式=付费,夜间不实跑)
+- 三个 e2e 抓出的真 bug: ① vite 字符串代理不转发 WS→dev 下聊天完全不通(P0);② WS 连不上 streaming 卡 true 冻死 composer;③ 删带消息会话 FK 崩 500(无 relationship flush 排序)——全修+测试钉住
+- 取舍: 多模型对比(intent P1)/会话自动命名/system_prompt 暴露/RAG 上下文留 backlog;PROVIDERS 入口文字化(⚙ 属 emoji 禁区)
+- 复查: e2e 驱动(本轮 review 重点=真链路);backlog 清 P1×2(旧样式+无删除)+修 P0×2/P1×1,新增 P1×1(多模型对比)+P2×2
+- 契约/notch 影响: 无(chat 端点 notch 不消费;后端改动跑全量 pytest 绿)
+- VibeHub: record_decision「阶段2·轮4 Chat 座舱化+删除链路+3 bug」→ 013988b5 (ai_proposed, F2)
+- 验证: 前端 build ✓/check 0 错 0 警(245 文件)/test 152;后端 pytest 184+11skip;视觉 dev 5174 dark+light 核过
+- 状态: ✅ 夜间自 commit(feat/design-shell-today,未合 main)｜❓需确认: 无
+
 ## 2026-07-02 13:52 · phase2-round3-calendar（夜间模式）· F7 日历切片
 - 对齐: 阶段2 第3轮——日历视图座舱化(清 backlog P1)+ e2e 抓到并修掉事件创建 UTC 往返错位(P0)
 - 设计基线: DESIGN.md(账本/accent 界标/mono 配给/禁 emoji;未改)
