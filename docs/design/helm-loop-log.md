@@ -6,6 +6,18 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 15:20 · phase2-round9-cockpit（夜间模式）· F1 驾驶舱切片1
+- 对齐: 阶段2 第9轮——驾驶舱主视图(分栏/文件瓦片/预览)座舱化 + Monaco Diff 跟随双主题
+- 设计基线: DESIGN.md(瓦片零圆角/发丝/accent 底线 tab/语义绿=活动;未改)
+- 改动: `cockpit/CockpitView.svelte`(tab+分栏发丝)、`FileBrowser.svelte`(mono 路径栏/↑/跟随 act/发丝瓦片/selected accent/changed 绿闪/徽章 mono;⬆→↑)、`PreviewPane.svelte`(mono 标题/tab/tile code 块/token Markdown)、`DiffView.svelte`(Monaco theme 跟随 isDark,修暗色下白块)
+- 功能可用性: e2e 真后端:开 /Users/victor/work/AI-workspace/helm→瓦片列出→选 DESIGN.md→Markdown 预览+预览/Diff tab;文件浏览/预览/终端/监听/diff 功能未动(m1-m6 既有)
+- 取舍: 文件类型图标保留 FanBox 实体色(功能性着色同语法高亮);xterm 黑底终端惯例保留(P2 记账);Monaco 不随主题热更(P2)
+- 复查: 清 P1(驾驶舱旧线框);新增 P1×1(AgentView 归 F5 轮)+P2×1
+- 契约/notch 影响: 无
+- VibeHub: record_decision「阶段2·轮9 驾驶舱座舱化+Monaco 双主题」→ 96a52d30 (ai_proposed, F1)
+- 验证: npm build ✓/check 0 错 0 警(248 文件)/test 155;视觉 dev 5174 dark+light 核过
+- 状态: ✅ 夜间自 commit(feat/design-shell-today,未合 main)｜❓需确认: 无
+
 ## 2026-07-02 15:05 · phase2-round8-research（夜间模式）· F3 研究视图
 - 对齐: 阶段2 第8轮——Research 报告视图座舱化(模块清单下一项)
 - 设计基线: DESIGN.md(仪表头/描边徽章/框选视口=活的过程/mono 配给;未改)

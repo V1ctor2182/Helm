@@ -3,6 +3,7 @@
   import * as monaco from 'monaco-editor'
   import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
   import { fetchDiff, langForExt } from './gitClient'
+  import { theme } from '../theme.svelte'
 
   let { path, ext = '' }: { path: string; ext?: string } = $props()
 
@@ -30,6 +31,8 @@
       readOnly: true,
       automaticLayout: true,
       renderSideBySide: true,
+      // 跟随座舱双主题(默认 'vs' 亮色在暗色模式下是白块)
+      theme: theme.isDark ? 'vs-dark' : 'vs',
     })
     const original = monaco.editor.createModel(d.head, lang)
     const modified = monaco.editor.createModel(d.working, lang)
@@ -53,7 +56,8 @@
     min-height: 200px;
   }
   .msg {
-    color: #999;
+    color: var(--t4);
+    font-size: 13px;
     padding: 12px;
   }
 </style>

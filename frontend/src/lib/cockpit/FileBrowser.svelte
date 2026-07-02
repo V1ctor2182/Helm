@@ -39,7 +39,7 @@
         type="button"
         class="up"
         disabled={!parent}
-        onclick={() => parent && cockpit.browse(parent)}>⬆</button
+        onclick={() => parent && cockpit.browse(parent)}>↑</button
       >
       <span class="cwd" title={cockpit.cwd}>{cockpit.cwd}</span>
       <button
@@ -103,113 +103,150 @@
   .browser {
     height: 100%;
     overflow: auto;
-    padding: 16px;
+    padding: 14px;
     box-sizing: border-box;
+    font-family: var(--sans);
+    color: var(--t2);
   }
   .bar {
     display: flex;
-    gap: 8px;
+    gap: 10px;
     align-items: center;
     margin-bottom: 12px;
   }
   .bar input {
     flex: 1;
-    border: 1px solid #e5e4e7;
-    border-radius: 8px;
-    padding: 8px 10px;
-    font: inherit;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--hair);
+    color: var(--t1);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 4px 0 7px;
+    min-width: 0;
+  }
+  .bar input::placeholder {
+    color: var(--t4);
+    font-family: var(--sans);
+    font-size: 13px;
+  }
+  .bar input:focus {
+    outline: none;
+    border-bottom-color: var(--acc-ink);
   }
   .bar button {
-    border: 1px solid #e5e4e7;
-    background: #fff;
-    border-radius: 8px;
-    padding: 7px 12px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--t4);
+    background: transparent;
+    border: 1px solid var(--line);
+    padding: 4px 10px;
     cursor: pointer;
+    transition: color .12s var(--ease);
+  }
+  .bar button:hover:not(:disabled) {
+    color: var(--t1);
+  }
+  .up {
+    padding: 4px 8px;
   }
   .up:disabled {
     opacity: 0.4;
     cursor: default;
   }
   .cwd {
-    color: #555;
-    font-size: 0.85rem;
+    color: var(--t3);
+    font-family: var(--mono);
+    font-size: 11px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .error {
-    color: #e5484d;
-    font-size: 0.85rem;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--red);
   }
   .section {
     margin: 4px 0 10px;
-    font-size: 0.85rem;
-    color: #888;
-    font-weight: 600;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--t3);
+    font-weight: 700;
   }
   .muted {
-    color: #aaa;
+    color: var(--t4);
+    font-size: 13px;
   }
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 10px;
+    gap: 8px;
   }
+  /* 文件瓦片:1px 线框、零圆角(仪表瓦片,非填充卡) */
   .card {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
-    border: 1px solid #e5e4e7;
-    border-radius: 10px;
-    background: #fff;
-    padding: 12px;
+    border: 1px solid var(--hair);
+    background: transparent;
+    padding: 10px 11px;
     cursor: pointer;
     text-align: left;
-    min-height: 76px;
+    min-height: 72px;
+    transition: border-color .12s var(--ease);
   }
   .card:hover {
-    border-color: #c9c8cf;
+    border-color: var(--line);
   }
   .card.selected {
-    border-color: #4250ff;
-    background: #f5f6ff;
+    border-color: var(--acc-ink);
   }
   .card.changed {
     animation: flash 1.2s ease-out;
   }
   @keyframes flash {
     0% {
-      border-color: #37b24d;
-      box-shadow: 0 0 0 2px rgba(55, 178, 77, 0.5);
+      border-color: var(--green);
+      box-shadow: 0 0 0 1px var(--green);
     }
     100% {
-      border-color: #e5e4e7;
+      border-color: var(--hair);
       box-shadow: none;
     }
   }
   .follow {
     margin-left: auto;
-    font-size: 0.8rem;
+    flex: none;
   }
   .follow.on {
-    border-color: #37b24d;
-    color: #2b8a3e;
+    border-color: var(--green) !important;
+    color: var(--green) !important;
   }
   .icon {
+    font-family: var(--mono);
     font-weight: 700;
-    font-size: 14px;
+    font-size: 13px;
   }
   .card-name {
-    font-size: 0.85rem;
+    font-size: 12.5px;
+    color: var(--t2);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     max-width: 100%;
   }
+  .card.selected .card-name {
+    color: var(--t1);
+  }
   .meta {
-    color: #999;
-    font-size: 0.75rem;
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--t4);
+    font-variant-numeric: tabular-nums;
   }
   .badges {
     display: flex;
@@ -217,10 +254,11 @@
     flex-wrap: wrap;
   }
   .badge {
-    font-size: 0.7rem;
-    background: #eef1ff;
-    color: #4250ff;
-    border-radius: 4px;
-    padding: 1px 5px;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: .5px;
+    color: var(--acc-ink);
+    border: 1px solid var(--acc-ink);
+    padding: 0 4px;
   }
 </style>

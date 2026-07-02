@@ -42,6 +42,8 @@
     grid-template-columns: minmax(260px, 1fr) minmax(280px, 1.2fr);
     height: 100%;
     min-height: 0;
+    font-family: var(--sans);
+    color: var(--t2);
   }
   .left,
   .right {
@@ -51,25 +53,32 @@
   .right {
     display: flex;
     flex-direction: column;
+    border-left: 1px solid var(--hair);
   }
   .seg {
     display: flex;
-    gap: 4px;
-    padding: 6px 8px 0;
-    border-bottom: 1px solid #e5e4e7;
+    gap: 18px;
+    padding: 6px 14px 0;
+    border-bottom: 1px solid var(--hair);
   }
   .seg button {
-    border: 1px solid #e5e4e7;
-    border-bottom: none;
-    background: #f4f3f5;
-    border-radius: 8px 8px 0 0;
-    padding: 4px 12px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--t3);
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    padding: 4px 1px 6px;
     cursor: pointer;
-    font-size: 0.82rem;
+    transition: color .12s var(--ease);
+  }
+  .seg button:hover {
+    color: var(--t1);
   }
   .seg button.active {
-    background: #fff;
-    font-weight: 600;
+    color: var(--t1);
+    border-bottom-color: var(--acc);
   }
   .pane {
     flex: 1;

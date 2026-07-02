@@ -120,55 +120,70 @@
   .preview {
     height: 100%;
     overflow: auto;
-    padding: 16px;
+    padding: 14px;
     box-sizing: border-box;
-    border-left: 1px solid #e5e4e7;
+    font-family: var(--sans);
+    color: var(--t2);
   }
   .empty,
   .error {
-    color: #999;
-    font-size: 0.9rem;
+    color: var(--t4);
+    font-size: 13px;
   }
   .error {
-    color: #e5484d;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--red);
   }
   .title {
-    font-weight: 600;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--t1);
     margin-bottom: 8px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .trunc {
-    color: #c97b1f;
-    font-size: 0.78rem;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--orange);
   }
   .vtabs {
     display: flex;
-    gap: 4px;
+    gap: 14px;
     margin-bottom: 8px;
+    border-bottom: 1px solid var(--hair);
   }
   .vtabs button {
-    border: 1px solid #e5e4e7;
-    background: #fff;
-    border-radius: 8px;
-    padding: 3px 12px;
-    font-size: 0.82rem;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--t3);
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    padding: 3px 1px 5px;
     cursor: pointer;
+    transition: color .12s var(--ease);
+  }
+  .vtabs button:hover {
+    color: var(--t1);
   }
   .vtabs button.active {
-    background: #eef1ff;
-    border-color: #4250ff;
-    color: #4250ff;
+    color: var(--t1);
+    border-bottom-color: var(--acc);
   }
   .code {
     margin: 0;
-    font: 13px ui-monospace, monospace;
+    font: 12px var(--mono);
     white-space: pre;
     overflow: auto;
-    background: #f6f6f8;
+    background: var(--tile);
+    border: 1px solid var(--hair);
     padding: 12px;
-    border-radius: 8px;
+    color: var(--t2);
   }
   .img {
     max-width: 100%;
@@ -179,25 +194,44 @@
     height: 80vh;
     border: 0;
   }
+  .md {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--t2);
+  }
+  .md :global(h1),
+  .md :global(h2),
+  .md :global(h3) {
+    color: var(--t1);
+  }
+  .md :global(a) {
+    color: var(--acc-ink);
+  }
   .md :global(pre) {
-    background: #f6f6f8;
+    background: var(--tile);
+    border: 1px solid var(--hair);
     padding: 12px;
-    border-radius: 8px;
     overflow: auto;
+  }
+  .md :global(code) {
+    font-family: var(--mono);
+    font-size: 12px;
   }
   .zip {
     list-style: none;
     margin: 0;
     padding: 0;
-    font: 13px ui-monospace, monospace;
+    font: 12px var(--mono);
+    color: var(--t2);
   }
   .zip li {
     display: flex;
     justify-content: space-between;
     padding: 2px 0;
-    border-bottom: 1px solid #f0eff2;
+    border-bottom: 1px solid var(--hair);
   }
   .zs {
-    color: #999;
+    color: var(--t4);
+    font-variant-numeric: tabular-nums;
   }
 </style>
