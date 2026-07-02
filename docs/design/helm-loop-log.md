@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 21:30 · phase3-round3-term-path-links(夜间模式)· P1 第2条
+- 对齐: 阶段3 轮3——终端路径点击四层识别+点开定位(FanBox app:2528-2644/srv:937-1018 行为)
+- 改动: 后端 +POST /api/cockpit/paths/resolve(批量 stat,cwd 基准,file:// 前缀/目录尾 / 兜底,50 上限);前端 +terminal/pathLinks.ts(纯函数:URL>引号串(救空格路径)>斜杠 token>裸文件名扩展白名单,全角标点切断集,--flag=/path 取 = 后,LRU 验证缓存);Terminal.svelte 注册 linkProvider(折行 isWrapped 拼回逻辑行,index↔row/col 按 cols 映射,验证过才划线);cockpit.openPath(目录→browse/文件→选中预览)+点击切 cockpit 模式;URL 系统浏览器开
+- 功能可用性: pytest 覆盖 resolve(相对/绝对/~/file:///目录尾/缺失);7 个单测覆盖提取与缓存;真机终端 WS 正常(prompt 渲染);划线/点击的交互手感程序化驱动不了(合成键事件进不了 xterm)——待人目视
+- 取舍: scrollback 回扫+basename 搜索+Spotlight 兜底(FanBox 定位后三层)留 P2 新条;md/html 点开全屏依赖全屏预览(P2)未做
+- 契约/notch 影响: 无(新增端点,notch 不消费)
+- VibeHub: record_decision(F1)→ 见下条;矩阵 P1 2/14
+- 验证: 前端 build ✓/check 0/0(252 文件)/test 168(+7);后端 pytest 188(+1);视觉 dark 终端截图
+- 状态: ✅ 夜间自 commit(feat/cockpit-fanbox,未合 main)｜❓待目视: 终端里路径 hover 划线+点击定位
+
 ## 2026-07-02 20:45 · phase3-round2-edit-in-preview(夜间模式)· P1 首条
 - 对齐: 阶段3 轮2——预览即编辑+停笔 0.8s 自动落盘+并发覆盖保护(FanBox app:1179-1382/srv:409-433 行为,皮肤守 DESIGN.md)
 - 改动: 后端 `cockpit/preview.py`(+write_text 原子写 tmp+fsync+rename/WriteConflict/5MB 上限,隐藏 tmp 名避监听噪声)、`cockpit/routes.py`(+POST /api/cockpit/text,409 带磁盘 mtime;GET /text +mtime);前端 `PreviewPane.svelte`(code 预览即编辑 textarea/md +「源码」tab/0.8s 防抖+⌘S+写盘串行化/「xx 前已保存」秒级刷新/409→「文件被外部修改」重载|覆盖/guardDirty 切文件静默 flush/截断只读)

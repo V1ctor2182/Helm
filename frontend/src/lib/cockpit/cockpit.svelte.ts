@@ -108,6 +108,20 @@ export class CockpitStore {
     )
   }
 
+  /** 终端路径点击的落点:目录→浏览进去;文件→浏览其目录+选中预览。 */
+  openPath(path: string, isDir: boolean): void {
+    if (isDir) {
+      void this.browse(path)
+      return
+    }
+    const name = path.split('/').pop() ?? path
+    const dot = name.lastIndexOf('.')
+    const ext = dot > 0 ? name.slice(dot + 1).toLowerCase() : ''
+    const dir = path.slice(0, path.lastIndexOf('/'))
+    if (dir && dir !== this.cwd) void this.browse(dir)
+    this.selected = { name, path, is_dir: false, size: 0, ext }
+  }
+
   // Apply a watch event: always flash; in follow mode also track the file
   // (browse to its dir if needed + preview it).
   applyChange(ev: { path: string; kind: string }): void {

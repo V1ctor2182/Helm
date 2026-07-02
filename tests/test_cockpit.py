@@ -277,3 +277,24 @@ def test_text_write_guards(config, tmp_path):
     assert c.post("/api/cockpit/text", json={"path": str(tmp_path / "nope.txt"), "content": "x"}).status_code == 404
     assert c.post("/api/cockpit/text", json={"path": str(tmp_path), "content": "x"}).status_code == 404
 
+def test_paths_resolve(config, tmp_path):
+    c = TestClient(create_app(config))
+    f = tmp_path / "src" / "main.py"
+    f.parent.mkdir()
+    f.write_text("x", encoding="utf-8")
+    r = c.post(
+        "/api/cockpit/paths/resolve",
+        json={
+            "cwd": str(tmp_path),
+            "candidates": ["src/main.py", "src/", str(f), "missing.py", "file://" + str(f)],
+        },
+    ).json()["resolved"]
+    assert r["src/main.py"]["path"] == str(f) and r["src/main.py"]["is_dir"] is False
+    assert r["src/"]["is_dir"] is True  # 目录尾 / 兜底
+    assert r[str(f)]["path"] == str(f)
+    assert "missing.py" not in r
+    assert r["file://" + str(f)]["path"] == str(f)
+    # 无 cwd 时相对路径不解析
+    r2 = c.post("/api/cockpit/paths/resolve", json={"candidates": ["src/main.py"]}).json()["resolved"]
+    assert r2 == {}
+

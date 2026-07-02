@@ -81,6 +81,35 @@ def file_text(path: str) -> dict:
     }
 
 
+class ResolvePathsBody(BaseModel):
+    cwd: str | None = None
+    candidates: list[str]
+
+
+@router.post("/paths/resolve")
+def resolve_paths(body: ResolvePathsBody) -> dict:
+    """终端路径点击的服务端验证层(承 FanBox srv:937-971):批量 stat 候选,
+    相对路径以 cwd 为基准;只回存在的,前端只给验证过的划线。"""
+    out: dict[str, dict] = {}
+    base = Path(body.cwd).expanduser() if body.cwd else None
+    for raw in body.candidates[:50]:
+        if not raw or len(raw) > 1024:
+            continue
+        token = raw[7:] if raw.startswith("file://") else raw
+        stripped = token.rstrip("/") or "/"
+        p = Path(stripped).expanduser()
+        try:
+            cand = p if p.is_absolute() else (base / p if base is not None else None)
+            if cand is None:
+                continue
+            cand = cand.resolve()
+            if cand.exists():
+                out[raw] = {"path": str(cand), "is_dir": cand.is_dir()}
+        except OSError:
+            continue
+    return {"resolved": out}
+
+
 class WriteTextBody(BaseModel):
     path: str
     content: str
