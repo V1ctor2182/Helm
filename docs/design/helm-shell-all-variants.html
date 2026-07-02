@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Helm · Shell 全变体合并 · A–G</title>
+<style>
+  :root{
+    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,monospace;
+    --ease:cubic-bezier(.32,.72,0,1);
+    --palA:#FFC53D;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#0b0b0d;color:#b8b8b8;font-family:var(--sans);-webkit-font-smoothing:antialiased}
+  .page{max-width:1200px;margin:0 auto;padding:28px 22px 100px}
+  .mast{font-family:var(--mono);font-size:19px;font-weight:800;letter-spacing:2px;color:#fff;margin:0}
+  .intro{font-size:12.5px;color:#8c8c8c;line-height:1.6;max-width:940px;margin:11px 0 2px}
+  .intro b{color:#e6e6e6}.intro .a{color:var(--palA)}
+  .tools{display:flex;gap:9px;margin:14px 0 4px;flex-wrap:wrap}
+  .tools button{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.4px;border:1px solid #333;background:#161618;color:#ccc;border-radius:7px;padding:7px 12px;cursor:pointer}
+  .tools button:hover{border-color:#555;color:#fff}
+  .tools .pri{background:var(--palA);color:#141210;border-color:var(--palA)}
+  .vh{display:flex;align-items:baseline;gap:10px;margin:32px 0 3px}
+  .vt{font-family:var(--mono);font-size:12px;font-weight:800;color:#0b0e0f;background:var(--palA);border-radius:5px;padding:2px 8px}
+  .vh h2{font-size:15px;font-weight:700;color:#fff;margin:0}.vh .z{font-size:12.5px;color:#777}
+  .vh .ref{margin-left:auto;font-family:var(--mono);font-size:10px;color:#6a6a6a;letter-spacing:.3px}
+  .vh .ref b{color:var(--palA)}
+  .gl{font-size:11.5px;color:#8a8a8a;line-height:1.5;margin:0 0 10px;max-width:1010px}
+  .gl .g{color:#5db06e}.gl .l{color:#c78a3a}
+
+  /* ============ SHARED BASE ============ */
+  .app{
+    --bg:#000;--chrome:#0a0a0c;--panel:#08080a;
+    --t1:#fff;--t2:rgba(255,255,255,.82);--t3:rgba(255,255,255,.52);--t4:rgba(255,255,255,.32);
+    --line:rgba(255,255,255,.13);--hair:rgba(255,255,255,.07);--tile:#131315;
+    --acc:var(--palA);--acc-ink:var(--palA);--grid:rgba(255,255,255,.03);
+    --green:#34C759;--orange:#FF9F0A;--red:#FF453A;--cyan:#34D6C0;
+    --gtc:54px 218px 1fr;
+    height:500px;border:.5px solid var(--line);border-radius:12px;overflow:hidden;
+    box-shadow:0 18px 55px rgba(0,0,0,.55);display:grid;grid-template-columns:var(--gtc);
+    grid-template-rows:28px 1fr 24px;background:var(--bg);color:var(--t2);position:relative}
+  .tbar{grid-column:1/-1;background:var(--chrome);border-bottom:.5px solid var(--hair);display:flex;
+    align-items:center;gap:6px;padding:0 11px;font-family:var(--mono);font-size:10px;color:var(--t4);letter-spacing:.4px}
+  .tbar .wm{color:var(--t2);font-weight:800;letter-spacing:2px;margin-left:8px}
+  .tbar .r{margin-left:auto}
+  .tl{width:10px;height:10px;border-radius:50%}.tl.r1{background:#ff5f57}.tl.y1{background:#febc2e}.tl.g1{background:#28c840}
+  .rail{background:var(--bg);position:relative;display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:2px}
+  .fil{position:absolute;top:8px;bottom:8px;right:0;width:1px;background:var(--line)}
+  .anc{position:absolute;right:-.5px;top:46px;width:2px;height:32px;background:var(--acc);border-radius:2px;box-shadow:0 0 10px -1px var(--acc)}
+  .pulse{position:absolute;right:-.5px;width:2px;height:11px;border-radius:2px;background:linear-gradient(180deg,transparent,var(--acc),transparent);animation:fp 2.6s var(--ease) infinite}
+  @keyframes fp{0%{top:76%;opacity:0}14%{opacity:.9}100%{top:12%;opacity:0}}
+  .lg{width:20px;height:20px;color:var(--acc);margin-bottom:7px}
+  .ric{width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--t4);position:relative}
+  .ric svg{width:17px;height:17px}.ric.on{color:var(--t1)}
+  .ric .bdg{position:absolute;top:4px;right:5px;width:6px;height:6px;border-radius:50%;background:var(--orange);box-shadow:0 0 0 2px var(--bg)}
+  .sp{flex:1}
+  .ctx{background:var(--panel);border-right:.5px solid var(--hair);padding:12px 12px;overflow:hidden;position:relative}
+  .slab{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1px;color:var(--t4);text-transform:uppercase;margin:0 0 8px}
+  .nrow{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t3);padding:5px 7px}
+  .nrow.on{color:var(--t1)}.nrow .dot{width:5px;height:5px;border-radius:50%;background:var(--t4)}
+  .nrow.on .dot{background:var(--acc);box-shadow:0 0 6px var(--acc)}
+  .nrow .ct{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--t4)}
+  .telem{margin-top:14px;font-family:var(--mono);font-size:9px;line-height:1.7;color:var(--t4)}
+  .telem b{color:var(--t3);font-weight:600}
+  .center{background:var(--bg);overflow:hidden;position:relative;min-width:0}
+  .sbar{grid-column:1/-1;background:var(--chrome);border-top:.5px solid var(--hair);display:flex;align-items:center;
+    font-family:var(--mono);font-size:10px;color:var(--t4);letter-spacing:.2px}
+  .sbar .sg{padding:0 11px;height:24px;display:flex;align-items:center;gap:6px}
+  .sbar .live{color:var(--acc-ink)}.sbar .grow{flex:1}.sbar .k{color:var(--t3)}
+  .tn{font-variant-numeric:tabular-nums}.mono{font-family:var(--mono)}
+  .cstar{color:var(--acc-ink);display:inline-block;animation:spin 1.1s ease-in-out infinite}
+  @keyframes spin{0%{transform:rotate(0) scale(.85);opacity:.6}50%{transform:rotate(180deg) scale(1.12);opacity:1}100%{transform:rotate(360deg) scale(.85);opacity:.6}}
+  .car{display:inline-block;width:2px;height:13px;background:var(--acc);vertical-align:-2px;animation:bl 1s steps(1) infinite}
+  @keyframes bl{50%{opacity:0}}
+  .cbx{width:13px;height:13px;border:1.4px solid var(--t4);flex:none}
+  .cbx.on{border-color:var(--acc-ink);background:var(--acc)}
+  .strk{color:var(--t4);text-decoration:line-through}
+  .sdot{width:6px;height:6px;border-radius:50%;flex:none}
+  .sdot.ok{background:var(--green)}.sdot.run{background:var(--acc)}
+
+  /* ---------- V-A · Instrument Readout ---------- */
+  .v-a .rd{padding:14px 20px 14px 0;height:100%;overflow:hidden}
+  .v-a .rh{display:flex;align-items:baseline;gap:11px;padding-left:56px;margin-bottom:5px}
+  .v-a .rh h3{font-family:var(--mono);font-size:21px;font-weight:800;letter-spacing:1px;color:var(--t1);margin:0}
+  .v-a .rh .d{font-family:var(--mono);font-size:11px;color:var(--acc-ink);font-weight:700}
+  .v-a .rh .p{margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--t4)}
+  .v-a .rr{display:grid;grid-template-columns:56px 1fr;border-top:.5px solid var(--hair);padding:8px 0}
+  .v-a .rr:first-child{border-top:none}
+  .v-a .gut{font-family:var(--mono);font-size:9px;color:var(--t4);line-height:1.5;padding-top:2px}
+  .v-a .gut .tm{color:var(--t3)}
+  .v-a .h{font-family:var(--mono);font-size:9px;color:var(--t4);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+  .v-a .task{display:flex;align-items:center;gap:9px;padding:2px 0;font-size:12.5px;color:var(--t2)}
+  .v-a .task .due{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--t4)}
+  .v-a .task .due.hot{color:var(--orange)}
+  .v-a .jr{display:flex;align-items:center;gap:8px;color:var(--t4);font-size:12.5px}
+  .v-a .ai{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--acc-ink);border:1px solid var(--acc-ink);padding:2px 7px}
+  .v-a .fr{position:relative;border:1px solid var(--line);padding:8px 11px}
+  .v-a .fr::before,.v-a .fr::after{content:"";position:absolute;width:8px;height:8px;border:1.3px solid var(--acc-ink)}
+  .v-a .fr::before{top:-1px;left:-1px;border-right:0;border-bottom:0}.v-a .fr::after{bottom:-1px;right:-1px;border-left:0;border-top:0}
+  .v-a .agl{display:flex;align-items:center;gap:9px;padding:3px 0;font-size:12px}
+  .v-a .agl .nm{color:var(--t1);font-weight:600}.v-a .agl .ac{font-family:var(--mono);font-size:11px;color:var(--t3)}
+  .v-a .agl .st{margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--t4)}
+  .v-a .proj{display:flex;align-items:center;gap:9px;padding:3px 0;font-size:12px}
+  .v-a .proj .pd{width:12px;height:12px;border-radius:3px;background:linear-gradient(135deg,#e8a07a,#6a4f8f);flex:none}
+  .v-a .proj .br{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--t4)}
+  .v-a .qa{padding-left:56px;margin-top:12px;display:flex;gap:7px}
+  .v-a .qa span{font-family:var(--mono);font-size:10px;color:var(--t3);border:1px solid var(--line);padding:5px 10px}
+  .v-a .qa .pri{color:var(--acc-ink);border-color:var(--acc-ink)}
+
+  /* ---------- V-B · Command Deck (tiles + terminal) ---------- */
+  .v-b .app{--gtc:54px 218px 1fr 220px}
+  .v-b .center{padding:14px}
+  .v-b .dh{display:flex;align-items:baseline;gap:10px;margin-bottom:11px}
+  .v-b .dh h3{font-size:19px;font-weight:800;letter-spacing:-.02em;color:var(--t1);margin:0}
+  .v-b .dh .d{font-family:var(--mono);font-size:11px;color:var(--acc-ink);font-weight:700}
+  .v-b .deck{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .v-b .tile{background:var(--tile);border:.5px solid var(--line);border-radius:10px;padding:11px 12px}
+  .v-b .tile.wide{grid-column:1/-1}
+  .v-b .th{display:flex;align-items:center;gap:7px;margin-bottom:9px}
+  .v-b .th .s{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1px;color:var(--t4);text-transform:uppercase}
+  .v-b .th .m{margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--t4)}
+  .v-b .tr{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;color:var(--t2)}
+  .v-b .tr+.tr{border-top:.5px solid var(--hair)}
+  .v-b .tr .due{margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--t4)}
+  .v-b .mp{display:flex;gap:7px}
+  .v-b .mpc{flex:1;background:#0d0d0f;border:.5px solid var(--hair);border-radius:8px;padding:8px}
+  .v-b .mpc .pd{width:16px;height:16px;border-radius:4px;background:linear-gradient(135deg,#e8a07a,#6a4f8f);margin-bottom:6px}
+  .v-b .mpc .pn{font-size:11px;font-weight:700;color:var(--t2)}.v-b .mpc .pb{font-family:var(--mono);font-size:9px;color:var(--t4);margin-top:2px}
+  .v-b .term{background:#050506;border-left:.5px solid var(--hair);display:flex;flex-direction:column}
+  .v-b .term .th2{padding:9px 11px;border-bottom:.5px solid var(--hair);font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--t4);text-transform:uppercase}
+  .v-b .term .tb{flex:1;padding:10px 11px;font-family:var(--mono);font-size:10.5px;color:var(--t3);line-height:1.7}
+
+  /* ---------- V-C · Focus Column ---------- */
+  .v-c .app{--gtc:54px 200px 1fr}
+  .v-c .rail{opacity:.6}.v-c .ctx{opacity:.5;background:#060608}
+  .v-c .center{display:flex;justify-content:center;padding:30px 0}
+  .v-c .fc{width:520px}
+  .v-c .fd{font-family:var(--mono);font-size:11px;color:var(--acc-ink);font-weight:700;letter-spacing:.4px}
+  .v-c .fc h3{font-size:32px;font-weight:800;letter-spacing:-.03em;color:var(--t1);margin:5px 0 3px}
+  .v-c .fg{font-size:13px;color:var(--t3);margin-bottom:26px}
+  .v-c .fs{margin-bottom:22px}
+  .v-c .fs .s{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1px;color:var(--t4);text-transform:uppercase;display:block;margin-bottom:11px}
+  .v-c .row{display:flex;align-items:center;gap:11px;padding:8px 0;border-top:.5px solid var(--hair);font-size:13.5px;color:var(--t2)}
+  .v-c .row:first-of-type{border-top:none}.v-c .row .cbx{width:14px;height:14px}
+  .v-c .row .r{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--t4)}
+  .v-c .ag{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px}
+  .v-c .qa{display:flex;gap:8px;margin-top:6px}
+  .v-c .qa span{font-family:var(--mono);font-size:11px;color:var(--t3);border:1px solid var(--line);border-radius:8px;padding:7px 12px}
+  .v-c .qa .pri{color:var(--acc-ink);border-color:var(--acc-ink)}
+
+  /* ---------- V-D · Ops Terminal (Bloomberg) ---------- */
+  .v-d .app{--bg:#0b0d0e;--chrome:#0f1214;--panel:#0b0d0e;--t2:#c9cccd;--t3:#8b9296;--t4:#4b5257;--line:rgba(255,255,255,.08);--hair:rgba(255,255,255,.06);--gtc:54px 190px 1fr}
+  .v-d .center{padding:0}
+  .v-d .panes{display:grid;grid-template-columns:1.3fr 1fr;grid-template-rows:1fr 1fr;height:100%}
+  .v-d .pane{border-right:.5px solid var(--hair);border-bottom:.5px solid var(--hair);padding:8px 10px;overflow:hidden}
+  .v-d .ph{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1px;color:var(--t4);text-transform:uppercase;margin-bottom:7px;display:flex}
+  .v-d .ph .c{margin-left:auto;color:var(--acc)}
+  .v-d .tr{display:grid;grid-template-columns:1fr auto auto;gap:9px;font-family:var(--mono);font-size:10.5px;padding:2.5px 0;color:#aeb4b7;border-bottom:.5px solid rgba(255,255,255,.04)}
+  .v-d .tr .n{color:#eceeef}.v-d .tr .s{color:var(--green)}.v-d .tr .w{color:var(--orange)}.v-d .tr .a{color:var(--acc)}.v-d .k{color:var(--t4)}
+
+  /* ---------- V-E · Tactical HUD ---------- */
+  .v-e .app{--bg:#050505;--chrome:#000;--panel:#050505;--t2:#cfcfc8;--t3:#9a9a90;--t4:#6f6f66;--line:rgba(255,255,255,.15);--hair:rgba(255,255,255,.14);border-radius:0}
+  .v-e .ric{border-radius:0}.v-e .anc{box-shadow:none}
+  .v-e .center::before{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0 1px,transparent 1px 3px);opacity:.6}
+  .v-e .center{padding:14px 16px}
+  .v-e .cross{position:absolute;color:rgba(255,255,255,.2);font-family:var(--mono);font-size:13px}
+  .v-e .big{font-family:var(--mono);font-size:34px;font-weight:800;letter-spacing:2px;color:#fff;line-height:.95;margin:0 0 3px}
+  .v-e .sub{font-family:var(--mono);font-size:9px;color:var(--t4);letter-spacing:2px;margin-bottom:14px}
+  .v-e .brk{position:relative;border:1px solid var(--line);padding:10px 12px;margin-bottom:10px}
+  .v-e .brk::before,.v-e .brk::after,.v-e .brk i::before,.v-e .brk i::after{content:"";position:absolute;width:8px;height:8px;border:1px solid var(--acc)}
+  .v-e .brk::before{top:-1px;left:-1px;border-right:0;border-bottom:0}.v-e .brk::after{top:-1px;right:-1px;border-left:0;border-bottom:0}
+  .v-e .brk i::before{bottom:-1px;left:-1px;border-right:0;border-top:0}.v-e .brk i::after{bottom:-1px;right:-1px;border-left:0;border-top:0}
+  .v-e .bh{font-family:var(--mono);font-size:9px;letter-spacing:1.5px;color:var(--t4);margin-bottom:7px;text-transform:uppercase}
+  .v-e .tr{font-family:var(--mono);font-size:11.5px;color:var(--t2);padding:2.5px 0;display:flex;gap:8px;align-items:center}
+  .v-e .tr .x{color:var(--acc)}.v-e .tr .r{margin-left:auto;color:var(--t4);font-size:10px}
+
+  /* ---------- V-F · Hardware Panel (TE) ---------- */
+  .v-f .app{--bg:#111112;--chrome:#161615;--panel:#141413;--t2:#d6d4cf;--t3:#9a9a90;--t4:#7a7a70;--line:rgba(255,255,255,.09);--hair:rgba(255,255,255,.06)}
+  .v-f .rail{background:#0d0d0d}
+  .v-f .center{padding:12px}
+  .v-f .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;height:100%;grid-template-rows:auto auto 1fr}
+  .v-f .mod{background:#191917;border:.5px solid var(--line);border-radius:4px;padding:9px 10px;position:relative}
+  .v-f .mod .id{position:absolute;top:7px;right:8px;font-family:var(--mono);font-size:8px;letter-spacing:1px;color:#5f5f57;background:#0d0d0c;padding:1px 4px;border-radius:2px}
+  .v-f .ml{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1px;color:#8a8a80;text-transform:uppercase;margin-bottom:8px}
+  .v-f .mbig{font-size:24px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+  .v-f .mrow{font-family:var(--mono);font-size:10.5px;color:#b6b4ac;padding:3px 0;display:flex;gap:7px;align-items:center;border-top:.5px solid rgba(255,255,255,.05)}
+  .v-f .mrow:first-of-type{border-top:none}
+  .v-f .knob{width:24px;height:24px;border-radius:50%;border:2px solid #3a3a36;position:relative;background:#0e0e0d}
+  .v-f .knob::after{content:"";position:absolute;top:3px;left:calc(50% - 1px);width:2px;height:7px;background:var(--acc)}
+  .v-f .led{width:7px;height:7px;border-radius:50%;background:var(--acc);box-shadow:0 0 6px var(--acc)}
+  .v-f .led.g{background:var(--green);box-shadow:0 0 6px var(--green)}
+  .v-f .wide{grid-column:1/-1}
+
+  /* ---------- V-G · Refined Minimal ---------- */
+  .v-g .app{--bg:#000;--panel:#000;--chrome:#000;--line:rgba(255,255,255,.06);--hair:rgba(255,255,255,.06);--t2:#ededed;--t3:#999;--t4:#555}
+  .v-g .center{padding:28px 34px}
+  .v-g h3{font-size:28px;font-weight:700;letter-spacing:-.03em;color:#fff;margin:0 0 5px}
+  .v-g .greet{font-size:13.5px;color:#8a8a8a;margin-bottom:28px}
+  .v-g .sec{margin-bottom:22px}
+  .v-g .sl{font-size:11px;font-weight:600;color:#666;margin-bottom:11px}
+  .v-g .row{display:flex;align-items:center;gap:11px;padding:8px 0;border-top:.5px solid var(--hair);font-size:13.5px;color:#d6d6d6}
+  .v-g .row:first-of-type{border-top:none}.v-g .row .cbx{width:14px;height:14px;border-radius:4px}
+  .v-g .row .r{margin-left:auto;color:#666;font-size:12px}
+  .v-g .dot{width:6px;height:6px;border-radius:50%}
+  .v-g .btn{font-size:12.5px;color:#000;background:#fff;border-radius:8px;padding:7px 14px}
+  .v-g .btn.gh{background:transparent;color:#bbb;border:.5px solid rgba(255,255,255,.16)}
+
+  .foot{margin-top:44px;padding-top:18px;border-top:1px solid #222;font-size:12px;color:#777;line-height:1.7}
+  .foot b{color:#aaa}
+</style></head>
+<body>
+<div class="page">
+  <h1 class="mast">HELM · SHELL 全变体合并 · A–G</h1>
+  <p class="intro">
+    7 个方向同尺度上下排列，一次判断。全部守 Helm DNA（黑底 · 单一 accent · SF Pro/Mono 硬切 · 禁 emoji · 细丝 Rail）。
+    <b>A/B/C</b> 是密度/温度轴的三档；<b>D–G</b> 是 research 撑出的性格光谱。当前定稿是 <span class="a">A + ORAGE</span>。
+    右上「换今日色」全局生效。（磷光 CRT 皮 H 定位可选彩蛋，未并入。）
+  </p>
+  <div class="tools"><button class="pri" id="daily">换今日色 →</button></div>
+
+  <!-- A -->
+  <div class="vh"><span class="vt">A</span><h2>Instrument Readout</h2><span class="z">纯仪表 · 无卡片账本（定稿基）</span><span class="ref">notch 母体</span></div>
+  <p class="gl"><span class="g">得：密度最高最克制，最忠北极星。</span> <span class="l">失：层级靠排版功力，弱内容显空。</span></p>
+  <div class="app v-a">
+    <div class="tbar"><span class="tl r1"></span><span class="tl y1"></span><span class="tl g1"></span><span class="wm">HELM</span><span>C:\HELM\TODAY</span><span class="r">SES 541GAQ · LOCAL</span></div>
+    <nav class="rail" data-badge></nav>
+    <aside class="ctx">
+      <div class="slab">Today</div>
+      <div class="nrow on"><span class="dot"></span>今日概览<span class="ct">⌘1</span></div>
+      <div class="nrow"><span class="dot"></span>任务<span class="ct">3</span></div>
+      <div class="nrow"><span class="dot"></span>Agent 收件箱<span class="ct">2</span></div>
+      <div class="nrow"><span class="dot"></span>邮件<span class="ct">1</span></div>
+      <div class="telem"><div><b>SESSION</b> 541GAQ</div><div><b>MODEL</b> opus-4.8</div><div><b>TOKENS</b> 14213</div><div><b>RAG</b> IDLE</div></div>
+    </aside>
+    <main class="center"><div class="rd">
+      <div class="rh"><h3>TODAY</h3><span class="d">周三 · 25.03</span><span class="p">001/009</span></div>
+      <div class="rr"><div class="gut"><span class="tm">今日</span><br>3 未完</div><div>
+        <div class="h">任务 / TASKS</div>
+        <div class="task"><span class="cbx"></span>对齐 notch scroll 手感（实机复验）<span class="due hot">今天</span></div>
+        <div class="task"><span class="cbx"></span>写 F8 Shell 设计稿 → Svelte<span class="due">今天</span></div>
+        <div class="task"><span class="cbx on"></span><span class="strk">回 Odysseus RAG 迁移问题</span><span class="due">完成</span></div>
+      </div></div>
+      <div class="rr"><div class="gut"><span class="tm">08:41</span></div><div>
+        <div class="h">日记 / JOURNAL</div><div class="jr"><span class="car"></span>写两行今天…<span class="ai">AI 今日小结</span></div>
+      </div></div>
+      <div class="rr"><div class="gut"><span class="tm">刚刚</span><br>2 活跃</div><div>
+        <div class="h">Agent 收件箱 / VIEWPORT</div>
+        <div class="fr"><div class="agl"><span class="sdot run"></span><span class="nm">notch</span><span class="ac"><span class="cstar">✻</span> 正在思考…</span><span class="st">CLAUDE CODE</span></div>
+        <div class="agl"><span class="sdot ok"></span><span class="nm">helm</span><span class="ac">swift build ✓ · 3 改动</span><span class="st">2 MIN</span></div></div>
+      </div></div>
+      <div class="rr"><div class="gut"><span class="tm">本周</span></div><div>
+        <div class="h">最近项目 / PROJECTS</div>
+        <div class="proj"><span class="pd"></span>helm<span class="br">⎇ feat/notch · ↑2</span></div>
+        <div class="proj"><span class="pd" style="background:linear-gradient(135deg,#7aa0e8,#4f6a8f)"></span>odysseus-dev<span class="br">⎇ main</span></div>
+      </div></div>
+      <div class="qa"><span class="pri">＋ 新 Chat</span><span>发起研究</span><span>记一条 · ⌘N</span></div>
+    </div></main>
+    <div class="sbar"><span class="sg"><span class="live">●</span> ~/helm</span><span class="sg">⎇ feat/notch <span class="tn">↑2</span></span><span class="sg tn">tok 14.2k · 60ms</span><span class="grow"></span><span class="sg">NEXT</span><span class="sg tn">001/009</span><span class="sg k">⌘K</span></div>
+  </div>
+
+  <!-- B -->
+  <div class="vh"><span class="vt">B</span><h2>Command Deck</h2><span class="z">瓦片 · 右侧终端</span><span class="ref">notch dash</span></div>
+  <p class="gl"><span class="g">得：最好扫读最暖，弱内容不显空。</span> <span class="l">失：瓦片=容器，克制感稀释。</span></p>
+  <div class="app v-b">
+    <div class="tbar"><span class="tl r1"></span><span class="tl y1"></span><span class="tl g1"></span><span class="wm">HELM</span><span>~/helm</span><span class="r">SES 541GAQ</span></div>
+    <nav class="rail"></nav>
+    <aside class="ctx">
+      <div class="slab">模式</div>
+      <div class="nrow on"><span class="dot"></span>Today<span class="ct">⌘1</span></div>
+      <div class="nrow"><span class="dot"></span>Chat<span class="ct">⌘2</span></div>
+      <div class="nrow"><span class="dot"></span>Research<span class="ct">⌘3</span></div>
+      <div class="nrow"><span class="dot"></span>记忆<span class="ct">⌘4</span></div>
+      <div class="nrow"><span class="dot"></span>驾驶舱<span class="ct">⌘7</span></div>
+    </aside>
+    <main class="center">
+      <div class="dh"><h3>Today</h3><span class="d">周三 · 25.03</span></div>
+      <div class="deck">
+        <div class="tile"><div class="th"><span class="s">今日任务</span><span class="m">3 · ⌘T</span></div>
+          <div class="tr"><span class="cbx"></span>对齐 notch scroll 手感<span class="due">今天</span></div>
+          <div class="tr"><span class="cbx"></span>写 F8 Shell 设计稿<span class="due">今天</span></div>
+          <div class="tr"><span class="cbx on"></span><span class="strk">回 RAG 迁移问题</span></div></div>
+        <div class="tile"><div class="th"><span class="s">日记</span><span class="m">08:41</span></div>
+          <div style="color:var(--t4);font-size:12px;margin-bottom:8px">写两行今天…<span class="car"></span></div>
+          <span class="ai" style="font-family:var(--mono);font-size:10px;color:var(--acc-ink);border:1px solid var(--acc-ink);padding:3px 8px">AI 今日小结</span></div>
+        <div class="tile"><div class="th"><span class="s">Agent 活动</span><span class="m">2 活跃</span></div>
+          <div class="tr"><span class="sdot run"></span>notch<span class="mono" style="font-size:11px;color:var(--t3)"><span class="cstar">✻</span> 思考中</span></div>
+          <div class="tr"><span class="sdot ok"></span>helm<span class="mono" style="font-size:11px;color:var(--t3)">build ✓ · 3 改动</span></div></div>
+        <div class="tile"><div class="th"><span class="s">邮件 · AI 分诊</span><span class="m">1 紧急</span></div>
+          <div class="tr"><span class="sdot" style="background:var(--red)"></span>Anthropic<span style="color:var(--t4);font-size:11px">API 用量</span></div>
+          <div class="tr"><span class="sdot" style="background:var(--t4)"></span>GitHub<span style="color:var(--t4);font-size:11px">CI 通过</span></div></div>
+        <div class="tile wide"><div class="th"><span class="s">最近项目</span><span class="m">⌘P</span></div>
+          <div class="mp"><div class="mpc"><div class="pd"></div><div class="pn">helm</div><div class="pb">⎇ feat/notch · ↑2</div></div>
+          <div class="mpc"><div class="pd" style="background:linear-gradient(135deg,#7aa0e8,#4f6a8f)"></div><div class="pn">odysseus-dev</div><div class="pb">⎇ main</div></div>
+          <div class="mpc"><div class="pd" style="background:linear-gradient(135deg,#8fe8a0,#4f8f6a)"></div><div class="pn">fanbox-master</div><div class="pb">⎇ main</div></div></div></div>
+      </div>
+    </main>
+    <aside class="term"><div class="th2">终端 · ~/helm</div><div class="tb"><div><span style="color:var(--green)">➜</span> swift build</div><div style="color:var(--t4)">Compiling…</div><div style="color:var(--green)">Build complete! (4.2s)</div><div><span style="color:var(--green)">➜</span> <span style="color:var(--acc)">claude</span> <span class="car"></span></div></div></aside>
+    <div class="sbar"><span class="sg"><span class="live">●</span> CLAUDE</span><span class="sg">~/helm · feat/notch</span><span class="sg tn">tok 14.2k</span><span class="grow"></span><span class="sg k">⌘K 命令面板</span></div>
+  </div>
+
+  <!-- C -->
+  <div class="vh"><span class="vt">C</span><h2>Focus Column</h2><span class="z">沉浸中栏 · 更大脑</span><span class="ref">immersive</span></div>
+  <p class="gl"><span class="g">得：最静最有仪式感，chat/research 沉浸一流。</span> <span class="l">失：密度最低，多任务靠切模式补。</span></p>
+  <div class="app v-c">
+    <div class="tbar"><span class="tl r1"></span><span class="tl y1"></span><span class="tl g1"></span><span class="wm">Helm</span><span class="r">~/helm</span></div>
+    <nav class="rail"></nav>
+    <aside class="ctx"><div class="slab">跳转</div>
+      <div class="nrow on"><span class="dot"></span>Today</div><div class="nrow"><span class="dot"></span>Chat</div><div class="nrow"><span class="dot"></span>研究</div><div class="nrow"><span class="dot"></span>记忆</div></aside>
+    <main class="center"><div class="fc">
+      <div class="fd">周三 · 2026-07-02 · 08:41</div>
+      <h3>晚上好，Victor</h3>
+      <div class="fg">3 件今天的事 · 2 个 agent 在跑 · 一切本地。</div>
+      <div class="fs"><span class="s">今天</span>
+        <div class="row"><span class="cbx"></span>对齐 notch scroll 手感（实机复验）<span class="r">今天</span></div>
+        <div class="row"><span class="cbx"></span>写 F8 Shell 设计稿 → Svelte<span class="r">今天</span></div>
+        <div class="row"><span class="cbx on"></span><span class="strk">回 Odysseus RAG 迁移问题</span></div></div>
+      <div class="fs"><span class="s">Agent</span>
+        <div class="ag"><span class="sdot run"></span><span style="font-weight:600;color:var(--t1)">notch</span><span class="mono" style="font-size:12px;color:var(--t3)"><span class="cstar">✻</span> 正在思考…</span></div>
+        <div class="ag"><span class="sdot ok"></span><span style="font-weight:600;color:var(--t1)">helm</span><span class="mono" style="font-size:12px;color:var(--t3)">swift build ✓ · 3 文件待看</span></div></div>
+      <div class="qa"><span class="pri">＋ 新 Chat</span><span>发起研究</span><span>记一条 · ⌘N</span></div>
+    </div></main>
+    <div class="sbar"><span class="sg"><span class="live">●</span> CLAUDE</span><span class="sg">~/helm · feat/notch</span><span class="grow"></span><span class="sg k">⌘K</span><span class="sg k">⌘\ 沉浸</span></div>
+  </div>
+
+  <!-- D -->
+  <div class="vh"><span class="vt">D</span><h2>Ops Terminal</h2><span class="z">交易台 · 多面板极密</span><span class="ref">RESEARCH · <b>Bloomberg</b></span></div>
+  <p class="gl"><span class="g">得：信息密度天花板，一屏掌控全部。</span> <span class="l">失：最冷最上班，情绪价值低。</span></p>
+  <div class="app v-d">
+    <div class="tbar"><span class="tl r1"></span><span class="tl y1"></span><span class="tl g1"></span><span class="wm">HELM</span><span>TODAY · DESK</span><span class="r">SES 541GAQ · LOCAL</span></div>
+    <nav class="rail"></nav>
+    <aside class="ctx"><div class="slab">Panes</div>
+      <div class="nrow on"><span class="dot"></span>TASKS<span class="ct">3</span></div><div class="nrow"><span class="dot"></span>AGENTS<span class="ct">2</span></div>
+      <div class="nrow"><span class="dot"></span>PROJECTS<span class="ct">5</span></div><div class="nrow"><span class="dot"></span>MAIL<span class="ct">1</span></div>
+      <div class="telem"><div><b>MODEL</b> opus-4.8</div><div><b>TOK</b> 14213</div><div><b>LAT</b> 60ms</div><div><b>RAG</b> idle</div></div></aside>
+    <main class="center"><div class="panes">
+      <div class="pane"><div class="ph">TASKS · TODAY<span class="c">3 OPEN</span></div>
+        <div class="tr"><span class="n">对齐 notch scroll 手感</span><span class="w">DUE</span><span class="a">08:41</span></div>
+        <div class="tr"><span class="n">写 F8 Shell 设计稿</span><span class="w">DUE</span><span class="k">10:00</span></div>
+        <div class="tr"><span class="n strk">回 RAG 迁移问题</span><span class="s">DONE</span><span class="k">—</span></div></div>
+      <div class="pane"><div class="ph">AGENTS · LIVE<span class="c">2/7</span></div>
+        <div class="tr"><span class="n">notch</span><span class="a"><span class="cstar">✻</span></span><span class="a">THINK</span></div>
+        <div class="tr"><span class="n">helm</span><span class="s">●</span><span class="s">BUILD OK</span></div>
+        <div class="tr"><span class="n k">app</span><span class="k">○</span><span class="k">IDLE</span></div></div>
+      <div class="pane"><div class="ph">PROJECTS<span class="c">⌘P</span></div>
+        <div class="tr"><span class="n">helm</span><span class="k">⎇ feat/notch</span><span class="a">↑2</span></div>
+        <div class="tr"><span class="n">odysseus-dev</span><span class="k">⎇ main</span><span class="k">—</span></div>
+        <div class="tr"><span class="n">fanbox-master</span><span class="k">⎇ main</span><span class="k">—</span></div></div>
+      <div class="pane" style="border-right:none"><div class="ph">MAIL · AI 分诊<span class="c">1 URG</span></div>
+        <div class="tr"><span class="n">Anthropic</span><span class="w">URG</span><span class="k">API 用量</span></div>
+        <div class="tr"><span class="n" style="color:var(--t3)">GitHub</span><span class="s">OK</span><span class="k">CI pass</span></div></div>
+    </div></main>
+    <div class="sbar"><span class="sg"><span class="live">●</span> CLAUDE</span><span class="sg">~/helm</span><span class="sg">⎇ feat/notch <span class="tn">↑2</span></span><span class="sg tn">tok 14.2k · 60ms</span><span class="grow"></span><span class="sg k">⌘K</span></div>
+  </div>
+
+  <!-- E -->
+  <div class="vh"><span class="vt">E</span><h2>Tactical HUD</h2><span class="z">战术遥测 · 硬核粗野</span><span class="ref">RESEARCH · <b>Brutalist</b></span></div>
+  <p class="gl"><span class="g">得：最难忘最有机密终端气场，把 ORAGE 推到极致。</span> <span class="l">失：最重最挑人，长时间用眼累。</span></p>
+  <div class="app v-e">
+    <div class="tbar"><span class="wm">HELM</span><span>[ TODAY ]</span><span class="r">SYS.OK · 10:58:23 · LOCAL_ONLY</span></div>
+    <nav class="rail"></nav>
+    <aside class="ctx"><div class="slab">// NAV</div>
+      <div class="nrow on"><span class="dot"></span>TODAY<span class="ct">◆</span></div><div class="nrow"><span class="dot"></span>TASKS<span class="ct">03</span></div><div class="nrow"><span class="dot"></span>AGENTS<span class="ct">02</span></div><div class="nrow"><span class="dot"></span>MAIL<span class="ct">01</span></div>
+      <div class="telem"><div><b>SES</b> 541GAQ</div><div><b>TOK</b> 14213</div><div><b>LAT</b> 60MS</div><div><b>RAG</b> IDLE</div></div></aside>
+    <main class="center">
+      <span class="cross" style="left:44%;top:10px">+</span><span class="cross" style="right:22px;top:40%">+</span><span class="cross" style="left:18px;bottom:54px">×</span>
+      <div class="big">TODAY</div><div class="sub">// 03 TASKS · 02 AGENTS · ALL LOCAL · 001/009</div>
+      <div class="brk"><i></i><div class="bh">▸ TASKS</div>
+        <div class="tr"><span class="x">▸</span>对齐 notch scroll 手感（实机复验）<span class="r">DUE·08:41</span></div>
+        <div class="tr"><span class="x">▸</span>写 F8 Shell 设计稿 → Svelte<span class="r">DUE·10:00</span></div>
+        <div class="tr"><span style="color:var(--t4)">✓</span><span class="strk">回 RAG 迁移问题</span><span class="r">DONE</span></div></div>
+      <div class="brk"><i></i><div class="bh">▸ AGENTS · VIEWPORT</div>
+        <div class="tr"><span class="x cstar">✻</span>notch — 正在思考…<span class="r">CLAUDE CODE</span></div>
+        <div class="tr"><span style="color:var(--green)">●</span>helm — swift build OK · 3 diff<span class="r">2MIN</span></div></div>
+    </main>
+    <div class="sbar"><span class="sg"><span class="live">●</span> ~/helm</span><span class="sg">⎇ feat/notch ↑2</span><span class="sg tn">tok 14.2k · 60ms</span><span class="grow"></span><span class="sg">NEXT</span><span class="sg">001/009</span><span class="sg k">⌘K</span></div>
+  </div>
+
+  <!-- F -->
+  <div class="vh"><span class="vt">F</span><h2>Hardware Panel</h2><span class="z">器械面板 · 可触</span><span class="ref">RESEARCH · <b>Teenage Eng.</b></span></div>
+  <p class="gl"><span class="g">得：最有实体设备高级感与愉悦，模块化对应各能力。</span> <span class="l">失：模块=容器；旋钮/LED 过头会 gimmick。</span></p>
+  <div class="app v-f">
+    <div class="tbar"><span class="tl r1"></span><span class="tl y1"></span><span class="tl g1"></span><span class="wm">HELM</span><span>OP-1 · TODAY</span><span class="r">UNIT 541GAQ · v0.1</span></div>
+    <nav class="rail"></nav>
+    <aside class="ctx"><div class="slab">Units</div>
+      <div class="nrow on"><span class="dot"></span>TODAY<span class="ct">01</span></div><div class="nrow"><span class="dot"></span>CHAT<span class="ct">02</span></div><div class="nrow"><span class="dot"></span>RESEARCH<span class="ct">03</span></div><div class="nrow"><span class="dot"></span>MEMORY<span class="ct">04</span></div><div class="nrow"><span class="dot"></span>COCKPIT<span class="ct">07</span></div></aside>
+    <main class="center"><div class="grid">
+      <div class="mod"><span class="id">MOD.01</span><div class="ml">Tasks</div><div class="mbig">3</div><div class="mono" style="font-size:9px;color:#7a7a70;margin-top:2px">OPEN TODAY</div></div>
+      <div class="mod"><span class="id">MOD.02</span><div class="ml">Agents</div><div style="display:flex;align-items:center;gap:8px"><div class="mbig">2</div><div style="display:flex;flex-direction:column;gap:4px"><span class="led"></span><span class="led g"></span></div></div><div class="mono" style="font-size:9px;color:#7a7a70;margin-top:2px">LIVE / 7</div></div>
+      <div class="mod"><span class="id">MOD.03</span><div class="ml">Journal</div><div style="display:flex;align-items:center;gap:10px;margin-top:3px"><div class="knob"></div><div style="font-size:11px;color:#b6b4ac">写两行今天…</div></div></div>
+      <div class="mod wide"><span class="id">MOD.04</span><div class="ml">Agent Activity</div>
+        <div class="mrow"><span class="led"></span><span style="color:#fff;font-weight:600">notch</span><span class="cstar" style="font-size:11px">✻</span>正在思考…<span style="margin-left:auto;color:#5f5f57">CLAUDE CODE</span></div>
+        <div class="mrow"><span class="led g"></span><span style="color:#fff;font-weight:600">helm</span>swift build ✓ · 3 改动<span style="margin-left:auto;color:#5f5f57">2MIN</span></div></div>
+      <div class="mod"><span class="id">MOD.05</span><div class="ml">Recent</div><div class="mrow" style="border:none">helm<span style="margin-left:auto;color:var(--acc)">↑2</span></div><div class="mrow">odysseus-dev</div></div>
+    </div></main>
+    <div class="sbar"><span class="sg"><span class="led" style="display:inline-block"></span> UNIT ~/helm</span><span class="sg">⎇ feat/notch</span><span class="sg tn">tok 14.2k</span><span class="grow"></span><span class="sg k">⌘K</span></div>
+  </div>
+
+  <!-- G -->
+  <div class="vh"><span class="vt">G</span><h2>Refined Minimal</h2><span class="z">克制成年版</span><span class="ref">RESEARCH · <b>Vercel/Linear</b></span></div>
+  <p class="gl"><span class="g">得：最耐看最稳最像成熟产品，风险最低。</span> <span class="l">失：最不差异化，少了座舱记忆点。</span></p>
+  <div class="app v-g">
+    <div class="tbar"><span class="tl r1"></span><span class="tl y1"></span><span class="tl g1"></span><span class="wm" style="font-weight:600;letter-spacing:.5px">Helm</span><span class="r">~/helm</span></div>
+    <nav class="rail"></nav>
+    <aside class="ctx"><div class="slab" style="font-family:var(--sans);font-weight:600;text-transform:none;letter-spacing:0;font-size:11px">Workspace</div>
+      <div class="nrow on"><span class="dot" style="background:var(--acc)"></span>Today<span class="ct">⌘1</span></div><div class="nrow"><span class="dot" style="background:#444"></span>Chat<span class="ct">⌘2</span></div><div class="nrow"><span class="dot" style="background:#444"></span>Research<span class="ct">⌘3</span></div><div class="nrow"><span class="dot" style="background:#444"></span>Memory<span class="ct">⌘4</span></div></aside>
+    <main class="center">
+      <h3>晚上好，Victor</h3><div class="greet">3 件今天的事 · 2 个 agent 在跑 · 一切本地。</div>
+      <div class="sec"><div class="sl">今天</div>
+        <div class="row"><span class="cbx"></span>对齐 notch scroll 手感（实机复验）<span class="r">今天</span></div>
+        <div class="row"><span class="cbx"></span>写 F8 Shell 设计稿 → Svelte<span class="r">今天</span></div>
+        <div class="row"><span class="cbx on"></span><span class="strk">回 RAG 迁移问题</span></div></div>
+      <div class="sec"><div class="sl">Agent</div>
+        <div class="row"><span class="dot" style="background:var(--acc)"></span>notch<span style="color:#8a8a8a;font-size:13px"><span class="cstar">✻</span> 正在思考…</span></div>
+        <div class="row"><span class="dot" style="background:var(--green)"></span>helm<span style="color:#8a8a8a;font-size:13px">swift build ✓ · 3 文件待看</span></div></div>
+      <div style="display:flex;gap:9px;margin-top:4px"><span class="btn">＋ 新 Chat</span><span class="btn gh">发起研究</span><span class="btn gh">记一条 ⌘N</span></div>
+    </main>
+    <div class="sbar"><span class="sg"><span class="live">●</span> CLAUDE</span><span class="sg">~/helm · feat/notch</span><span class="sg tn">tok 14.2k</span><span class="grow"></span><span class="sg k">⌘K 命令面板</span></div>
+  </div>
+
+  <div class="foot">
+    <b>怎么判断：</b>A/B/C 是同一 DNA 的密度/温度三档；D–G 是 research 撑出的不同性格。定稿仍是 <b>A + ORAGE</b>（见 helm-cockpit-orage-themes.html 的黑/白双主题）。<br>
+    <b>可回灌 A 的零件：</b>D 多面板（Cockpit/Research 模式）· F 的 MOD.xx+LED 状态语汇 · G 的问候大标题与留白（沉浸子态）· E 的 ASCII 括号（A 里已有）。<br>
+    <b>告诉我</b>：选一个当定稿，或点名要哪几个元素合进 A。
+  </div>
+</div>
+
+<script>
+const PALETTE=["#FB9E66","#FF6F61","#FFC53D","#B6E84F","#34D6C0","#4FD6E8","#5EA0FF","#7C9CFF","#B98CFF","#FF6FA5"];
+const RAIL=`<span class="lg"><svg viewBox="0 0 24 24"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5" fill="currentColor"/><path d="M8 7.5v9M16 7.5v9M8 12h8" stroke="var(--bg)" stroke-width="2" stroke-linecap="round"/></svg></span>
+<div class="fil"></div><div class="anc"></div><div class="pulse"></div>
+<div class="ric on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></div>
+<div class="ric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 5h16v11H8l-4 4z"/></svg></div>
+<div class="ric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg></div>
+<div class="ric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="6" cy="7" r="2.3"/><circle cx="17" cy="6" r="2.3"/><circle cx="13" cy="17" r="2.3"/><path d="M8 8l4 8M15 8l-2 8"/></svg></div>
+<div class="ric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 4h11l3 3v13H5z"/><path d="M8 9h7M8 13h7"/></svg></div>
+<div class="ric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><span class="bdg"></span></div>
+<div class="ric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg></div>
+<div class="sp"></div>
+<div class="ric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.8 7.8 0 000-3l2-1.5-2-3.4-2.3 1a7.7 7.7 0 00-2.6-1.5L14 1.5h-4l-.5 2.6a7.7 7.7 0 00-2.6 1.5l-2.3-1-2 3.4 2 1.5a7.8 7.8 0 000 3l-2 1.5 2 3.4 2.3-1a7.7 7.7 0 002.6 1.5l.5 2.6h4l.5-2.6a7.7 7.7 0 002.6-1.5l2.3 1 2-3.4z"/></svg></div>`;
+document.querySelectorAll('.rail').forEach(r=>r.innerHTML=RAIL);
+let di=2;
+document.getElementById('daily').addEventListener('click',()=>{di=(di+1)%PALETTE.length;document.documentElement.style.setProperty('--palA',PALETTE[di]);});
+</script>
+</body></html>
