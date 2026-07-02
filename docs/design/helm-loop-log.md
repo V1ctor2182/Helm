@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 18:40 · phase2-round12-today-real（夜间模式）· F8 Today 真数据·模块清单收官
+- 对齐: 阶段2 第12轮——Today 五节全接真 /api(模块清单最后一块),版式不动空态兜底
+- 改动: `lib/Today.svelte`(数据层重写:任务/日记/Agent 运行/项目/日程 NEXT+真日期头+tabular 计数+30s 刷新);`Today.test.ts`(重写为真数据断言,5 测)
+- 功能可用性: e2e 种真数据:任务显本地 17:00(cron 本地语义连通)、今日日记摘要、项目点击开驾驶舱、下个日程 19:29;五节空态各自兜底;checkbox=真启停;种子清净
+- 契约/notch 影响: 无(orchestration/runs 只读消费)
+- 取舍: 邮件行按用户 6-28 决定改「日程/NEXT」;context 遥测块/状态栏 tok 仍 mock(遥测流属 F5 后续)记 P2
+- VibeHub: record_decision「阶段2·轮12 Today 真数据收官」→ 922ccf7e (ai_proposed, F8)
+- 验证: npm build ✓/check 0 错 0 警(250 文件)/test 159(+1);视觉 dev 5174 dark+light 真数据截图核过
+- 状态: ✅ 夜间自 commit(feat/design-shell-today,未合 main)｜里程碑:模块清单 10 项全部端到端可用｜❓需确认: 无
+
 ## 2026-07-02 17:55 · phase2-cleanup-round（清账轮)· backlog open 全处置
 - 对齐: 用户指示「把 pause 前遇到的问题全部完成」——backlog open P1×1+P2×15 全处置:可动的 15 项全修,5 项判 defer/wontfix 并注明理由
 - 后端: cron 改本地墙钟语义(收口 question 8d6ac767,e2e 验 0 9 * * *→本地 09:00 +08:00,DTO 不变 notch 无影响);会话自动命名(首条用户消息);summary +days 窗口(周回顾)

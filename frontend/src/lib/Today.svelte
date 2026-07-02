@@ -1,21 +1,63 @@
 <script lang="ts">
+  import { onMount } from 'svelte'
   import { layout } from './layout.svelte'
+  import { tasks } from './notes/tasksStore.svelte'
+  import { notes } from './notes/notesStore.svelte'
+  import { agent } from './orchestration/agentStore.svelte'
+  import { cockpit } from './cockpit/cockpit.svelte'
+  import { calendar } from './mail/calendarStore.svelte'
+  import { toLocal, localHHMM, localDateTime, localDate } from './time'
 
-  // Today = 无卡片仪表读数（承 helm-pro.html `.rd`）。数据用设计稿同款 mock；
-  // 真实数据（任务→F6 / agent→F5 / 项目→F1 / 邮件→F7）阶段2 接 /api，保持此版式。
-  const tasks = [
-    { label: '对齐 notch scroll 手感（实机复验）', due: '今天', hot: true, done: false },
-    { label: '写 F8 Shell 设计稿 → loop 进 Svelte', due: '今天', hot: false, done: false },
-    { label: '回 Odysseus RAG 迁移的问题', due: '完成', hot: false, done: true },
-  ]
-  const agents = [
-    { name: 'notch', activity: '正在思考…', status: 'run', tag: 'CLAUDE CODE', thinking: true },
-    { name: 'helm', activity: 'Bash: swift build ✓ · 3 文件改动待看', status: 'ok', tag: '2 MIN', thinking: false },
-  ]
-  const recent = [
-    { name: 'helm', branch: '⎇ feat/notch · ↑2' },
-    { name: 'odysseus-dev', branch: '⎇ main' },
-  ]
+  // Today = 无卡片仪表读数(承 helm-pro.html `.rd`)。阶段2:各节接真 /api,
+  // 版式与阶段1对齐版一致;无数据走空态。邮件行按用户 2026-06-28 决定换成下个日程。
+
+  let now = $state(new Date())
+
+  onMount(() => {
+    void tasks.load()
+    void notes.load()
+    void agent.loadRuns()
+    void cockpit.loadProjects()
+    void calendar.load()
+    const t = setInterval(() => (now = new Date()), 30_000)
+    return () => clearInterval(t)
+  })
+
+  const pad2 = (n: number) => String(n).padStart(2, '0')
+  const pad3 = (n: number) => String(n).padStart(3, '0')
+  const headDate = $derived(
+    `周${'日一二三四五六'[now.getDay()]} · ${pad2(now.getDate())}.${pad2(now.getMonth() + 1)} · ${pad2(now.getHours())}:${pad2(now.getMinutes())}`,
+  )
+  const todayStr = $derived(`${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`)
+
+  // 任务:启用在前、按下次触发时间升序,取 3
+  const topTasks = $derived(
+    [...tasks.tasks]
+      .sort((a, b) => Number(b.enabled) - Number(a.enabled) || (a.next_run ?? '').localeCompare(b.next_run ?? ''))
+      .slice(0, 3),
+  )
+  const enabledCount = $derived(tasks.tasks.filter((t) => t.enabled).length)
+  function dueSoon(iso: string | null): boolean {
+    if (!iso) return false
+    return toLocal(iso).getTime() - now.getTime() < 3_600_000
+  }
+
+  // 日记:今天的条目
+  const todayEntries = $derived(notes.notes.filter((n) => n.kind === 'journal' && n.journal_date === todayStr))
+
+  // Agent:最近 2 次运行
+  const latestRuns = $derived(agent.runs.slice(0, 2))
+  const runningCount = $derived(agent.runs.filter((r) => r.status === 'running').length)
+
+  // 项目:最近 2 个
+  const recent = $derived(cockpit.projects.slice(0, 2))
+
+  // 日程:下一个未来事件
+  const nextEvent = $derived(
+    [...calendar.events]
+      .filter((e) => e.start && toLocal(e.start).getTime() >= now.getTime())
+      .sort((a, b) => (a.start ?? '').localeCompare(b.start ?? ''))[0] ?? null,
+  )
 
   function newChat() {
     layout.setMode('chat')
@@ -25,83 +67,120 @@
     layout.setMode('research')
     layout.openTab('Research', 'research')
   }
+  function openProject(path: string) {
+    void cockpit.openProject(path)
+    layout.setMode('cockpit')
+  }
 </script>
 
 <div class="rd">
   <header class="rdhead">
     <h1>Today</h1>
-    <span class="date">周三 · 25.03 · 08:41</span>
-    <span class="pg">LOADING · 001/009</span>
+    <span class="date">{headDate}</span>
+    <span class="pg">{pad3(tasks.tasks.length)} TASKS · {pad3(agent.runs.length)} RUNS</span>
   </header>
 
   <div class="rdrow">
-    <div class="gut"><span class="tm">今日</span><br />3 未完</div>
+    <div class="gut"><span class="tm">今日</span><br />{enabledCount} 启用</div>
     <div>
       <div class="h">任务 / TASKS</div>
-      {#each tasks as t (t.label)}
-        <div class="task">
-          <span class="cbx" class:done={t.done} aria-hidden="true"></span>
-          <span class:strk={t.done}>{t.label}</span>
-          <span class="due" class:hot={t.hot}>{t.due}</span>
-        </div>
-      {/each}
+      {#if topTasks.length === 0}
+        <div class="emptyline">没有定时任务 — 记录 → 任务 里建一个。</div>
+      {:else}
+        {#each topTasks as t (t.id)}
+          <div class="task">
+            <button
+              class="cbx"
+              class:done={t.enabled}
+              aria-pressed={t.enabled}
+              aria-label={`启用 ${t.name}`}
+              onclick={() => tasks.toggle(t)}
+            ></button>
+            <span class:strk={!t.enabled}>{t.name}</span>
+            <span class="due" class:hot={t.enabled && dueSoon(t.next_run)}>{t.enabled ? localHHMM(t.next_run) || '—' : '停用'}</span>
+          </div>
+        {/each}
+      {/if}
     </div>
   </div>
 
   <div class="rdrow">
-    <div class="gut"><span class="tm">08:41</span></div>
+    <div class="gut"><span class="tm">{pad2(now.getHours())}:{pad2(now.getMinutes())}</span><br />{todayEntries.length} 条</div>
     <div>
       <div class="h">日记 / JOURNAL</div>
       <div class="jr">
-        <span class="car" aria-hidden="true"></span>写两行今天…
+        <span class="car" aria-hidden="true"></span>
+        {#if todayEntries.length === 0}
+          写两行今天…
+        {:else}
+          {todayEntries[todayEntries.length - 1].content.slice(0, 42)}
+        {/if}
         <button class="aibtn" onclick={() => layout.setMode('journal')}>AI 今日小结</button>
       </div>
     </div>
   </div>
 
   <div class="rdrow">
-    <div class="gut"><span class="tm">刚刚</span><br />2 活跃</div>
+    <div class="gut"><span class="tm">刚刚</span><br />{runningCount} 活跃</div>
     <div>
       <div class="h">Agent 收件箱 / VIEWPORT</div>
       <div class="framed">
-        {#each agents as a (a.name)}
-          <div class="agl">
-            <span class="sdot" class:run={a.status === 'run'} class:ok={a.status === 'ok'} aria-hidden="true"></span>
-            <span class="nm">{a.name}</span>
-            <span class="ac">
-              {#if a.thinking}<span class="cstar" aria-hidden="true">✻</span> {/if}{a.activity}
-            </span>
-            <span class="st">{a.tag}</span>
-          </div>
-        {/each}
+        {#if latestRuns.length === 0}
+          <div class="emptyline">没有 agent 运行 — 驾驶舱里跑一条。</div>
+        {:else}
+          {#each latestRuns as r (r.id)}
+            <div class="agl">
+              <span
+                class="sdot"
+                class:run={r.status === 'running'}
+                class:ok={r.status === 'completed' || r.status === 'done'}
+                class:err={r.status === 'failed' || r.status === 'error'}
+                aria-hidden="true"
+              ></span>
+              <span class="nm">{r.agent}</span>
+              <span class="ac">
+                {#if r.status === 'running'}<span class="cstar" aria-hidden="true">✻</span> {/if}{(r.prompt ?? '').slice(0, 40) || r.status}
+              </span>
+              <span class="st">{r.started_at ? localHHMM(r.started_at) : r.status.toUpperCase()}</span>
+            </div>
+          {/each}
+        {/if}
       </div>
     </div>
   </div>
 
   <div class="rdrow">
-    <div class="gut"><span class="tm">本周</span></div>
+    <div class="gut"><span class="tm">最近</span></div>
     <div>
       <div class="h">最近项目 / PROJECTS</div>
-      {#each recent as p (p.name)}
-        <button class="projline" onclick={() => layout.setMode('cockpit')}>
-          <span class="pd" aria-hidden="true"></span>
-          <span class="pp">{p.name}</span>
-          <span class="br">{p.branch}</span>
-        </button>
-      {/each}
+      {#if recent.length === 0}
+        <div class="emptyline">还没有项目 — 驾驶舱里打开一个文件夹。</div>
+      {:else}
+        {#each recent as p (p.path)}
+          <button class="projline" onclick={() => openProject(p.path)}>
+            <span class="pd" aria-hidden="true"></span>
+            <span class="pp">{p.name}</span>
+            <span class="br">{p.last_opened ? localDate(p.last_opened) : p.path}</span>
+          </button>
+        {/each}
+      {/if}
     </div>
   </div>
 
   <div class="rdrow">
-    <div class="gut"><span class="tm">收件</span><br />AI 分诊</div>
+    <div class="gut"><span class="tm">下个</span></div>
     <div>
-      <div class="h">邮件 / MAIL</div>
-      <div class="mailn">
-        <span class="fl" aria-hidden="true"></span>
-        <span class="from">Anthropic</span>
-        <span class="sj">— API 用量本月…</span>
-        <span class="urg">紧急</span>
-      </div>
+      <div class="h">日程 / NEXT</div>
+      {#if !nextEvent}
+        <div class="emptyline">没有即将到来的日程。</div>
+      {:else}
+        <div class="mailn">
+          <span class="fl" aria-hidden="true"></span>
+          <span class="from">{nextEvent.summary}</span>
+          {#if nextEvent.location}<span class="sj">— {nextEvent.location}</span>{/if}
+          <span class="urg">{localDateTime(nextEvent.start)}</span>
+        </div>
+      {/if}
     </div>
   </div>
 
@@ -139,6 +218,7 @@
     font-size: 12px;
     color: var(--acc-ink);
     font-weight: 700;
+    font-variant-numeric: tabular-nums;
   }
   .rdhead .pg {
     margin-left: auto;
@@ -164,6 +244,7 @@
     line-height: 1.5;
     padding-top: 3px;
     letter-spacing: .3px;
+    font-variant-numeric: tabular-nums;
   }
   .gut .tm {
     color: var(--t3);
@@ -188,7 +269,10 @@
     width: 13px;
     height: 13px;
     border: 1.4px solid var(--t4);
+    background: transparent;
     flex: none;
+    cursor: pointer;
+    padding: 0;
   }
   .cbx.done {
     border-color: var(--acc-ink);
@@ -203,6 +287,7 @@
     font-family: var(--mono);
     font-size: 10px;
     color: var(--t4);
+    font-variant-numeric: tabular-nums;
   }
   .due.hot {
     color: var(--orange);
@@ -213,12 +298,14 @@
     gap: 9px;
     color: var(--t4);
     font-size: 13px;
+    min-width: 0;
   }
   .car {
     width: 2px;
     height: 14px;
     background: var(--acc);
     display: inline-block;
+    flex: none;
     animation: blink 1s steps(1) infinite;
   }
   @keyframes blink {
@@ -226,6 +313,7 @@
   }
   .aibtn {
     margin-left: auto;
+    flex: none;
     font-family: var(--mono);
     font-size: 10px;
     color: var(--acc-ink);
@@ -234,7 +322,7 @@
     padding: 3px 8px;
     cursor: pointer;
   }
-  /* Agent 框选视口（frame + 琥珀 L 角） */
+  /* Agent 框选视口(frame + 琥珀 L 角) */
   .framed {
     position: relative;
     border: 1px solid var(--line);
@@ -276,6 +364,7 @@
   }
   .sdot.ok { background: var(--green); }
   .sdot.run { background: var(--acc); }
+  .sdot.err { background: var(--red); }
   .agl .nm {
     color: var(--t1);
     font-weight: 600;
@@ -285,12 +374,18 @@
     font-family: var(--mono);
     font-size: 11px;
     color: var(--t3);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
   }
   .agl .st {
     margin-left: auto;
+    flex: none;
     font-family: var(--mono);
     font-size: 10px;
     color: var(--t4);
+    font-variant-numeric: tabular-nums;
   }
   .cstar {
     color: var(--acc-ink);
@@ -324,11 +419,15 @@
   .projline .pp {
     color: var(--t2);
   }
+  .projline:hover .pp {
+    color: var(--t1);
+  }
   .projline .br {
     font-family: var(--mono);
     font-size: 10px;
     color: var(--t4);
     margin-left: auto;
+    font-variant-numeric: tabular-nums;
   }
   .mailn {
     display: flex;
@@ -336,12 +435,13 @@
     gap: 10px;
     padding: 4px 0;
     font-size: 12.5px;
+    min-width: 0;
   }
   .mailn .fl {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: var(--red);
+    background: var(--acc);
     flex: none;
   }
   .mailn .from {
@@ -349,12 +449,22 @@
   }
   .mailn .sj {
     color: var(--t4);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
   }
   .mailn .urg {
     margin-left: auto;
+    flex: none;
     font-family: var(--mono);
     font-size: 10px;
-    color: var(--orange);
+    color: var(--t4);
+    font-variant-numeric: tabular-nums;
+  }
+  .emptyline {
+    color: var(--t4);
+    font-size: 12.5px;
   }
   .qacts {
     padding-left: var(--gutter-w);

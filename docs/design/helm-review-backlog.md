@@ -9,6 +9,7 @@
 
 <!-- 新发现追加到对应严重度下；修掉移到「Done」或就地改 [x] -->
 
+- [ ] [F8][P2][gap] context 面板会话遥测(SESSION/MODEL/TOKENS)与状态栏 tok/latency 仍 mock——规划中的遥测流(可并进 orchestration WS)未建,属 F5 后续  (轮12/2026-07-02)
 - [ ] [记录][P2][gap] 日记附图(intent#2)未做——Note 无附件字段,需 schema 迁移(不可逆),留人拍板  (轮1/2026-07-02;清账轮复确认)
 - [ ] [Chat][P2][gap] 对话接 RAG/项目上下文(intent 56910be6)未做——上下文注入点(持久化语义/token 预算)是架构切片,建议单独一轮设计后做  (轮4/2026-07-02;清账轮复确认)
 - [ ] [大脑][P2][gap] Skills 触发计数恒 0、启停不真禁 Claude Code——需 Claude Code hook 集成(F5 大件),既有已知限制  (轮7/2026-07-02)
@@ -19,6 +20,7 @@
 
 <!-- 修掉/wontfix 的条目归到这里，保留可追溯 -->
 
+- [x] [F8][P1][gap] Today 全 mock(模块清单最后一块)→ 修于 轮12 commit(五节全接真:任务←/api/tasks(checkbox 真启停+下次本地时间+1h 内 hot)、日记←今日 entries 摘要、Agent 框选视口←/api/orchestration/runs(notch 共用只读)、项目←/api/cockpit/projects(点击开驾驶舱)、邮件行按用户 6-28 决定改「日程/NEXT」←下个未来事件;真日期头+计数 tabular;五节空态兜底;测试重写为真数据断言(159 绿);e2e 种真数据全节点亮+清净)  (轮12/2026-07-02)
 - [x] [记录][P1][bug] cron next_run 按 UTC 计算(question 8d6ac767)→ 修于 清账轮 commit(用户授权「全部完成」:cron 表达式按本地墙钟解释,croniter 在本地 tz 迭代,返回 tz-aware;e2e 验证 `0 9 * * *`→次日本地 09:00(+08:00);DTO 形状不变 notch 契约无影响;测试改锁本地语义)  (轮1→清账轮/2026-07-02)
 - [x] [Chat][P2][gap] 会话自动命名 → 修于 清账轮 commit(首条用户消息前 30 字设为无标题会话标题,后端 add_message;测试钉住)  (轮4→清账轮/2026-07-02)
 - [x] [Chat][P2][gap] 新会话未暴露 system_prompt → 修于 清账轮 commit(新会话表单 +system prompt 输入)  (轮4→清账轮/2026-07-02)
