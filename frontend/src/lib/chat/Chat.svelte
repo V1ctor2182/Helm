@@ -3,10 +3,13 @@
   import { marked } from 'marked'
   import DOMPurify from 'dompurify'
   import { chat } from './chatStore.svelte'
+  import { compare } from './compareStore.svelte'
   import ProviderSettings from './ProviderSettings.svelte'
+  import CompareView from './CompareView.svelte'
 
   let input = $state('')
   let showProviders = $state(false)
+  let showCompare = $state(false)
   let newProviderId = $state<number | null>(null)
   let newModel = $state('')
   let msgsEl = $state<HTMLElement | null>(null)
@@ -14,7 +17,10 @@
   onMount(() => {
     void chat.loadProviders()
     void chat.loadSessions()
-    return () => chat.disconnect() // close the chat WS when leaving chat mode
+    return () => {
+      chat.disconnect() // close the chat WS when leaving chat mode
+      compare.disconnect()
+    }
   })
 
   const newProvider = $derived(chat.providers.find((p) => p.id === newProviderId) ?? null)
@@ -80,11 +86,26 @@
       </ul>
     {/if}
 
-    <button class="act prov" class:on={showProviders} onclick={() => (showProviders = !showProviders)}>PROVIDERS</button>
+    <button
+      class="act prov cmpbtn"
+      class:on={showCompare}
+      onclick={() => {
+        showCompare = !showCompare
+        if (showCompare) showProviders = false
+      }}>COMPARE</button>
+    <button
+      class="act prov"
+      class:on={showProviders}
+      onclick={() => {
+        showProviders = !showProviders
+        if (showProviders) showCompare = false
+      }}>PROVIDERS</button>
   </aside>
 
   <main class="thread">
-    {#if showProviders}
+    {#if showCompare}
+      <CompareView />
+    {:else if showProviders}
       <ProviderSettings />
     {:else if !chat.current}
       <div class="blank">
@@ -272,8 +293,11 @@
     color: var(--t1);
   }
   .prov {
-    margin-top: auto;
     letter-spacing: 1px;
+  }
+  .cmpbtn {
+    margin-top: auto;
+    margin-bottom: 8px;
   }
   .prov.on {
     color: var(--acc-ink);

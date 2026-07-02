@@ -10,7 +10,7 @@
 <!-- 新发现追加到对应严重度下；修掉移到「Done」或就地改 [x] -->
 
 - [ ] [记录][P1][bug] cron next_run 后端按 UTC 计算：用户写 `0 9 * * *` 期望本地 9 点，实际 09:00 UTC 触发。前端已如实显示本地时间（会显 17:00 暴露错位），但语义修正需后端定 tz 策略（/api/tasks 为 notch 共用契约，不擅动）→ 已 add_question 待人定  (轮1/2026-07-02)
-- [ ] [Chat][P1][gap] 多模型并排对比+盲测（room intent 4501c6dd 标 P1）未做——大特性，不阻塞"provider+流式+持久化"基本可用，排 Chat 二轮  (轮4/2026-07-02)
+- [ ] [Chat][P2][polish] 对比 lane 会话在侧栏无「对比」视觉标记；对比历史不可从会话列表重新打开成对比视图（现只能当普通会话看）  (轮5/2026-07-02)
 - [ ] [Chat][P2][gap] 会话无自动命名（title 一直 null 显示"会话 N"）；新会话表单未暴露 system_prompt；对话未接 RAG/项目上下文（intent 56910be6）  (轮4/2026-07-02)
 - [ ] [外壳][P2][polish] Rail.svelte:60 `bind:this={btns['settings']}` 绑非响应式属性（Svelte dev 警告 binding_property_non_reactive）  (轮2/2026-07-02)
 - [ ] [日历][P2][gap] 日程只有账本 agenda 列表，模块表提的周/月网格视图未做（agenda 已可用，网格视图待产品优先级）  (轮3/2026-07-02)
@@ -25,6 +25,7 @@
 
 <!-- 修掉/wontfix 的条目归到这里，保留可追溯 -->
 
+- [x] [Chat][P1][gap] 多模型并排对比+盲测（intent 4501c6dd）→ 修于 轮5 commit（compareStore N 路并行:每 lane 真会话+独立 WS 流;CompareView 框选视口 lane 网格+STREAMING 标+盲测 模型 A/B/C+揭晓;COMPARE 侧栏入口;3 store 测;e2e 两路并行错误帧+揭晓实测）  (轮4→轮5/2026-07-02)
 - [x] [Chat][P0][bug] vite 代理不转发 WebSocket（字符串简写缺 ws:true）→ dev 环境 Chat 流式完全不通 → 修于 轮4 commit（proxy 对象形式 + ws:true）  (轮4/2026-07-02)
 - [x] [Chat][P0][bug] 删除带消息的会话 FK 崩 500（messages↔sessions 无 ORM relationship，flush 排序错）→ 修于 轮4 commit（先 flush 子行；后端测试补"带消息删除"场景）  (轮4/2026-07-02)
 - [x] [Chat][P1][gap] 会话/provider 无删除（后端缺 DELETE /api/sessions/{id}；UI 两者都没入口）→ 修于 轮4 commit（+端点+store+×按钮；provider 被会话引用时 409 明确提示而非 FK 500）  (轮4/2026-07-02)

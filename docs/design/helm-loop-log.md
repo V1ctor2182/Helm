@@ -6,6 +6,18 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 14:22 · phase2-round5-compare（夜间模式）· F2 多模型对比
+- 对齐: 阶段2 第5轮——清 backlog P1:多模型并排对比+盲测(intent 4501c6dd),零后端改动
+- 设计基线: DESIGN.md(框选视口=活的输出/mono 配给/accent 语汇;未改)
+- 改动: 新增 `chat/compareStore.svelte.ts`(N 路:每 lane 真会话+独立 WS,delta 按 key 路由,stopAll/reveal/label)、`chat/CompareView.svelte`(2-3 路选择+盲测+caret composer+框选视口 lane 网格+STREAMING 标+揭晓)、`Chat.svelte`(COMPARE 侧栏入口,与 PROVIDERS 互斥;卸载断开 compare);+compare.test 3 测
+- 功能可用性: e2e 真后端:加 Ollama→两路盲测运行→并行错误帧各自回显(模型 A/B)→揭晓显真名;跑完侧栏会话列表刷新;烟测数据清净
+- 取舍: 对比会话持久化留档(不建后端 compare 端点,复用 sessions+ws——一能力一契约);真流式对比=付费未实跑(store 测+错误路径 e2e 覆盖);对比会话无侧栏标记/不可重开成对比视图记 P2
+- 复查: backlog 清 P1×1;新增 P2×1;store 防重入/双路以下拒跑有测钉住
+- 契约/notch 影响: 无(零后端改动)
+- VibeHub: record_decision「阶段2·轮5 多模型对比+盲测」→ 805b58e7 (ai_proposed, F2)
+- 验证: npm build ✓/check 0 错 0 警(248 文件)/test 155(+3);视觉 dev 5174 dark+light 对比网格截图核过
+- 状态: ✅ 夜间自 commit(feat/design-shell-today,未合 main)｜❓需确认: 无
+
 ## 2026-07-02 14:10 · phase2-round4-chat（夜间模式）· F2 Chat 切片
 - 对齐: 阶段2 第4轮——Chat/ProviderSettings 座舱化 + 会话/provider 删除全链路 + e2e 抓修 3 个真 bug
 - 设计基线: DESIGN.md(账本无气泡/mono-sans 硬切/accent 活栏/语义色配给;未改)
