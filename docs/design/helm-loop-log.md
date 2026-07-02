@@ -6,6 +6,18 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 13:30 · phase2-round1-journal-module（夜间模式）· F6 记录模块 切片1
+- 对齐: 阶段2 第1轮——记录模式(速记/日记/任务/日历壳)从旧浅色线框做成 DESIGN.md 座舱账本 + 端到端真能用
+- 设计基线: DESIGN.md（账本读数/框选视口/mono-sans 硬切/禁 emoji/双主题 token）+ Today.svelte 既有 ledger 语汇（helm-pro 未画此模式，按系统新设计；设计稿未改）
+- Svelte 改动: `lib/notes/JournalView.svelte`（重写：JOURNAL 仪表头+tabular 计数、accent 底线 tab、账本行、caret 输入、AI 小结框选视口、日期 accent 界标、×删除、860px 行长、Calendar 缩进包裹+TODO、providers/日历按 tab 懒加载）；`notesStore`（+toTask 接 POST /api/notes/{id}/to-task、mutation 起始清 error、load 守卫）；`tasksStore`（同守卫+清 error）；测试 +3（toTask body / →任务 pin 流 / 原有全绿）
+- 功能可用性: 端到端实测通（dev 5174 + 真后端 8769）：建速记→列表（本地时间）→ →任务 pin 跳 tab→cron 建任务（linked_note_id 留）→日记 Markdown 按日分组→任务启停/删→空态/错误兜底；AI 小结无 provider 正确报「先配置」；烟测数据已清
+- 取舍: emoji(📅✨🗑)全清；cron 的 UTC 语义不擅动（notch 共用契约）→ add_question 留人定，前端先如实显示本地钟；.cbx 纯色勾选态遵 helm-pro 原样（复查建议不采纳）；Calendar 重设计留 F7 轮
+- 复查: 3 finder（逐行/删除行为/跨文件+契约/复用/精简/效率/altitude/公约）→ 修 7（UTC 时间戳、error 不清、stale pin 404 误导、双发丝线、草稿覆盖、行长、懒加载）、refuted 1（reduced-motion 全局已有）、wontfix 1（cbx 遵设计）；新增 backlog open 9 条（P1×4：cron tz / task_runs UI / jsonFetch 守卫基建 / F7 Calendar；P2×5），详 helm-review-backlog.md
+- 契约/notch 影响: 无（未动共用端点，只新消费既有 to-task；notch 不受影响，未跑 swift）
+- VibeHub: record_decision「阶段2·轮1 记录模式重设计+note→task 打通」→ 2179029a (ai_proposed)；add_question「cron 按本地 tz 还是 UTC」→ 8d6ac767 (ai_proposed)
+- 验证: npm build ✓ / check 0 错 0 警（243 文件）/ test 148 通过（+3）；视觉: dev 5174 dark+light 双主题截图核过（账本/框选视口/空态/数据态）
+- 状态: ✅ 夜间自 commit（feat/design-shell-today，未合 main）｜❓需确认: cron tz 语义（question 8d6ac767）
+
 ## 2026-07-02 01:57 · design-11-terminal-edge（夜间模式）· F8 外壳收官
 - 对齐: 折叠态终端边条（40px 竖排 TERMINAL ⟩）——补齐外壳网格第4列
 - 设计基线: helm-pro.html 外壳 40px `.edge` / grid 58 250 1fr 40（只读对照，未改）

@@ -27,12 +27,13 @@ export class TasksStore {
   }
 
   async load(): Promise<void> {
-    const body = (await this.#json('/api/tasks')) as { tasks: Task[] } | null
-    if (body) this.tasks = body.tasks
+    const body = (await this.#json('/api/tasks')) as { tasks?: Task[] } | null
+    if (body) this.tasks = body.tasks ?? []
   }
 
   async create(name: string, prompt: string, kind: string, value: Record<string, unknown>): Promise<boolean> {
     if (!prompt.trim()) return false
+    this.error = null
     const ok = await this.#json('/api/tasks', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },

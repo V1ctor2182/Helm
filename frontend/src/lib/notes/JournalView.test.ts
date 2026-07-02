@@ -63,4 +63,16 @@ describe('JournalView', () => {
     render(JournalView)
     expect(await screen.findByText(/还没有速记/)).toBeInTheDocument()
   })
+
+  it('→任务 jumps to the tasks tab with the note pinned', async () => {
+    notes.notes = [N({ id: 11, content: 'summarize inbox daily' })]
+    render(JournalView)
+    await fireEvent.click(await screen.findByRole('button', { name: '→任务' }))
+    // tasks tab is now active, prompt prefilled from the note and locked
+    expect(screen.getByRole('tab', { name: '任务' })).toHaveAttribute('aria-selected', 'true')
+    const prompt = screen.getByLabelText('任务指令') as HTMLInputElement
+    expect(prompt.value).toBe('summarize inbox daily')
+    expect(prompt).toHaveAttribute('readonly')
+    expect(screen.getByText(/自速记 #11/)).toBeInTheDocument()
+  })
 })

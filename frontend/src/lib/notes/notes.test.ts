@@ -51,6 +51,19 @@ describe('NotesStore', () => {
     expect(JSON.parse((post![1] as RequestInit).body as string)).toEqual({ journal_date: '2026-06-27' })
   })
 
+  it('toTask posts the schedule to /to-task', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ id: 1 }) })
+    vi.stubGlobal('fetch', fetchMock)
+    const s = new NotesStore()
+    expect(await s.toTask(4, 'cron', { expr: '0 9 * * *' })).toBe(true)
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/notes/4/to-task')
+    expect(JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string)).toEqual({
+      name: '',
+      schedule_kind: 'cron',
+      schedule_value: { expr: '0 9 * * *' },
+    })
+  })
+
   it('toMemory posts and reports failure', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: () => Promise.resolve({}) }))
     const s = new NotesStore()

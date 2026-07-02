@@ -37,6 +37,7 @@ export class NotesStore {
   }
 
   async persist(text: string): Promise<void> {
+    this.error = null
     const ok = await this.#json('/api/notes', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -52,8 +53,8 @@ export class NotesStore {
 
   async load(kind?: string): Promise<void> {
     const q = kind ? `?kind=${kind}` : ''
-    const body = (await this.#json(`/api/notes${q}`)) as { notes: Note[] } | null
-    if (body) this.notes = body.notes
+    const body = (await this.#json(`/api/notes${q}`)) as { notes?: Note[] } | null
+    if (body) this.notes = body.notes ?? []
   }
 
   async create(
@@ -62,6 +63,7 @@ export class NotesStore {
     journalDate: string | null = null,
   ): Promise<boolean> {
     if (!content.trim()) return false
+    this.error = null
     const ok = await this.#json('/api/notes', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -75,6 +77,7 @@ export class NotesStore {
   // ── convert (intent#1: 一键转 记忆/日记) ────────────────────────────────
 
   async toJournal(id: number, date?: string): Promise<boolean> {
+    this.error = null
     const ok = await this.#json(`/api/notes/${id}/to-journal`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -85,8 +88,22 @@ export class NotesStore {
   }
 
   async toMemory(id: number): Promise<boolean> {
+    this.error = null
     const ok = await this.#json(`/api/notes/${id}/to-memory`, { method: 'POST' })
     if (!ok) this.error = '转记忆失败'
+    return ok !== null
+  }
+
+  /** note→task (intent#1): the note's content becomes the task prompt, linked
+   *  via linked_note_id server-side. Schedule comes from the tasks form. */
+  async toTask(id: number, kind: string, value: Record<string, unknown>, name = ''): Promise<boolean> {
+    this.error = null
+    const ok = await this.#json(`/api/notes/${id}/to-task`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name, schedule_kind: kind, schedule_value: value }),
+    })
+    if (!ok) this.error = '转任务失败(检查 schedule)'
     return ok !== null
   }
 
