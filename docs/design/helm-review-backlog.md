@@ -11,6 +11,7 @@
 
 - [ ] [记录][P1][bug] cron next_run 后端按 UTC 计算：用户写 `0 9 * * *` 期望本地 9 点，实际 09:00 UTC 触发。前端已如实显示本地时间（会显 17:00 暴露错位），但语义修正需后端定 tz 策略（/api/tasks 为 notch 共用契约，不擅动）→ 已 add_question 待人定  (轮1/2026-07-02)
 - [ ] [驾驶舱][P2][polish] xterm 终端保持惯例黑底(未接双主题 token,浅色模式下是黑岛,终端惯例可接受待定);Monaco Diff 主题已跟随但初始化后不随切换热更  (轮9/2026-07-02)
+- [ ] [设置][P2][gap] 本机 hook / 媒体源设置属 notch 伴侣侧未纳入 Web 设置;通用 settings K/V 与 secrets 管理 UI 未做;accent 手动选择不持久化(设计定当日轮换,待产品确认)  (轮11/2026-07-02)
 - [ ] [研究][P2][polish] 无 provider 时 provider/model 下拉是光秃 chevron,应给「先配置 provider」占位/禁用提示  (轮8/2026-07-02)
 - [ ] [大脑][P2][gap] Skills 触发计数恒 0(无 agent 真实遥测钩子)、启停只持久化 Helm 侧不真禁 Claude Code 加载——既有已知限制,归 F5 agent-orchestration 集成  (轮7/2026-07-02 复确认)
 - [ ] [Chat][P2][polish] 对比 lane 会话在侧栏无「对比」视觉标记；对比历史不可从会话列表重新打开成对比视图（现只能当普通会话看）  (轮5/2026-07-02)
@@ -28,6 +29,7 @@
 
 <!-- 修掉/wontfix 的条目归到这里，保留可追溯 -->
 
+- [x] [设置][P1][gap] settings 模式只有通用 tab 占位、主题切换无 UI 入口、主题模式不持久化 → 修于 轮11 commit（Settings.svelte:主题三态(跟随系统/暗/亮,持久化 localStorage,init 恢复)+今日 accent 10 色现场换+后端连接状态(healthz 点+版本)+MCP 注入状态/注入按钮(合并+备份);Shell 挂 settings 模式;theme store +持久化+测试;e2e:切暗→reload 仍暗→换 accent 生效→复原跟随系统）  (轮11/2026-07-02)
 - [x] [驾驶舱][P1][gap] AgentView 旧样式+10 个 emoji 图标(🟢💬🔧⚠️🔐⏳📊🏁🔴🤖,违禁 emoji 硬规) → 修于 轮10 commit（ACP 事件流=框选视口+mono 类型标签(SESS/MSG/TOOL/OK/ERR/PERM/RATE/END)+语义色调;caret 指令输入;状态/历史描边徽章;文案与事件逻辑不动测试全保)  (轮9→轮10/2026-07-02)
 - [x] [驾驶舱][P1][gap] CockpitView/FileBrowser/PreviewPane 旧线框(⬆/圆角卡/硬编码 hex/Monaco 亮主题暗模式白块) → 修于 轮9 commit（accent 底线 tab;文件=1px 发丝瓦片零圆角+selected accent 边+changed 绿闪(token);路径栏 mono+↑/跟随 act;预览 mono 标题+tile code 块+Markdown token;Monaco theme 跟随 isDark;e2e 开真项目→浏览→选 DESIGN.md→Markdown 预览+预览/Diff tab 全通）  (轮9/2026-07-02)
 - [x] [研究][P1][gap] Research.svelte 旧线框+emoji(🔍) → 修于 轮8 commit（RESEARCH 仪表头+status/badge 描边徽章(running accent/done 绿/error 红)+caret 提问+mono 控件+进度框选视口+CLAIMS/SOURCES section tag+引用 [n] accent mono+历史发丝行;全 token 双主题）  (轮8/2026-07-02)

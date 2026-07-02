@@ -54,6 +54,12 @@ class ThemeStore {
   setMode(m: ThemeMode) {
     this.mode = m
     this.apply()
+    // 持久化 mode(accent 保持每日轮换设计,不持久化)
+    try {
+      localStorage.setItem('helm-theme-mode', m)
+    } catch {
+      /* jsdom/隐私模式:无 localStorage 也不碍事 */
+    }
   }
 
   /** 手动设 accent（如「换今日色」），传 palette hex。 */
@@ -78,8 +84,14 @@ class ThemeStore {
     root.style.setProperty('--acc-ink', this.isDark ? this.accent : darken(this.accent))
   }
 
-  /** 启动挂载：立即应用 + 系统主题翻转时刷新（system 模式下）。 */
+  /** 启动挂载：恢复持久化 mode + 立即应用 + 系统主题翻转时刷新（system 模式下）。 */
   init() {
+    try {
+      const saved = localStorage.getItem('helm-theme-mode')
+      if (saved === 'dark' || saved === 'light' || saved === 'system') this.mode = saved
+    } catch {
+      /* ignore */
+    }
     this.accent = dailyAccent()
     this.apply()
     if (typeof window !== 'undefined' && window.matchMedia) {

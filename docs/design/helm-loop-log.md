@@ -6,6 +6,18 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 16:35 · phase2-round11-settings（夜间模式·pause 前末轮）· 设置模式
+- 对齐: 阶段2 第11轮——Settings 模式落地(主题三态持久化+今日 accent 换色+后端/MCP 状态);用户「pause」后本轮收尾即停
+- 设计基线: DESIGN.md(账本行/mono act/色块 3px 例外/LOCAL 角标;未改)
+- 改动: 新增 `lib/Settings.svelte`(主题 radio 三态/accent 10 色块/healthz 状态/MCP 注入状态+按钮);`Shell.svelte` 挂 settings 模式替占位;`theme.svelte.ts`(+localStorage 持久化+init 恢复);theme.test +1(持久化,内存 stub localStorage)
+- 功能可用性: e2e 真后端:切暗→reload 仍暗(持久化闭环)→accent 现场换色→复原跟随系统;后端 ok·v0.0.1 与 MCP NOT INJECTED 真状态渲染;注入按钮未实点(改用户 .mcp.json 留显式操作)
+- 取舍: 本机 hook/媒体源属 notch 伴侣侧、K/V-secrets 管理 UI、accent 持久化(设计定当日轮换)记 P2
+- 复查: 清 P1(settings 占位+主题无入口+不持久化);新增 P2×1
+- 契约/notch 影响: 无(只读消费 /api/orchestration/mcp 与 /healthz)
+- VibeHub: record_decision「阶段2·轮11 Settings 落地」→ 083ea1be (ai_proposed, F8)
+- 验证: npm build ✓/check 0 错 0 警(249 文件)/test 156(+1);视觉 dev 5174 dark+light 核过
+- 状态: ✅ 夜间自 commit(feat/design-shell-today,未合 main)｜❓需确认: 无｜⏸ loop 已按用户指令暂停(cron d509f1a7 已删)
+
 ## 2026-07-02 15:35 · phase2-round10-agentview（夜间模式）· F5 编排切片
 - 对齐: 阶段2 第10轮——AgentView 座舱化(清 backlog P1;此前 10 个 emoji 图标违禁最重)
 - 设计基线: DESIGN.md(框选视口=活的输出/mono 标签/语义色配给/禁 emoji;未改)
