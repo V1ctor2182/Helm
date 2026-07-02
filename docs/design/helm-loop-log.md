@@ -6,6 +6,14 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 19:50 · phase3-round1-parity-matrix(夜间模式)· 阶段3 开跑
+- 对齐: 阶段3 轮1——刷参考仓(victor-context 已最新,两份 fanbox-master 一致 @1.11.3)+ 全量盘点 FanBox 行为(90+ 条,子 agent 深读 CHANGELOG+app.js+server.js)+ 建对照矩阵
+- 产出: docs/design/fanbox-cockpit-parity.md——P1×14(最大缺口:预览即编辑/终端路径点击/终端状态感知/文件操作三件套/列表排序/缩略图/双击灯箱/终端手感三小件/内容搜索/键盘导航/变更收件箱/拖拽进终端/噪声过滤/跟随升级)、P2×26、wontfix×5(注理由);procedure 新增阶段3 大节、prompt 瘦身为点火器
+- 契约/notch 影响: 无(纯 docs)
+- VibeHub: record_decision「阶段3·轮1 对照矩阵+路线」→ c43e60d4 (ai_proposed, F1)
+- 验证: 纯 docs 轮,无代码硬门;矩阵条目均带 FanBox 实现位置可回查
+- 状态: ✅ commit a069e4c(feat/cockpit-fanbox,未合 main;helm-loop-prompt.md 含用户此前未提交编辑一并入库)｜下一轮:P1 首条「预览即编辑+自动落盘」
+
 ## 2026-07-02 18:40 · phase2-round12-today-real（夜间模式）· F8 Today 真数据·模块清单收官
 - 对齐: 阶段2 第12轮——Today 五节全接真 /api(模块清单最后一块),版式不动空态兜底
 - 改动: `lib/Today.svelte`(数据层重写:任务/日记/Agent 运行/项目/日程 NEXT+真日期头+tabular 计数+30s 刷新);`Today.test.ts`(重写为真数据断言,5 测)
