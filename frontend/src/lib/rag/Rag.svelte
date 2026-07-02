@@ -13,42 +13,43 @@
 </script>
 
 <section class="rag" aria-label="知识库">
-  <header>
-    <h2>📚 知识库</h2>
+  <div class="toolrow">
+    <div class="h">知识库 / KNOWLEDGE</div>
     {#if rag.stats}
       <span class="stats">
         {rag.stats.sources} 源 · {rag.stats.files} 文件 · {rag.stats.chunks} 块
         {#if rag.stats.vector_count === 0}<span class="off" title="向量索引未启用">(向量关)</span>{/if}
       </span>
     {/if}
-  </header>
+  </div>
 
   <form
-    class="add"
+    class="compose"
     onsubmit={(e) => {
       e.preventDefault()
       void add()
     }}
   >
+    <span class="car" aria-hidden="true"></span>
     <input
       class="path"
       placeholder="本地目录或文件路径(PDF / Office / Markdown / 代码)…"
       bind:value={path}
       aria-label="文档路径"
     />
-    <button type="submit" disabled={rag.busy || !path.trim()}>{rag.busy ? '索引中…' : '添加并索引'}</button>
+    <button class="act pri" type="submit" disabled={rag.busy || !path.trim()}>{rag.busy ? '索引中…' : '添加并索引'}</button>
   </form>
 
-  <div class="search">
+  <div class="compose search">
     <input
       placeholder="检索知识库(语义)…"
       bind:value={rag.query}
       onkeydown={(e) => e.key === 'Enter' && rag.search()}
       aria-label="检索"
     />
-    <button onclick={() => rag.search()}>检索</button>
+    <button class="act" onclick={() => rag.search()}>检索</button>
     {#if rag.results !== null}
-      <button onclick={() => rag.clearSearch()}>清除</button>
+      <button class="act" onclick={() => rag.clearSearch()}>清除</button>
     {/if}
   </div>
 
@@ -61,11 +62,11 @@
     {#if rag.results.length === 0}
       <p class="empty">没有匹配的片段。</p>
     {:else}
-      <ul class="hits">
+      <ul class="list">
         {#each rag.results as h, i (i)}
           <li class="hit">
             <div class="meta">
-              <span class="hpath">{h.path}</span>
+              <span class="mpath">{h.path}</span>
               <span class="score">{h.score}</span>
             </div>
             <p class="snippet">{h.text}</p>
@@ -76,18 +77,16 @@
   {:else if rag.sources.length === 0}
     <p class="empty">还没有文档源 — 在上面添加一个本地目录或文件。</p>
   {:else}
-    <ul class="sources">
+    <ul class="list">
       {#each rag.sources as s (s.id)}
         <li class="source">
-          <div class="info">
-            <span class="spath">{s.path}</span>
-            <span class="badge {s.status}">{s.status}</span>
-          </div>
-          <div class="counts">{s.file_count} 文件 · {s.chunk_count} 块{#if s.error} · ⚠ {s.error}{/if}</div>
-          <div class="actions">
-            <button onclick={() => rag.reindex(s.id)} disabled={rag.busy} title="重新索引">↻</button>
-            <button class="del" aria-label={`移除 ${s.path}`} onclick={() => rag.removeSource(s.id)}>🗑</button>
-          </div>
+          <span class="mpath">{s.path}</span>
+          <span class="badge {s.status}">{s.status}</span>
+          <span class="counts">{s.file_count} 文件 · {s.chunk_count} 块{#if s.error} · ERR {s.error}{/if}</span>
+          <span class="acts">
+            <button class="act" onclick={() => rag.reindex(s.id)} disabled={rag.busy} title="重新索引">重索引</button>
+            <button class="act del" aria-label={`移除 ${s.path}`} onclick={() => rag.removeSource(s.id)}>×</button>
+          </span>
         </li>
       {/each}
     </ul>
@@ -99,102 +98,165 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    padding: 14px;
+    padding: 12px 24px 18px 18px;
     overflow: auto;
     height: 100%;
+    box-sizing: border-box;
+    font-family: var(--sans);
+    color: var(--t2);
   }
-  header {
+  .toolrow {
     display: flex;
     align-items: baseline;
-    justify-content: space-between;
-    gap: 8px;
+    gap: 12px;
   }
-  header h2 {
-    margin: 0;
-    font-size: 1.05rem;
+  .h {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--t3);
+    letter-spacing: 1px;
+    text-transform: uppercase;
   }
   .stats {
-    font-size: 0.8rem;
-    color: #888;
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--t4);
+    font-variant-numeric: tabular-nums;
   }
   .off {
-    color: #c08a00;
+    color: var(--orange);
   }
-  .add,
-  .search {
+  .act {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--t4);
+    background: transparent;
+    border: 1px solid var(--line);
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: color .12s var(--ease);
+  }
+  .act:hover:not(:disabled) {
+    color: var(--t1);
+  }
+  .act.pri {
+    color: var(--acc-ink);
+    border-color: var(--acc-ink);
+  }
+  .act.pri:disabled {
+    color: var(--t4);
+    border-color: var(--line);
+    cursor: default;
+  }
+  .compose {
     display: flex;
-    gap: 6px;
+    align-items: center;
+    gap: 9px;
   }
-  .add .path,
-  .search input {
+  .car {
+    width: 2px;
+    height: 14px;
+    background: var(--acc);
+    flex: none;
+    animation: blink 1s steps(1) infinite;
+  }
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+  .compose input {
     flex: 1;
-    padding: 6px 8px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--hair);
+    color: var(--t1);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 3px 0 6px;
+    min-width: 0;
   }
-  .sources,
-  .hits {
+  .compose input::placeholder {
+    color: var(--t4);
+    font-family: var(--sans);
+    font-size: 13px;
+  }
+  .compose input:focus {
+    outline: none;
+    border-bottom-color: var(--acc-ink);
+  }
+  .search {
+    padding-left: 11px;
+  }
+  .list {
     list-style: none;
     margin: 0;
     padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
   }
   .source {
-    border: 1px solid #eceaef;
-    border-radius: 10px;
-    padding: 8px 10px;
-    background: #fff;
-  }
-  .info {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    padding: 5px 0;
+    border-top: 1px solid var(--hair);
+    font-size: 13px;
   }
-  .spath,
-  .hpath {
-    font-family: ui-monospace, monospace;
-    font-size: 0.82rem;
+  .source:first-child {
+    border-top: none;
+  }
+  .mpath {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--t2);
     word-break: break-all;
   }
   .badge {
-    font-size: 0.68rem;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: .5px;
     text-transform: uppercase;
-    border-radius: 999px;
-    padding: 1px 8px;
-    background: #eee;
-    color: #666;
+    color: var(--t4);
+    border: 1px solid var(--line);
+    padding: 0 5px;
+    flex: none;
   }
   .badge.indexed {
-    background: #e6f6ec;
-    color: #1c7a40;
+    color: var(--green);
+    border-color: var(--green);
+  }
+  .badge.indexing {
+    color: var(--orange);
+    border-color: var(--orange);
   }
   .badge.error {
-    background: #fbe8e6;
-    color: #c0392b;
+    color: var(--red);
+    border-color: var(--red);
   }
   .counts {
-    font-size: 0.78rem;
-    color: #888;
-    margin: 4px 0;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--t4);
+    font-variant-numeric: tabular-nums;
   }
-  .actions {
+  .acts {
+    margin-left: auto;
     display: flex;
+    align-items: center;
     gap: 6px;
-    justify-content: flex-end;
+    flex: none;
   }
-  .actions button {
+  .act.del {
     border: 0;
-    background: transparent;
-    cursor: pointer;
+    padding: 2px 4px;
+  }
+  .act.del:hover {
+    color: var(--red);
   }
   .hit {
-    border: 1px solid #eceaef;
-    border-radius: 10px;
-    padding: 8px 10px;
-    background: #fff;
+    padding: 6px 0;
+    border-top: 1px solid var(--hair);
+  }
+  .hit:first-child {
+    border-top: none;
   }
   .meta {
     display: flex;
@@ -202,21 +264,27 @@
     gap: 8px;
   }
   .score {
-    font-size: 0.72rem;
-    color: #aaa;
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--t4);
+    font-variant-numeric: tabular-nums;
   }
   .snippet {
     margin: 4px 0 0;
-    font-size: 0.88rem;
+    font-size: 12.5px;
+    color: var(--t3);
     white-space: pre-wrap;
     max-height: 6em;
     overflow: hidden;
   }
   .err {
-    color: #c0392b;
-    font-size: 0.85rem;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--red);
+    margin: 0;
   }
   .empty {
-    color: #aaa;
+    color: var(--t4);
+    font-size: 13px;
   }
 </style>

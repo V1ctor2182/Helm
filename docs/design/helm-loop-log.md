@@ -6,6 +6,18 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 14:50 · phase2-round7-rag-skills（夜间模式）· F4 大脑切片2·模块收口
+- 对齐: 阶段2 第7轮——知识库(RAG)+Skills 透视座舱化(清 backlog P1);F4 三视图齐
+- 设计基线: DESIGN.md(账本行/描边徽章/语义色配给/禁 emoji;未改)
+- 改动: `rag/Rag.svelte`(重写:stats mono/caret 路径输入/检索/源账本行+状态徽章/命中行 path+score+片段;📚🗑↻ 清)、`skills/Skills.svelte`(重写:计数 mono/账本行+方形启停+健康徽章+触发计数;⚡清)
+- 功能可用性: e2e 真后端:建 1 文件源→UI 添加→后台索引 indexed(vector_count 1,真 embedder)→语义检索命中 score 0.6594→UI 移除,库净;Skills 真扫描 72 个渲染(72 健康);启停不实测(避免动用户 skill 态,单测覆盖)
+- 取舍: Skills 触发计数恒 0/启停不真禁 Claude Code=既有已知限制(归 F5 集成),降 P2 留账
+- 复查: 清 P1×1;F4 完整性:记忆(增/混检/置顶/删/导入导出)+知识库(源管理/索引/检索)+Skills(扫描/健康/启停)全可用,MCP 4 工具契约未动 → 模块判定基本可用
+- 契约/notch 影响: 无
+- VibeHub: record_decision「阶段2·轮7 RAG+Skills 座舱化,F4 收口」→ b7668756 (ai_proposed, F4)
+- 验证: npm build ✓/check 0 错 0 警(248 文件)/test 155;视觉 dev 5174 dark+light 核过
+- 状态: ✅ 夜间自 commit(feat/design-shell-today,未合 main)｜❓需确认: 无
+
 ## 2026-07-02 14:35 · phase2-round6-memory（夜间模式）· F4 大脑切片1
 - 对齐: 阶段2 第6轮——大脑模式壳(BrainPanel)+记忆视图座舱化;修搜索结果不同步 bug
 - 设计基线: DESIGN.md(仪表头/账本行/accent 配给/禁 emoji;未改)

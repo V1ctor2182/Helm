@@ -10,7 +10,7 @@
 <!-- 新发现追加到对应严重度下；修掉移到「Done」或就地改 [x] -->
 
 - [ ] [记录][P1][bug] cron next_run 后端按 UTC 计算：用户写 `0 9 * * *` 期望本地 9 点，实际 09:00 UTC 触发。前端已如实显示本地时间（会显 17:00 暴露错位），但语义修正需后端定 tz 策略（/api/tasks 为 notch 共用契约，不擅动）→ 已 add_question 待人定  (轮1/2026-07-02)
-- [ ] [大脑][P1][gap] Rag.svelte(222 行)与 Skills.svelte(159 行)仍旧线框样式(硬编码 hex/圆角/可能残留 emoji),BrainPanel 壳已座舱化,两个子视图排下一轮  (轮6/2026-07-02)
+- [ ] [大脑][P2][gap] Skills 触发计数恒 0(无 agent 真实遥测钩子)、启停只持久化 Helm 侧不真禁 Claude Code 加载——既有已知限制,归 F5 agent-orchestration 集成  (轮7/2026-07-02 复确认)
 - [ ] [Chat][P2][polish] 对比 lane 会话在侧栏无「对比」视觉标记；对比历史不可从会话列表重新打开成对比视图（现只能当普通会话看）  (轮5/2026-07-02)
 - [ ] [Chat][P2][gap] 会话无自动命名（title 一直 null 显示"会话 N"）；新会话表单未暴露 system_prompt；对话未接 RAG/项目上下文（intent 56910be6）  (轮4/2026-07-02)
 - [ ] [外壳][P2][polish] Rail.svelte:60 `bind:this={btns['settings']}` 绑非响应式属性（Svelte dev 警告 binding_property_non_reactive）  (轮2/2026-07-02)
@@ -26,6 +26,7 @@
 
 <!-- 修掉/wontfix 的条目归到这里，保留可追溯 -->
 
+- [x] [大脑][P1][gap] Rag/Skills 子视图旧线框(📚⚡🗑↻ emoji+胶囊+硬编码 hex) → 修于 轮7 commit（知识库:账本源行+状态 mono 徽章(indexed 绿/indexing 橙/error 红)+重索引/×+检索命中行(path+score+片段);Skills:账本行+方形启停+健康徽章+触发计数+路径;e2e:真源索引(vector 1)+语义检索命中 0.6594+移除;Skills 真扫描 72 个渲染）  (轮6→轮7/2026-07-02)
 - [x] [大脑][P1][gap] BrainPanel/Memory 旧线框+emoji(🧠📌📍🗑) → 修于 轮6 commit（MEMORY 仪表头+tabular 三计数+accent 底线 tab;记忆=分类 chips+caret 输入+分类 select+搜索行+账本行(FACT tag/score/PIN/×)+置顶 accent 左栏;e2e 增/混合搜索(score 0.59)/置顶/删全通）  (轮6/2026-07-02)
 - [x] [大脑][P2][bug] 搜索结果视图里置顶/删除不同步反映（load 只刷 items 不刷 results）→ 修于 轮6 commit（store 同步 patch results）  (轮6/2026-07-02)
 - [x] [Chat][P1][gap] 多模型并排对比+盲测（intent 4501c6dd）→ 修于 轮5 commit（compareStore N 路并行:每 lane 真会话+独立 WS 流;CompareView 框选视口 lane 网格+STREAMING 标+盲测 模型 A/B/C+揭晓;COMPARE 侧栏入口;3 store 测;e2e 两路并行错误帧+揭晓实测）  (轮4→轮5/2026-07-02)
