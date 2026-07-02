@@ -6,6 +6,18 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 13:52 · phase2-round3-calendar（夜间模式）· F7 日历切片
+- 对齐: 阶段2 第3轮——日历视图座舱化(清 backlog P1)+ e2e 抓到并修掉事件创建 UTC 往返错位(P0)
+- 设计基线: DESIGN.md(账本/accent 界标/mono 配给/禁 emoji;未改)
+- Svelte 改动: `notes/Calendar.svelte`(重写:AGENDA 账本按本地日分组+accent 日期界标+mono 工具钮+caret 输入+来源标 LOCAL|CALDAV+×删+空态;🗑 清除);`mail/calendarStore.svelte.ts`(add 转 UTC ISO 再发);新增共享 `lib/time.ts`(toLocal/localHHMM/localDate/localDateTime),JournalView 迁移同一套;+CalendarView.test(2 测:分组/本地时间/来源标/空态)
+- 功能可用性: e2e 实测(真后端):加事件 09:30→显示 09:30(修前显 17:30)→按日分组→删除→空态;导入导出/CalDAV 面(账户表单/同步钮)保留原功能
+- 取舍: 全天事件按原始日期分组(不过 UTC 解析,避免漂移一天);周/月网格视图未做(agenda 先可用)记 P2;Mail.svelte(禁用)toEvent 同病记 P2;真实 CalDAV 服务器联调仍归既有 needs-human
+- 复查: e2e 即抓 P0(时区往返)当轮修;时间工具第三处复用前抽 lib/time.ts(altitude);新增 P2×2、清 P1×1+P0×1,详 backlog
+- 契约/notch 影响: 无(未动端点;notch 不消费 calendar 写路径)
+- VibeHub: record_decision「阶段2·轮3 日历座舱化+UTC 修复+lib/time.ts」→ 11cd8ac3 (ai_proposed, F7 room)
+- 验证: npm build ✓ / check 0 错 0 警(245 文件)/ test 151 通过(+2);视觉: dev 5174 dark+light agenda 截图核过
+- 状态: ✅ 夜间自 commit(feat/design-shell-today,未合 main)｜❓需确认: 无
+
 ## 2026-07-02 13:42 · phase2-round2-backlog-p1（夜间模式）· 清 P1×2
 - 对齐: 阶段2 第2轮——按收敛规则先清 backlog open P1:task_runs 运行历史 UI(F6)+ jsonFetch 列表守卫基建(跨模块)
 - 设计基线: DESIGN.md（mono 子账本/语义色配给/发丝分隔;未改）

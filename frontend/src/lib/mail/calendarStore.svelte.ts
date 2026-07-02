@@ -81,10 +81,13 @@ export class CalendarStore {
 
   async add(summary: string, start: string): Promise<boolean> {
     if (!summary.trim() || !start) return false
+    // datetime-local 给的是本地墙钟(裸 ISO);转成 UTC(带 Z)再发——
+    // 后端列是 DateTime(timezone=True),显示层约定"裸 ISO=UTC",不转会差时区。
+    const startUtc = new Date(start).toISOString()
     const ok = await this.#json('/api/calendar/events', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ summary, start }),
+      body: JSON.stringify({ summary, start: startUtc }),
     })
     if (ok) await this.load()
     else this.error = '创建事件失败'

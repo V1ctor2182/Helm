@@ -2,7 +2,8 @@
   // Calendar lives with journal/tasks (the time/planning cluster). The store
   // still sits under mail/ from the original email-calendar room; mail itself
   // is currently disabled but the calendar capability stands alone.
-  import { calendar } from '../mail/calendarStore.svelte'
+  import { calendar, type CalEvent } from '../mail/calendarStore.svelte'
+  import { localDate, localHHMM } from '../time'
 
   let evSummary = $state('')
   let evStart = $state('')
@@ -39,49 +40,76 @@
       URL.revokeObjectURL(url)
     }
   }
+
+  // 日程账本:按本地日期分组(全天事件按原始日期,避免 UTC 解析漂移一天),
+  // 组内按开始时间升序,最近的日期在前。
+  function dayKey(ev: CalEvent): string {
+    if (!ev.start) return '未定'
+    return ev.all_day ? ev.start.slice(0, 10) : localDate(ev.start)
+  }
+  const eventsByDay = $derived(
+    (() => {
+      const groups = new Map<string, CalEvent[]>()
+      const sorted = [...calendar.events].sort((a, b) => (a.start ?? '').localeCompare(b.start ?? ''))
+      for (const ev of sorted) {
+        const d = dayKey(ev)
+        ;(groups.get(d) ?? groups.set(d, []).get(d)!).push(ev)
+      }
+      return [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+    })(),
+  )
 </script>
 
 <div class="cal">
+  <div class="h">日程 / AGENDA</div>
+
   <div class="tools">
-    <button onclick={doImport}>导入 .ics</button>
-    <button onclick={doExport} disabled={!calendar.events.length}>导出 .ics</button>
+    <button class="act" onclick={doImport}>导入 .ics</button>
+    <button class="act" onclick={doExport} disabled={!calendar.events.length}>导出 .ics</button>
     {#if calendar.caldavAccounts.length}
-      <button onclick={() => calendar.syncCaldav()} disabled={calendar.syncing}>
+      <button class="act pri" onclick={() => calendar.syncCaldav()} disabled={calendar.syncing}>
         {calendar.syncing ? 'CalDAV 同步中…' : 'CalDAV 同步'}
       </button>
     {/if}
-    <button onclick={() => (showCaldav = !showCaldav)}>+ CalDAV</button>
+    <button class="act" onclick={() => (showCaldav = !showCaldav)}>+ CalDAV</button>
   </div>
 
-  <form class="addev" onsubmit={(e) => { e.preventDefault(); void addEvent() }}>
+  <form class="compose" onsubmit={(e) => { e.preventDefault(); void addEvent() }}>
+    <span class="car" aria-hidden="true"></span>
     <input placeholder="事件标题" bind:value={evSummary} aria-label="事件标题" />
-    <input type="datetime-local" bind:value={evStart} aria-label="开始时间" />
-    <button type="submit" disabled={!evSummary.trim() || !evStart}>加事件</button>
+    <input class="dt" type="datetime-local" bind:value={evStart} aria-label="开始时间" />
+    <button class="act pri" type="submit" disabled={!evSummary.trim() || !evStart}>加事件</button>
   </form>
 
   {#if showCaldav}
-    <form class="addacc" onsubmit={(e) => { e.preventDefault(); void addCaldav() }}>
+    <form class="cdform" onsubmit={(e) => { e.preventDefault(); void addCaldav() }}>
       <input placeholder="名称" bind:value={cdav.name} aria-label="CalDAV 名称" />
       <input placeholder="CalDAV URL(如 https://caldav.icloud.com)" bind:value={cdav.url} aria-label="CalDAV URL" />
       <input placeholder="用户名" bind:value={cdav.username} aria-label="CalDAV 用户名" />
       <input type="password" placeholder="密码 / 应用专用密码" bind:value={cdav.password} aria-label="CalDAV 密码" />
-      <button type="submit" disabled={!cdav.url.trim() || !cdav.password.trim()}>添加(凭据加密存储)</button>
+      <button class="act pri" type="submit" disabled={!cdav.url.trim() || !cdav.password.trim()}>添加(凭据加密存储)</button>
     </form>
   {/if}
+  {#if calendar.error}<p class="err" role="alert">{calendar.error}</p>{/if}
   {#if calendar.syncMsg}<p class="cmsg">{calendar.syncMsg}</p>{/if}
 
   {#if calendar.events.length === 0}
     <p class="empty">还没有日程 — 加一个事件,或导入 .ics。</p>
   {:else}
-    <ul class="events">
-      {#each calendar.events as ev (ev.id)}
-        <li class="event">
-          <span class="when">{ev.all_day ? (ev.start?.slice(0, 10) ?? '') : (ev.start?.slice(0, 16).replace('T', ' ') ?? '')}</span>
-          <span class="esum">{ev.summary}</span>
-          <button class="del" aria-label={`删除 ${ev.summary}`} onclick={() => calendar.remove(ev.id)}>🗑</button>
-        </li>
-      {/each}
-    </ul>
+    {#each eventsByDay as [day, evs] (day)}
+      <section class="day">
+        <h3>{day}</h3>
+        {#each evs as ev (ev.id)}
+          <div class="event">
+            <span class="when">{ev.all_day ? '全天' : localHHMM(ev.start)}</span>
+            <span class="esum">{ev.summary}</span>
+            {#if ev.location}<span class="eloc">{ev.location}</span>{/if}
+            <span class="esrc">{ev.source === 'caldav' ? 'CALDAV' : 'LOCAL'}</span>
+            <button class="act del" aria-label={`删除 ${ev.summary}`} onclick={() => calendar.remove(ev.id)}>×</button>
+          </div>
+        {/each}
+      </section>
+    {/each}
   {/if}
 </div>
 
@@ -90,82 +118,177 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    font-family: var(--sans);
+    color: var(--t2);
+  }
+  .h {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--t3);
+    letter-spacing: 1px;
+    text-transform: uppercase;
   }
   .tools {
     display: flex;
-    gap: 6px;
+    gap: 8px;
     flex-wrap: wrap;
   }
-  .tools button,
-  .addacc button {
-    border: 1px solid #cfcdd4;
-    background: #fff;
-    border-radius: 8px;
-    padding: 4px 12px;
+  .act {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--t4);
+    background: transparent;
+    border: 1px solid var(--line);
+    padding: 4px 10px;
     cursor: pointer;
-    font-size: 0.82rem;
+    transition: color .12s var(--ease);
   }
-  .addev {
+  .act:hover:not(:disabled) {
+    color: var(--t1);
+  }
+  .act:disabled {
+    cursor: default;
+    color: var(--t4);
+    border-color: var(--hair);
+  }
+  .act.pri {
+    color: var(--acc-ink);
+    border-color: var(--acc-ink);
+  }
+  .act.pri:disabled {
+    color: var(--t4);
+    border-color: var(--line);
+  }
+  .act.del {
+    border: 0;
+    padding: 2px 4px;
+  }
+  .act.del:hover {
+    color: var(--red);
+  }
+  .compose {
     display: flex;
-    gap: 6px;
+    align-items: center;
+    gap: 9px;
   }
-  .addev input {
-    padding: 5px 8px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
+  .car {
+    width: 2px;
+    height: 14px;
+    background: var(--acc);
+    flex: none;
+    animation: blink 1s steps(1) infinite;
   }
-  .addacc {
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+  .compose input,
+  .cdform input {
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--hair);
+    color: var(--t1);
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 3px 0 6px;
+    min-width: 0;
+  }
+  .compose input::placeholder,
+  .cdform input::placeholder {
+    color: var(--t4);
+  }
+  .compose input:focus,
+  .cdform input:focus {
+    outline: none;
+    border-bottom-color: var(--acc-ink);
+  }
+  .compose input {
+    flex: 1;
+  }
+  .compose input.dt {
+    flex: none;
+    width: 190px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color-scheme: dark light;
+  }
+  .cdform {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    padding: 8px;
-    background: #fafafa;
-    border-radius: 8px;
+    gap: 10px;
+    border: 1px solid var(--line);
+    padding: 10px 12px;
   }
-  .addacc input {
-    padding: 5px 8px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
+  .cdform input {
     flex: 1;
-    min-width: 140px;
+    min-width: 150px;
   }
   .cmsg {
-    font-size: 0.78rem;
-    color: #1c7a40;
-  }
-  .events {
-    list-style: none;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--green);
     margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    overflow: auto;
+  }
+  .err {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--red);
+    margin: 0;
+  }
+  .day h3 {
+    margin: 10px 0 4px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    color: var(--acc-ink);
+    border-bottom: 1px solid var(--hair);
+    padding-bottom: 3px;
+    font-variant-numeric: tabular-nums;
+  }
+  .day:first-of-type h3 {
+    margin-top: 2px;
   }
   .event {
     display: flex;
     gap: 10px;
     align-items: center;
-    padding: 5px 8px;
-    border: 1px solid #eceaef;
-    border-radius: 8px;
-    background: #fff;
+    padding: 4px 0;
+    border-top: 1px solid var(--hair);
+    font-size: 13px;
+  }
+  .day .event:first-of-type {
+    border-top: none;
   }
   .when {
-    font-family: ui-monospace, monospace;
-    font-size: 0.8rem;
-    color: #777;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--t3);
     flex: none;
+    min-width: 34px;
+    font-variant-numeric: tabular-nums;
   }
   .esum {
     flex: 1;
+    color: var(--t2);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
-  .del {
-    border: 0;
-    background: transparent;
-    cursor: pointer;
+  .eloc {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--t4);
+  }
+  .esrc {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: .5px;
+    color: var(--t4);
   }
   .empty {
-    color: #aaa;
+    color: var(--t4);
+    font-size: 13px;
+    margin: 2px 0;
   }
 </style>

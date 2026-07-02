@@ -5,6 +5,7 @@
   import { notes, type Note } from './notesStore.svelte'
   import { tasks } from './tasksStore.svelte'
   import { calendar } from '../mail/calendarStore.svelte'
+  import { localHHMM, localDateTime } from '../time'
   import Calendar from './Calendar.svelte'
 
   let view = $state<'notes' | 'journal' | 'tasks' | 'calendar'>('notes')
@@ -84,23 +85,6 @@
     return DOMPurify.sanitize(marked.parse(src ?? '', { async: false }) as string)
   }
 
-  // 后端时间戳是 UTC(created_at 无时区标记、next_run 带 +00:00);
-  // 显示一律转本地钟。裸 ISO 补 Z 再解析,避免被当本地时间。
-  function toLocal(iso: string): Date {
-    return new Date(/(Z|[+-]\d{2}:?\d{2})$/.test(iso) ? iso : iso + 'Z')
-  }
-  const pad2 = (n: number) => String(n).padStart(2, '0')
-  function hhmm(iso: string | null): string {
-    if (!iso) return ''
-    const d = toLocal(iso)
-    return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
-  }
-  function nextRunLabel(iso: string | null): string {
-    if (!iso) return '—'
-    const d = toLocal(iso)
-    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`
-  }
-
   const pad3 = (n: number) => String(n).padStart(3, '0')
 
   async function add() {
@@ -162,7 +146,7 @@
           <ul class="list">
             {#each noteItems as n (n.id)}
               <li class="note">
-                <span class="nt">{hhmm(n.created_at)}</span>
+                <span class="nt">{localHHMM(n.created_at)}</span>
                 <span class="body">{n.content}</span>
                 <span class="acts">
                   <button class="act" title="转为今天的日记" onclick={() => notes.toJournal(n.id)}>→日记</button>
@@ -263,7 +247,7 @@
                 <div class="task" class:off={!t.enabled}>
                   <input type="checkbox" class="cbx" checked={t.enabled} aria-label={`启用 ${t.name}`} onchange={() => tasks.toggle(t)} />
                   <span class="tname">{t.name}</span>
-                  <span class="tsched">{t.schedule_kind} · 下次 {nextRunLabel(t.next_run)}</span>
+                  <span class="tsched">{t.schedule_kind} · 下次 {localDateTime(t.next_run)}</span>
                   <span class="acts">
                     <button
                       class="act runs"
@@ -285,7 +269,7 @@
                       {#each tasks.runs as r (r.id)}
                         <div class="runrow">
                           <span class="rdot" class:ok={r.status === 'ok'} class:err={r.status === 'error'} aria-hidden="true"></span>
-                          <span class="rtime">{nextRunLabel(r.started_at)}</span>
+                          <span class="rtime">{localDateTime(r.started_at)}</span>
                           <span class="rstatus">{r.status}</span>
                           <span class="rout" title={r.output ?? ''}>{r.output ?? ''}</span>
                         </div>

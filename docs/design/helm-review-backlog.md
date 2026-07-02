@@ -11,7 +11,8 @@
 
 - [ ] [记录][P1][bug] cron next_run 后端按 UTC 计算：用户写 `0 9 * * *` 期望本地 9 点，实际 09:00 UTC 触发。前端已如实显示本地时间（会显 17:00 暴露错位），但语义修正需后端定 tz 策略（/api/tasks 为 notch 共用契约，不擅动）→ 已 add_question 待人定  (轮1/2026-07-02)
 - [ ] [外壳][P2][polish] Rail.svelte:60 `bind:this={btns['settings']}` 绑非响应式属性（Svelte dev 警告 binding_property_non_reactive）  (轮2/2026-07-02)
-- [ ] [日历][P1][gap] `Calendar.svelte` 仍是旧线框样式（硬编码 hex/圆角/emoji 风格外），归 F7 日历模块轮按 DESIGN.md 重设计（JournalView 已留 TODO）  (轮1/2026-07-02)
+- [ ] [日历][P2][gap] 日程只有账本 agenda 列表，模块表提的周/月网格视图未做（agenda 已可用，网格视图待产品优先级）  (轮3/2026-07-02)
+- [ ] [邮件][P2][bug] Mail.svelte（模式现禁用）toEvent 的 window.prompt 时间仍按裸本地串直发，重新启用邮件时需与日历 UTC 约定对齐  (轮3/2026-07-02)
 - [ ] [记录][P2][gap] 任务表单只暴露 cron；后端 at/every/execution_mode(existing|new_conversation) 未露出  (轮1/2026-07-02)
 - [ ] [记录][P2][gap] note→task 成功后速记行无「已转任务」标记（server 非破坏保留 note），可重复转出多任务；标记方式待产品定  (轮1/2026-07-02)
 - [ ] [记录][P2][polish] Today↔JournalView 账本 CSS（head/row/gut/framed/cbx/act.pri ≈100 行）手抄两份已现漂移（framed padding、.pg tabular-nums），抽共享 ledger 样式/组件  (轮1/2026-07-02)
@@ -22,6 +23,8 @@
 
 <!-- 修掉/wontfix 的条目归到这里，保留可追溯 -->
 
+- [x] [日历][P1][gap] Calendar.svelte 旧线框样式 → 修于 轮3 commit（重设计为座舱账本 agenda：按本地日分组 + accent 日期界标 + mono 工具/来源标 LOCAL|CALDAV + caret 输入 + 空态；emoji 🗑→×；全 token 双主题）  (轮1→轮3/2026-07-02)
+- [x] [日历][P0][bug] 事件创建时区往返错位：datetime-local 本地墙钟裸串直发、显示层按 UTC 解释（输 09:30 显 17:30，e2e 抓到）→ 修于 轮3 commit（calendarStore.add 转 UTC ISO 再发；共享 lib/time.ts 抽出 toLocal/localHHMM/localDate/localDateTime，JournalView 同步迁移）  (轮3/2026-07-02)
 - [x] [记录][P1][gap] 任务运行历史未接（GET /api/tasks/{id}/runs 有、UI 无）→ 修于 轮2 commit（tasksStore.toggleRuns + 任务行「N 次」按钮展开 mono 子账本抽屉：状态点/本地时间/输出省略；空态兜底；e2e 实测展开/收起/删除联动）  (轮2/2026-07-02)
 - [x] [基建][P1][gap] jsonFetch 无类型化列表守卫 → 修于 轮2 commit（lib/api.ts +jsonList<T>(path,key)：null=请求失败、[]=形状缺失；chat/memory/rag/mail/calendar/research/orchestration/notes/tasks 全部 16 处迁移，skillsStore 混合形状就地守卫）  (轮2/2026-07-02)
 
