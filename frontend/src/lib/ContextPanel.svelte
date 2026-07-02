@@ -80,11 +80,11 @@
   }
   .slab {
     font-family: var(--mono);
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: 1px;
     text-transform: uppercase;
-    color: var(--t4);
+    color: var(--t3);
     margin: 16px 0 8px;
   }
   .nrow {
@@ -117,9 +117,9 @@
   .telem {
     margin-top: 18px;
     font-family: var(--mono);
-    font-size: 9px;
-    line-height: 1.7;
-    color: var(--t4);
+    font-size: 10px;
+    line-height: 1.75;
+    color: var(--t3);
     letter-spacing: .3px;
   }
   .telem b {

@@ -158,8 +158,8 @@
   }
   .gut {
     font-family: var(--mono);
-    font-size: 9px;
-    color: var(--t4);
+    font-size: 10px;
+    color: var(--t3);
     line-height: 1.5;
     padding-top: 3px;
     letter-spacing: .3px;
@@ -169,8 +169,8 @@
   }
   .h {
     font-family: var(--mono);
-    font-size: 9px;
-    color: var(--t4);
+    font-size: 10px;
+    color: var(--t3);
     letter-spacing: 1px;
     text-transform: uppercase;
     margin-bottom: 7px;
