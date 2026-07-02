@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-03 04:55 · phase3-round11-kbnav(夜间模式)· P1 第10条
+- 对齐: 阶段3 轮11——主区键盘导航+Esc 分层退出(FanBox app:402-408/539-559/2152-2185)
+- 改动: FileBrowser(+键盘光标 cursorIdx——与选中分离,扫过目录不误入;measureCols 按 offsetTop 实测网格列数(列表=1);↑↓±cols/←→±1/Enter=select 语义/F2 重命名/⌘⌫ 走废纸篓(文件秒删目录轻确认)/Backspace 上一级;光标虚线 accent 外框+scrollIntoView;目录变更光标复位;Esc 全序:菜单→对话框→面板自管→灯箱让位→输入 blur→关预览);Lightbox Esc 加 .ctx/.dlg 让位守卫(一次只退一层)
+- 功能可用性: e2e 真机:↓↓ 光标落 frontend 目录→Enter 进入(cwd 变);3 个组件测锁:光标不触发 browse/Esc 两层顺序/F2 对话框/⌘⌫ trash POST/Backspace 上级
+- 取舍: Space 收藏依赖收藏功能(P2 条);⌘[ 历史栈未做(P2 导航条);终端/输入框聚焦时导航自动让位(inInput 检查)
+- 契约/notch 影响: 无(纯前端)
+- VibeHub: record_decision(F1)→ 见下条;矩阵 P1 10/14
+- 验证: 前端 build ✓/check 0/0(256 文件)/test 187(+3);后端未动(pytest 198 上轮全绿);视觉 dark 光标截图
+- 状态: ✅ 夜间自 commit(feat/cockpit-fanbox,未合 main)｜❓需确认: 无
+
 ## 2026-07-03 04:25 · phase3-round10-cmdk-search(夜间模式)· P1 第9条
 - 对齐: 阶段3 轮10——⌘K 文件名模糊+「内容:」全文搜索(FanBox app:1817-1914/srv:269-392)
 - 改动: 后端 +cockpit/search.py(fuzzyScore 原样移植:连续/词首/靠前加分+短名优先;search_files walk 60k/4s 预算+跳噪声目录+目录 +6/近期修改加权;search_content=mdfind 优先(runner 注入)→grep 兜底 ≤512KB 文本 mtime 倒序行级预览)+GET /api/cockpit/search(mode=name|content);前端 CommandPalette(命令+文件命中合并列/150ms 防抖+token 守卫/内容: 前缀切模式/Tab 切 当前目录↔全机/截断橙色提示/HIT·DIR·FILE mono 标+短路径/Enter→驾驶舱 openPath)

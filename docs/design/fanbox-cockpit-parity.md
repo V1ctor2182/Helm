@@ -16,7 +16,7 @@
 - [x] **双击语义 + 图片灯箱** → 轮8 搬入(双击图片→灯箱/pdf·zip·二进制→系统 App(open argv)/文本保持分栏(全屏预览 P2 账上);灯箱=滚轮 0.2-8x(FanBox 公式)+点空白/Esc 关+原生格式 raw·heic 走 w=1600 thumb) | 单击=分栏预览、双击文本→全屏、pdf/压缩包/二进制→系统 App;图片点击进灯箱(滚轮 0.2-8x、Esc/点空白关) | app:520-536, 759-771
 - [x] **终端手感三小件:Option 拖拽选中 + login shell + Nerd Font 栈** → 轮9 搬入(macOptionClickForcesSelection/minimumContrastRatio 4.5/Nerd 栈原样;后端 zsh -l+TERM+UTF-8 locale 兜底,shell_argv_env 纯函数直测;e2e 实证 zsh -l 进程+字体栈应用) | macOptionClickForcesSelection(TUI 鼠标上报吃拖拽);pty 用 zsh -l 读 .zprofile 找回 claude;JetBrainsMono/MesloLGS Nerd 字体栈防 tofu;低对比自动提亮 minimumContrastRatio 4.5 | app:2459-2510, CHANGELOG 1.11.2/1.11.3
 - [x] **⌘K 内容搜索(`内容:` 前缀)** → 轮10 搬入(文件名模糊=FanBox fuzzyScore 原样移植+目录/近期加权+60k/4s 预算;内容=mdfind 优先 grep 兜底(≤512KB/mtime 倒序/行级预览);⌘K 合并命令+文件命中,150ms 防抖,Tab 切 当前目录/全机,截断提示;Enter 直达驾驶舱预览;⌘↵ 编辑器整包打开留 P2) | mdfind Spotlight 优先(覆盖 PDF/OCR)、回退 grep(512KB 内文本);命中补行级预览+高亮;范围切换 全机/当前目录(Tab 键) | app:1817-1914, srv:269-392
-- [ ] **主区键盘导航 + Esc 分层退出** | ↑↓←→ 按实测列数移动、Enter 打开、Space 收藏、F2 重命名、⌘⌫ 废纸篓;Esc 菜单→cmdk→灯箱→全屏→blur→关预览逐层退 | app:402-408, 539-559, 2152-2185
+- [x] **主区键盘导航 + Esc 分层退出** → 轮11 搬入(光标≠选中——扫过目录不误入,Enter 才打开;↑↓按实测列数/←→±1/F2 重命名/⌘⌫ 废纸篓/Backspace 上一级;Esc 菜单→对话框→(面板/灯箱自管)→输入 blur→关预览逐层退;Space 收藏归 P2 收藏条) | ↑↓←→ 按实测列数移动、Enter 打开、Space 收藏、F2 重命名、⌘⌫ 废纸篓;Esc 菜单→cmdk→灯箱→全屏→blur→关预览逐层退 | app:402-408, 539-559, 2152-2185
 - [ ] **变更收件箱(改·N)** | 顶栏变更徽标;面板列本会话 100 条(去重计数、最新置顶),点行直达预览,可清空;卡片「改·N」热度发光+tooltip 子路径+4.5s 消退(helm 现只有闪一下) | app:437-454, 3193-3253
 - [ ] **拖文件进终端** | 卡片可拖,落进终端插入 shell 单引号转义路径;dragover 虚线高亮;全局 drop 兜底防导航 | app:465-511, 2060-2090
 - [ ] **监听噪声过滤补全** | 隐藏/点目录、node_modules/dist 等构建目录、sqlite sidecar(-journal/-shm/-wal)、中段 .tmp 原子写临时名——高亮/收件箱/跟随共用一套(helm 现有过滤较粗) | app:3183-3192
@@ -76,4 +76,5 @@
 | 7 | 缩略图管线(图片) | fd8c412 |
 | 8 | 双击语义+图片灯箱 | cb7873e |
 | 9 | 终端手感三小件 | 0d47e48 |
-| 10 | ⌘K 文件名模糊+内容搜索 | (见 git log 轮10) |
+| 10 | ⌘K 文件名模糊+内容搜索 | 4f76a6a |
+| 11 | 键盘导航+Esc 分层 | (见 git log 轮11) |

@@ -3,6 +3,7 @@
   import { cockpit } from './cockpit.svelte'
   import { iconFor } from './fileIcons'
   import { previewKind } from './previewKind'
+  import { layout } from '../layout.svelte'
 
   let pathInput = $state('')
 
@@ -13,6 +14,9 @@
     entry: import('./cockpit.svelte').Entry | null // null = 空白处
   }
   let menu = $state<Menu | null>(null)
+  // 键盘光标(承 FanBox:光标≠选中,Enter 才打开;目录不因光标扫过而误入)
+  let cursorIdx = $state(-1)
+  let gridEl = $state<HTMLElement | null>(null)
   interface Dialog {
     kind: 'rename' | 'newfile' | 'newdir' | 'trashdir'
     target?: string // rename/trashdir 的路径
@@ -34,12 +38,105 @@
     menu = null
   }
 
+  // 网格实测列数(offsetTop 同第一行的个数;列表=1)
+  function measureCols(): number {
+    if (cockpit.viewMode === 'list' || !gridEl) return 1
+    const items = gridEl.querySelectorAll('.card')
+    if (!items.length) return 1
+    const top0 = (items[0] as HTMLElement).offsetTop
+    let c = 0
+    for (const it of items) {
+      if ((it as HTMLElement).offsetTop === top0) c++
+      else break
+    }
+    return Math.max(1, c)
+  }
+
+  function moveCursor(d: number) {
+    const n = sortedEntries.length
+    if (!n) return
+    cursorIdx = cursorIdx < 0 ? 0 : Math.min(n - 1, Math.max(0, cursorIdx + d))
+    // 光标滚到可视区
+    const el = document.querySelector(`[data-idx="${cursorIdx}"]`)
+    el?.scrollIntoView({ block: 'nearest' })
+  }
+
+  function cursorEnter() {
+    const e = sortedEntries[cursorIdx]
+    if (!e) return
+    cockpit.select(e) // dir→browse,file→选中预览(store 语义)
+  }
+
+  function parentUp() {
+    if (parent) void cockpit.browse(parent)
+  }
+
+  // Esc 分层退出 + 主区键盘导航(承 FanBox app:2152-2185,一次退一层)
   function onWinKey(e: KeyboardEvent) {
-    if (e.key === 'Escape') {
-      if (dialog) dialog = null
-      else if (menu) closeMenu()
+    // ① 右键菜单
+    if (e.key === 'Escape' && menu) {
+      closeMenu()
+      return
+    }
+    // ② 自绘对话框
+    if (e.key === 'Escape' && dialog) {
+      dialog = null
+      return
+    }
+    // ③ 命令面板自管(开着时这里不抢)
+    if (layout.paletteOpen) return
+    // ④ 灯箱(Lightbox 组件自己也处理,这里让位)
+    if (cockpit.lightboxPath) return
+    const ae = document.activeElement
+    const inInput =
+      !!ae && (['INPUT', 'TEXTAREA', 'SELECT'].includes(ae.tagName) || (ae as HTMLElement).isContentEditable)
+    // ⑤ 输入框里 Esc 先退出输入,别越级关预览
+    if (e.key === 'Escape' && inInput) {
+      ;(ae as HTMLElement).blur()
+      return
+    }
+    // ⑥ 关预览(取消选中)
+    if (e.key === 'Escape' && cockpit.selected) {
+      cockpit.selected = null
+      return
+    }
+    if (inInput || !cockpit.cwd) return
+    // 主区键盘导航
+    const cols = measureCols()
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      moveCursor(cols)
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      moveCursor(-cols)
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault()
+      moveCursor(1)
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault()
+      moveCursor(-1)
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      cursorEnter()
+    } else if ((e.metaKey || e.ctrlKey) && (e.key === 'Backspace' || e.key === 'Delete')) {
+      e.preventDefault()
+      const it = sortedEntries[cursorIdx]
+      if (it) askTrash(it)
+    } else if (e.key === 'Backspace') {
+      e.preventDefault()
+      parentUp()
+    } else if (e.key === 'F2') {
+      e.preventDefault()
+      const it = sortedEntries[cursorIdx]
+      if (it) askRename(it.path, it.name)
     }
   }
+
+  // 目录变了 → 光标复位
+  $effect(() => {
+    void cockpit.entries
+    cursorIdx = -1
+  })
 
   async function copyPath(p: string) {
     try {
@@ -225,10 +322,12 @@
         <div class="fhead" role="row">
           <span class="fname">名称</span><span class="ftime">修改时间</span><span class="fsize">大小</span>
         </div>
-        {#each sortedEntries as e (e.path)}
+        {#each sortedEntries as e, idx (e.path)}
           {@const ic = iconFor(e)}
           <button
             class="frow"
+            data-idx={idx}
+            class:cursor={cursorIdx === idx}
             class:selected={cockpit.selected?.path === e.path}
             class:changed={cockpit.changedPaths.has(e.path)}
             onclick={() => cockpit.select(e)}
@@ -243,11 +342,13 @@
         {/each}
       </div>
     {:else}
-    <div class="grid g-{cockpit.gridSize}">
-      {#each sortedEntries as e (e.path)}
+    <div class="grid g-{cockpit.gridSize}" bind:this={gridEl}>
+      {#each sortedEntries as e, idx (e.path)}
         {@const ic = iconFor(e)}
         <button
           class="card"
+          data-idx={idx}
+          class:cursor={cursorIdx === idx}
           class:selected={cockpit.selected?.path === e.path}
           class:changed={cockpit.changedPaths.has(e.path)}
           onclick={() => cockpit.select(e)}
@@ -645,6 +746,11 @@
   }
   .card.changed {
     animation: flash 1.2s ease-out;
+  }
+  .card.cursor,
+  .frow.cursor {
+    outline: 1px dashed var(--acc-ink);
+    outline-offset: -1px;
   }
   @keyframes flash {
     0% {

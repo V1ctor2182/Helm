@@ -31,7 +31,8 @@
   }
 
   function onKey(e: KeyboardEvent) {
-    if (e.key === 'Escape' && cockpit.lightboxPath) close()
+    // Esc 分层:右键菜单/对话框在上层时让位(一次只退一层)
+    if (e.key === 'Escape' && cockpit.lightboxPath && !document.querySelector('.ctx, .dlg')) close()
   }
 </script>
 
