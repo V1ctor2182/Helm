@@ -62,8 +62,11 @@ export class MemoryStore {
 
   async remove(id: number): Promise<void> {
     const ok = await this.#json(`/api/memories/${id}`, { method: 'DELETE' })
-    if (ok) await this.load()
-    else this.error = '删除失败'
+    if (ok) {
+      await this.load()
+      // 搜索结果视图里删掉的行也要消失
+      if (this.results) this.results = this.results.filter((r) => r.id !== id)
+    } else this.error = '删除失败'
   }
 
   async togglePin(m: Memory): Promise<void> {
@@ -72,7 +75,11 @@ export class MemoryStore {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ pinned: !m.pinned }),
     })
-    if (ok) await this.load()
+    if (ok) {
+      await this.load()
+      // 搜索结果视图里的同一条也要立即反映置顶态
+      if (this.results) this.results = this.results.map((r) => (r.id === m.id ? { ...r, pinned: !m.pinned } : r))
+    }
   }
 
   async search(): Promise<void> {

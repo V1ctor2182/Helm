@@ -6,6 +6,18 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 14:35 · phase2-round6-memory（夜间模式）· F4 大脑切片1
+- 对齐: 阶段2 第6轮——大脑模式壳(BrainPanel)+记忆视图座舱化;修搜索结果不同步 bug
+- 设计基线: DESIGN.md(仪表头/账本行/accent 配给/禁 emoji;未改)
+- 改动: `memory/BrainPanel.svelte`(MEMORY 仪表头+三计数+accent 底线 tab)、`memory/Memory.svelte`(重写:分类 chips/导入导出 act/caret compose/搜索行/账本行 FACT tag+score+PIN+×/置顶 accent 左栏)、`memoryStore`(置顶/删除同步 patch 搜索 results)
+- 功能可用性: e2e 真后端:加记忆→计数 001→混合检索命中(score 0.5913,向量检索 live)→置顶持久化→删除→空态;烟测清净
+- 取舍: RAG/Skills 子视图仍旧线框(记 P1 下一轮);emoji 🧠📌📍🗑 全清(PIN 用 mono 文字钮)
+- 复查: e2e 抓到搜索结果视图 pin/删不反映(store 只刷 items)当轮修;新增 P1×1(Rag/Skills 视图)
+- 契约/notch 影响: 无(MCP 工具契约 ca4b5e64 未触碰)
+- VibeHub: record_decision「阶段2·轮6 大脑壳+记忆座舱化」→ 56d20d32 (ai_proposed, F4)
+- 验证: npm build ✓/check 0 错 0 警(248 文件)/test 155;视觉 dev 5174 dark+light 核过
+- 状态: ✅ 夜间自 commit(feat/design-shell-today,未合 main)｜❓需确认: 无
+
 ## 2026-07-02 14:22 · phase2-round5-compare（夜间模式）· F2 多模型对比
 - 对齐: 阶段2 第5轮——清 backlog P1:多模型并排对比+盲测(intent 4501c6dd),零后端改动
 - 设计基线: DESIGN.md(框选视口=活的输出/mono 配给/accent 语汇;未改)

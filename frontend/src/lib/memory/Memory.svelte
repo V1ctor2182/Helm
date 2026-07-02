@@ -43,56 +43,50 @@
 </script>
 
 <section class="memory" aria-label="Memory">
-  <header>
-    <h2>🧠 记忆</h2>
+  <div class="toolrow">
+    <div class="filters" role="tablist" aria-label="分类筛选">
+      <button class="chip" class:active={memory.filter === 'all'} onclick={() => memory.setFilter('all')}>全部</button>
+      {#each CATEGORIES as c (c)}
+        <button class="chip" class:active={memory.filter === c} onclick={() => memory.setFilter(c)}>{c}</button>
+      {/each}
+    </div>
     <div class="io">
-      <button onclick={doExport}>导出 JSON</button>
-      <label class="import">
+      <button class="act" onclick={doExport}>导出 JSON</button>
+      <label class="act import">
         导入
         <input type="file" accept="application/json" onchange={onImportFile} />
       </label>
     </div>
-  </header>
+  </div>
 
   <form
-    class="add"
+    class="compose"
     onsubmit={(e) => {
       e.preventDefault()
       void add()
     }}
   >
-    <input
-      class="text"
-      placeholder="记住点什么…(事实 / 偏好 / 决策)"
-      bind:value={draft}
-      aria-label="记忆内容"
-    />
+    <span class="car" aria-hidden="true"></span>
+    <input class="text" placeholder="记住点什么…(事实 / 偏好 / 决策)" bind:value={draft} aria-label="记忆内容" />
     <select bind:value={draftCat} aria-label="分类">
       {#each CATEGORIES as c (c)}
         <option value={c}>{c}</option>
       {/each}
     </select>
-    <button type="submit" disabled={!draft.trim()}>添加</button>
+    <button class="act pri" type="submit" disabled={!draft.trim()}>添加</button>
   </form>
 
-  <div class="search">
+  <div class="compose search">
     <input
       placeholder="搜索记忆(关键词 + 语义)…"
       bind:value={memory.query}
       onkeydown={(e) => e.key === 'Enter' && memory.search()}
       aria-label="搜索"
     />
-    <button onclick={() => memory.search()}>搜索</button>
+    <button class="act" onclick={() => memory.search()}>搜索</button>
     {#if memory.results !== null}
-      <button onclick={() => memory.clearSearch()}>清除</button>
+      <button class="act" onclick={() => memory.clearSearch()}>清除</button>
     {/if}
-  </div>
-
-  <div class="filters" role="tablist" aria-label="分类筛选">
-    <button class:active={memory.filter === 'all'} onclick={() => memory.setFilter('all')}>全部</button>
-    {#each CATEGORIES as c (c)}
-      <button class:active={memory.filter === c} onclick={() => memory.setFilter(c)}>{c}</button>
-    {/each}
   </div>
 
   {#if memory.error}
@@ -107,22 +101,19 @@
     <ul class="list">
       {#each shown as m (m.id)}
         <li class="item" class:pinned={m.pinned}>
-          <div class="meta">
-            <span class="cat">{m.category}</span>
-            {#if 'score' in m}<span class="score">{(m as { score: number }).score}</span>{/if}
-          </div>
+          <span class="cat">{m.category}</span>
           <p class="body">{m.text}</p>
-          <div class="actions">
+          <span class="acts">
+            {#if 'score' in m}<span class="score">{(m as { score: number }).score}</span>{/if}
             <button
-              class="pin"
+              class="act pin"
+              class:on={m.pinned}
               aria-pressed={m.pinned}
               title={m.pinned ? '取消置顶' : '置顶'}
-              onclick={() => memory.togglePin(m)}>{m.pinned ? '📌' : '📍'}</button
+              onclick={() => memory.togglePin(m)}>PIN</button
             >
-            <button class="del" aria-label={`删除 ${m.text}`} onclick={() => memory.remove(m.id)}
-              >🗑</button
-            >
-          </div>
+            <button class="act del" aria-label={`删除 ${m.text}`} onclick={() => memory.remove(m.id)}>×</button>
+          </span>
         </li>
       {/each}
     </ul>
@@ -134,109 +125,192 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    padding: 14px;
+    padding: 12px 24px 18px 18px;
     overflow: auto;
     height: 100%;
+    box-sizing: border-box;
   }
-  header {
+  .toolrow {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 12px;
   }
-  header h2 {
-    margin: 0;
-    font-size: 1.05rem;
+  .filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .chip {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .5px;
+    color: var(--t4);
+    background: transparent;
+    border: 1px solid var(--line);
+    padding: 3px 9px;
+    cursor: pointer;
+    transition: color .12s var(--ease);
+  }
+  .chip:hover {
+    color: var(--t1);
+  }
+  .chip.active {
+    color: var(--acc-ink);
+    border-color: var(--acc-ink);
   }
   .io {
+    margin-left: auto;
     display: flex;
-    gap: 6px;
+    gap: 8px;
+  }
+  .act {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--t4);
+    background: transparent;
+    border: 1px solid var(--line);
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: color .12s var(--ease);
+  }
+  .act:hover {
+    color: var(--t1);
+  }
+  .act.pri {
+    color: var(--acc-ink);
+    border-color: var(--acc-ink);
+  }
+  .act.pri:disabled {
+    color: var(--t4);
+    border-color: var(--line);
+    cursor: default;
   }
   .import {
-    font-size: 0.8rem;
-    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
   }
   .import input {
     display: none;
   }
-  .add,
-  .search {
+  .compose {
     display: flex;
-    gap: 6px;
+    align-items: center;
+    gap: 9px;
   }
-  .add .text,
-  .search input {
+  .car {
+    width: 2px;
+    height: 14px;
+    background: var(--acc);
+    flex: none;
+    animation: blink 1s steps(1) infinite;
+  }
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+  .compose input {
     flex: 1;
-    padding: 6px 8px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--hair);
+    color: var(--t1);
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 3px 0 6px;
+    min-width: 0;
   }
-  .filters {
-    display: flex;
-    gap: 4px;
+  .compose input::placeholder {
+    color: var(--t4);
   }
-  .filters button {
-    border: 1px solid #e5e4e7;
-    background: #f4f3f5;
-    border-radius: 999px;
-    padding: 3px 10px;
-    cursor: pointer;
-    font-size: 0.8rem;
+  .compose input:focus {
+    outline: none;
+    border-bottom-color: var(--acc-ink);
   }
-  .filters button.active {
-    background: #fff;
-    border-color: #cfcdd4;
+  .compose select {
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--hair);
+    color: var(--t1);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 0 5px;
+  }
+  .compose select option {
+    background: var(--panel);
+    color: var(--t1);
+  }
+  .compose select:focus {
+    outline: none;
+    border-bottom-color: var(--acc-ink);
+  }
+  .search {
+    padding-left: 11px; /* 与 compose 的 caret 对齐 */
   }
   .list {
     list-style: none;
     margin: 0;
     padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
   }
   .item {
-    border: 1px solid #eceaef;
-    border-radius: 10px;
-    padding: 8px 10px;
-    background: #fff;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 5px 0;
+    border-top: 1px solid var(--hair);
+    font-size: 13px;
+  }
+  .item:first-child {
+    border-top: none;
   }
   .item.pinned {
-    border-color: #d9b8ff;
-    background: #faf6ff;
-  }
-  .meta {
-    display: flex;
-    gap: 8px;
-    align-items: center;
+    border-left: 2px solid var(--acc);
+    padding-left: 8px;
   }
   .cat {
-    font-size: 0.7rem;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: .5px;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #8a7fa3;
-  }
-  .score {
-    font-size: 0.7rem;
-    color: #aaa;
+    color: var(--t4);
+    flex: none;
+    min-width: 62px;
   }
   .body {
-    margin: 4px 0;
+    margin: 0;
+    flex: 1;
+    color: var(--t2);
+    word-break: break-word;
   }
-  .actions {
+  .acts {
     display: flex;
+    align-items: center;
     gap: 6px;
-    justify-content: flex-end;
+    flex: none;
   }
-  .actions button {
+  .score {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--t4);
+    font-variant-numeric: tabular-nums;
+  }
+  .act.pin,
+  .act.del {
     border: 0;
-    background: transparent;
-    cursor: pointer;
+    padding: 2px 4px;
+  }
+  .act.pin.on {
+    color: var(--acc-ink);
+  }
+  .act.del:hover {
+    color: var(--red);
   }
   .err {
-    color: #c0392b;
-    font-size: 0.85rem;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--red);
+    margin: 0;
   }
   .empty {
-    color: #aaa;
+    color: var(--t4);
+    font-size: 13px;
   }
 </style>
