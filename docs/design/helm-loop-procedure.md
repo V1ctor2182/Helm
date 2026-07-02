@@ -3,9 +3,9 @@
 > 这条 loop 的本体:**`docs/design/helm-pro.html` 是锁定的最终设计稿(只读、唯一真相),配合 `DESIGN.md`(token/规则);把它的 UI 一块一块"原样"实现进 Svelte 前端,直到跑起来的 Helm 和 helm-pro.html 看起来/用起来一模一样。**
 > 启动命令见 [`helm-loop-prompt.md`](./helm-loop-prompt.md)。这是**真实开发**(F8 workspace-layout room),仿 notch 的 [`notch-loop-procedure.md`](../../notch/docs/notch-loop-procedure.md) 但目标从 Swift 换成 **Svelte 前端**。
 
-> **两阶段。本 loop 分两个阶段,先视觉后数据:**
-> - **阶段 1 · 前端保真(先做,默认档位):** 把 Svelte 前端做到和 `helm-pro.html` 一模一样(布局/色/字号/间距/尺寸/动画/交互/双主题)。**后端数据不碰。**
-> - **阶段 2 · 后端接入 + 暴露给 notch(前端差不多之后再做):** 把设计稿的 mock 逐块换成真后端数据(`/api` + 流),并把该暴露的能力做成 notch 也消费的稳定契约。详见下方「阶段 2」大节。
+> **两阶段。本 loop 分两个阶段:**
+> - **阶段 1 · 前端外壳保真(已完成,合入 main):** 把 Svelte 前端外壳(Shell + Today + 双主题 + 细丝 Rail + 状态栏 + ORAGE chrome + ⌘K/⌘N)做到和 `helm-pro.html` 一模一样。
+> - **阶段 2 · 逐模块完善,让所有功能真能用(当前):** 一个模块一个模块地把各模式(Chat / 驾驶舱 / 研究 / 记忆 / 记录 / 日历 / 邮件 / 设置)从占位做成端到端可用——设计视图(helm-pro 没画,按 `DESIGN.md` 系统新设计)→ 建 Svelte UI → 接真后端 `/api` → 功能真能跑通,并守 notch 契约。详见下方「阶段 2」大节。
 
 > **🎯 阶段 1 范围(唯一目标):把 Svelte 前端做到和 `helm-pro.html` 一模一样。后端数据接入不在阶段 1 范围内——**
 > - 数据一律用**和设计稿同款的 mock**(helm-pro.html 里写死什么就照搬:tasks、journal、agents、projects、mail、SESSION/MODEL/TOKENS 遥测值等)。已有真实数据源(后端 `/api`、本机 agent hook)照用,但**不为「接某个后端端口」而停留、阻塞、或去猜后端接口**。
@@ -139,60 +139,76 @@ loop 现在的活 = **从零把 helm-pro.html 的设计逐块做进这套骨架*
 
 ---
 
-# 阶段 2 · 后端接入 + 暴露给 notch
+# 阶段 2 · 逐模块完善(让所有功能真能用)
 
-> **触发时机:** 阶段 1 差不多之后(外壳 / 细丝 Rail / Today 读数 / 双主题 / 状态栏 / ORAGE chrome 都对齐、跑起来和 `helm-pro.html` 一模一样),再进阶段 2。不必 100% 像素完美才进——主体对齐、剩零星细节可并行。
+> **触发时机:** 阶段 1 外壳保真已完成并合入 main(Shell + Today + 双主题 + 细丝 Rail + 状态栏 + ORAGE chrome + ⌘K/⌘N 全对齐 helm-pro)。现在进阶段 2。
 >
-> **目标:** 把设计稿里的 mock 逐块换成**真后端数据**,并把 Helm 后端该暴露的能力做成 **notch 也消费的稳定契约**——同一个 FastAPI 后端,主前端(Web)和 notch(原生 Swift 客户端)吃同一套 `/api`,逻辑不分叉。
+> **目标:** **一个模块一个模块地做成真能用的功能**——把每个模式(Chat / 驾驶舱 / 研究 / 记忆 / 记录 / 日历 / 邮件 / 设置)从占位做成端到端可用:设计它的视图 → 建 Svelte UI → 接真后端 `/api` → 功能真能跑通。顺带把该暴露的能力做成 **notch 也消费的稳定契约**(同一 FastAPI 后端,Web 前端 + notch 原生客户端吃同一套 `/api`,逻辑不分叉)。
+>
+> **和阶段 1 最大的不同:** 阶段 1 有 `helm-pro.html` 当像素靶;**阶段 2 的各模式 helm-pro 没画**——所以每个模块要**先按 `DESIGN.md` 的设计系统新设计它的视图**(座舱美学:黑/白双主题 token、细丝/仪表观感、无卡片优先、禁 emoji、mono/sans 硬切、招牌缓动),和已落地的外壳一致。复杂模块(如驾驶舱、Chat)可先跑 `/design-consultation` 或手搓一张该模块的设计稿再实现;简单的直接照系统建。参考既有决策:UI 参考 AionUi renderer、驾驶舱逻辑参考 FanBox、大脑能力参考 Odysseus(见各 Room 的 record_decision)。
 
-## 阶段 2 的两个文件(和阶段 1 不同)
+## 阶段 2 要改的目标(比阶段 1 大)
 
-- **只读设计基线仍是 `helm-pro.html` + `DESIGN.md`**:接了真数据后,**视觉/布局/空态必须仍和设计稿一模一样**(真数据渲染进同一套版式;没数据走优雅空态,别破版)。设计稿依旧不改。
-- **要改的目标**(阶段 2 扩大):
-  - 前端 `frontend/src/`:把 mock 换成 `fetch('/api/...')` + WS/SSE 流(vite 已 proxy `/api`→后端);抽数据层(如 `lib/api.ts` / 各 store)。
-  - 后端 `helm/`:缺的端点就加/补(FastAPI 路由:`cockpit/chat/memory/rag/skills/orchestration/research/notes/tasks/calendar/settings`;后端 `127.0.0.1:8769`,前端 static 挂 `/`、`/api/*` 优先)。
-  - notch 客户端 `notch/Sources/HelmNotchCore/HelmBackend.swift`:只在**改动了 notch 消费的契约**时才碰(见下「notch 契约」)。
+- **前端 `frontend/src/`**:把各模式的占位换成**真组件 + 真数据**(`fetch('/api/...')` + WS/SSE 流;vite 已 proxy `/api`→后端);抽数据层(`lib/api.ts` / 各 store)。设计上和外壳同一套 token、禁 emoji。
+- **后端 `helm/`**:缺的端点就加/补(FastAPI 路由:`cockpit/chat/memory/rag/skills/orchestration/research/notes/tasks/calendar/settings`;后端 `127.0.0.1:8769`,前端 static 挂 `/`、`/api/*` 优先)。**只补该模块要的,别一次动一大片。**
+- **notch 客户端 `notch/Sources/HelmNotchCore/HelmBackend.swift`**:只在**改动了 notch 消费的契约**时才碰(见「notch 契约」)。
+
+## 模块清单(逐个做成可用;顺序按价值/依赖,可自行判断)
+
+| 模块(模式) | 归属 room | 后端 router | 做成可用 = | 参考 |
+|---|---|---|---|---|
+| **Chat 与多模型** | F2 chat-multimodel | `chat` | provider 配置 + 流式对话 + 会话持久化/切换 | Odysseus chat / AionUi |
+| **驾驶舱 Cockpit** | F1 cockpit | `cockpit` | 文件浏览/预览 + 内嵌终端(xterm 已在) + 实时看 agent 改动 | FanBox |
+| **Agent 编排** | F5 agent-orchestration | `orchestration` | 起/接 Claude Code 会话 + ACP 事件流 → Today/状态栏/驾驶舱实时 | AionUi team/ACP |
+| **Deep Research** | F3 deep-research | `research` | 发起研究 + 迭代进度 + 带引用的报告 | Odysseus deep_research |
+| **记忆/RAG/Skills** | F4 memory-rag-skills | `memory`/`rag`/`skills` | 记忆浏览/搜 + 文档 RAG + skills 透视 | Odysseus |
+| **记录(日记/速记/任务)** | F6 journal-notes-tasks | `notes`/`tasks` | 笔记/日记列表 + 任务 + ⌘N 落库(已有 `POST /api/notes`) | Odysseus Keep |
+| **日历** | F7 email-calendar | `calendar` | 事件列表/周月视图 + CalDAV(已有 `GET /api/calendar/events`) | Odysseus |
+| **邮件** | F7 email-calendar | `mail`(现禁用) | 邮件列表 + AI 分诊(后端 mail 先启用再接) | Odysseus |
+| **设置** | F8/F0 | `settings`/`setup` | 主题(黑/白/accent)+ 后端连接 + 本机 hook + 媒体源 | helm-pro settings modal |
+| **Today 真数据** | F8 workspace-layout | 聚合上列 | Today 各节 mock→真(任务/agent/项目/邮件/遥测) | — |
 
 ## notch 契约(暴露给 notch 的稳定 `/api`)
 
-notch 已经是 Helm 后端的原生客户端(`HelmClient` → `http://127.0.0.1:8769`),**现在就消费这些**——阶段 2 把主前端也接到同一套,并保持契约稳定:
+notch 已是 Helm 后端的原生客户端(`HelmClient` → `http://127.0.0.1:8769`),**现在就消费这些**——做到对应模块时把主前端也接到同一套,并保持契约稳定:
 
 | 能力 | 端点(现有/规划) | notch 侧消费者 | 主前端消费者 | 归属 room |
 |---|---|---|---|---|
 | 健康/连接 | `GET /healthz` | 连接状态点 | 状态栏 live 点 | F0 platform-shell |
-| 速记/日记 | `POST /api/notes`(kind/journalDate) | 速记 5-kind | Today 日记 + ⌘N | F6 journal-notes-tasks |
-| 任务 | `POST /api/tasks` · `GET /api/tasks` | 派发任务 | Today 任务 | F6 |
-| agent 活动 | `GET /api/orchestration/runs`(+ 期望 **WS/SSE 流**) | agent 监控 | Today Agent 收件箱 + 状态栏 | F5 agent-orchestration |
-| 日历 | `GET /api/calendar/events` | 下个日程/提醒 | Today(日历模式) | F7 email-calendar |
+| 速记/日记 | `POST /api/notes`(kind/journalDate) | 速记 5-kind | 记录模式 + Today 日记 + ⌘N | F6 |
+| 任务 | `POST /api/tasks` · `GET /api/tasks` | 派发任务 | 记录模式 + Today 任务 | F6 |
+| agent 活动 | `GET /api/orchestration/runs`(+ 期望 **WS/SSE 流**) | agent 监控 | 驾驶舱 + Today Agent 收件箱 + 状态栏 | F5 |
+| 日历 | `GET /api/calendar/events` | 下个日程/提醒 | 日历模式 + Today | F7 |
 | 媒体 | now-playing(规划) | 折叠条媒体 | (Today/媒体) | — |
 | 会话遥测 | model/tokens/latency/rag(规划,可并进 orchestration 流) | (可选) | context 遥测块 + 状态栏 | F5 |
 
 > **原则:** 一个能力**一套 `/api` 契约,两个前端共用**。notch 要的和主前端要的,做成同一个端点/同一份 DTO——不为 notch 单开一套,也不为主前端把 notch 的接口改坏。
 
-## 阶段 2 每一轮(= 接一个数据源)
+## 阶段 2 每一轮(= 把一个模块做成可用;默认一个模块可拆几轮)
 
-和阶段 1 同节奏,只是"块"从"视觉块"变成"数据源":
+模块大,一个模块通常拆成几轮(先视图骨架、再接数据、再补交互),每轮仍是一个能提交的完整小块。节奏:
 
-1. **选一个数据源**,按依赖/价值排序(建议):**① 健康/连接(状态栏 live 点 + context) → ② 速记/日记(⌘N + Today 日记,已有 `POST /api/notes`) → ③ 任务(Today 任务) → ④ agent 活动(Today Agent 收件箱 + 状态栏,`orchestration/runs`,补实时流) → ⑤ 最近项目(cockpit) → ⑥ 会话遥测(context 块) → ⑦ 日历 → ⑧ 邮件(F7,后端 mail 现禁用,后加) → ⑨ chat/research/memory 各模式**。别和 log 重复。
-2. **摸清契约**:读后端对应 router(`helm/<feature>/*` + `helm/app.py` 的 mount)拿到真实端点/DTO;读 notch `HelmBackend.swift` 看它怎么消费同一能力。**对不上就以"两个前端共用一套"为准去统一**。
-3. **对齐 VibeHub**(记进**对应 feature room**,不只 F8):这条数据怎么接、契约长什么样。
-4. **接进前端**:把该块的 mock 换成真 `/api` 调用 / 流;**保持设计稿版式不变**——真数据填进同一布局,无数据走优雅空态(别破版、别塞占位丑态)。抽到数据层(`lib/api.ts`/store),组件只消费。
-5. **后端补端点(若缺)**:在对应 `helm/<feature>` router 加/补;**保持对 notch 的契约向后兼容**——若必须改 notch 也用的端点,**同一次改动里一起更新 `HelmBackend.swift`** 并 `record_decision` 记契约变更 + `add_constraint` 钉住契约。**绝不悄悄改坏 notch 消费的接口。**
-6. **硬门(阶段 2 更严)**:
-   - 前端:`npm run build` + `check` + `test` 全绿。
-   - 后端(改了才跑):`pytest`(仓库根 `pytest` 或对应模块)全绿。
-   - 若改了 notch 契约:`cd notch && swift build && swift test` 全绿(别把 notch 编坏)。
-7. **视觉门**:真数据 + 空态都要和设计稿版式一致(browse dark/light 对比);**并验证 notch 仍正常**(改了共用端点时)。
-8. **记 context + log + 每轮 report**:同阶段 1(report 里多一行「契约/notch 影响」)。
+1. **选一个模块 / 该模块的一个可用切片**(按上表顺序或你的判断)。别和 log 重复。
+2. **拉这个 Room 的 context**:`get_feature_context(<该模块 room>)` + `get_file_context` + 读后端对应 router(`helm/<feature>/*` + `helm/app.py` mount)拿真实端点/DTO + 读参考实现(AionUi/FanBox/Odysseus,见该 Room 决策)+ 读现状 Svelte 占位。
+3. **设计该模块视图**(helm-pro 没画→按 `DESIGN.md` 系统新设计,和外壳一致:双主题 token、座舱观感、无卡片优先、禁 emoji)。复杂的先手搓/`/design-consultation` 出一张该模块设计稿放 `docs/design/`,当该模块的视觉基线;简单的直接照系统建。
+4. **建 Svelte UI**(真组件,不是占位)——布局/交互做出来,数据先可空态。走 app.css token、走 theme store、禁 emoji。
+5. **接真后端 `/api`**:把数据接上(`fetch`/流,抽 `lib/api.ts`/store);缺端点就在对应 `helm/<feature>` router 补,**保持对 notch 契约向后兼容**——若必须改 notch 也用的端点,**同一次改动一起更新 `HelmBackend.swift`** + `record_decision` 记契约 + `add_constraint` 钉住。**绝不悄悄改坏 notch。**
+6. **端到端可用**:这个切片**真能用**(点得动、跑得通、错误有兜底、无数据有空态)。不是画个壳。
+7. **硬门**:前端 `npm run build`+`check`+`test` 全绿;改了后端跑 `pytest` 全绿;改了 notch 契约跑 `cd notch && swift build && swift test` 全绿。**非全绿绝不 commit。**
+8. **视觉门**:`npm run dev`(5174)截图 dark/light,视图和该模块设计稿/系统一致、空态好看;改了共用端点验证 **notch 仍正常**。
+9. **记 context(记进该模块 Room,不只 F8)+ 写 log + 每轮 report**(report 多一行「功能可用性:能用/差什么」+「契约/notch 影响」)。
+10. **commit**(夜间自 commit 到 `feat/<模块>-*` 或统一 `feat/modules-*` 分支;不合 main)。
 
 ## 阶段 2 硬规则(在阶段 1 硬规则之上加)
 
-- **设计稿仍只读、仍是视觉真相**:接了真数据不许破版,空态也要好看。
+- **做成"真能用",不是画壳**:每个切片要点得动、接真数据、有空态/错误兜底;判断"这块完"= 功能真能跑通,不只是好看。
+- **每个模块先有设计再建**:helm-pro 没画的模块,先按 `DESIGN.md` 系统定该模块视图(可手搓设计稿),别边写边瞎设计;和已落地外壳一致、禁 emoji。
 - **一能力一契约、两前端共用**:不为 notch 或主前端单独分叉后端逻辑。
 - **不改坏 notch**:动到 notch 消费的 `/api`/DTO,必须同次更新 `HelmBackend.swift` + `record_decision` 契约 + notch `swift build/test` 绿。
 - **后端硬门**:改后端必过 `pytest`;改 notch 契约必过 `swift build/test`。
-- **实时优先**:agent 活动 / 会话遥测 / 媒体这类"活"的,做成 WS/SSE 流,让主前端的 Agent 收件箱/状态栏和 notch 的 agent 监控**吃同一条流**。
-- **不可逆/破坏操作不猜**(删数据、迁移 schema 等)→ `add_question` 等人。
+- **小步提交**:一次一个可用切片,别一轮动一大片(前端+后端+notch 全翻);大改先拆。
+- **实时优先**:agent 活动 / 会话遥测 / 媒体这类"活"的,做成 WS/SSE 流,主前端与 notch **吃同一条流**。
+- **不可逆/破坏操作不猜**(删数据、迁 schema、动别的 Room 已交付的东西)→ `add_question` 等人。
 
 ---
 

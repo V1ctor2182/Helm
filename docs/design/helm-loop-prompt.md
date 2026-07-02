@@ -51,14 +51,22 @@
 /loop 1m 读 docs/design/helm-loop-procedure.md(通读只读设计基线 helm-pro.html + DESIGN.md + 读现状 Svelte + 用 VibeHub pull F8 workspace-layout room context),以【夜间模式】把设计稿逐块做进 Svelte 前端到一模一样,整夜不停、完全自主。范围:只做前端和设计稿一模一样,后端不碰——数据一律用设计稿同款 mock,要后端加端口的留 TODO 别停别猜后端。按依赖排序(token→主题→外壳→细丝 Rail→Today→context/遥测→状态栏→ORAGE chrome)。每块 挑→精读设计稿→实现进 Svelte(token 走 app.css 变量/别写死 hex/accent 走 theme store/禁 emoji)→cd frontend && npm run build + npm run check + npm run test 全绿(硬门,非绿绝不 commit;某块修 3 轮还不绿就 skip+add_question+切下一块)→browse 截设计稿靶图 dark/light 视觉比对→把这块 context record_decision 进 F8 room(暂定/存疑的 add_question 标 [needs-human])→写 helm-loop-log.md→每轮出一份 report(收尾消息+log)→自己 commit 到 feat/design-* 分支并 push,接着下一块。关键:每个本该停下 review 或问我的点,都改成"做最忠于设计稿的暂定实现 + record/add_question 记下来 + 代码留 TODO + 继续",不停下等我。硬底线:绝不改 helm-pro.html/DESIGN.md;npm build/check/test 非全绿绝不 commit;不合 main(合并留我早上);不可逆/破坏操作不猜。全部块对齐完或全卡住才报告并停。
 ```
 
-## 阶段 2 · 后端接入 + 暴露给 notch(前端差不多之后)
+## 阶段 2 · 逐模块完善,让所有功能真能用(当前阶段)
 
-前端主体对齐后,进阶段 2:把设计稿的 mock 逐块换成真后端数据,并把该暴露的能力做成 notch 也消费的稳定契约(同一 FastAPI 后端,主前端 Web + notch 原生客户端吃同一套 `/api`,逻辑不分叉)。流程细节见 `helm-loop-procedure.md` 的「阶段 2」大节。
+阶段 1 外壳保真已合入 main。阶段 2 = **一个模块一个模块地做成真能用的功能**:每个模式(Chat / 驾驶舱 / 研究 / 记忆 / 记录 / 日历 / 邮件 / 设置)从占位做成端到端可用——**设计它的视图(helm-pro 没画,按 DESIGN.md 系统新设计)→ 建 Svelte UI → 接真后端 /api → 功能真能跑通**,并守 notch 契约。流程 + 模块清单见 `helm-loop-procedure.md` 的「阶段 2」大节。
 
-直接粘这一段:
+### 命令(默认:一个可用切片一停,让我 review)
 
 ```
-读 docs/design/helm-loop-procedure.md 的「阶段 2 · 后端接入 + 暴露给 notch」全节;确认阶段 1(前端和 helm-pro.html 一模一样)已差不多。现在进阶段 2:把设计稿里的 mock 逐块换成真后端数据,并把该暴露的能力做成 notch 也消费的稳定契约。设计稿 helm-pro.html + DESIGN.md 仍只读、仍是视觉真相——接了真数据不许破版,空态也要好看。按依赖排序选一个数据源(① 健康/连接 → ② 速记/日记(已有 POST /api/notes)→ ③ 任务 → ④ agent 活动(orchestration/runs,补实时流)→ ⑤ 最近项目 → ⑥ 会话遥测 → ⑦ 日历 → ⑧ 邮件 → ⑨ 各模式):摸清后端对应 router 的真实端点/DTO(helm/<feature> + helm/app.py mount,后端 127.0.0.1:8769)+ 读 notch HelmBackend.swift 看它怎么消费同一能力→前端把该块 mock 换成真 /api 调用/流(保持设计稿版式、无数据走优雅空态、抽到 lib/api.ts 或 store)→后端缺端点就在对应 router 补(保持对 notch 契约向后兼容;若必须改 notch 也用的端点,同一次改动一起更新 HelmBackend.swift + record_decision 记契约 + add_constraint 钉住,绝不改坏 notch)→硬门:前端 npm run build+check+test 全绿、改了后端跑 pytest 全绿、改了 notch 契约跑 cd notch && swift build && swift test 全绿→视觉门:真数据+空态和设计稿一致(dark/light),改了共用端点验证 notch 仍正常→record_decision 进对应 feature room(F6 notes/tasks、F5 orchestration、F7 calendar/mail…)+ 写 helm-loop-log.md + 每轮 report(多一行「契约/notch 影响」)。每接 1 个数据源停下让我 review;绝不改 helm-pro.html/DESIGN.md,不自动 commit,不可逆/破坏操作(删数据/迁 schema)add_question 等我。原则:一能力一契约、两前端共用,不为任一端分叉后端逻辑。
+读 docs/design/helm-loop-procedure.md 的「阶段 2 · 逐模块完善」全节 + 模块清单;确认阶段 1 外壳已合入 main。现在进阶段 2:一个模块一个模块地把各模式做成端到端真能用(不是画壳)。挑一个模块(或它的一个可用切片),按依赖/价值(建议 Chat→驾驶舱→Agent 编排→研究→记忆/RAG→记录→日历→邮件→设置→Today 真数据,可自行判断):① 拉这个 Room 的 context get_feature_context(<该模块 room>)+ get_file_context + 读后端对应 router(helm/<feature> + helm/app.py mount,后端 127.0.0.1:8769)拿真实端点/DTO + 读参考实现(AionUi/FanBox/Odysseus,见该 Room 决策)+ 读现状 Svelte 占位;② 设计该模块视图——helm-pro 没画,按 DESIGN.md 系统新设计(双主题 token/座舱观感/无卡片优先/禁 emoji/走 theme store),复杂的先手搓一张该模块设计稿放 docs/design/ 当视觉基线;③ 建真 Svelte 组件(不是占位),走 app.css token;④ 接真后端 /api(fetch/流,抽 lib/api.ts 或 store),缺端点就在对应 router 补,保持对 notch 契约向后兼容——若必须改 notch 也用的端点,同一次改动一起更新 notch/Sources/HelmNotchCore/HelmBackend.swift + record_decision 记契约 + add_constraint 钉住,绝不改坏 notch;⑤ 端到端可用(点得动/跑得通/错误兜底/空态好看);⑥ 硬门:前端 cd frontend && npm run build+check+test 全绿、改了后端跑 pytest 全绿、改了 notch 契约跑 cd notch && swift build && swift test 全绿(非绿绝不 commit);⑦ 视觉门 npm run dev(5174)截 dark/light,改了共用端点验证 notch 仍正常;⑧ record_decision 进对应 feature room(F2/F1/F5/F3/F4/F6/F7…)+ 写 docs/design/helm-loop-log.md + 每轮 report(多一行「功能可用性 + 契约/notch 影响」)。每做完一个可用切片停下让我 review;不自动 commit(分支 feat/modules-* 或 feat/<模块>-*,合并留我),DESIGN.md/helm-pro.html 只读,不可逆/破坏操作(删数据/迁 schema/动别 Room 已交付的东西)add_question 等我。原则:做成真能用不是画壳;一能力一契约两前端共用;小步提交别一轮动一大片。
+```
+
+### 🌙 阶段 2 夜间模式(整夜自主推进模块)
+
+把上面命令前面加 `/loop 5m` 且带【夜间模式】:每做完一个可用切片不停下等我,硬门(前端 build/check/test + 改后端 pytest + 改 notch swift)全绿就自己 commit 到 feat/modules-* 并 push、接着下一块;每个本该停下/问我的点改成"做最忠于 DESIGN.md 的暂定实现 + record/add_question 记下来 + 代码留 TODO + 继续"。硬底线不松:非全绿绝不 commit、不合 main、不改坏 notch、不可逆操作不猜、DESIGN.md 只读。每轮照出 report。所有模块都可用 或 全卡住 才报告并停。
+
+```
+/loop 5m 读 docs/design/helm-loop-procedure.md 的「阶段 2 · 逐模块完善」全节 + 模块清单,以【夜间模式】把各模式一个个做成端到端真能用,整夜不停、完全自主。挑模块→拉该 Room context(get_feature_context + 后端 router + 参考实现 + 现状占位)→按 DESIGN.md 系统设计该模块视图(座舱/双主题/禁 emoji,复杂的先手搓设计稿)→建真 Svelte 组件(走 token)→接真 /api(缺端点在对应 router 补,守 notch 契约:改共用端点必同次更新 HelmBackend.swift+record+notch swift 绿)→端到端可用(点得动/跑得通/空态兜底)→硬门 前端 npm build+check+test 全绿、改后端 pytest 绿、改 notch swift 绿(某切片修 3 轮不绿就 skip+add_question+切下一个)→dev 5174 截 dark/light 视觉门+改共用端点验 notch 仍正常→record_decision 进对应 feature room + 写 helm-loop-log.md + 每轮 report(收尾消息+log,多一行「功能可用性+契约/notch 影响」)→自己 commit 到 feat/modules-* 并 push,接着下一块。关键:每个本该停下 review/问我的点都改成"做最忠于 DESIGN.md 的暂定 + record/add_question + 代码留 TODO + 继续",不停下等我。硬底线:做成真能用不是画壳;非全绿绝不 commit;不合 main(合并留我);不改坏 notch;不可逆/破坏操作(删数据/迁 schema/动别 Room 交付物)不猜;DESIGN.md/helm-pro.html 只读。所有模块可用 或 全卡住 才报告并停。
 ```
 
 ## 调参
