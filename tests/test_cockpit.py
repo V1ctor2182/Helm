@@ -404,3 +404,23 @@ def test_thumb_route_guards(config, tmp_path):
     t.write_text("x", encoding="utf-8")
     assert c.get("/api/cockpit/thumb", params={"path": str(t)}).status_code == 400
 
+def test_fs_open_with_system(config, tmp_path):
+    import subprocess as sp
+
+    from helm.cockpit import fsops
+
+    f = tmp_path / "doc.pdf"
+    f.write_bytes(b"%PDF")
+    ran: dict = {}
+
+    def fake_run(argv, **kw):
+        ran["argv"] = argv
+        return sp.CompletedProcess(argv, 0, stdout="", stderr="")
+
+    fsops.open_with_system(str(f), runner=fake_run)
+    assert ran["argv"] == ["open", str(f)]  # argv 传参,无 shell
+    import pytest as _pytest
+
+    with _pytest.raises(FileNotFoundError):
+        fsops.open_with_system(str(tmp_path / "nope.pdf"), runner=fake_run)
+

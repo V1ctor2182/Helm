@@ -2,6 +2,7 @@
   import { onDestroy, onMount } from 'svelte'
   import { cockpit } from './cockpit.svelte'
   import { iconFor } from './fileIcons'
+  import { previewKind } from './previewKind'
 
   let pathInput = $state('')
 
@@ -103,6 +104,19 @@
       return a.name.localeCompare(b.name, 'zh', { numeric: true, sensitivity: 'base' })
     }),
   )
+
+  // 双击分流(承 FanBox onItemOpen):图片→灯箱;pdf/压缩包/未知→系统 App;
+  // 文本/代码保持分栏预览(全屏预览在 P2 账上)。
+  function onOpen(e: import('./cockpit.svelte').Entry) {
+    if (e.is_dir) return
+    const k = previewKind(e.ext)
+    if (k === 'image') {
+      cockpit.select(e)
+      cockpit.lightboxPath = e.path
+    } else if (k === 'pdf' || k === 'zip' || k === 'none') {
+      void cockpit.openWithSystem(e.path)
+    }
+  }
 
   const THUMB_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'heic', 'heif', 'tif', 'tiff'])
   const thumbW = $derived(cockpit.gridSize === 'sm' ? 200 : cockpit.gridSize === 'lg' ? 360 : 280)
@@ -218,6 +232,7 @@
             class:selected={cockpit.selected?.path === e.path}
             class:changed={cockpit.changedPaths.has(e.path)}
             onclick={() => cockpit.select(e)}
+            ondblclick={() => onOpen(e)}
             oncontextmenu={(ev) => openMenu(ev, e)}
             role="row"
           >
@@ -236,6 +251,7 @@
           class:selected={cockpit.selected?.path === e.path}
           class:changed={cockpit.changedPaths.has(e.path)}
           onclick={() => cockpit.select(e)}
+          ondblclick={() => onOpen(e)}
           oncontextmenu={(ev) => openMenu(ev, e)}
         >
           {#if !e.is_dir && THUMB_EXTS.has(e.ext)}

@@ -142,3 +142,19 @@ describe('cockpit fs ops(新建/重命名/废纸篓)', () => {
   })
 })
 
+describe('cockpit 双击语义 + 灯箱', () => {
+  it('openWithSystem posts the path', async () => {
+    const calls: { url: string; body?: unknown }[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, init?: RequestInit) => {
+        calls.push({ url, body: init?.body ? JSON.parse(init.body as string) : undefined })
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ opened: '/p/doc.pdf' }) })
+      }),
+    )
+    const c = new CockpitStore()
+    await c.openWithSystem('/p/doc.pdf')
+    expect(calls[0]).toEqual({ url: '/api/cockpit/fs/open', body: { path: '/p/doc.pdf' } })
+  })
+})
+

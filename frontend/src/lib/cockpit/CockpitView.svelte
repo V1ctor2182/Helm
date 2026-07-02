@@ -2,6 +2,7 @@
   import FileBrowser from './FileBrowser.svelte'
   import PreviewPane from './PreviewPane.svelte'
   import AgentView from '../orchestration/AgentView.svelte'
+  import Lightbox from './Lightbox.svelte'
 
   // Right pane shows the file preview or the live agent observation (ACP events
   // streamed from the run WS). Both belong to the cockpit; a segmented control
@@ -35,6 +36,8 @@
     </div>
   </div>
 </div>
+
+<Lightbox />
 
 <style>
   .split {

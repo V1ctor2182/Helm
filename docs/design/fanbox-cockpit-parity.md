@@ -13,7 +13,7 @@
 - [x] **文件操作三件套:新建/重命名/删除(废纸篓)+ 右键菜单** → 轮5 搬入(右键按类型组装/自绘对话框/文件秒删文件夹轻确认/AppleScript argv 防注入+授权与超时人话/新建文件即选中;「在终端打开」「Finder 显示」依赖多标签与壳能力留 P2) | 右键按类型组装菜单(打开/预览/在终端打开/Finder 显示/复制路径/重命名/废纸篓);新建文件即编辑;删除走废纸篓(AppleScript,argv 防注入);重命名拒分隔符 | app:1384-1453, 1638-1677, srv:436-480
 - [x] **列表/网格双视图 + 排序 + 隐藏文件开关** → 轮6 搬入(网格 SM/MD/LG 三档/列表表头名称·时间·大小/排序 zh locale+numeric 目录在前 mtime·size 降序/隐藏默认藏+开关 refetch/全偏好 localStorage;顺手清掉 fileIcons 的 📁📄 emoji 违规) | 网格三档尺寸;列表带表头名称/时间/大小;排序 zh locale+numeric、目录在前;隐藏文件 checkbox 落 localStorage | app:340-401, 2132-2146
 - [x] **缩略图管线(图片先行)** → 轮7 搬入(sips+md5(路径:mtime:尺寸) 缓存+per-key 锁去重+200MB LRU 裁剪+透明出 png/其余 jpeg+onerror 回退字形;预览图先走 w=1000 缩略图(heic/tiff 可看);视频/PDF qlmanage 帧留 P2) | 图片 sips 生成、md5(路径+mtime+尺寸) 缓存、并发去重、LRU 裁剪;失败回退矢量字形不留裂图;heic/tiff 永远走缩略图 | app:414-429, srv:1174-1229
-- [ ] **双击语义 + 图片灯箱** | 单击=分栏预览、双击文本→全屏、pdf/压缩包/二进制→系统 App;图片点击进灯箱(滚轮 0.2-8x、Esc/点空白关) | app:520-536, 759-771
+- [x] **双击语义 + 图片灯箱** → 轮8 搬入(双击图片→灯箱/pdf·zip·二进制→系统 App(open argv)/文本保持分栏(全屏预览 P2 账上);灯箱=滚轮 0.2-8x(FanBox 公式)+点空白/Esc 关+原生格式 raw·heic 走 w=1600 thumb) | 单击=分栏预览、双击文本→全屏、pdf/压缩包/二进制→系统 App;图片点击进灯箱(滚轮 0.2-8x、Esc/点空白关) | app:520-536, 759-771
 - [ ] **终端手感三小件:Option 拖拽选中 + login shell + Nerd Font 栈** | macOptionClickForcesSelection(TUI 鼠标上报吃拖拽);pty 用 zsh -l 读 .zprofile 找回 claude;JetBrainsMono/MesloLGS Nerd 字体栈防 tofu;低对比自动提亮 minimumContrastRatio 4.5 | app:2459-2510, CHANGELOG 1.11.2/1.11.3
 - [ ] **⌘K 内容搜索(`内容:` 前缀)** | mdfind Spotlight 优先(覆盖 PDF/OCR)、回退 grep(512KB 内文本);命中补行级预览+高亮;范围切换 全机/当前目录(Tab 键) | app:1817-1914, srv:269-392
 - [ ] **主区键盘导航 + Esc 分层退出** | ↑↓←→ 按实测列数移动、Enter 打开、Space 收藏、F2 重命名、⌘⌫ 废纸篓;Esc 菜单→cmdk→灯箱→全屏→blur→关预览逐层退 | app:402-408, 539-559, 2152-2185
@@ -72,4 +72,5 @@
 | 4 | 终端状态感知+完成提醒 | b73c43e |
 | 5 | 文件操作三件套+右键菜单 | 31164cc |
 | 6 | 双视图+排序+隐藏开关 | 952f293 |
-| 7 | 缩略图管线(图片) | (见 git log 轮7) |
+| 7 | 缩略图管线(图片) | fd8c412 |
+| 8 | 双击语义+图片灯箱 | (见 git log 轮8) |

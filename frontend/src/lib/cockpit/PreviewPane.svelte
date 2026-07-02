@@ -254,10 +254,13 @@
     {:else if view.kind === 'image'}
       <!-- 先走 w=1000 缩略图秒开(heic/tiff 也能看),失败回退原图(承 FanBox) -->
       {@const imgPath = view.entry.path}
+      <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
+      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
       <img
-        class="img"
+        class="img zoomable"
         src={`/api/cockpit/thumb?path=${encodeURIComponent(imgPath)}&w=1000`}
         alt={view.entry.name}
+        onclick={() => (cockpit.lightboxPath = imgPath)}
         onerror={(ev) => {
           const img = ev.currentTarget as HTMLImageElement
           const raw = rawUrl(imgPath)
@@ -396,6 +399,9 @@
   .img {
     max-width: 100%;
     height: auto;
+  }
+  .img.zoomable {
+    cursor: zoom-in;
   }
   .pdf {
     width: 100%;

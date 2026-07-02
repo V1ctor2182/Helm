@@ -64,6 +64,18 @@ def rename_path(path: str, new_name: str) -> str:
     return str(dst)
 
 
+def open_with_system(path: str, runner=subprocess.run) -> None:
+    """双击 pdf/压缩包/二进制 → 交系统默认 App(macOS `open`,argv 传参)。"""
+    p = Path(path).expanduser()
+    if not p.exists():
+        raise FileNotFoundError(path)
+    if sys.platform != "darwin":
+        raise RuntimeError("系统打开目前仅支持 macOS")
+    r = runner(["open", str(p)], capture_output=True, text=True, timeout=10)
+    if r.returncode != 0:
+        raise RuntimeError((r.stderr or "open failed").strip())
+
+
 def move_to_trash(path: str, runner=subprocess.run) -> None:
     """Move to the system Trash (recoverable — never unlink). macOS first;
     other platforms refuse rather than hard-delete."""

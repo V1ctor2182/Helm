@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-03 03:35 · phase3-round8-dblclick-lightbox(夜间模式)· P1 第7条
+- 对齐: 阶段3 轮8——双击语义+图片灯箱(FanBox app:520-536/759-771)
+- 改动: 后端 fsops+open_with_system(macOS open,argv 无 shell)+POST /api/cockpit/fs/open;前端 cockpit store(+lightboxPath/openWithSystem);新增 Lightbox.svelte(滚轮 scale-=deltaY*0.002 clamp 0.2-8 原公式/点空白与 Esc 关/原生格式 raw·heic/tiff 走 w=1600 thumb/换图重置缩放/mono 提示条);FileBrowser 网格+列表 dblclick 分流(图片→选中+灯箱,pdf/zip/未知→系统 App,文本保持分栏);PreviewPane 图片点击 zoom-in 进灯箱
+- 功能可用性: e2e 真机:双击图片→灯箱开+图 loaded→点空白关(隔拍确认);系统打开不实点(夜里不弹 App 窗)由单测锁 argv;滚轮缩放/clamp/关闭路径 5 个组件测钉死
+- 取舍: 双击文本→全屏预览依赖全屏机制(P2「全屏预览」账上),暂保持分栏;视频 kind 未纳入(previewKind 无 video 类,随 qlmanage P2 一起)
+- 契约/notch 影响: 无(新增端点)
+- VibeHub: record_decision(F1)→ 见下条;矩阵 P1 7/14
+- 验证: 前端 build ✓/check 0/0(256 文件)/test 182(+4);后端 pytest 194(+1);视觉 dark 灯箱截图
+- 状态: ✅ 夜间自 commit(feat/cockpit-fanbox,未合 main)｜❓需确认: 无
+
 ## 2026-07-03 00:10 · phase3-round7-thumbnails(夜间模式)· P1 第6条
 - 对齐: 阶段3 轮7——图片缩略图管线(FanBox app:414-429/srv:1174-1229)
 - 改动: 后端 +cockpit/thumbs.py(sips 生成/md5(路径:mtime:尺寸) 键——改图换键/per-key threading 锁并发去重/48-1600 尺寸钳制/透明 png 其余 jpeg/200MB LRU 摊还裁剪/runner 注入可测)+GET /api/cockpit/thumb(Cache-Control 7d;404/400/500 映射);前端网格卡片图片走 thumb(尺寸随三档 200/280/360,lazy,onerror 加 dead 类回退字形不留裂图);PreviewPane 图片先走 w=1000 缩略图秒开(heic/tiff 也能看),onerror 回退 raw

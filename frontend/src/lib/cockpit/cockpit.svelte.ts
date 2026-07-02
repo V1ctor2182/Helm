@@ -74,6 +74,8 @@ export class CockpitStore {
   gridSize = $state<'sm' | 'md' | 'lg'>('md')
   sortKey = $state<'name' | 'mtime' | 'size'>('name')
   showHidden = $state(false)
+  /** 图片灯箱(null=关);点预览图/双击网格图片打开。 */
+  lightboxPath = $state<string | null>(null)
   error = $state<string | null>(null)
   changedPaths = $state<Set<string>>(new Set())
   followMode = $state(false)
@@ -209,6 +211,11 @@ export class CockpitStore {
     if (p !== null && this.cwd) await this.browse(this.cwd)
     if (this.selected?.path === path) this.selected = null
     return p !== null
+  }
+
+  /** 双击 pdf/压缩包/二进制 → 系统默认 App。 */
+  async openWithSystem(path: string): Promise<void> {
+    await this.#fsPost('/api/cockpit/fs/open', { path })
   }
 
   /** 终端路径点击的落点:目录→浏览进去;文件→浏览其目录+选中预览。 */

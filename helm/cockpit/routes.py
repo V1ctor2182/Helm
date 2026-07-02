@@ -130,6 +130,12 @@ def fs_rename(body: FsRenameBody) -> dict:
     return {"path": _fs_errors(lambda: fsops.rename_path(body.path, body.name))}
 
 
+@router.post("/fs/open")
+def fs_open(body: FsPathBody) -> dict:
+    _fs_errors(lambda: fsops.open_with_system(body.path))
+    return {"opened": body.path}
+
+
 @router.post("/fs/trash")
 def fs_trash(body: FsPathBody) -> dict:
     _fs_errors(lambda: fsops.move_to_trash(body.path))
