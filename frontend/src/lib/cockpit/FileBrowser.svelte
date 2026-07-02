@@ -5,6 +5,75 @@
 
   let pathInput = $state('')
 
+  // ── 右键菜单 + 自绘对话框(承 FanBox app:1384-1453/1638-1677) ──────────
+  interface Menu {
+    x: number
+    y: number
+    entry: import('./cockpit.svelte').Entry | null // null = 空白处
+  }
+  let menu = $state<Menu | null>(null)
+  interface Dialog {
+    kind: 'rename' | 'newfile' | 'newdir' | 'trashdir'
+    target?: string // rename/trashdir 的路径
+    value: string
+    label: string
+  }
+  let dialog = $state<Dialog | null>(null)
+
+  function openMenu(e: MouseEvent, entry: Menu['entry']) {
+    e.preventDefault()
+    e.stopPropagation()
+    // 钳制在窗口内(菜单约 180×窗高)
+    const x = Math.min(e.clientX, window.innerWidth - 190)
+    const y = Math.min(e.clientY, window.innerHeight - 230)
+    menu = { x, y, entry }
+  }
+
+  function closeMenu() {
+    menu = null
+  }
+
+  function onWinKey(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      if (dialog) dialog = null
+      else if (menu) closeMenu()
+    }
+  }
+
+  async function copyPath(p: string) {
+    try {
+      await navigator.clipboard.writeText(p)
+    } catch {
+      /* clipboard 不可用忽略 */
+    }
+    closeMenu()
+  }
+
+  function askRename(path: string, current: string) {
+    closeMenu()
+    dialog = { kind: 'rename', target: path, value: current, label: '重命名为' }
+  }
+
+  function askTrash(entry: NonNullable<Menu['entry']>) {
+    closeMenu()
+    if (entry.is_dir) {
+      // 文件夹弹一次轻确认;文件秒删(废纸篓可恢复)
+      dialog = { kind: 'trashdir', target: entry.path, value: '', label: `丢进废纸篓:${entry.name}?` }
+    } else {
+      void cockpit.trash(entry.path)
+    }
+  }
+
+  async function dialogSubmit() {
+    const d = dialog
+    if (!d) return
+    if (d.kind === 'rename' && d.target) await cockpit.renameEntry(d.target, d.value)
+    else if (d.kind === 'newfile') await cockpit.newFile(d.value)
+    else if (d.kind === 'newdir') await cockpit.mkdir(d.value)
+    else if (d.kind === 'trashdir' && d.target) await cockpit.trash(d.target)
+    dialog = null
+  }
+
   onMount(() => {
     void cockpit.loadProjects()
   })
@@ -32,7 +101,10 @@
   }
 </script>
 
-<div class="browser">
+<svelte:window onkeydown={onWinKey} onmousedown={() => menu && closeMenu()} />
+
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="browser" role="region" aria-label="文件浏览" oncontextmenu={(e) => cockpit.cwd && openMenu(e, null)}>
   <form class="bar" onsubmit={openInput}>
     {#if cockpit.cwd}
       <button
@@ -89,6 +161,7 @@
           class:selected={cockpit.selected?.path === e.path}
           class:changed={cockpit.changedPaths.has(e.path)}
           onclick={() => cockpit.select(e)}
+          oncontextmenu={(ev) => openMenu(ev, e)}
         >
           <span class="icon" style="color:{ic.color}">{ic.glyph}</span>
           <span class="card-name" title={e.name}>{e.name}</span>
@@ -97,9 +170,140 @@
       {/each}
     </div>
   {/if}
+
+  {#if menu}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="ctx" style={`left:${menu.x}px;top:${menu.y}px`} onmousedown={(e) => e.stopPropagation()}>
+      {#if menu.entry}
+        {@const en = menu.entry}
+        <button class="mi" onclick={() => { cockpit.select(en); closeMenu() }}>{en.is_dir ? '打开' : '预览'}</button>
+        <button class="mi" onclick={() => copyPath(en.path)}>复制路径</button>
+        <button class="mi" onclick={() => askRename(en.path, en.name)}>重命名</button>
+        <div class="msep"></div>
+        <button class="mi danger" onclick={() => askTrash(en)}>丢进废纸篓</button>
+      {:else}
+        <button class="mi" onclick={() => { closeMenu(); dialog = { kind: 'newfile', value: '', label: '新建文件' } }}>新建文件</button>
+        <button class="mi" onclick={() => { closeMenu(); dialog = { kind: 'newdir', value: '', label: '新建文件夹' } }}>新建文件夹</button>
+        {#if cockpit.cwd}<button class="mi" onclick={() => copyPath(cockpit.cwd!)}>复制当前路径</button>{/if}
+      {/if}
+    </div>
+  {/if}
+
+  {#if dialog}
+    <div class="dlg">
+      <div class="dl">{dialog.label}</div>
+      {#if dialog.kind !== 'trashdir'}
+        <!-- svelte-ignore a11y_autofocus -->
+        <input
+          class="di"
+          bind:value={dialog.value}
+          autofocus
+          aria-label={dialog.label}
+          onkeydown={(e) => {
+            if (e.key === 'Enter') void dialogSubmit()
+          }}
+        />
+      {/if}
+      <div class="da">
+        <button class="act pri" onclick={dialogSubmit} disabled={dialog.kind !== 'trashdir' && !dialog.value.trim()}>
+          {dialog.kind === 'trashdir' ? '丢进废纸篓' : '确定'}
+        </button>
+        <button class="act" onclick={() => (dialog = null)}>取消</button>
+      </div>
+    </div>
+  {/if}
 </div>
 
 <style>
+  .ctx {
+    position: fixed;
+    z-index: 60;
+    min-width: 150px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    padding: 4px 0;
+  }
+  .mi {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: 0;
+    padding: 6px 14px;
+    font-size: 12.5px;
+    color: var(--t2);
+    cursor: pointer;
+  }
+  .mi:hover {
+    color: var(--t1);
+    background: var(--tile);
+  }
+  .mi.danger:hover {
+    color: var(--red);
+  }
+  .msep {
+    height: 1px;
+    background: var(--hair);
+    margin: 4px 0;
+  }
+  .dlg {
+    position: fixed;
+    z-index: 61;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 300px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .dl {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--t2);
+  }
+  .di {
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--hair);
+    color: var(--t1);
+    font-size: 13px;
+    padding: 3px 0 6px;
+  }
+  .di:focus {
+    outline: none;
+    border-bottom-color: var(--acc-ink);
+  }
+  .da {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+  .act {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--t4);
+    background: transparent;
+    border: 1px solid var(--line);
+    padding: 4px 10px;
+    cursor: pointer;
+  }
+  .act:hover:not(:disabled) {
+    color: var(--t1);
+  }
+  .act.pri {
+    color: var(--acc-ink);
+    border-color: var(--acc-ink);
+  }
+  .act.pri:disabled {
+    color: var(--t4);
+    border-color: var(--line);
+    cursor: default;
+  }
+
   .browser {
     height: 100%;
     overflow: auto;

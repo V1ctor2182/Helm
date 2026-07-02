@@ -94,3 +94,51 @@ describe('CockpitStore', () => {
     expect(c.selected?.name).toBe('f')
   })
 })
+
+describe('cockpit fs ops(新建/重命名/废纸篓)', () => {
+  it('mkdir/newFile/renameEntry/trash post the right bodies and refresh', async () => {
+    const calls: { url: string; body?: unknown }[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, init?: RequestInit) => {
+        calls.push({ url, body: init?.body ? JSON.parse(init.body as string) : undefined })
+        const isFs = url.includes('/fs/')
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve(
+              isFs
+                ? { path: '/proj/new.md' }
+                : { path: '/proj', entries: [{ name: 'new.md', path: '/proj/new.md', is_dir: false, size: 0, ext: 'md' }] },
+            ),
+        })
+      }),
+    )
+    const c = new CockpitStore()
+    c.cwd = '/proj'
+    expect(await c.mkdir('sub')).toBe(true)
+    expect(calls.find((x) => x.url === '/api/cockpit/fs/mkdir')?.body).toEqual({ dir: '/proj', name: 'sub' })
+
+    expect(await c.newFile('new.md')).toBe(true)
+    // 新建即编辑:创建后选中该文件
+    expect(c.selected?.path).toBe('/proj/new.md')
+
+    await c.renameEntry('/proj/new.md', 'renamed.md')
+    expect(calls.find((x) => x.url === '/api/cockpit/fs/rename')?.body).toEqual({ path: '/proj/new.md', name: 'renamed.md' })
+
+    await c.trash('/proj/renamed.md')
+    expect(calls.find((x) => x.url === '/api/cockpit/fs/trash')?.body).toEqual({ path: '/proj/renamed.md' })
+  })
+
+  it('server detail surfaces to error on failure', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, status: 409, json: () => Promise.resolve({ detail: '已存在同名项' }) }),
+    )
+    const c = new CockpitStore()
+    c.cwd = '/proj'
+    expect(await c.mkdir('dup')).toBe(false)
+    expect(c.error).toBe('已存在同名项')
+  })
+})
+

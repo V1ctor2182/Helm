@@ -108,6 +108,60 @@ export class CockpitStore {
     )
   }
 
+  // ── 文件操作(承 FanBox:新建/重命名/废纸篓,错误透出 server detail) ────
+  async #fsPost(path: string, body: unknown): Promise<string | null> {
+    try {
+      const res = await fetch(path, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        const d = (await res.json().catch(() => null)) as { detail?: string } | null
+        this.error = d?.detail ?? '操作失败'
+        return null
+      }
+      this.error = null
+      const j = (await res.json()) as { path?: string }
+      return j.path ?? ''
+    } catch {
+      this.error = '操作失败(网络)'
+      return null
+    }
+  }
+
+  async mkdir(name: string): Promise<boolean> {
+    if (!this.cwd) return false
+    const p = await this.#fsPost('/api/cockpit/fs/mkdir', { dir: this.cwd, name })
+    if (p !== null) await this.browse(this.cwd)
+    return p !== null
+  }
+
+  /** 新建文件并立即选中(空文本→预览即编辑,承 FanBox「新建即编辑」)。 */
+  async newFile(name: string): Promise<boolean> {
+    if (!this.cwd) return false
+    const p = await this.#fsPost('/api/cockpit/fs/newfile', { dir: this.cwd, name })
+    if (p === null) return false
+    await this.browse(this.cwd)
+    const entry = this.entries.find((e) => e.path === p)
+    if (entry) this.select(entry)
+    return true
+  }
+
+  async renameEntry(path: string, name: string): Promise<boolean> {
+    const p = await this.#fsPost('/api/cockpit/fs/rename', { path, name })
+    if (p !== null && this.cwd) await this.browse(this.cwd)
+    if (this.selected?.path === path) this.selected = null
+    return p !== null
+  }
+
+  async trash(path: string): Promise<boolean> {
+    const p = await this.#fsPost('/api/cockpit/fs/trash', { path })
+    if (p !== null && this.cwd) await this.browse(this.cwd)
+    if (this.selected?.path === path) this.selected = null
+    return p !== null
+  }
+
   /** 终端路径点击的落点:目录→浏览进去;文件→浏览其目录+选中预览。 */
   openPath(path: string, isDir: boolean): void {
     if (isDir) {

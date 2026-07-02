@@ -21,7 +21,8 @@ from helm.cockpit import models  # noqa: F401  (register models on Base.metadata
 from helm.cockpit.git import NotInRepo, file_diff
 from helm.cockpit.git import status as git_status
 from helm.cockpit.models import TerminalSession
-from helm.cockpit.preview import MAX_TEXT_BYTES, WriteConflict, list_zip, read_text, write_text
+from helm.cockpit import fsops
+from helm.cockpit.preview import WriteConflict, list_zip, read_text, write_text
 from helm.cockpit.service import ProjectService, list_dir, record_change
 from helm.cockpit.terminal import PtyProcess
 from helm.cockpit.watcher import DirWatcher
@@ -79,6 +80,56 @@ def file_text(path: str) -> dict:
         "truncated": truncated,
         "mtime": Path(path).expanduser().stat().st_mtime,
     }
+
+
+class FsDirNameBody(BaseModel):
+    dir: str
+    name: str
+
+
+class FsRenameBody(BaseModel):
+    path: str
+    name: str
+
+
+class FsPathBody(BaseModel):
+    path: str
+
+
+def _fs_errors(fn):
+    try:
+        return fn()
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="not found") from None
+    except FileExistsError:
+        raise HTTPException(status_code=409, detail="已存在同名项") from None
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from None
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from None
+
+
+@router.post("/fs/mkdir")
+def fs_mkdir(body: FsDirNameBody) -> dict:
+    return {"path": _fs_errors(lambda: fsops.make_dir(body.dir, body.name))}
+
+
+@router.post("/fs/newfile")
+def fs_newfile(body: FsDirNameBody) -> dict:
+    return {"path": _fs_errors(lambda: fsops.make_file(body.dir, body.name))}
+
+
+@router.post("/fs/rename")
+def fs_rename(body: FsRenameBody) -> dict:
+    return {"path": _fs_errors(lambda: fsops.rename_path(body.path, body.name))}
+
+
+@router.post("/fs/trash")
+def fs_trash(body: FsPathBody) -> dict:
+    _fs_errors(lambda: fsops.move_to_trash(body.path))
+    return {"trashed": body.path}
 
 
 class ResolvePathsBody(BaseModel):

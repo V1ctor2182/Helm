@@ -298,3 +298,48 @@ def test_paths_resolve(config, tmp_path):
     r2 = c.post("/api/cockpit/paths/resolve", json={"candidates": ["src/main.py"]}).json()["resolved"]
     assert r2 == {}
 
+# ---- fs ops: mkdir/newfile/rename/trash(阶段3 FanBox 对齐) ---------------
+
+
+def test_fs_mkdir_newfile_rename(config, tmp_path):
+    c = TestClient(create_app(config))
+    r = c.post("/api/cockpit/fs/mkdir", json={"dir": str(tmp_path), "name": "sub"})
+    assert r.status_code == 200 and (tmp_path / "sub").is_dir()
+    # 同名 409、非法名 400、缺目录 404
+    assert c.post("/api/cockpit/fs/mkdir", json={"dir": str(tmp_path), "name": "sub"}).status_code == 409
+    assert c.post("/api/cockpit/fs/mkdir", json={"dir": str(tmp_path), "name": "a/b"}).status_code == 400
+    assert c.post("/api/cockpit/fs/mkdir", json={"dir": str(tmp_path / "nope"), "name": "x"}).status_code == 404
+
+    r = c.post("/api/cockpit/fs/newfile", json={"dir": str(tmp_path), "name": "note.md"})
+    assert r.status_code == 200 and (tmp_path / "note.md").is_file()
+
+    r = c.post("/api/cockpit/fs/rename", json={"path": str(tmp_path / "note.md"), "name": "renamed.md"})
+    assert r.status_code == 200 and (tmp_path / "renamed.md").is_file()
+    assert c.post("/api/cockpit/fs/rename", json={"path": str(tmp_path / "renamed.md"), "name": "sub"}).status_code == 409
+
+
+def test_fs_trash_via_finder(config, tmp_path):
+    import subprocess as sp
+
+    from helm.cockpit import fsops
+
+    f = tmp_path / "bye.txt"
+    f.write_text("x", encoding="utf-8")
+    ran: dict = {}
+
+    def fake_run(argv, **kw):
+        ran["argv"] = argv
+        return sp.CompletedProcess(argv, 0, stdout="", stderr="")
+
+    # 直接测底层:runner 注入
+    fsops.move_to_trash(str(f), runner=fake_run)
+    assert ran["argv"][0] == "osascript" and ran["argv"][-1] == str(f)  # 路径走 argv 防注入
+
+    def fail_run(argv, **kw):
+        return sp.CompletedProcess(argv, 1, stdout="", stderr="execution error: not allowed (-1743)")
+
+    import pytest as _pytest
+
+    with _pytest.raises(PermissionError):
+        fsops.move_to_trash(str(f), runner=fail_run)
+

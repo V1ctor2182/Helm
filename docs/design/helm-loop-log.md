@@ -6,6 +6,17 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 23:00 · phase3-round5-fs-ops(夜间模式)· P1 第4条
+- 对齐: 阶段3 轮5——文件操作三件套+右键菜单(FanBox app:1384-1453/1638-1677/srv:436-480)
+- 改动: 后端 +cockpit/fsops.py(valid_name 拒分隔符与 ../make_dir/make_file/rename_path/move_to_trash——macOS Finder AppleScript,路径走 argv 防注入+as alias,-1743/-600 授权人话,TimeoutExpired 超时人话,非 mac 拒绝不硬删)+4 个 /fs/* 路由(400/404/409/403/500 映射);前端 cockpit store +mkdir/newFile(建即选中)/renameEntry/trash(server detail 透出);FileBrowser +右键菜单(卡片按类型/空白处新建,钳制窗口内,点外/Esc 关)+自绘对话框(重命名/新建/文件夹删除轻确认,Enter/Esc)
+- 抓修: osascript 首跑授权延迟致 TimeoutExpired 500 裸文本(UI 只见「操作失败」)→ 补超时人话护栏;a11y 静态元素 contextmenu 警告→role+ignore
+- 功能可用性: e2e 真机:空白右键→新建文件→落盘+自动选中;卡片右键→重命名→落盘;废纸篓→文件真进 Trash(可恢复),二次验证 UI 全通;pytest 21(mkdir/newfile/rename 守卫+trash runner 注入含 argv 断言与 -1743 人话)
+- 取舍: 「在终端打开」(需 per-tab cwd)与「Finder 显示」(壳能力)留 P2;F2/⌘⌫ 键盘归"键盘导航"那条
+- 契约/notch 影响: 无(新增端点,notch 不消费)
+- VibeHub: record_decision(F1)→ 见下条;矩阵 P1 4/14
+- 验证: 前端 build ✓/check 0/0(254 文件)/test 176(+2);后端 pytest 190(+2);视觉 dark 菜单截图
+- 状态: ✅ 夜间自 commit(feat/cockpit-fanbox,未合 main)｜❓需确认: 无
+
 ## 2026-07-02 22:05 · phase3-round4-term-status(夜间模式)· P1 第3条
 - 对齐: 阶段3 轮4——终端状态感知+完成提醒(FanBox app:2692-2801 忠实单会话移植,含 TERM_ASK_RE 与 E5→B5 合成音原味)
 - 改动: +terminal/termStatus.svelte.ts(busy/idle/dead;回显过滤<400ms 只续命不刷工时;2.5s 静默判闲;esc to interrupt 30s 假静默护栏;still running 页脚压制报喜;ask=工时>600ms+审批正则→单音;done=工时>4s→双音;「轮到你」呼吸 6.5s;SND 静音 localStorage;系统通知仅已授权+隐藏时);Terminal.svelte(onData/output/exit 挂钩+tailProvider 读缓冲区尾+右上 HUD:状态点 busy=accent 脉冲/idle=绿/dead=红+SND 钮+termwrap 呼吸框)
