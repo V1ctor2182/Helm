@@ -6,6 +6,18 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-02 15:05 · phase2-round8-research（夜间模式）· F3 研究视图
+- 对齐: 阶段2 第8轮——Research 报告视图座舱化(模块清单下一项)
+- 设计基线: DESIGN.md(仪表头/描边徽章/框选视口=活的过程/mono 配给;未改)
+- 改动: `research/Research.svelte`(重写:RESEARCH 仪表头+status 徽章+SESSIONS 计数、caret 提问、mono 控件、进度框选视口、CLAIMS/SOURCES tag、引用 [n] accent mono、历史发丝行+状态徽章;🔍清)
+- 功能可用性: start/stop/进度流/引用映射/存记忆/导出 Markdown(拒覆盖)/历史全保留未动;真实研究=真 web 搜索+付费 LLM,夜间不实跑(fake-provider 测试链已覆盖 WS 流/中断/恢复/报告渲染,m3/m4 既有)
+- 取舍: 无 provider 时下拉光秃记 P2;富图表可视化仍属未来 polish(m4 决策)
+- 复查: 清"旧线框"账(研究视图);新增 P2×1
+- 契约/notch 影响: 无
+- VibeHub: record_decision「阶段2·轮8 Research 座舱化」→ be1d869b (ai_proposed, F3)
+- 验证: npm build ✓/check 0 错 0 警(248 文件)/test 155;视觉 dev 5174 dark+light 核过
+- 状态: ✅ 夜间自 commit(feat/design-shell-today,未合 main)｜❓需确认: 无
+
 ## 2026-07-02 14:50 · phase2-round7-rag-skills（夜间模式）· F4 大脑切片2·模块收口
 - 对齐: 阶段2 第7轮——知识库(RAG)+Skills 透视座舱化(清 backlog P1);F4 三视图齐
 - 设计基线: DESIGN.md(账本行/描边徽章/语义色配给/禁 emoji;未改)
