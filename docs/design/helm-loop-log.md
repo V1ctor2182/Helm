@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-03 06:20 · phase3-round14-follow-upgrade(夜间模式)· P1 第14条·矩阵 P1 收官
+- 对齐: 阶段3 轮14——跟随模式升级(FanBox app:3360-3661,末条 P1)
+- 改动: cockpit store(#agentActive 归属门=busy 或 8s 内输出(单终端版 boundAgentActive);#followChange 节流非防抖——定时器只设一次到点取最新、首切 120/已跟随 900ms、低优先级不顶排队的 md/html(followPrio 3/2/1);同文件→followTick 只刷视图;editorBusy 不抢屏;manualTakeover 点文件/openPath/编辑即停;toggleFollow 开启回溯 5min 内最近 inbox);PreviewPane(followTick 刷新:干净时重载,代码滚到首变动行(公共前缀行)+绿脉冲边框,md 尾部变更贴底/中间保持视口;dirty 同步 store)
+- 功能可用性: e2e 真机:开终端(活跃窗口)→开跟随→外部写 notes.md→预览 120ms 内自动切换;点 code.py 卡片→跟随即停+预览切换;同文件刷新 e2e 撞上 8s 归属门(agent 安静不抢屏=FanBox 语义,单测锁 busy 路径);5 个 store 测锁节流/优先级/tick/归属门/接管/回溯
+- 取舍: html 双缓冲零白闪依赖 HTML 交互预览(P2);过程旁白/会话回放/产物卡片均 P2 在账
+- 契约/notch 影响: 无(纯前端)
+- VibeHub: record_decision(F1)→ 见下条;**矩阵 P1 14/14 全勾**
+- 验证: 前端 build ✓/check 0/0(258 文件)/test 195(+2);后端 pytest 198 上轮全绿;视觉 dark 截图
+- 状态: ✅ 夜间自 commit(feat/cockpit-fanbox,未合 main)｜🏁 阶段3 P1 收官,按终止条件报告并停
+
 ## 2026-07-03 05:50 · phase3-round13-drag-to-term(夜间模式)· P1 第13条
 - 对齐: 阶段3 轮13——拖文件进终端(FanBox app:465-511/2060-2090)
 - 改动: termClient(+shQuote 单引号转义原样/dropPath 自家类型优先 text/plain 兜底,含测);Terminal.svelte(termwrap dragover 类型过滤+copy 效果+drophot accent 内框+「松手把路径喂给 agent」mono 提示,drop→shQuote+空格 send,termStatus.onInput 视同用户输入防 busy 误报,dragleave 复位);FileBrowser(卡片/列表行 draggable+dragstart 三类型:text/plain、application/x-helm-path、图片额外 text/html 原路径——防浏览器默认抓低清 thumb 链接);Shell svelte:window dragover/drop preventDefault 全局兜底(防拖到别处松手导航走)

@@ -5,6 +5,7 @@
 import { commands } from '../commands.svelte'
 import { layout } from '../layout.svelte'
 import { isNoisyChange } from './watchFilter'
+import { termStatus } from './terminal/termStatus.svelte'
 
 export interface Entry {
   name: string
@@ -81,6 +82,10 @@ export class CockpitStore {
   changeHeat = $state<Record<string, { count: number; files: string[] }>>({})
   // 变更收件箱:本会话去重计数、最新置顶、封顶 100
   inbox = $state<{ path: string; name: string; count: number; ts: number }[]>([])
+  /** 跟随中同一文件继续写 → 只刷视图(PreviewPane 监听此信号)。 */
+  followTick = $state(0)
+  /** 编辑器有未保存改动时跟随不抢屏(PreviewPane 同步)。 */
+  editorBusy = false
   error = $state<string | null>(null)
   changedPaths = $state<Set<string>>(new Set())
   followMode = $state(false)
@@ -134,6 +139,7 @@ export class CockpitStore {
   }
 
   select(entry: Entry): void {
+    this.manualTakeover()
     if (entry.is_dir) {
       void this.browse(entry.path)
     } else {
@@ -143,6 +149,11 @@ export class CockpitStore {
 
   toggleFollow(): void {
     this.followMode = !this.followMode
+    if (this.followMode) {
+      // 开启即回溯:跟上 5 分钟内最近一笔变更,不干等下一笔(承 FanBox)
+      const recent = this.inbox[0]
+      if (recent && Date.now() - recent.ts < 300_000) this.#followSwitch(recent.path)
+    }
   }
 
   #heatTimers = new Map<string, ReturnType<typeof setTimeout>>()
@@ -261,6 +272,7 @@ export class CockpitStore {
 
   /** 终端路径点击的落点:目录→浏览进去;文件→浏览其目录+选中预览。 */
   openPath(path: string, isDir: boolean): void {
+    this.manualTakeover()
     if (isDir) {
       void this.browse(path)
       return
@@ -275,6 +287,57 @@ export class CockpitStore {
 
   // Apply a watch event: always flash; in follow mode also track the file
   // (browse to its dir if needed + preview it).
+  #followPending: string | null = null
+  #followTimer: ReturnType<typeof setTimeout> | null = null
+
+  /** 归属判定(单终端版,承 FanBox boundAgentActive):agent 正忙或 8s 内有输出。 */
+  #agentActive(): boolean {
+    return termStatus.status === 'busy' || Date.now() - termStatus.lastData < 8000
+  }
+
+  // 看头优先级:html/md「写给人看的」> 代码 > 其它(承 FanBox followPrio)
+  #followPrio(p: string): number {
+    const ext = (p.split('.').pop() ?? '').toLowerCase()
+    if (['md', 'markdown', 'html', 'htm'].includes(ext)) return 3
+    if (['ts', 'tsx', 'js', 'jsx', 'py', 'rs', 'go', 'swift', 'svelte', 'css', 'json', 'yaml', 'yml', 'sh', 'c', 'h', 'cpp', 'java', 'rb', 'sql', 'toml', 'txt', 'log'].includes(ext)) return 2
+    return 1
+  }
+
+  /** 变更进跟随:同文件→刷视图;换文件→节流切目标(定时器只设一次,到点取最新;
+   *  低优先级不顶掉已排队的高优先级;首切 120ms 之后 900ms 稳节奏)。 */
+  #followChange(full: string): void {
+    if (full === this.selected?.path) {
+      this.followTick++
+      return
+    }
+    if (this.editorBusy) return // 编辑器开着不抢屏,等用户收工
+    if (this.#followTimer && this.#followPending && this.#followPrio(this.#followPending) > this.#followPrio(full)) return
+    this.#followPending = full
+    if (!this.#followTimer) {
+      const wait = this.selected ? 900 : 120
+      this.#followTimer = setTimeout(() => {
+        this.#followTimer = null
+        const p = this.#followPending
+        this.#followPending = null
+        if (p && this.followMode) this.#followSwitch(p)
+      }, wait)
+    }
+  }
+
+  #followSwitch(path: string): void {
+    const name = path.split('/').pop() ?? path
+    const dot = name.lastIndexOf('.')
+    const ext = dot > 0 ? name.slice(dot + 1).toLowerCase() : ''
+    const dir = path.slice(0, path.lastIndexOf('/'))
+    if (dir && dir !== this.cwd) void this.browse(dir)
+    this.selected = { name, path, is_dir: false, size: 0, ext }
+  }
+
+  /** 手动接管即停(承 FanBox):导航/点文件/编辑任一动作关掉跟随。 */
+  manualTakeover(): void {
+    if (this.followMode) this.followMode = false
+  }
+
   applyChange(ev: { path: string; kind: string }): void {
     // 噪声过滤(高亮/收件箱/跟随共用):相对 cwd 判,不在 cwd 下按全路径判
     const rel = this.cwd && ev.path.startsWith(this.cwd + '/') ? ev.path.slice(this.cwd.length + 1) : ev.path
@@ -282,12 +345,9 @@ export class CockpitStore {
     this.markChanged(ev.path)
     this.#pushInbox(ev.path)
     if (this.followMode && ev.kind !== 'deleted') {
-      const name = ev.path.split('/').pop() ?? ev.path
-      const dot = name.lastIndexOf('.')
-      const ext = dot > 0 ? name.slice(dot + 1).toLowerCase() : ''
-      const dir = ev.path.slice(0, ev.path.lastIndexOf('/'))
-      if (dir && dir !== this.cwd) void this.browse(dir)
-      this.selected = { name, path: ev.path, is_dir: false, size: 0, ext }
+      // 归属双判定:在监听范围内(startWatching 已限 cwd)+ 绑定 agent 此刻在干活
+      if (!this.#agentActive()) return
+      this.#followChange(ev.path)
     }
   }
 

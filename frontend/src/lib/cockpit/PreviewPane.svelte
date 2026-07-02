@@ -33,6 +33,10 @@
   let nowTick = $state(Date.now())
   let saveTimer: ReturnType<typeof setTimeout> | null = null
   let chain: Promise<void> = Promise.resolve() // 写盘串行化
+  let previewEl = $state<HTMLDivElement | null>(null)
+  let editEl = $state<HTMLTextAreaElement | null>(null)
+  let followPulse = $state(false)
+  let lastFollowTick = 0
 
   $effect(() => {
     const t = setInterval(() => (nowTick = Date.now()), 1000)
@@ -61,6 +65,7 @@
   }
 
   function onEdit(v: string) {
+    cockpit.manualTakeover() // 编辑=手动接管,跟随即停(承 FanBox)
     editText = v
     dirty = true
     if (saveTimer) clearTimeout(saveTimer)
@@ -127,6 +132,52 @@
         node.removeEventListener('input', onInput)
         node.removeEventListener('keydown', editKeydown)
       },
+    }
+  }
+
+  // 跟随刷新(承 FanBox 代码实时流/md 贴底):同文件再写 → 干净时重载;
+  // 代码滚到首个变动行+脉冲;md 尾部变更贴底、改中间保持视口。
+  $effect(() => {
+    const t = cockpit.followTick
+    if (t === lastFollowTick) return
+    lastFollowTick = t
+    const sel = cockpit.selected
+    if (!sel || dirty || conflict) return
+    void followReload(sel)
+  })
+
+  // 编辑器有未保存改动 → 跟随不抢屏(同步给 store)
+  $effect(() => {
+    cockpit.editorBusy = dirty
+  })
+
+  function firstChangedLine(a: string, b: string): number {
+    const la = a.split('\n')
+    const lb = b.split('\n')
+    const n = Math.min(la.length, lb.length)
+    let i = 0
+    while (i < n && la[i] === lb[i]) i++
+    return i
+  }
+
+  async function followReload(sel: Entry) {
+    const container = previewEl
+    const nearBottom = container
+      ? container.scrollHeight - container.scrollTop - container.clientHeight < 80
+      : false
+    const prevScroll = container?.scrollTop ?? 0
+    const oldText = editText
+    const my = ++token
+    await load(sel, my)
+    if (my !== token) return
+    if (view?.kind === 'code' && editEl) {
+      const line = firstChangedLine(oldText, editText)
+      editEl.scrollTop = Math.max(0, (line - 3) * 18)
+      followPulse = true
+      setTimeout(() => (followPulse = false), 700)
+    } else if (view?.kind === 'markdown' && container) {
+      const tail = firstChangedLine(oldText, view.text ?? '') >= oldText.split('\n').length - 2
+      container.scrollTop = tail || nearBottom ? container.scrollHeight : prevScroll
     }
   }
 
@@ -204,7 +255,7 @@
   }
 </script>
 
-<div class="preview" aria-label="预览">
+<div class="preview" aria-label="预览" bind:this={previewEl}>
   {#if !view}
     <p class="empty">选择一个文件以预览</p>
   {:else if loading}
@@ -242,13 +293,13 @@
         <p class="error">diff 加载失败</p>
       {/await}
     {:else if view.kind === 'markdown' && vtab === 'src' && !view.truncated}
-      <textarea class="codeedit" value={editText} use:editInput aria-label="编辑源码" spellcheck="false"></textarea>
+      <textarea class="codeedit" class:fpulse={followPulse} bind:this={editEl} value={editText} use:editInput aria-label="编辑源码" spellcheck="false"></textarea>
     {:else if view.kind === 'markdown'}
       <!-- sanitized via DOMPurify above -->
       <div class="md">{@html view.html}</div>
     {:else if view.kind === 'code' && !view.truncated}
       <!-- 预览即编辑(FanBox):代码/纯文本打开就是可编辑态 -->
-      <textarea class="codeedit" value={editText} use:editInput aria-label="编辑内容" spellcheck="false"></textarea>
+      <textarea class="codeedit" class:fpulse={followPulse} bind:this={editEl} value={editText} use:editInput aria-label="编辑内容" spellcheck="false"></textarea>
     {:else if view.kind === 'code'}
       <pre class="code">{view.text}</pre>
     {:else if view.kind === 'image'}
@@ -381,6 +432,13 @@
     padding: 12px;
     resize: vertical;
     white-space: pre;
+  }
+  .codeedit.fpulse {
+    animation: fpulse .7s ease-out;
+  }
+  @keyframes fpulse {
+    0% { border-color: var(--green); box-shadow: 0 0 0 1px var(--green); }
+    100% { border-color: var(--hair); box-shadow: none; }
   }
   .codeedit:focus {
     outline: none;

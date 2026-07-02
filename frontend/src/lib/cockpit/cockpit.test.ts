@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { CockpitStore } from './cockpit.svelte'
+import { termStatus } from './terminal/termStatus.svelte'
 import { commands } from '../commands.svelte'
 import { layout } from '../layout.svelte'
 
@@ -54,7 +55,9 @@ describe('CockpitStore', () => {
     ).toBe(true)
   })
 
-  it('applyChange flashes the path; follow mode also previews it', () => {
+  it('applyChange flashes the path; follow 需 agent 活跃且经节流才切换', () => {
+    vi.useFakeTimers()
+    termStatus.status = 'busy' // 归属判定:绑定 agent 在干活
     const c = new CockpitStore()
     c.cwd = '/p'
     c.applyChange({ path: '/p/a.md', kind: 'modified' })
@@ -63,8 +66,56 @@ describe('CockpitStore', () => {
 
     c.followMode = true
     c.applyChange({ path: '/p/b.ts', kind: 'modified' })
+    expect(c.selected).toBeNull() // 节流窗口内还没切
+    vi.advanceTimersByTime(150) // 首切 120ms
     expect(c.selected?.path).toBe('/p/b.ts')
     expect(c.selected?.ext).toBe('ts')
+    termStatus.status = 'idle'
+    termStatus.lastData = 0
+    vi.useRealTimers()
+  })
+
+  it('follow 节流取最新目标,低优先级不顶掉排队的 md;同文件只刷 tick;agent 不活跃不抢屏', () => {
+    vi.useFakeTimers()
+    termStatus.status = 'busy'
+    const c = new CockpitStore()
+    c.cwd = '/p'
+    c.followMode = true
+    c.selected = { name: 'x.ts', path: '/p/x.ts', is_dir: false, size: 0, ext: 'ts', mtime: 0 }
+    // 已在跟随:切换等 900ms;先排 md(prio3),后来的 txt(prio2)不顶
+    c.applyChange({ path: '/p/notes.md', kind: 'modified' })
+    c.applyChange({ path: '/p/log.txt', kind: 'modified' })
+    vi.advanceTimersByTime(950)
+    expect(c.selected?.path).toBe('/p/notes.md')
+    // 同文件继续写 → followTick++ 不换目标
+    const tickBefore = c.followTick
+    c.applyChange({ path: '/p/notes.md', kind: 'modified' })
+    expect(c.followTick).toBe(tickBefore + 1)
+    // agent 不活跃(idle 且 lastData 久远)→ 不抢屏
+    termStatus.status = 'idle'
+    termStatus.lastData = 0
+    c.applyChange({ path: '/p/other.md', kind: 'modified' })
+    vi.advanceTimersByTime(1000)
+    expect(c.selected?.path).toBe('/p/notes.md')
+    vi.useRealTimers()
+  })
+
+  it('手动接管即停:select/openPath 关掉跟随;开启即回溯 5 分钟内最近变更', () => {
+    const c = new CockpitStore()
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ path: '/p', entries: [] }) }))
+    c.cwd = '/p'
+    c.followMode = true
+    c.select({ name: 'a.md', path: '/p/a.md', is_dir: false, size: 0, ext: 'md', mtime: 0 })
+    expect(c.followMode).toBe(false) // 点文件=接管
+    // 开启即回溯
+    termStatus.status = 'busy'
+    c.applyChange({ path: '/p/fresh.md', kind: 'modified' }) // 进 inbox
+    c.followMode = false
+    c.toggleFollow()
+    expect(c.followMode).toBe(true)
+    expect(c.selected?.path).toBe('/p/fresh.md')
+    termStatus.status = 'idle'
+    termStatus.lastData = 0
   })
 
   it('markChanged clears the flash after the timeout', () => {
