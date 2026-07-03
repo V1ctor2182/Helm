@@ -24,8 +24,8 @@ describe('applyShortcut', () => {
   })
 
   it('⌘\\ toggles context, ⌘` toggles terminal', () => {
-    layout.contextCollapsed = false
     const l = new LayoutStore()
+    l.contextCollapsed = false
     applyShortcut(mod('\\'), l)
     expect(l.contextCollapsed).toBe(true)
     applyShortcut(mod('`'), l)
@@ -50,8 +50,8 @@ describe('applyShortcut', () => {
   })
 
   it('does not fire when Alt is held (AltGr layouts)', () => {
-    layout.contextCollapsed = false
     const l = new LayoutStore()
+    l.contextCollapsed = false
     expect(
       applyShortcut({ metaKey: false, ctrlKey: true, altKey: true, key: '\\' }, l),
     ).toBe(false)
