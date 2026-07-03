@@ -95,7 +95,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNaviga
         Task {
             let ok = await backend.ensureRunning()
             if ok {
-                webView.load(URLRequest(url: shellURL))
+                var req = URLRequest(url: shellURL)
+                req.cachePolicy = .reloadRevalidatingCacheData  // index.html 必回源验证
+                webView.load(req)
             } else {
                 showSetupHint()
             }
@@ -178,7 +180,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNaviga
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
         let url = shellURL
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            webView.load(URLRequest(url: url))
+            var req = URLRequest(url: url)
+            req.cachePolicy = .reloadRevalidatingCacheData
+            webView.load(req)
         }
     }
 
@@ -227,7 +231,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNaviga
     }
 
     @objc private func reloadPage() {
-        webView.reload()
+        webView.reloadFromOrigin()  // ⌘R 永远绕过缓存(壳里没有 devtools 硬刷)
     }
 }
 

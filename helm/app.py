@@ -127,7 +127,7 @@ def create_app(config: HelmConfig | None = None) -> FastAPI:
     # /api/* (registered above) win over this catch-all static mount.
     dist = _frontend_dist()
     if dist is not None:
-        app.mount("/", StaticFiles(directory=dist, html=True), name="frontend")
+        app.mount("/", NoCacheHTMLStatic(directory=dist, html=True), name="frontend")
     else:
 
         @app.get("/", response_class=HTMLResponse)
@@ -135,6 +135,17 @@ def create_app(config: HelmConfig | None = None) -> FastAPI:
             return _BOOT_PAGE
 
     return app
+
+
+class NoCacheHTMLStatic(StaticFiles):
+    """index.html 必须每次回源(WKWebView 缓存过狠,壳里改版看不到);
+    带内容 hash 的 js/css 保持可缓存。"""
+
+    async def get_response(self, path: str, scope):  # type: ignore[override]
+        resp = await super().get_response(path, scope)
+        if "text/html" in (resp.headers.get("content-type") or ""):
+            resp.headers["Cache-Control"] = "no-cache"
+        return resp
 
 
 def _frontend_dist() -> Path | None:
