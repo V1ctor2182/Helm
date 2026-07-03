@@ -209,7 +209,7 @@ final class NotchController {
                 return CGSize(width: 560, height: 152)  // reminder banner
             }
             if model.localAttentionCount > 0 {
-                return CGSize(width: 620, height: 208)  // permission banner
+                return model.bannerSize  // permission banner(高度随内容)
             }
             return model.expanded
                 ? CGSize(width: model.expandedWidth, height: model.autoExpandedHeight)

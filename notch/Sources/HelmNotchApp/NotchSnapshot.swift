@@ -26,6 +26,13 @@ enum NotchSnapshot {
                                          cwd: "~/notch", tool: "Edit",
                                          detail: "src/auth/middleware.ts", reply: true))
             }),
+            ("banner-ask", {
+                $0.applyHook(HookMessage(
+                    event: "PermissionRequest", session: "notch", cwd: "~/kaggle",
+                    tool: "AskUserQuestion",
+                    detail: "你本地能跑那两个评分模型吗(GPT-OSS-20B 和 Gemma、4-bit GGUF)?\n① 能,有 GPU / 好机器\n② 只有这台 Mac\n③ 不想本地跑模型\n④ 先不管合规,先确认得分链",
+                    reply: true))
+            }),
             ("mat-darkglass", { $0.module = .dashboard; $0.backgroundMaterial = .darkGlass }),
             ("mat-lightglass", { $0.module = .dashboard; $0.backgroundMaterial = .lightGlass }),
             ("mat-vibrant", { $0.module = .dashboard; $0.backgroundMaterial = .vibrant }),
@@ -40,7 +47,7 @@ enum NotchSnapshot {
             // Banner states override the expanded panel with their own size.
             let banner: CGSize? = model.reminder != nil
                 ? CGSize(width: 560, height: 152)
-                : (model.localSessions.contains(where: \.needsAttention) ? CGSize(width: 620, height: 208) : nil)
+                : (model.localSessions.contains(where: \.needsAttention) ? model.bannerSize : nil)
             let w = (banner?.width ?? CGFloat(model.expandedWidth)) + 80
             let h = (banner?.height ?? CGFloat(model.expanded ? model.autoExpandedHeight : 32)) + 60
             let content = NotchView(model: model)

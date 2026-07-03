@@ -25,8 +25,8 @@ struct NotchView: View {
         // precedence over a permission request (620×208) — matching HTML render().
         let waiting = model.localSessions.first(where: { $0.needsAttention })
         let reminder = model.reminder
-        let shellW: CGFloat = reminder != nil ? 560 : (waiting != nil ? 620 : (model.expanded ? model.expandedWidth : collapsedWidth))
-        let shellH: CGFloat = reminder != nil ? 152 : (waiting != nil ? 208 : (model.expanded ? model.autoExpandedHeight : collapsedBarHeight))
+        let shellW: CGFloat = reminder != nil ? 560 : (waiting != nil ? model.bannerSize.width : (model.expanded ? model.expandedWidth : collapsedWidth))
+        let shellH: CGFloat = reminder != nil ? 152 : (waiting != nil ? model.bannerSize.height : (model.expanded ? model.autoExpandedHeight : collapsedBarHeight))
         shell(width: shellW, height: shellH, banner: waiting, reminder: reminder)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .onExitCommand { captureFocused = false; model.locked ? model.endInteraction() : model.collapse() }
@@ -1288,10 +1288,11 @@ struct NotchView: View {
                 Spacer()
                 Text("⌘Y 允许 · ⌘N 拒绝").font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
             }
-            Text("⚠︎ \(s.pendingTool ?? "请求执行")").font(.system(size: 11, weight: .semibold)).foregroundStyle(amber).padding(.top, 10)
+            Text("⚠︎ \(s.pendingTool == "AskUserQuestion" ? "选择题 — 允许后在终端作答" : (s.pendingTool ?? "请求执行"))")
+                .font(.system(size: 11, weight: .semibold)).foregroundStyle(amber).padding(.top, 10)
             Text(s.pendingDetail ?? s.pendingTool ?? "(请求权限)")
                 .font(.system(size: 11, design: .monospaced)).foregroundStyle(.white.opacity(0.82))
-                .lineLimit(3).frame(maxWidth: .infinity, alignment: .leading)
+                .lineLimit(8).frame(maxWidth: .infinity, alignment: .leading)
                 .padding(9)
                 .background(RoundedRectangle(cornerRadius: 8).fill(.black.opacity(0.4)))
                 .padding(.top, 9)
@@ -1311,7 +1312,7 @@ struct NotchView: View {
             Spacer(minLength: 0)
         }
         .padding(EdgeInsets(top: 14, leading: 18, bottom: 14, trailing: 18))
-        .frame(width: 620, height: 208, alignment: .topLeading)
+        .frame(width: model.bannerSize.width, height: model.bannerSize.height, alignment: .topLeading)
     }
 
     // MARK: Reminder banner (HTML remindHTML / .notch.remind — pops on a near event)

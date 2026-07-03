@@ -38,6 +38,17 @@ enum HookRunner {
     private static func summarize(tool: String?, input: Any?) -> String? {
         guard let tool else { return nil }
         if let dict = input as? [String: Any] {
+            // 选择题:把题面+选项带给横幅,别只显示一个干巴巴的工具名
+            if tool == "AskUserQuestion",
+               let qs = dict["questions"] as? [[String: Any]], let q0 = qs.first {
+                var lines: [String] = []
+                if let q = q0["question"] as? String { lines.append(q) }
+                let marks = ["①", "②", "③", "④"]
+                for (i, o) in ((q0["options"] as? [[String: Any]]) ?? []).prefix(4).enumerated() {
+                    if let label = o["label"] as? String { lines.append("\(marks[i]) \(label)") }
+                }
+                if !lines.isEmpty { return lines.joined(separator: "\n") }
+            }
             if let cmd = dict["command"] as? String { return "\(tool): \(cmd)" }
             if let path = dict["file_path"] as? String { return "\(tool): \(path)" }
         }

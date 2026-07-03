@@ -234,6 +234,21 @@ public final class NotchModel {
     public var openSettings: (@MainActor () -> Void)?
 
     public var localActiveCount: Int { localSessions.lazy.filter(\.isActive).count }
+    /// Permission banner 高度随内容走:头 40 + 标题 25 + 正文行数 + 按钮区 60。
+    /// 定高 208 在一行 detail 时底下剩一大块黑(2026-07-03 用户反馈)。
+    public var bannerSize: CGSize {
+        guard let s = localSessions.first(where: { $0.needsAttention }) else {
+            return CGSize(width: 620, height: 208)
+        }
+        let detail = s.pendingDetail ?? s.pendingTool ?? ""
+        // 显式换行 + 长行折行估算(monospaced 11pt,620-36-18 宽约容 78 字符)
+        let lines = detail.split(separator: "\n", omittingEmptySubsequences: false)
+            .reduce(0) { $0 + max(1, Int(ceil(Double($1.count) / 78.0))) }
+        let clamped = min(8, max(1, lines))
+        // 实测布局:上下 padding 28 + 头 16 + 题行 25 + 正文框 18 + 按钮区 48 ≈ 144 固定 + 行高 16
+        return CGSize(width: 620, height: CGFloat(144 + clamped * 16))
+    }
+
     public var localAttentionCount: Int { localSessions.lazy.filter(\.needsAttention).count }
 
     /// Running or blocked agents — surfaced on the collapsed pill.
