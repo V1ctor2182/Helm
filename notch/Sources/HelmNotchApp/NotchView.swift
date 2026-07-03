@@ -1077,6 +1077,9 @@ struct NotchView: View {
     /// `.bgcov` — the cover blurred + scaled behind everything, with a dark scrim.
     private var mediaBgCover: some View {
         ZStack {
+            // Solid floor: whatever the material/cover brightness, the media panel
+            // never reads translucent and lyrics keep contrast (device feedback).
+            Color.black
             Group {
                 if let np = model.nowPlaying, let art = nsArtwork(np) {
                     Image(nsImage: art).resizable().aspectRatio(contentMode: .fill)
@@ -1087,7 +1090,7 @@ struct NotchView: View {
                 }
             }
             .blur(radius: 34).scaleEffect(1.3).opacity(0.6)
-            Color.black.opacity(0.45)
+            Color.black.opacity(0.58)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
@@ -1141,12 +1144,12 @@ struct NotchView: View {
                 // 优雅降级:静态可滚全词 + 一行说明(2026-07-03 用户:歌词没动)
                 VStack(alignment: .leading, spacing: 6) {
                     Text("该播放源不提供进度 — 歌词不跟唱")
-                        .font(.system(size: 9)).foregroundStyle(.white.opacity(0.3))
+                        .font(.system(size: 9)).foregroundStyle(.white.opacity(0.45))
                     ScrollView(.vertical, showsIndicators: false) {
                         VStack(alignment: .leading, spacing: 9) {
                             ForEach(lines.indices, id: \.self) { i in
                                 Text(lines[i].text).font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(.white.opacity(0.55)).lineLimit(2)
+                                    .foregroundStyle(.white.opacity(0.78)).lineLimit(2)
                             }
                         }
                     }
@@ -1193,9 +1196,9 @@ struct NotchView: View {
             .mask(lyricsMask)
         case .none:
             VStack(spacing: 6) {
-                Text("没有找到歌词").font(.system(size: 12)).foregroundStyle(.white.opacity(0.4))
+                Text("没有找到歌词").font(.system(size: 12)).foregroundStyle(.white.opacity(0.55))
                 if model.nowPlaying != nil {
-                    Text("lrclib 无此曲目").font(.system(size: 10)).foregroundStyle(.white.opacity(0.25))
+                    Text("lrclib 无此曲目").font(.system(size: 10)).foregroundStyle(.white.opacity(0.38))
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
