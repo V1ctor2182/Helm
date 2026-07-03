@@ -213,7 +213,7 @@ final class NotchController {
             }
             return model.expanded
                 ? CGSize(width: model.expandedWidth, height: model.autoExpandedHeight)
-                : CGSize(width: CGFloat(model.notchWidth) + 200, height: collapsedHeight)
+                : CGSize(width: model.collapsedWidth, height: collapsedHeight)
         }
         panel.contentView = host
         return panel

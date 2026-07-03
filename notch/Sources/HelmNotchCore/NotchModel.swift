@@ -249,6 +249,28 @@ public final class NotchModel {
         return CGSize(width: 620, height: CGFloat(144 + clamped * 16))
     }
 
+    /// 折叠态两翼宽度随内容走(2026-07-03 用户:折叠态太宽)。
+    /// 左翼:媒体播放/专注要放标题,空闲只有 ● Helm;右翼:日程要放"10:00 站会",
+    /// 计数徽章/空闲一个点就够。原一刀切 notch+200 在空闲时两边全是黑。
+    public var collapsedLeftWing: CGFloat {
+        if focusOn { return 120 }
+        if nowPlaying != nil { return 130 }
+        return 58
+    }
+
+    public var collapsedRightWing: CGFloat {
+        if focusOn { return 70 }
+        let waiting = localSessions.contains { $0.needsAttention }
+        let running = localSessions.contains { $0.phase == .running }
+        if waiting || running { return 48 }
+        if !events.isEmpty { return 120 }
+        return 40
+    }
+
+    public var collapsedWidth: CGFloat {
+        CGFloat(notchWidth) + collapsedLeftWing + collapsedRightWing
+    }
+
     public var localAttentionCount: Int { localSessions.lazy.filter(\.needsAttention).count }
 
     /// Running or blocked agents — surfaced on the collapsed pill.

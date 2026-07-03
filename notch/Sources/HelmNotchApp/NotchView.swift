@@ -18,7 +18,7 @@ struct NotchView: View {
     private let collapsedBarHeight: CGFloat = 32
     // ~100px per side around the camera gap (HTML #bar: (360−160)/2), so the
     // media title reads as "Counting My Bless…" instead of truncating hard.
-    private var collapsedWidth: CGFloat { CGFloat(model.notchWidth) + 200 }
+    private var collapsedWidth: CGFloat { model.collapsedWidth }
 
     var body: some View {
         // Banner states override collapsed/expanded. Reminder (560×152) takes
@@ -125,7 +125,7 @@ struct NotchView: View {
     private var collapsedBar: some View {
         HStack(spacing: 0) {
             collapsedLeft
-                .frame(maxWidth: .infinity, alignment: .trailing)
+                .frame(width: model.collapsedLeftWing - 11, alignment: .trailing)
                 .padding(.trailing, 11)
             // Physical notch / camera gap, with the HTML camera lens dot.
             Color.clear.frame(width: CGFloat(model.notchWidth))
@@ -135,7 +135,7 @@ struct NotchView: View {
                         .frame(width: 7, height: 7).padding(.top, 8)
                 }
             collapsedRight
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(width: model.collapsedRightWing - 11, alignment: .leading)
                 .padding(.leading, 11)
         }
         .frame(width: collapsedWidth, height: collapsedBarHeight)
