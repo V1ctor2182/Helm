@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from helm.app import db_session, get_secret_box
-from helm.chat import adapters
+from helm.chat import adapters, claudecli
 from helm.chat import models  # noqa: F401  (register models on Base.metadata)
 from helm.chat.models import ChatSession, Provider
 from helm.chat.service import PROVIDER_TEMPLATES, ProviderService, provider_public
@@ -55,6 +55,30 @@ def list_providers(
     return {"providers": [provider_public(p) for p in providers]}
 
 
+@router.post("/providers/claude-cli-setup")
+def setup_claude_cli(
+    session: Session = Depends(db_session), box: SecretBox = Depends(get_secret_box)
+) -> dict:
+    """一键接入本机 Claude Code 订阅:探测 claude 二进制,自动建/更新 provider。"""
+    binary = claudecli.detect_claude()
+    if not binary:
+        raise HTTPException(
+            status_code=404,
+            detail="没找到 claude——先安装 Claude Code 并登录(npm i -g @anthropic-ai/claude-code)",
+        )
+    svc = ProviderService(session, box)
+    existing = next((p for p in svc.list() if p.type == "claude-cli"), None)
+    if existing is not None:
+        existing.base_url = binary
+        session.flush()
+        return {"provider": provider_public(existing), "binary": binary, "created": False}
+    p = svc.create(
+        type="claude-cli", name="Claude Code(订阅)", base_url=binary,
+        api_key=None, models=["sonnet", "opus", "haiku"],
+    )
+    return {"provider": provider_public(p), "binary": binary, "created": True}
+
+
 @router.post("/providers")
 def create_provider(
     body: ProviderBody,
@@ -83,6 +107,12 @@ async def test_provider(
     provider = session.get(Provider, provider_id)
     if provider is None:
         raise HTTPException(status_code=404, detail="provider not found")
+    if provider.type == "claude-cli":
+        from pathlib import Path
+
+        ok = bool(provider.base_url) and Path(provider.base_url).exists()
+        return {"ok": ok, "models": ["sonnet", "opus", "haiku"]} if ok else {
+            "ok": False, "error": f"找不到 claude 可执行文件:{provider.base_url}"}
     try:
         key = svc.api_key(provider_id)  # may raise DecryptionError on a lost key
         available = await adapters.ping(
@@ -167,6 +197,7 @@ async def chat_ws(ws: WebSocket, session_id: int) -> None:
     await ws.accept()
     db = ws.app.state.db
     box = ws.app.state.secret_box
+    config = ws.app.state.config
 
     # Snapshot the session + provider (rows detach after the scope closes).
     with db.session_scope() as s:
@@ -203,14 +234,25 @@ async def chat_ws(ws: WebSocket, session_id: int) -> None:
         acc: list[str] = []
         error: str | None = None
         try:
-            async for chunk in adapters.chat_stream(
-                provider_type=ptype,
-                base_url=base_url,
-                model=model,
-                messages=history,
-                system=system,
-                api_key=api_key,
-            ):
+            stream = (
+                claudecli.chat_stream(
+                    binary=base_url,  # claude-cli:base_url 存的是探测到的绝对路径
+                    model=model,
+                    messages=history,
+                    system=system,
+                    cwd=config.data_dir,
+                )
+                if ptype == "claude-cli"
+                else adapters.chat_stream(
+                    provider_type=ptype,
+                    base_url=base_url,
+                    model=model,
+                    messages=history,
+                    system=system,
+                    api_key=api_key,
+                )
+            )
+            async for chunk in stream:
                 if stop_event and stop_event.is_set():
                     break
                 acc.append(chunk)

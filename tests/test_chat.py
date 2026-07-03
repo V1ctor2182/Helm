@@ -305,3 +305,91 @@ def test_chat_ws_stop(config, monkeypatch):
     # an assistant turn was persisted (partial or full)
     msgs = c.get(f"/api/sessions/{sid}").json()["messages"]
     assert any(m["role"] == "assistant" for m in msgs)
+
+# ---- claude-cli provider(订阅直连,2026-07-03 用户拍板) --------------------
+
+
+def test_claudecli_prompt_and_extract():
+    from helm.chat.claudecli import build_prompt, extract_text
+
+    prompt = build_prompt(
+        [{"role": "user", "content": "你好"}, {"role": "assistant", "content": "嗨"},
+         {"role": "user", "content": "1+1?"}],
+        system="言简意赅",
+    )
+    assert "[系统指示]" in prompt and "言简意赅" in prompt
+    assert prompt.index("你好") < prompt.index("嗨") < prompt.index("1+1?")
+    assert prompt.rstrip().endswith(")")  # 收口指示
+
+    line = '{"type":"stream_event","event":{"type":"content_block_delta","delta":{"type":"text_delta","text":"2"}}}'
+    assert extract_text(line) == "2"
+    fallback = '{"type":"assistant","message":{"content":[{"type":"text","text":"答案是 2"}]}}'
+    assert extract_text(fallback) == "答案是 2"
+    assert extract_text('{"type":"result"}') is None
+    assert extract_text("not json") is None
+
+
+def test_claudecli_stream_with_fake_process(config):
+    import asyncio
+
+    from helm.chat import claudecli
+
+    lines = [
+        b'{"type":"system","subtype":"init"}\n',
+        b'{"type":"stream_event","event":{"type":"content_block_delta","delta":{"type":"text_delta","text":"He"}}}\n',
+        b'{"type":"stream_event","event":{"type":"content_block_delta","delta":{"type":"text_delta","text":"lm"}}}\n',
+        b'{"type":"assistant","message":{"content":[{"type":"text","text":"Helm"}]}}\n',
+        b'{"type":"result","subtype":"success"}\n',
+    ]
+
+    class FakeStdout:
+        def __init__(self):
+            self.queue = list(lines)
+
+        async def readline(self):
+            return self.queue.pop(0) if self.queue else b""
+
+    class FakeProc:
+        stdout = FakeStdout()
+        stderr = None
+        returncode = 0
+
+        async def wait(self):
+            return 0
+
+        def terminate(self):
+            pass
+
+    async def fake_spawn(*argv, **kw):
+        assert argv[1] == "-p" and "--output-format" in argv
+        return FakeProc()
+
+    async def run():
+        out = []
+        async for t in claudecli.chat_stream(
+            binary="/fake/claude", model="sonnet",
+            messages=[{"role": "user", "content": "hi"}], system=None,
+            cwd=config.data_dir, spawn=fake_spawn,
+        ):
+            out.append(t)
+        return out
+
+    assert "".join(asyncio.run(run())) == "Helm"  # 增量拼接;assistant 整段不重复
+
+
+def test_claude_cli_setup_endpoint(config, monkeypatch):
+    from helm.chat import claudecli
+
+    monkeypatch.setattr(claudecli, "detect_claude", lambda: "/usr/local/bin/claude")
+    c = TestClient(create_app(config))
+    r = c.post("/api/providers/claude-cli-setup")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["created"] is True and body["binary"] == "/usr/local/bin/claude"
+    assert body["provider"]["type"] == "claude-cli"
+    # 幂等:再点一次是更新不是重复建
+    r2 = c.post("/api/providers/claude-cli-setup")
+    assert r2.json()["created"] is False
+    providers = c.get("/api/providers").json()["providers"]
+    assert sum(1 for p in providers if p["type"] == "claude-cli") == 1
+

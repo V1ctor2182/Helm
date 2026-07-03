@@ -66,6 +66,19 @@ export class ChatStore {
     if (xs) this.providers = xs
   }
 
+  /** 一键接入本机 Claude Code 订阅(探测 claude 二进制,自动建 provider)。 */
+  async setupClaudeCli(): Promise<{ ok: boolean; msg: string }> {
+    try {
+      const r = await fetch('/api/providers/claude-cli-setup', { method: 'POST' })
+      const body = await r.json()
+      if (!r.ok) return { ok: false, msg: body.detail ?? `HTTP ${r.status}` }
+      await this.loadProviders()
+      return { ok: true, msg: `${body.created ? '已接入' : '已刷新'}:${body.binary}` }
+    } catch {
+      return { ok: false, msg: '后端不可达' }
+    }
+  }
+
   async addProvider(p: {
     type: string
     name: string

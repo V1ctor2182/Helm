@@ -33,6 +33,16 @@
     name = baseUrl = apiKey = ''
   }
 
+  let oneClickMsg = $state('')
+  let oneClickOk = $state(true)
+
+  async function oneClick() {
+    oneClickMsg = '探测中…'
+    const r = await chat.setupClaudeCli()
+    oneClickOk = r.ok
+    oneClickMsg = r.msg
+  }
+
   async function test(id: number) {
     const r = await chat.testProvider(id)
     testOk = r.ok
@@ -60,6 +70,12 @@
   {#if testResult}<p class="test" class:bad={!testOk}>{testResult}</p>{/if}
 
   <div class="h ht">从模板添加</div>
+  <!-- 一键接入:走本机 Claude Code 订阅,零 key 零计费(2026-07-03 用户拍板) -->
+  <div class="oneclick">
+    <button class="act pri" onclick={oneClick}>一键接入 Claude Code(订阅)</button>
+    {#if oneClickMsg}<span class="ocmsg" class:bad={!oneClickOk}>{oneClickMsg}</span>{/if}
+  </div>
+
   <div class="templates">
     {#each chat.templates as t (t.type)}
       <button class="act" class:sel={selected?.type === t.type} onclick={() => pick(t)}>{t.name}</button>
@@ -71,7 +87,9 @@
       <input bind:value={name} placeholder="名称" aria-label="名称" />
       <input bind:value={baseUrl} placeholder="base_url" aria-label="base_url" />
       {#if selected.needs_key}
-        <input bind:value={apiKey} type="password" placeholder="API key(加密存储)" aria-label="API key" />
+        {#if selected?.type !== 'claude-cli'}
+          <input bind:value={apiKey} type="password" placeholder="API key(加密存储)" aria-label="API key" />
+        {/if}
       {/if}
       <button class="act pri" type="submit">添加</button>
     </form>
@@ -158,6 +176,20 @@
   .act.pri {
     color: var(--acc-ink);
     border-color: var(--acc-ink);
+  }
+  .oneclick {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .ocmsg {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--green);
+  }
+  .ocmsg.bad {
+    color: var(--red, #d33);
   }
   .templates {
     display: flex;
