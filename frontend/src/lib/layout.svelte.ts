@@ -59,6 +59,9 @@ export class LayoutStore {
     return this.tabs.find((t) => t.id === this.activeTabId) ?? null
   }
 
+  /** 深链意图:切到记录页时直接落某个 tab(ContextPanel「任务」用)。 */
+  journalIntent = $state<'notes' | 'journal' | 'tasks' | 'calendar' | null>(null)
+
   setMode(id: ModeId): void {
     this.mode = id
   }

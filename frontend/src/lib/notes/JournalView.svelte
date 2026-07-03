@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { layout } from '../layout.svelte'
   import { onMount } from 'svelte'
   import { marked } from 'marked'
   import DOMPurify from 'dompurify'
@@ -10,6 +11,14 @@
   import Calendar from './Calendar.svelte'
 
   let view = $state<'notes' | 'journal' | 'tasks' | 'calendar'>('notes')
+
+  // 深链:侧栏「任务」等入口带着 tab 意图跳进来
+  $effect(() => {
+    if (layout.journalIntent) {
+      view = layout.journalIntent
+      layout.journalIntent = null
+    }
+  })
   let draft = $state('')
   let taskPrompt = $state('')
   let taskKind = $state<'cron' | 'every' | 'at'>('cron')
