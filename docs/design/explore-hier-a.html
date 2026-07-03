@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Helm · 层级探索 A · 表盘主角 Dial</title>
+<style>
+  /* ============================================================
+     EXPLORE-HIER-A · 表盘主角 Dial
+     药方:每屏立一个超大主读数当视觉锚,五级字阶拉开层级。
+     字阶:9px mono 标签 / 12px 辅文 / 15px 正文 / 22-28px 关键数字 / 72px 主读数
+     ============================================================ */
+  * { margin:0; padding:0; box-sizing:border-box; border-radius:0; }
+
+  :root {
+    --sans: -apple-system, "SF Pro Text", sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  }
+
+  [data-theme="dark"] {
+    --bg:#000; --chrome:#0a0a0c; --panel:#08080a;
+    --t1:#fff; --t2:rgba(255,255,255,.82); --t3:rgba(255,255,255,.52); --t4:rgba(255,255,255,.32);
+    --line:rgba(255,255,255,.14); --hair:rgba(255,255,255,.07);
+    --tile:#101012; --grid:rgba(255,255,255,.035);
+    --green:#34C759; --acc:#FFC53D; --acc-ink:#FFC53D;
+  }
+  [data-theme="light"] {
+    --bg:#efece3; --chrome:#e7e3d8; --panel:#eae6dc;
+    --t1:#17140d; --t2:rgba(23,20,13,.74); --t3:rgba(23,20,13,.52); --t4:rgba(23,20,13,.34);
+    --line:rgba(23,20,13,.20); --hair:rgba(23,20,13,.10);
+    --tile:#e4dfd2; --grid:rgba(23,20,13,.05);
+    --green:#2a8f43; --acc:#FFC53D; --acc-ink:#8a6410;
+  }
+
+  body { background:#141414; }
+  #root {
+    min-height:100vh; background:var(--bg); color:var(--t1);
+    font-family:var(--sans); padding:36px 40px 64px;
+    transition:background .25s ease, color .25s ease;
+  }
+
+  /* ---------- 页头 ---------- */
+  .page-head {
+    display:flex; align-items:baseline; gap:18px;
+    max-width:1180px; margin:0 auto 8px;
+  }
+  .page-head h1 { font:800 15px/1.2 var(--mono); letter-spacing:1px; color:var(--t1); }
+  .page-head .sub { font:400 12px/1.4 var(--sans); color:var(--t3); }
+  .theme-btn {
+    margin-left:auto; cursor:pointer;
+    font:700 9px/1 var(--mono); letter-spacing:1px; text-transform:uppercase;
+    color:var(--t2); background:var(--chrome); border:1px solid var(--line);
+    padding:8px 14px;
+  }
+  .theme-btn:hover { color:var(--t1); border-color:var(--acc-ink); }
+
+  .screen-label {
+    max-width:1180px; margin:34px auto 10px;
+    font:700 9px/1 var(--mono); letter-spacing:2px; text-transform:uppercase; color:var(--t4);
+    display:flex; align-items:center; gap:10px;
+  }
+  .screen-label::after { content:""; flex:1; height:1px; background:var(--hair); }
+  .screen-label b { color:var(--acc-ink); font-weight:700; }
+
+  /* ---------- App 外壳 ---------- */
+  .app {
+    max-width:1180px; height:640px; margin:0 auto;
+    background:var(--bg); border:1px solid var(--line); border-radius:14px;
+    overflow:hidden;
+    display:grid;
+    grid-template-columns:58px 1fr;
+    grid-template-rows:1fr 26px;
+    font-family:var(--sans); color:var(--t2);
+  }
+
+  /* ---------- Rail(细丝) ---------- */
+  .rail {
+    grid-row:1; grid-column:1;
+    background:var(--chrome); border-right:1px solid var(--hair);
+    position:relative;
+    display:flex; flex-direction:column; align-items:center;
+    padding:18px 0 14px; gap:6px;
+  }
+  .rail .filament {
+    position:absolute; top:0; right:0; width:1px; height:100%;
+    background:var(--hair);
+  }
+  .rail .filament i {
+    position:absolute; right:0; width:1px; height:38px;
+    background:var(--acc); display:block;
+  }
+  .rail .ric {
+    width:34px; height:34px; display:flex; align-items:center; justify-content:center;
+    font:700 12px/1 var(--mono); color:var(--t4); cursor:default;
+  }
+  .rail .ric.on { color:var(--t1); }
+  .rail .ric svg { display:block; }
+  .rail .spacer { flex:1; }
+  .rail .ver { font:400 9px/1 var(--mono); color:var(--t4); letter-spacing:1px; }
+
+  /* ---------- 主区共通 ---------- */
+  .main {
+    grid-row:1; grid-column:2;
+    background:
+      radial-gradient(var(--grid) 1px, transparent 1px);
+    background-size:22px 22px;
+    overflow:hidden; position:relative;
+    display:flex; flex-direction:column;
+  }
+  /* fiducial 角标(左上/右下 accent L 角) */
+  .fid { position:relative; }
+  .fid::before, .fid::after {
+    content:""; position:absolute; width:9px; height:9px; pointer-events:none;
+  }
+  .fid::before { top:-1px; left:-1px; border-top:1px solid var(--acc-ink); border-left:1px solid var(--acc-ink); }
+  .fid::after  { bottom:-1px; right:-1px; border-bottom:1px solid var(--acc-ink); border-right:1px solid var(--acc-ink); }
+
+  /* ---------- 状态栏(26px 遥测) ---------- */
+  .statusbar {
+    grid-row:2; grid-column:1 / -1;
+    background:var(--chrome); border-top:1px solid var(--hair);
+    display:flex; align-items:center; gap:0;
+    padding:0 12px;
+    font:400 9px/1 var(--mono); letter-spacing:.4px; color:var(--t3);
+    font-variant-numeric:tabular-nums;
+    white-space:nowrap; overflow:hidden;
+  }
+  .statusbar .seg { padding:0 10px; border-right:1px solid var(--hair); }
+  .statusbar .seg:first-child { padding-left:0; }
+  .statusbar .seg:last-child { border-right:0; margin-left:auto; padding-right:0; }
+  .statusbar .dot { color:var(--acc-ink); }
+  .statusbar .ok { color:var(--green); }
+
+  /* ============================================================
+     屏 ① TODAY · 仪表读数
+     ============================================================ */
+  .today { padding:30px 42px 0; overflow:hidden; }
+
+  /* —— 主读数:重磅时钟(全屏唯一主角,72px) —— */
+  .dial {
+    display:flex; align-items:flex-end; gap:26px;
+    padding-bottom:24px; border-bottom:1px solid var(--line);
+  }
+  .dial .clock {
+    font:800 72px/0.94 var(--mono); letter-spacing:-2px;
+    color:var(--t1); font-variant-numeric:tabular-nums;
+  }
+  .dial .clock .sec { font-size:22px; font-weight:700; color:var(--t4); letter-spacing:0; }
+  .dial .datecol { padding-bottom:6px; }
+  .dial .datecol .d1 { font:800 22px/1.1 var(--mono); color:var(--t2); letter-spacing:1px; font-variant-numeric:tabular-nums; }
+  .dial .datecol .d2 { font:400 12px/1.6 var(--mono); color:var(--t4); letter-spacing:2px; }
+  .dial .meta {
+    margin-left:auto; text-align:right; padding-bottom:6px;
+    font:700 9px/2 var(--mono); letter-spacing:1.5px; color:var(--t4); text-transform:uppercase;
+    font-variant-numeric:tabular-nums;
+  }
+  .dial .meta b { color:var(--t2); font-weight:700; }
+  .dial .meta .acc { color:var(--acc-ink); }
+
+  /* —— 账本式 section:左槽 mono tag + 发丝线 —— */
+  .ledger { flex:1; overflow:hidden; }
+  .sec-row {
+    display:grid; grid-template-columns:96px 1fr auto;
+    align-items:baseline; column-gap:20px;
+    padding:15px 0 13px; border-bottom:1px solid var(--hair);
+  }
+  .sec-row .tag {
+    font:700 9px/1.4 var(--mono); letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--t4);
+  }
+  .sec-row .tag em { display:block; font-style:normal; color:var(--acc-ink); margin-top:3px; }
+  .sec-row .key {
+    font:700 22px/1 var(--mono); color:var(--t1);
+    font-variant-numeric:tabular-nums; letter-spacing:-.5px;
+    text-align:right; align-self:start;
+  }
+  .sec-row .key u { text-decoration:none; font:400 9px/1 var(--mono); color:var(--t4); letter-spacing:1px; display:block; margin-top:5px; text-align:right; }
+
+  .items { display:flex; flex-direction:column; gap:7px; min-width:0; }
+  .item { display:flex; align-items:baseline; gap:10px; min-width:0; }
+  .item .bx { font:400 12px/1 var(--mono); color:var(--t4); }
+  .item .bx.done { color:var(--green); }
+  .item .tx { font:400 15px/1.35 var(--sans); color:var(--t2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .item .tx.done { color:var(--t4); text-decoration:line-through; }
+  .item .at { margin-left:auto; font:400 9px/1 var(--mono); color:var(--t4); letter-spacing:1px; font-variant-numeric:tabular-nums; flex:none; }
+
+  .ghost { font:400 15px/1.5 var(--sans); color:var(--t4); }
+  .ghost kbd {
+    font:700 9px/1 var(--mono); color:var(--t3); letter-spacing:1px;
+    border:1px solid var(--line); padding:2px 5px; margin:0 2px;
+  }
+
+  .agent-line { display:flex; align-items:baseline; gap:10px; }
+  .agent-line .pulse { font:400 12px/1 var(--mono); color:var(--t4); }
+  .agent-line .tx { font:400 15px/1.35 var(--sans); color:var(--t3); }
+
+  .chips { display:flex; gap:8px; flex-wrap:wrap; }
+  .chip {
+    font:400 12px/1 var(--mono); color:var(--t3); letter-spacing:.5px;
+    border:1px solid var(--hair); background:var(--panel); padding:6px 10px;
+    display:inline-flex; align-items:baseline; gap:8px;
+  }
+  .chip b { font-weight:700; color:var(--t2); }
+  .chip .k9 { font-size:9px; color:var(--t4); letter-spacing:1px; }
+  .chip.hot { border-color:var(--line); }
+  .chip.hot b { color:var(--t1); }
+
+  /* ============================================================
+     屏 ② COCKPIT · 驾驶舱
+     ============================================================ */
+  .cockpit { padding:0; }
+  .cp-head {
+    display:flex; align-items:flex-end; gap:20px;
+    padding:26px 32px 18px; border-bottom:1px solid var(--line);
+  }
+  .cp-head .proj { font:800 28px/1 var(--mono); letter-spacing:-.5px; color:var(--t1); }
+  .cp-head .path { font:400 12px/1.4 var(--mono); color:var(--t4); letter-spacing:.5px; padding-bottom:2px; }
+  .cp-head .stats {
+    margin-left:auto; display:flex; gap:22px; padding-bottom:2px;
+    font:700 9px/1.8 var(--mono); letter-spacing:1.5px; text-transform:uppercase; color:var(--t4);
+    font-variant-numeric:tabular-nums; text-align:right;
+  }
+  .cp-head .stats b { display:block; font-size:22px; font-weight:700; color:var(--t1); letter-spacing:-.5px; }
+  .cp-head .stats .g b { color:var(--green); }
+
+  .cp-body {
+    flex:1; display:grid; grid-template-columns:1fr 330px; min-height:0;
+  }
+
+  /* —— 左:文件网格 —— */
+  .files { padding:20px 24px 16px 32px; overflow:hidden; border-right:1px solid var(--hair); }
+  .files .flabel, .preview .flabel, .term .flabel {
+    font:700 9px/1 var(--mono); letter-spacing:2px; text-transform:uppercase; color:var(--t4);
+    display:flex; align-items:center; gap:8px; margin-bottom:14px;
+  }
+  .files .flabel::after { content:""; flex:1; height:1px; background:var(--hair); }
+  .fgrid { display:grid; grid-template-columns:repeat(3, 1fr); gap:1px; background:var(--hair); border:1px solid var(--hair); }
+  .fcard {
+    background:var(--bg); padding:13px 14px 12px; cursor:default;
+    display:flex; flex-direction:column; gap:7px; min-width:0;
+  }
+  .fcard:hover { background:var(--tile); }
+  .fcard .kind { font:700 9px/1 var(--mono); letter-spacing:1.5px; color:var(--t4); }
+  .fcard .kind i { font-style:normal; color:var(--acc-ink); }
+  .fcard .name {
+    font:700 14px/1.25 var(--sans); color:var(--t1);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .fcard .meta { font:400 9px/1 var(--mono); color:var(--t4); letter-spacing:.5px; font-variant-numeric:tabular-nums; }
+  .fcard.sel { background:var(--tile); box-shadow:inset 0 0 0 1px var(--line); }
+  .fcard.sel .kind i { color:var(--acc-ink); }
+
+  /* —— 右:预览(框选视口) —— */
+  .preview { padding:20px 32px 16px 24px; overflow:hidden; display:flex; flex-direction:column; }
+  .pframe {
+    flex:1; border:1px solid var(--hair); background:var(--panel);
+    padding:18px 18px 14px; display:flex; flex-direction:column; min-height:0;
+  }
+  .pframe .ptitle { font:700 15px/1.3 var(--sans); color:var(--t1); margin-bottom:4px; }
+  .pframe .psub { font:400 9px/1 var(--mono); color:var(--t4); letter-spacing:1px; margin-bottom:14px; font-variant-numeric:tabular-nums; }
+  .pframe p { font:400 12px/1.65 var(--sans); color:var(--t3); margin-bottom:10px; }
+  .pframe p b { color:var(--t2); font-weight:600; }
+  .pframe .tele {
+    margin-top:auto; padding-top:12px; border-top:1px solid var(--hair);
+    display:grid; grid-template-columns:1fr 1fr; gap:4px 16px;
+    font:400 9px/1.7 var(--mono); letter-spacing:.5px; color:var(--t4);
+    font-variant-numeric:tabular-nums;
+  }
+  .pframe .tele b { color:var(--t3); font-weight:400; }
+
+  /* —— 底:全宽终端 —— */
+  .term {
+    border-top:1px solid var(--line); background:var(--panel);
+    padding:10px 32px 12px; height:158px; flex:none;
+    display:flex; flex-direction:column;
+  }
+  .term .flabel { margin-bottom:8px; }
+  .term .flabel .live { color:var(--green); letter-spacing:.5px; }
+  .term pre {
+    flex:1; overflow:hidden; margin:0;
+    font:400 12px/1.75 var(--mono); color:var(--t3);
+    font-variant-numeric:tabular-nums;
+  }
+  .term pre .p { color:var(--acc-ink); }
+  .term pre .c { color:var(--t2); }
+  .term pre .g { color:var(--green); }
+  .term pre .dim { color:var(--t4); }
+  .term .cursor { display:inline-block; width:7px; height:13px; background:var(--acc); vertical-align:-2px; }
+
+  /* ---------- 字阶图例 ---------- */
+  .legend {
+    max-width:1180px; margin:26px auto 0; padding-top:14px; border-top:1px solid var(--hair);
+    display:flex; gap:26px; flex-wrap:wrap;
+    font:400 9px/1.8 var(--mono); letter-spacing:1px; color:var(--t4); text-transform:uppercase;
+  }
+  .legend b { color:var(--t3); font-weight:700; }
+</style>
+</head>
+<body>
+<div id="root" data-theme="dark">
+
+  <div class="page-head">
+    <h1>EXPLORE · HIER-A</h1>
+    <span class="sub">表盘主角 Dial — 每屏一个超大主读数当视觉锚,五级字阶拉开层级(9 / 12 / 15 / 22–28 / 72)</span>
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">THEME · DARK ⇄ LIGHT</button>
+  </div>
+
+  <!-- ════════════════ 屏 ① TODAY ════════════════ -->
+  <div class="screen-label">SCREEN 01 — <b>TODAY · 仪表读数</b> 主角:重磅时钟 72px,其余全是账本底噪</div>
+
+  <div class="app">
+    <div class="rail">
+      <div class="filament"><i style="top:16px"></i></div>
+      <div class="ric on" title="Today">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.2">
+          <circle cx="7.5" cy="7.5" r="6"/><path d="M7.5 4v3.5l2.5 1.5"/>
+        </svg>
+      </div>
+      <div class="ric" title="Cockpit">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.2">
+          <rect x="1.5" y="2.5" width="12" height="10"/><path d="M4.5 6l2 1.8-2 1.8M8 10h3"/>
+        </svg>
+      </div>
+      <div class="ric" title="Chat">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.2">
+          <path d="M1.5 2.5h12v8h-7l-3 2.5v-2.5h-2z"/>
+        </svg>
+      </div>
+      <div class="ric" title="Memory">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.2">
+          <rect x="2.5" y="1.5" width="10" height="12"/><path d="M5 4.5h5M5 7.5h5M5 10.5h3"/>
+        </svg>
+      </div>
+      <div class="spacer"></div>
+      <div class="ver">v0.1</div>
+    </div>
+
+    <div class="main today">
+
+      <!-- 主读数:全屏唯一主角 -->
+      <div class="dial">
+        <div class="clock">15:42<span class="sec">:07</span></div>
+        <div class="datecol">
+          <div class="d1">07·03</div>
+          <div class="d2">周五 · THU→FRI W27</div>
+        </div>
+        <div class="meta">
+          <div><b>3</b> TASKS OPEN</div>
+          <div><b>0</b> RUNS ACTIVE</div>
+          <div class="acc">FOCUS 2H 10M LEFT</div>
+        </div>
+      </div>
+
+      <!-- 账本 sections -->
+      <div class="ledger">
+
+        <div class="sec-row">
+          <div class="tag">TASKS<em>今日</em></div>
+          <div class="items">
+            <div class="item"><span class="bx">□</span><span class="tx">把 Today 页字阶从窄带拉开成五级</span><span class="at">P1 · 设计</span></div>
+            <div class="item"><span class="bx">□</span><span class="tx">notch 面板 media source 图标换单色 SVG</span><span class="at">P2 · notch</span></div>
+            <div class="item"><span class="bx done">◆</span><span class="tx done">DESIGN.md 补每日 accent 色轮说明</span><span class="at">已完成 11:20</span></div>
+          </div>
+          <div class="key">2<u>/ 3 待办</u></div>
+        </div>
+
+        <div class="sec-row">
+          <div class="tag">JOURNAL<em>15:42</em></div>
+          <div class="items">
+            <div class="ghost">今天还没有落笔 — 按 <kbd>⌘N</kbd> 记一行,或直接开始输入…</div>
+          </div>
+          <div class="key">0<u>字 · 连续 4 天</u></div>
+        </div>
+
+        <div class="sec-row">
+          <div class="tag">AGENT<em>IDLE</em></div>
+          <div class="items">
+            <div class="agent-line"><span class="pulse">○</span><span class="tx">CLAUDE 待命 — 上次运行 14:03,helm/frontend 重构 rail 组件,12 文件通过</span></div>
+          </div>
+          <div class="key">14:03<u>上次运行</u></div>
+        </div>
+
+        <div class="sec-row">
+          <div class="tag">RECENT<em>项目</em></div>
+          <div class="items">
+            <div class="chips">
+              <span class="chip hot"><b>helm</b><span class="k9">2 分钟前 · ⎇ main</span></span>
+              <span class="chip"><b>notch</b><span class="k9">1 小时前</span></span>
+              <span class="chip"><b>fanbox</b><span class="k9">昨天</span></span>
+            </div>
+          </div>
+          <div class="key">3<u>本周活跃</u></div>
+        </div>
+
+        <div class="sec-row" style="border-bottom:0">
+          <div class="tag">SCHEDULE<em>下一项</em></div>
+          <div class="items">
+            <div class="item"><span class="bx">▸</span><span class="tx">设计评审 — Today 页层级方案对比</span><span class="at">持续 45 分钟</span></div>
+            <div class="item"><span class="bx" style="color:transparent">▸</span><span class="tx" style="color:var(--t4)">之后:自由 focus 块直到 19:00</span><span class="at"></span></div>
+          </div>
+          <div class="key">17:00<u>还有 1H 18M</u></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="statusbar">
+      <span class="seg"><span class="dot">●</span> ~/helm</span>
+      <span class="seg">⎇ main ↑0</span>
+      <span class="seg">CLAUDE · tok 14.2k</span>
+      <span class="seg"><span class="ok">backend ok</span> · v0.0.1</span>
+      <span class="seg">⌘K 命令面板</span>
+    </div>
+  </div>
+
+  <!-- ════════════════ 屏 ② COCKPIT ════════════════ -->
+  <div class="screen-label">SCREEN 02 — <b>COCKPIT · 驾驶舱</b> 主角:项目名 28px;文件名 14px 中景;终端 12px 底噪</div>
+
+  <div class="app">
+    <div class="rail">
+      <div class="filament"><i style="top:56px"></i></div>
+      <div class="ric" title="Today">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.2">
+          <circle cx="7.5" cy="7.5" r="6"/><path d="M7.5 4v3.5l2.5 1.5"/>
+        </svg>
+      </div>
+      <div class="ric on" title="Cockpit">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.2">
+          <rect x="1.5" y="2.5" width="12" height="10"/><path d="M4.5 6l2 1.8-2 1.8M8 10h3"/>
+        </svg>
+      </div>
+      <div class="ric" title="Chat">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.2">
+          <path d="M1.5 2.5h12v8h-7l-3 2.5v-2.5h-2z"/>
+        </svg>
+      </div>
+      <div class="ric" title="Memory">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.2">
+          <rect x="2.5" y="1.5" width="10" height="12"/><path d="M5 4.5h5M5 7.5h5M5 10.5h3"/>
+        </svg>
+      </div>
+      <div class="spacer"></div>
+      <div class="ver">v0.1</div>
+    </div>
+
+    <div class="main cockpit">
+
+      <!-- 主读数:当前项目 -->
+      <div class="cp-head">
+        <div class="proj">helm</div>
+        <div class="path">~/work/AI-workspace/helm · ⎇ main · 干净工作区</div>
+        <div class="stats">
+          <div>FILES<b>128</b></div>
+          <div>CHANGED<b>0</b></div>
+          <div class="g">CI<b>PASS</b></div>
+        </div>
+      </div>
+
+      <div class="cp-body">
+        <!-- 左:文件网格 -->
+        <div class="files">
+          <div class="flabel">FILES · ROOT</div>
+          <div class="fgrid">
+            <div class="fcard sel fid">
+              <div class="kind"><i>DIR</i></div>
+              <div class="name">frontend</div>
+              <div class="meta">42 项 · 2 分钟前</div>
+            </div>
+            <div class="fcard">
+              <div class="kind">DIR</div>
+              <div class="name">backend</div>
+              <div class="meta">31 项 · 1 小时前</div>
+            </div>
+            <div class="fcard">
+              <div class="kind">DIR</div>
+              <div class="name">notch</div>
+              <div class="meta">18 项 · 昨天</div>
+            </div>
+            <div class="fcard">
+              <div class="kind">DIR</div>
+              <div class="name">docs</div>
+              <div class="meta">24 项 · 20 分钟前</div>
+            </div>
+            <div class="fcard">
+              <div class="kind">MD</div>
+              <div class="name">DESIGN.md</div>
+              <div class="meta">14.8 KB · 今天 11:20</div>
+            </div>
+            <div class="fcard">
+              <div class="kind">MD</div>
+              <div class="name">CLAUDE.md</div>
+              <div class="meta">2.1 KB · 3 天前</div>
+            </div>
+            <div class="fcard">
+              <div class="kind">MD</div>
+              <div class="name">README.md</div>
+              <div class="meta">4.6 KB · 上周</div>
+            </div>
+            <div class="fcard">
+              <div class="kind">TOML</div>
+              <div class="name">helm.config.toml</div>
+              <div class="meta">0.9 KB · 上周</div>
+            </div>
+            <div class="fcard">
+              <div class="kind">SH</div>
+              <div class="name">dev.sh</div>
+              <div class="meta">1.2 KB · 2 周前</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右:预览视口 -->
+        <div class="preview">
+          <div class="flabel">PREVIEW · frontend/</div>
+          <div class="pframe fid">
+            <div class="ptitle">frontend</div>
+            <div class="psub">SVELTE APP · 42 项 · 最近改动 src/lib/Rail.svelte</div>
+            <p>Svelte 桌面壳前端。<b>Shell + Today</b> 已按 helm-pro 设计稿落地,当前在做字阶层级重构:把挤在 9–13px 的窄带拉成五级。</p>
+            <p>最近 3 次提交都围绕 rail 细丝与状态栏遥测;无未提交改动。</p>
+            <div class="tele">
+              <span>SESSION <b>#0427</b></span><span>MODEL <b>CLAUDE-4.6</b></span>
+              <span>TOKENS <b>14.2K</b></span><span>AGENTS <b>0/2</b></span>
+              <span>RAG <b>IDLE</b></span><span>UPTIME <b>02:41:07</b></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 底:全宽终端 -->
+      <div class="term">
+        <div class="flabel">TERMINAL · zsh · ~/helm/frontend <span class="live" style="margin-left:auto">● LIVE</span></div>
+        <pre><span class="dim">14:03:11</span>  <span class="p">❯</span> <span class="c">claude "重构 rail 组件,细丝动画照 DESIGN.md 招牌缓动"</span>
+<span class="dim">14:03:12</span>  <span class="g">✓</span> 读取 DESIGN.md · docs/design/helm-pro.html <span class="dim">(只读)</span>
+<span class="dim">14:05:48</span>  <span class="g">✓</span> 12 文件改动 · svelte-check 通过 · vitest 34/34
+<span class="dim">14:05:50</span>  <span class="dim">run #0427 结束 · tok 14.2k · 2m 39s</span>
+<span class="dim">15:42:07</span>  <span class="p">❯</span> <span class="cursor"></span></pre>
+      </div>
+
+    </div>
+
+    <div class="statusbar">
+      <span class="seg"><span class="dot">●</span> ~/helm</span>
+      <span class="seg">⎇ main ↑0</span>
+      <span class="seg">CLAUDE · tok 14.2k</span>
+      <span class="seg"><span class="ok">backend ok</span> · v0.0.1</span>
+      <span class="seg">⌘K 命令面板</span>
+    </div>
+  </div>
+
+  <!-- 字阶图例 -->
+  <div class="legend">
+    <span><b>72px</b> 主读数(时钟)</span>
+    <span><b>28px</b> 主读数(项目名)</span>
+    <span><b>22px</b> 关键数字(任务数/时刻/统计)</span>
+    <span><b>15px</b> 正文(任务/日记)</span>
+    <span><b>14px</b> 文件名(加重)</span>
+    <span><b>12px</b> 辅文/终端/chip</span>
+    <span><b>9px</b> mono 标签/遥测/状态栏</span>
+  </div>
+
+</div>
+
+<script>
+  function toggleTheme() {
+    var root = document.getElementById('root');
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    document.getElementById('themeBtn').textContent =
+      'THEME · ' + (next === 'dark' ? 'DARK ⇄ LIGHT' : 'LIGHT ⇄ DARK');
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Helm · Explore B — 头版层级 Front Page</title>
+<style>
+  /* ============================================================
+     EXPLORE B · 头版层级 Front Page
+     报纸头版逻辑：重量 + 留白拉层级，三级铁律
+       H1   26px / 800 / -0.5px / t1  + 2px accent 短下划线
+       BODY 13.5px / 500 / t1        ← 正文提亮到 t1
+       LBL  9px mono 大写 / t4
+     区块分隔靠 34–44px 留白 + 9px 节标，发丝线只进表格行内
+     ============================================================ */
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  [data-theme="dark"] {
+    --bg:#000; --chrome:#0a0a0c; --panel:#08080a;
+    --t1:#fff; --t2:rgba(255,255,255,.82); --t3:rgba(255,255,255,.52); --t4:rgba(255,255,255,.32);
+    --line:rgba(255,255,255,.14); --hair:rgba(255,255,255,.07);
+    --tile:#101012; --grid:rgba(255,255,255,.035);
+    --green:#34C759; --acc:#FFC53D; --acc-ink:#FFC53D;
+  }
+  [data-theme="light"] {
+    --bg:#efece3; --chrome:#e7e3d8; --panel:#eae6dc;
+    --t1:#17140d; --t2:rgba(23,20,13,.74); --t3:rgba(23,20,13,.52); --t4:rgba(23,20,13,.34);
+    --line:rgba(23,20,13,.20); --hair:rgba(23,20,13,.10);
+    --tile:#e4dfd2; --grid:rgba(23,20,13,.05);
+    --green:#2a8f43; --acc:#FFC53D; --acc-ink:#8a6410;
+  }
+
+  :root {
+    --sans:-apple-system,"SF Pro Text",sans-serif;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,monospace;
+  }
+
+  body { background:#000; }
+  #root {
+    min-height:100vh; background:var(--bg); color:var(--t1);
+    font-family:var(--sans); padding:48px 40px 96px;
+    transition:background .18s ease, color .18s ease;
+  }
+
+  /* ---- page chrome (outside the app frames) ---- */
+  .page-head {
+    max-width:1120px; margin:0 auto 40px;
+    display:flex; align-items:baseline; justify-content:space-between; gap:24px;
+  }
+  .page-head .ttl { font:800 15px/1.2 var(--sans); letter-spacing:-.2px; color:var(--t1); }
+  .page-head .sub { font:400 10px/1.6 var(--mono); color:var(--t4); text-transform:uppercase; letter-spacing:.08em; }
+  #themeBtn {
+    font:500 10px/1 var(--mono); text-transform:uppercase; letter-spacing:.1em;
+    color:var(--t2); background:transparent; border:1px solid var(--line);
+    padding:8px 14px; cursor:pointer; border-radius:0;
+  }
+  #themeBtn:hover { color:var(--t1); border-color:var(--t3); }
+
+  .screen-lbl {
+    max-width:1120px; margin:64px auto 12px;
+    font:500 9px/1 var(--mono); text-transform:uppercase; letter-spacing:.14em; color:var(--t4);
+    display:flex; align-items:center; gap:10px;
+  }
+  .screen-lbl::after { content:""; flex:1; height:1px; background:var(--hair); }
+  .screen-lbl:first-of-type { margin-top:0; }
+
+  /* ============================================================
+     APP FRAME — 58px rail + 1fr main + 26px status bar
+     ============================================================ */
+  .app {
+    max-width:1120px; height:640px; margin:0 auto;
+    display:grid;
+    grid-template-columns:58px 1fr;
+    grid-template-rows:1fr 26px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    position:relative; overflow:hidden;
+  }
+  /* 点阵底纹 —— 这版透明度减半，chrome 让位内容 */
+  .app::before {
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background-image:radial-gradient(var(--grid) 1px, transparent 1px);
+    background-size:22px 22px;
+    opacity:.5;
+  }
+
+  /* ---- rail ---- */
+  .rail {
+    grid-row:1; grid-column:1;
+    background:var(--chrome);
+    border-right:1px solid var(--hair);
+    display:flex; flex-direction:column; align-items:center;
+    padding:16px 0; gap:6px; position:relative; z-index:1;
+  }
+  .rail .mark {
+    width:26px; height:26px; margin-bottom:14px;
+    display:flex; align-items:center; justify-content:center;
+    font:800 12px/1 var(--mono); color:var(--t1);
+    border:1px solid var(--line);
+  }
+  .rail .ric {
+    width:34px; height:34px;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--t4); cursor:pointer;
+  }
+  .rail .ric svg { width:15px; height:15px; display:block; }
+  .rail .ric.on { color:var(--t1); background:var(--tile); box-shadow:none; }
+  .rail .ric.on { outline:1px solid var(--hair); outline-offset:-1px; }
+  .rail .spacer { flex:1; }
+  .rail .day-dot { width:6px; height:6px; background:var(--acc); margin-bottom:6px; }
+
+  /* ---- status bar ---- */
+  .statusbar {
+    grid-row:2; grid-column:1 / -1;
+    background:var(--chrome);
+    border-top:1px solid var(--hair);
+    display:flex; align-items:center; gap:0;
+    padding:0 14px;
+    font:400 10px/1 var(--mono); color:var(--t3);
+    font-variant-numeric:tabular-nums;
+    white-space:nowrap; overflow:hidden;
+    position:relative; z-index:1;
+  }
+  .statusbar .seg { display:flex; align-items:center; gap:6px; }
+  .statusbar .sep { margin:0 12px; color:var(--t4); opacity:.5; }
+  .statusbar .live { color:var(--green); }
+  .statusbar .push { flex:1; }
+  .statusbar .kbd { color:var(--t4); }
+
+  /* ---- main content shared ---- */
+  .main {
+    grid-row:1; grid-column:2;
+    position:relative; z-index:1;
+    overflow:hidden;
+    display:flex; flex-direction:column;
+  }
+
+  /* ================= 三级铁律 ================= */
+  .h1 {
+    font:800 26px/1.15 var(--sans);
+    letter-spacing:-.5px; color:var(--t1);
+  }
+  .h1 .dim { color:var(--t3); font-weight:800; }
+  .h1-rule { width:40px; height:2px; background:var(--acc); margin-top:10px; }
+
+  .body-t {
+    font:500 13.5px/1.5 var(--sans);
+    color:var(--t1);                 /* 正文提亮到 t1 —— 本版关键 */
+  }
+  .body-t .num { font-variant-numeric:tabular-nums; }
+
+  .lbl {
+    font:500 9px/1 var(--mono);
+    text-transform:uppercase; letter-spacing:.14em; color:var(--t4);
+  }
+  /* ============================================ */
+
+  /* 节标：沉底 9px mono，靠留白分区 */
+  .sect { margin-top:38px; }
+  .sect:first-child { margin-top:0; }
+  .sect-head { display:flex; align-items:baseline; gap:10px; margin-bottom:14px; }
+  .sect-head .n { color:var(--t4); opacity:.7; }
+
+  /* 装饰性 chrome（准星/坐标）一律 50% */
+  .deco { opacity:.5; }
+  .cross { position:absolute; font:400 9px/1 var(--mono); color:var(--t4); opacity:.5; pointer-events:none; }
+
+  /* ============================================================
+     SCREEN 1 · TODAY
+     ============================================================ */
+  .today { padding:44px 48px 32px; overflow:auto; }
+
+  .today-mast { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:40px; }
+  .today-mast .meta { text-align:right; }
+  .today-mast .meta .lbl { display:block; margin-bottom:6px; }
+  .today-mast .meta .clock {
+    font:500 13.5px/1.4 var(--mono); color:var(--t1);
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* focus lead —— 头版头条 */
+  .lead { display:flex; gap:16px; align-items:flex-start; }
+  .lead .bar { width:3px; align-self:stretch; background:var(--acc); flex:none; }
+  .lead .lead-t { font:500 13.5px/1.55 var(--sans); color:var(--t1); max-width:560px; }
+  .lead .lead-sub { margin-top:8px; }
+  .lead .lead-sub .lbl { letter-spacing:.12em; }
+
+  /* task table —— 发丝线只在行内 */
+  .rows { width:100%; }
+  .row {
+    display:grid; grid-template-columns:20px 1fr auto auto;
+    gap:14px; align-items:baseline;
+    padding:10px 0;
+    border-bottom:1px solid var(--hair);
+  }
+  .row:last-child { border-bottom:none; }
+  .row .tick {
+    font:400 12px/1 var(--mono); color:var(--t4);
+  }
+  .row .tick.done { color:var(--green); }
+  .row .t { font:500 13.5px/1.4 var(--sans); color:var(--t1); }
+  .row .t.done { color:var(--t4); text-decoration:line-through; text-decoration-color:var(--t4); }
+  .row .tag { font:500 9px/1 var(--mono); text-transform:uppercase; letter-spacing:.1em; color:var(--t4); }
+  .row .eta { font:400 11px/1 var(--mono); color:var(--t3); font-variant-numeric:tabular-nums; }
+  .row .eta.hot { color:var(--acc-ink); }
+
+  /* sessions strip */
+  .sess { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  .sess-card { background:var(--tile); padding:16px 18px 14px; outline:1px solid var(--hair); outline-offset:-1px; }
+  .sess-card .top { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
+  .sess-card .name { font:500 13.5px/1.3 var(--sans); color:var(--t1); }
+  .sess-card .st { font:500 9px/1 var(--mono); text-transform:uppercase; letter-spacing:.12em; }
+  .sess-card .st.run { color:var(--green); }
+  .sess-card .st.idle { color:var(--t4); }
+  .sess-card .foot { display:flex; gap:16px; font:400 10px/1 var(--mono); color:var(--t3); font-variant-numeric:tabular-nums; }
+
+  /* ============================================================
+     SCREEN 2 · COCKPIT — 左文件网格 + 右预览 + 底部全宽终端
+     ============================================================ */
+  .cockpit { display:grid; grid-template-rows:1fr 148px; height:100%; overflow:hidden; }
+  .cockpit-up { display:grid; grid-template-columns:1fr 380px; overflow:hidden; }
+
+  .files { padding:36px 36px 24px; overflow:auto; position:relative; }
+  .files-mast { margin-bottom:34px; display:flex; justify-content:space-between; align-items:flex-start; }
+  .files-mast .meta { text-align:right; }
+  .files-mast .meta .lbl { display:block; margin-bottom:6px; }
+  .files-mast .meta .v { font:500 12px/1.4 var(--mono); color:var(--t2); font-variant-numeric:tabular-nums; }
+
+  .fgrid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .ftile {
+    background:var(--tile); outline:1px solid var(--hair); outline-offset:-1px;
+    padding:14px 14px 12px; min-height:96px;
+    display:flex; flex-direction:column; cursor:pointer;
+  }
+  .ftile.sel { outline:1px solid var(--acc); }
+  .ftile .fic { color:var(--t4); margin-bottom:12px; }
+  .ftile .fic svg { width:14px; height:14px; display:block; }
+  .ftile.sel .fic { color:var(--acc-ink); }
+  .ftile .fname { font:500 13.5px/1.3 var(--sans); color:var(--t1); word-break:break-all; }
+  .ftile .fmeta { margin-top:auto; padding-top:10px; font:400 9px/1 var(--mono); text-transform:uppercase; letter-spacing:.08em; color:var(--t4); font-variant-numeric:tabular-nums; }
+
+  /* preview */
+  .preview {
+    border-left:1px solid var(--hair);
+    padding:36px 30px 20px; overflow:auto;
+    display:flex; flex-direction:column; position:relative;
+  }
+  .preview .p-head { margin-bottom:26px; }
+  .preview .p-title { font:800 17px/1.25 var(--sans); letter-spacing:-.3px; color:var(--t1); }
+  .preview .p-rule { width:28px; height:2px; background:var(--acc); margin-top:8px; }
+  .preview .p-body { font:500 13.5px/1.6 var(--sans); color:var(--t1); }
+  .preview .p-body p { margin-bottom:14px; }
+  .preview .p-body .q {
+    border-left:2px solid var(--line); padding-left:12px; color:var(--t2);
+  }
+  .preview .p-kv { margin-top:auto; padding-top:22px; display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; }
+  .preview .p-kv .k { display:block; margin-bottom:5px; }
+  .preview .p-kv .v { font:500 12px/1.3 var(--mono); color:var(--t1); font-variant-numeric:tabular-nums; }
+  .preview .p-kv .v.ok { color:var(--green); }
+
+  /* terminal */
+  .term {
+    border-top:1px solid var(--hair);
+    background:var(--chrome);
+    padding:12px 20px 10px;
+    font:400 11.5px/1.7 var(--mono);
+    color:var(--t2);
+    overflow:hidden; position:relative;
+    font-variant-numeric:tabular-nums;
+  }
+  .term .t-lbl { margin-bottom:8px; display:flex; justify-content:space-between; }
+  .term .ln { white-space:pre; overflow:hidden; text-overflow:ellipsis; }
+  .term .ln .ps { color:var(--acc-ink); }
+  .term .ln .ok { color:var(--green); }
+  .term .ln .dim { color:var(--t4); }
+  .term .caret { display:inline-block; width:7px; height:12px; background:var(--t2); vertical-align:-1px; }
+
+  @media (max-width:900px) {
+    .cockpit-up { grid-template-columns:1fr; }
+    .preview { display:none; }
+    .fgrid { grid-template-columns:repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+<div id="root" data-theme="dark">
+
+  <div class="page-head">
+    <div>
+      <div class="ttl">Helm · Explore B — 头版层级 Front Page</div>
+      <div class="sub">hierarchy via weight + whitespace · h1 26/800 · body 13.5/500/t1 · label 9 mono/t4</div>
+    </div>
+    <button id="themeBtn" type="button">theme: dark</button>
+  </div>
+
+  <!-- ═══════════════════════ SCREEN 1 · TODAY ═══════════════════════ -->
+  <div class="screen-lbl">Screen 01 / Today</div>
+  <div class="app">
+
+    <div class="rail">
+      <div class="mark">H</div>
+      <div class="ric on" title="Today">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="3" width="12" height="11"/><path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3"/></svg>
+      </div>
+      <div class="ric" title="Files">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 4h4l1.5 2H14v7H2z"/></svg>
+      </div>
+      <div class="ric" title="Sessions">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 4l4 4-4 4M8.5 12H13"/></svg>
+      </div>
+      <div class="ric" title="Notes">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M4 2h8v12H4z"/><path d="M6.5 5.5h3M6.5 8h3"/></svg>
+      </div>
+      <div class="spacer"></div>
+      <div class="day-dot deco"></div>
+      <div class="ric" title="Settings">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="8" cy="8" r="2.4"/><path d="M8 1.8v2M8 12.2v2M1.8 8h2M12.2 8h2"/></svg>
+      </div>
+    </div>
+
+    <div class="main">
+      <span class="cross" style="top:14px; right:18px;">+ 37.42N</span>
+      <div class="today">
+
+        <!-- masthead -->
+        <div class="today-mast">
+          <div>
+            <div class="h1">今天 <span class="dim">·</span> 周五</div>
+            <div class="h1-rule"></div>
+          </div>
+          <div class="meta">
+            <span class="lbl">2026-07-03 · W27</span>
+            <div class="clock">14:32:07</div>
+          </div>
+        </div>
+
+        <!-- 头条 focus -->
+        <div class="sect">
+          <div class="sect-head">
+            <span class="lbl">Focus <span class="n">/ 01</span></span>
+          </div>
+          <div class="lead">
+            <div class="bar"></div>
+            <div>
+              <div class="lead-t">把 notch 面板的 2×2 布局对齐到设计稿，收掉媒体块右侧 3px 偏移，然后跑一轮设备端视觉验收。</div>
+              <div class="lead-sub"><span class="lbl">notch-panel · 阶段 1 / 11 · 预计 90 min</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- tasks -->
+        <div class="sect">
+          <div class="sect-head">
+            <span class="lbl">Tasks <span class="n">/ 04</span></span>
+          </div>
+          <div class="rows">
+            <div class="row">
+              <span class="tick done">■</span>
+              <span class="t done">合并 layout-AD 分支的 hook 监听改动</span>
+              <span class="tag">notch</span>
+              <span class="eta">09:41</span>
+            </div>
+            <div class="row">
+              <span class="tick">□</span>
+              <span class="t">修复媒体块 3px 偏移 + 设备端截图对比</span>
+              <span class="tag">notch</span>
+              <span class="eta hot">15:00</span>
+            </div>
+            <div class="row">
+              <span class="tick">□</span>
+              <span class="t">回复 backend 关于 token 计数口径的评审意见</span>
+              <span class="tag">review</span>
+              <span class="eta">16:30</span>
+            </div>
+            <div class="row">
+              <span class="tick">□</span>
+              <span class="t">整理本周设计探索结论，归档到 DESIGN.md</span>
+              <span class="tag">docs</span>
+              <span class="eta">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- sessions -->
+        <div class="sect">
+          <div class="sect-head">
+            <span class="lbl">Sessions <span class="n">/ 02</span></span>
+          </div>
+          <div class="sess">
+            <div class="sess-card">
+              <div class="top">
+                <span class="name">notch · 视觉对齐 loop</span>
+                <span class="st run">● 运行中</span>
+              </div>
+              <div class="foot"><span>claude-fable-5</span><span>tok 14.2k</span><span>00:47:12</span></div>
+            </div>
+            <div class="sess-card">
+              <div class="top">
+                <span class="name">helm · 主题 token 重构</span>
+                <span class="st idle">待恢复</span>
+              </div>
+              <div class="foot"><span>claude-fable-5</span><span>tok 3.8k</span><span>昨天 22:10</span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="statusbar">
+      <span class="seg"><span class="live">●</span> ~/helm</span>
+      <span class="sep">·</span>
+      <span class="seg">⎇ main ↑0</span>
+      <span class="sep">·</span>
+      <span class="seg">CLAUDE · tok 14.2k</span>
+      <span class="sep">·</span>
+      <span class="seg">backend <span class="live">ok</span> · v0.0.1</span>
+      <span class="push"></span>
+      <span class="seg kbd">⌘K 命令面板</span>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════ SCREEN 2 · COCKPIT ═══════════════════════ -->
+  <div class="screen-lbl">Screen 02 / 驾驶舱 — Files + Preview + Terminal</div>
+  <div class="app">
+
+    <div class="rail">
+      <div class="mark">H</div>
+      <div class="ric" title="Today">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="3" width="12" height="11"/><path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3"/></svg>
+      </div>
+      <div class="ric on" title="Files">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 4h4l1.5 2H14v7H2z"/></svg>
+      </div>
+      <div class="ric" title="Sessions">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 4l4 4-4 4M8.5 12H13"/></svg>
+      </div>
+      <div class="ric" title="Notes">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M4 2h8v12H4z"/><path d="M6.5 5.5h3M6.5 8h3"/></svg>
+      </div>
+      <div class="spacer"></div>
+      <div class="day-dot deco"></div>
+      <div class="ric" title="Settings">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="8" cy="8" r="2.4"/><path d="M8 1.8v2M8 12.2v2M1.8 8h2M12.2 8h2"/></svg>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="cockpit">
+        <div class="cockpit-up">
+
+          <!-- left: file grid -->
+          <div class="files">
+            <span class="cross" style="top:12px; right:16px;">+ 122.08W</span>
+            <div class="files-mast">
+              <div>
+                <div class="h1">helm-notch</div>
+                <div class="h1-rule"></div>
+              </div>
+              <div class="meta">
+                <span class="lbl">Branch</span>
+                <div class="v">feat/design-shell · 12 files</div>
+              </div>
+            </div>
+
+            <div class="sect" style="margin-top:0;">
+              <div class="sect-head">
+                <span class="lbl">Files <span class="n">/ 06</span></span>
+              </div>
+              <div class="fgrid">
+                <div class="ftile sel">
+                  <div class="fic"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M4 1.5h6l2.5 2.5V14.5H4z"/></svg></div>
+                  <div class="fname">DESIGN.md</div>
+                  <div class="fmeta">md · 18.4 kb · 14:02</div>
+                </div>
+                <div class="ftile">
+                  <div class="fic"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M5 4L2 8l3 4M11 4l3 4-3 4"/></svg></div>
+                  <div class="fname">NotchPanel.swift</div>
+                  <div class="fmeta">swift · 9.1 kb · 13:47</div>
+                </div>
+                <div class="ftile">
+                  <div class="fic"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M5 4L2 8l3 4M11 4l3 4-3 4"/></svg></div>
+                  <div class="fname">MediaBlock.swift</div>
+                  <div class="fmeta">swift · 4.6 kb · 13:12</div>
+                </div>
+                <div class="ftile">
+                  <div class="fic"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M4 1.5h6l2.5 2.5V14.5H4z"/></svg></div>
+                  <div class="fname">helm-pro.html</div>
+                  <div class="fmeta">html · 61.2 kb · 只读</div>
+                </div>
+                <div class="ftile">
+                  <div class="fic"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2.5" y="2.5" width="11" height="11"/><path d="M2.5 10l3-3 2.5 2.5 2-2 3.5 3.5"/></svg></div>
+                  <div class="fname">2026-06-30-dev.png</div>
+                  <div class="fmeta">png · 812 kb · 06-30</div>
+                </div>
+                <div class="ftile">
+                  <div class="fic"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 4h4l1.5 2H14v7H2z"/></svg></div>
+                  <div class="fname">refs/inbox</div>
+                  <div class="fmeta">dir · 7 items</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- right: preview -->
+          <div class="preview">
+            <span class="cross" style="top:12px; right:16px;">⌖</span>
+            <div class="p-head">
+              <div class="lbl" style="margin-bottom:10px; display:block;">Preview · DESIGN.md</div>
+              <div class="p-title">Helm 设计系统</div>
+              <div class="p-rule"></div>
+            </div>
+            <div class="p-body">
+              <p>主工作台走「仪表读数」方向：无卡片、无阴影、零圆角，信息直接落在点阵底上。</p>
+              <p class="q">层级靠字重与留白，不靠框线。发丝线只用于表格行内分隔。</p>
+            </div>
+            <div class="p-kv">
+              <div><span class="lbl k">Status</span><span class="v ok">LOCKED</span></div>
+              <div><span class="lbl k">Themes</span><span class="v">dark / light</span></div>
+              <div><span class="lbl k">Accent</span><span class="v">#FFC53D · daily</span></div>
+              <div><span class="lbl k">Updated</span><span class="v">2026-07-02</span></div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- bottom: full-width terminal -->
+        <div class="term">
+          <div class="t-lbl">
+            <span class="lbl">Terminal <span style="opacity:.7;">/ zsh · claude</span></span>
+            <span class="lbl deco">80×24 · utf-8</span>
+          </div>
+          <div class="ln"><span class="ps">➜ ~/helm/notch</span> swift build</div>
+          <div class="ln"><span class="dim">Building for debugging…</span> <span class="ok">Build complete!</span> <span class="dim">(2.41s)</span></div>
+          <div class="ln"><span class="ps">➜ ~/helm/notch</span> claude "对齐媒体块 3px 偏移" <span class="dim">· tok 14.2k</span></div>
+          <div class="ln"><span class="ok">●</span> 已修改 MediaBlock.swift +6 −2 <span class="dim">— 等待视觉验收</span> <span class="caret"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="statusbar">
+      <span class="seg"><span class="live">●</span> ~/helm</span>
+      <span class="sep">·</span>
+      <span class="seg">⎇ main ↑0</span>
+      <span class="sep">·</span>
+      <span class="seg">CLAUDE · tok 14.2k</span>
+      <span class="sep">·</span>
+      <span class="seg">backend <span class="live">ok</span> · v0.0.1</span>
+      <span class="push"></span>
+      <span class="seg kbd">⌘K 命令面板</span>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+  (function () {
+    var root = document.getElementById('root');
+    var btn = document.getElementById('themeBtn');
+    btn.addEventListener('click', function () {
+      var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      btn.textContent = 'theme: ' + next;
+      document.body.style.background = next === 'dark' ? '#000' : '#efece3';
+    });
+  })();
+</script>
+</body>
+</html>
