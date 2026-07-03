@@ -21,9 +21,14 @@ final class AdapterMediaController: MediaController, @unchecked Sendable {
     /// Locate the vendored adapter: app bundle Resources, an explicit override,
     /// or the SwiftPM build's bundled resources (dev `swift run`).
     private static func resourceDir() -> URL? {
+        // 开发直跑(.build/debug/HelmNotchApp):可执行文件 ../../Resources 就是仓内
+        // vendored 目录——没有这个回退,裸 nohup 重启会把媒体探测悄悄弄哑
+        // (2026-07-03 真机踩坑:Apple Music 在放却检测不到)。
+        let exeDir = Bundle.main.executableURL?.deletingLastPathComponent()
         let candidates: [URL?] = [
             Bundle.main.resourceURL?.appendingPathComponent("mediaremote-adapter"),
             ProcessInfo.processInfo.environment["HELM_NOTCH_ADAPTER"].map { URL(fileURLWithPath: $0) },
+            exeDir?.appendingPathComponent("../../Resources/mediaremote-adapter").standardizedFileURL,
         ]
         for case let url? in candidates where FileManager.default.fileExists(atPath: url.path) {
             return url
