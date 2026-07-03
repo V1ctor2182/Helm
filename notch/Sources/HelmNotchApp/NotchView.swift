@@ -1040,9 +1040,10 @@ struct NotchView: View {
                 }
                 .padding(.bottom, 3)
 
+                let noLyrics = model.lyrics == Lyrics.none
                 HStack(alignment: .top, spacing: 22) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        coverArt(np, size: 84, radius: 14)
+                    VStack(alignment: noLyrics ? .center : .leading, spacing: 0) {
+                        coverArt(np, size: noLyrics ? 110 : 84, radius: 14)
                             .shadow(color: .black.opacity(0.5), radius: 10, y: 6)
                         Text(title).font(.system(size: 14, weight: .heavy)).foregroundStyle(.white).lineLimit(1).padding(.top, 8)
                         Text(artist).font(.system(size: 11)).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
@@ -1054,13 +1055,15 @@ struct NotchView: View {
                         }
                         .buttonStyle(.plain).foregroundStyle(.white).padding(.top, 8)
                     }
-                    .frame(width: 190)
-                    // id 绑曲目:换曲把旧词整棵拆掉,不留跨曲残影;clipped 防越界压波形
-                    lyricsColumn
-                        .id(model.nowPlaying.map { "\($0.title)|\($0.artist)" } ?? "none")
-                        .clipped()
+                    .frame(maxWidth: noLyrics ? .infinity : 190)
+                    if !noLyrics {
+                        // id 绑曲目:换曲把旧词整棵拆掉,不留跨曲残影;clipped 防越界压波形
+                        lyricsColumn
+                            .id(model.nowPlaying.map { "\($0.title)|\($0.artist)" } ?? "none")
+                            .clipped()
+                    }
                 }
-                .frame(maxHeight: .infinity, alignment: .top)
+                .frame(maxHeight: .infinity, alignment: noLyrics ? .center : .top)
 
                 Waveform(playing: np?.isPlaying ?? true, color: accent)
                     .frame(height: 24).padding(.top, 7)

@@ -22,6 +22,13 @@ enum NotchSnapshot {
                         LyricLine(time: Double($0) * 10, text: "Line \($0) — call it how it is")
                     }))
             }),
+            ("media-nolyrics", {
+                $0.module = .media
+                $0.debugSetMedia(
+                    NowPlaying(title: "Lose Yourself", artist: "Eminem", isPlaying: true,
+                               elapsed: 163, duration: 327),
+                    lyrics: .none)
+            }),
             ("media-plain", {
                 $0.module = .media
                 $0.debugSetMedia(
