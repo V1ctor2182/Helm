@@ -195,7 +195,7 @@
   .rd {
     height: 100%;
     overflow: auto;
-    padding: 18px 24px 24px 0;
+    padding: 18px 24px 24px 14px; /* 左侧留白:设计稿原为 0,用户反馈字贴边(2026-07-03) */
     font-family: var(--sans);
   }
   .rdhead {
