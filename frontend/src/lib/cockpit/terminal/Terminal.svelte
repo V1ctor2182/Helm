@@ -127,6 +127,9 @@
     })
     if (el) term.open(el)
     fit.fit()
+    // dock 布局变化(预览开合/拖分隔条)不触发 window resize——观察容器自适应
+    const ro = new ResizeObserver(() => onWindowResize())
+    ro.observe(el!)
 
     ws = new WebSocket(terminalWsUrl(window.location, cockpit.cwd, term.cols, term.rows))
     ws.onopen = () => term && send(resizeMsg(term.cols, term.rows))

@@ -193,8 +193,8 @@
     display: grid;
     grid-template-areas:
       'main vres right'
-      'hres vres right'
-      'bottom vres right';
+      'hres hres hres'
+      'bottom bottom bottom';
     height: 100%;
     min-height: 0;
     min-width: 0;
