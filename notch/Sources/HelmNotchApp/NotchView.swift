@@ -1133,23 +1133,28 @@ struct NotchView: View {
     @ViewBuilder private var lyricsColumn: some View {
         switch model.lyrics {
         case .synced(let lines):
-            TimelineView(.periodic(from: .now, by: 0.4)) { context in
+            // Apple Music 手感(2026-07-03 用户给了参照图):当前句大号加粗压场、
+            // 钉在窗口第二行,唱过的往上推走;其余句按离当前句的距离渐隐。
+            TimelineView(.periodic(from: .now, by: 0.3)) { context in
                 let pos = model.livePosition(at: context.date)
                 let cur = currentLyricIndex(lines, position: pos)
-                let window = 6
-                let lo = max(0, min(cur - 2, lines.count - window))
+                let window = 5
+                let anchor = max(0, cur - 1) // 当前句保持在第二行位置
+                let lo = min(anchor, max(0, lines.count - window))
                 let hi = min(lines.count, lo + window)
-                VStack(alignment: .leading, spacing: 7) {
+                VStack(alignment: .leading, spacing: 13) {
                     ForEach(lo..<hi, id: \.self) { i in
                         Text(lines[i].text)
-                            .font(.system(size: i == cur ? 14 : 13, weight: i == cur ? .bold : .regular))
-                            .foregroundStyle(i == cur ? .white : .white.opacity(0.38))
-                            .lineLimit(1)
+                            .font(.system(size: i == cur ? 18 : 15, weight: i == cur ? .heavy : .semibold))
+                            .foregroundStyle(.white.opacity(
+                                i == cur ? 1 : max(0.16, 0.38 - 0.09 * Double(abs(i - cur)))))
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .padding(.top, 14)
-                .animation(.easeOut(duration: 0.25), value: cur)
+                .padding(.top, 6)
+                .animation(.easeOut(duration: 0.3), value: cur)
                 .mask(lyricsMask)
             }
         case .plain(let lines):
@@ -1176,8 +1181,8 @@ struct NotchView: View {
 
     private var lyricsMask: LinearGradient {
         LinearGradient(
-            stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.22),
-                    .init(color: .black, location: 0.78), .init(color: .clear, location: 1)],
+            stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.05),
+                    .init(color: .black, location: 0.72), .init(color: .clear, location: 1)],
             startPoint: .top, endPoint: .bottom)
     }
 
