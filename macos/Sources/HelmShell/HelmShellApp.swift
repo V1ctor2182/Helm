@@ -118,6 +118,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNaviga
         config.preferences.isElementFullscreenEnabled = true
         // 网页标题栏 mousedown → 原生 performDrag(网页自绘 chrome,拖拽得由壳代劳)
         config.userContentController.add(self, name: "helmDrag")
+        // documentStart 注入壳标记:比 UA 检测可靠(customUserAgent 偶有不生效)
+        config.userContentController.addUserScript(WKUserScript(
+            source: "window.__HELM_SHELL__ = true",
+            injectionTime: .atDocumentStart, forMainFrameOnly: false))
         webView = WKWebView(frame: .zero, configuration: config)
         webView.uiDelegate = self
         webView.navigationDelegate = self
