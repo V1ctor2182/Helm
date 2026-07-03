@@ -1136,6 +1136,25 @@ struct NotchView: View {
     @ViewBuilder private var lyricsColumn: some View {
         switch model.lyrics {
         case .synced(let lines):
+            if model.nowPlaying?.hasProgress != true {
+                // 播放源不给进度(elapsed/duration 缺失)→ 跟不了唱,
+                // 优雅降级:静态可滚全词 + 一行说明(2026-07-03 用户:歌词没动)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("该播放源不提供进度 — 歌词不跟唱")
+                        .font(.system(size: 9)).foregroundStyle(.white.opacity(0.3))
+                    ScrollView(.vertical, showsIndicators: false) {
+                        VStack(alignment: .leading, spacing: 9) {
+                            ForEach(lines.indices, id: \.self) { i in
+                                Text(lines[i].text).font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(.white.opacity(0.55)).lineLimit(2)
+                            }
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .padding(.top, 6)
+                .mask(lyricsMask)
+            } else {
             // Apple Music 手感(2026-07-03 用户给了参照图):当前句大号加粗压场、
             // 钉在窗口第二行,唱过的往上推走;其余句按离当前句的距离渐隐。
             TimelineView(.periodic(from: .now, by: 0.3)) { context in
@@ -1159,6 +1178,7 @@ struct NotchView: View {
                 .padding(.top, 6)
                 .animation(.easeOut(duration: 0.3), value: cur)
                 .mask(lyricsMask)
+            }
             }
         case .plain(let lines):
             ScrollView(.vertical, showsIndicators: false) {
@@ -1684,11 +1704,15 @@ struct NotchView: View {
     // Confirmed 2026-07-01: height fully follows the active module (HTML
     // viewHeight); only the width stays user-adjustable.
 
+    @State private var resizeHover = false
+
     private var resizeHandle: some View {
         Image(systemName: "arrow.left.and.right")
-            .font(.system(size: 9, weight: .bold))
-            .foregroundStyle(.white.opacity(0.25))
-            .padding(7)
+            .font(.system(size: 10, weight: .bold))
+            .foregroundStyle(.white.opacity(resizeHover ? 0.5 : 0))  // 悬停才现身,不当牛皮癣
+            .animation(.easeOut(duration: 0.15), value: resizeHover)
+            .onHover { resizeHover = $0 }
+            .padding(8)
             .contentShape(Rectangle())
             .gesture(
                 DragGesture(coordinateSpace: .global)
