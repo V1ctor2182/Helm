@@ -9,6 +9,8 @@
 
 <!-- 新发现追加到对应严重度下；修掉移到「Done」或就地改 [x] -->
 
+- [ ] [notch][P1][bug] swift test 遗留竞态失败：testAskPostsAsAskNote 稳定红（"0"≠"1"）+ ContiguousArrayBuffer Index out of range crash——速记 ask 链路（e89ffba 全链路完善后引入），已隔离验证与媒体视觉修无关；修好前 notch 硬门无法全绿  (媒体排查/2026-07-03)
+
 - [ ] [F8][P2][gap] context 面板会话遥测(SESSION/MODEL/TOKENS)与状态栏 tok/latency 仍 mock——规划中的遥测流(可并进 orchestration WS)未建,属 F5 后续  (轮12/2026-07-02)
 - [ ] [记录][P2][gap] 日记附图(intent#2)未做——Note 无附件字段,需 schema 迁移(不可逆),留人拍板  (轮1/2026-07-02;清账轮复确认)
 - [ ] [Chat][P2][gap] 对话接 RAG/项目上下文(intent 56910be6)未做——上下文注入点(持久化语义/token 预算)是架构切片,建议单独一轮设计后做  (轮4/2026-07-02;清账轮复确认)
