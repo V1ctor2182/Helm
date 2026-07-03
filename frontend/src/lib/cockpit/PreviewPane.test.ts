@@ -165,4 +165,27 @@ describe('PreviewPane · 预览即编辑', () => {
       expect(JSON.parse(posts.at(-1)!.init!.body as string).expected_mtime).toBeNull()
     })
   })
+
+
+  it('html 文件走隔离源 iframe(:8770/fs)+ 源码 tab 可编辑', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ content: '<h1>hi</h1>', truncated: false, mtime: 1 }),
+      }),
+    )
+    cockpit.selected = { name: 'index.html', path: '/p/index.html', is_dir: false, size: 9, ext: 'html', mtime: 1 }
+    render(PreviewPane)
+    const frame = await vi.waitFor(() => {
+      const f = document.querySelector('iframe.hframe')
+      if (!f) throw new Error('no frame')
+      return f
+    })
+    expect(frame.getAttribute('src')).toContain('http://127.0.0.1:8770/fs/p/index.html')
+    expect(frame.getAttribute('sandbox')).toContain('allow-scripts')
+    expect(screen.getByText(/隔离源/)).toBeInTheDocument()
+    cockpit.selected = null
+  })
+
 })

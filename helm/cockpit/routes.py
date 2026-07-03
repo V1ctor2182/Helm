@@ -47,6 +47,15 @@ def _project_dict(p) -> dict:
     }
 
 
+@router.delete("/projects")
+def remove_project(path: str, session: Session = Depends(db_session)) -> dict:
+    """注销项目记录(不删磁盘文件)。notch 不消费此端点。"""
+    ok = ProjectService(session).remove(path)
+    if not ok:
+        raise HTTPException(status_code=404, detail="project not found")
+    return {"removed": path}
+
+
 @router.get("/files")
 def browse(path: str, hidden: bool = False, session: Session = Depends(db_session)) -> dict:
     try:

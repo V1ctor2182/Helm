@@ -3,7 +3,7 @@
   import { marked } from 'marked'
   import DOMPurify from 'dompurify'
   import { cockpit, type Entry } from './cockpit.svelte'
-  import { previewKind, rawUrl, type PreviewKind } from './previewKind'
+  import {previewKind, rawUrl, type PreviewKind, previewOriginUrl } from './previewKind'
 
   interface Loaded {
     kind: PreviewKind
@@ -213,11 +213,46 @@
     void load(sel, my)
   })
 
+  // ── HTML 交互预览(承 FanBox 双缓冲零白闪):两个 iframe 轮换,
+  //    后台帧载完再换前台;文件变更(watch)自动刷新。──────────────
+  let hSrc = $state<[string, string]>(['', ''])
+  let hActive = $state(0)
+  let hVer = 0
+  let lastAutoReload = 0
+
+  function htmlUrl(): string {
+    return cockpit.selected ? previewOriginUrl(cockpit.selected.path, ++hVer) : ''
+  }
+
+  function reloadHtml() {
+    const next = (1 - hActive) as 0 | 1
+    const url = htmlUrl()
+    hSrc = next === 0 ? [url, hSrc[1]] : [hSrc[0], url]
+  }
+
+  function onFrameLoad(idx: number) {
+    // 后台帧就绪才切前台 → 不白闪
+    if (hSrc[idx] && idx !== hActive) hActive = idx
+  }
+
+  // 选中的 html 被写入(agent/外部)→ 自动刷新;300ms 抑抖
+  $effect(() => {
+    const sel = cockpit.selected
+    if (!sel || view?.kind !== 'html') return
+    if (cockpit.changedPaths.has(sel.path)) {
+      const now = Date.now()
+      if (now - lastAutoReload > 300) {
+        lastAutoReload = now
+        reloadHtml()
+      }
+    }
+  })
+
   async function load(sel: Entry, my: number) {
     const kind = previewKind(sel.ext)
     loading = true
     try {
-      if (kind === 'markdown' || kind === 'code') {
+      if (kind === 'markdown' || kind === 'code' || kind === 'html') {
         const res = await fetch(`/api/cockpit/text?path=${encodeURIComponent(sel.path)}`)
         if (my !== token) return
         if (!res.ok) throw new Error()
@@ -238,6 +273,10 @@
           view = { kind, entry: sel, text: body.content, truncated: body.truncated, mtime: body.mtime }
         }
         if (!body.truncated) startEditSession(view)
+        if (kind === 'html') {
+          hActive = 0
+          hSrc = [previewOriginUrl(sel.path, ++hVer), '']
+        }
       } else if (kind === 'zip') {
         const res = await fetch(`/api/cockpit/zip?path=${encodeURIComponent(sel.path)}`)
         if (my !== token) return
@@ -266,10 +305,10 @@
     <header class="title" title={view.entry.path}>{view.entry.name}</header>
     {#if view.truncated}<p class="trunc">（已截断，仅显示前 1MB）</p>{/if}
 
-    {#if view.kind === 'markdown' || view.kind === 'code'}
+    {#if view.kind === 'markdown' || view.kind === 'code' || view.kind === 'html'}
       <div class="vtabs">
         <button class:active={vtab === 'view'} onclick={() => (vtab = 'view')}>{view.kind === 'code' ? '编辑' : '预览'}</button>
-        {#if view.kind === 'markdown' && !view.truncated}
+        {#if (view.kind === 'markdown' || view.kind === 'html') && !view.truncated}
           <button class:active={vtab === 'src'} onclick={() => (vtab = 'src')}>源码</button>
         {/if}
         <button class:active={vtab === 'diff'} onclick={() => (vtab = 'diff')}>Diff</button>
@@ -283,7 +322,7 @@
       </div>
     {/if}
 
-    {#if vtab === 'diff' && (view.kind === 'markdown' || view.kind === 'code')}
+    {#if vtab === 'diff' && (view.kind === 'markdown' || view.kind === 'code' || view.kind === 'html')}
       <!-- Monaco is heavy: load DiffView lazily so it's code-split out of the
            main bundle and never imported in the test/jsdom module graph. -->
       {#await import('./DiffView.svelte') then mod}
@@ -292,8 +331,31 @@
       {:catch}
         <p class="error">diff 加载失败</p>
       {/await}
-    {:else if view.kind === 'markdown' && vtab === 'src' && !view.truncated}
+    {:else if (view.kind === 'markdown' || view.kind === 'html') && vtab === 'src' && !view.truncated}
       <textarea class="codeedit" class:fpulse={followPulse} bind:this={editEl} value={editText} use:editInput aria-label="编辑源码" spellcheck="false"></textarea>
+    {:else if view.kind === 'html'}
+      <!-- 隔离源(独立 origin=沙箱本体)+ 双缓冲不白闪(承 FanBox) -->
+      <div class="htmlwrap">
+        <div class="htmlbar">
+          <button class="hbtn" onclick={reloadHtml}>↻ 刷新</button>
+          <button class="hbtn" onclick={() => window.open(previewOriginUrl(view!.entry.path, Date.now()), '_blank')}>⧉ 新窗</button>
+          <span class="hsrc">127.0.0.1:8770 · 隔离源</span>
+        </div>
+        <div class="hstage">
+          {#each [0, 1] as idx (idx)}
+            {#if hSrc[idx]}
+              <iframe
+                class="hframe"
+                class:front={hActive === idx}
+                title={`HTML 预览 ${idx}`}
+                src={hSrc[idx]}
+                sandbox="allow-scripts allow-same-origin allow-forms"
+                onload={() => onFrameLoad(idx)}
+              ></iframe>
+            {/if}
+          {/each}
+        </div>
+      </div>
     {:else if view.kind === 'markdown'}
       <!-- sanitized via DOMPurify above -->
       <div class="md">{@html view.html}</div>
@@ -453,6 +515,58 @@
     border: 1px solid var(--hair);
     padding: 12px;
     color: var(--t2);
+  }
+  .htmlwrap {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .htmlbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0 6px;
+    flex: none;
+  }
+  .hbtn {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .5px;
+    color: var(--t3);
+    background: transparent;
+    border: 1px solid var(--line);
+    padding: 3px 8px;
+    cursor: pointer;
+  }
+  .hbtn:hover {
+    color: var(--t1);
+    border-color: var(--acc);
+  }
+  .hsrc {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--t4);
+    letter-spacing: .5px;
+  }
+  .hstage {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    border: 1px solid var(--hair);
+    background: #fff; /* 页面自己的底色;白是网页世界的默认 */
+  }
+  .hframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    visibility: hidden;
+  }
+  .hframe.front {
+    visibility: visible;
   }
   .img {
     max-width: 100%;

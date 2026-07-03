@@ -114,6 +114,14 @@ class ProjectService:
             ).scalars()
         )
 
+    def remove(self, path: str) -> bool:
+        """注销项目(不动磁盘,只删注册记录);e2e/误开根目录的清理入口。"""
+        row = self._session.get(Project, str(Path(path).expanduser()))
+        if row is None:
+            return False
+        self._session.delete(row)
+        return True
+
     def open(self, path: str) -> Project:
         """Register/refresh a project by path: detect badges, bump last_opened."""
         folder = Path(path).expanduser()
@@ -123,7 +131,8 @@ class ProjectService:
         badges = ",".join(detect_badges(folder))
         row = self._session.get(Project, abs_path)
         if row is None:
-            row = Project(path=abs_path, name=folder.name, badges=badges)
+            # folder.name 对 '/' 是空串 → 空名项目污染侧栏/Today,兜底用路径
+            row = Project(path=abs_path, name=folder.name or abs_path, badges=badges)
             self._session.add(row)
         else:
             row.badges = badges

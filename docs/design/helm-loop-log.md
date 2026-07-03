@@ -6,6 +6,18 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-03 · cockpit-docking+html-preview(日间,用户拍板)· 结构#4 升级+HTML 预览提级
+- 需求: 用户:「terminal 放下面/所有模块可拖动吸附」+「内置浏览器有吗」→ AskUser 拍板:全面 docking + HTML 交互预览(任意网址浏览留原生壳)
+- 改动A dock: +dock.svelte.ts(三 zone/move/activate/reveal 幂等/resize 钳制/collapse/localStorage 自愈校验)+DockHost.svelte(grid areas+tab 栈拖拽 4px 阈值+zone 吸附高亮+空 zone 拖拽中撑 90/120px 落区+右/底分隔条+折叠条);模块常驻挂载 appendChild 迁移零重挂;CockpitView=Sidebar+DockHost;Shell 终端边条退役(statusbar 终端⟩→直达 dock);rightTab 语义废除(dock.reveal)
+- 改动B html 预览: +previewserver.py(8770 独立 origin=沙箱本体;stdlib 线程;限 $HOME+resolve 拒穿越;no-store)挂 app 启动(HELM_PREVIEW_SERVER=0 关);previewKind +html;PreviewPane html 分支(预览/源码可编辑/Diff;↻ ⧉;双缓冲 iframe onload 换前台零白闪;watch 变更 300ms 抑抖自动刷新)
+- 改动C 数据卫生: DELETE /api/cockpit/projects(注销记录不动磁盘)+根路径空名兜底(病根修复);清 6 个 e2e 遗留注册+「(空名)/」
+- 排障(重要教训): ①同步 window.dispatchEvent(resize) 在 $effect 里会让 xterm fit 异常打断 Svelte flush,全组件模板更新静默死——resize 必须 setTimeout 出 flush,fit 加 try/catch;②effect 里调会重写 state 的方法必须幂等+untrack,否则 layout→effect→layout 自激循环被 Svelte 掐树(dockReveal.test.ts 回归钉死);③jsdom 复现是排 HMR 幽灵的唯一可靠法
+- e2e 真机: 默认布局(文件主区/预览+Agent 右栏/终端底栏)→拖终端进右栏(xterm 缓冲逐字符保留)→拖回空底栏(撑落区修复)→折叠条;html:选中→隔离源渲染→外部改文件→v1→v2 双缓冲刷新;越 $HOME 404
+- 待查(低优): 点目录项目下 watch 未触发一例(非 dot 目录正常);iframe 内容渲染待目视
+- 契约/notch: 新增 DELETE cockpit/projects+8770 预览源,notch 均不消费
+- 验证: 后端 pytest 200(+2)/前端 201(+2,含回归)/check 0/0(263 文件)/build ✓;截图 dock-dark/htmlpv-final
+- 状态: ✅ commit(feat/cockpit-fanbox,未合 main);矩阵 P0·结构 4/5(剩:面包屑+网格呼吸感)
+
 ## 2026-07-03 · phase3.5-round2-sidebar(夜间模式)· P0·结构 #2 ｜ 用户 stop,loop 已停
 - 对齐: 阶段3.5 轮2——左侧栏(FanBox 侧栏:快速入口/收藏/Agent 项目/⌘K/折叠/当前目录统一高亮)
 - 改动: +Sidebar.svelte(搜索钮→openPalette/QUICK 四入口/FAV 星标列表 hover ×/PROJ+活跃度徽章 30s 自刷新 刚刚·m·h·d/当前目录 accent 左沿);store(+favorites/projectActivity/sidebarOpen 全 localStorage loadJson·saveJson try-catch;toggleFavorite/toggleSidebar;applyChange→#touchProjectActivity 按项目前缀记活跃);CockpitView 三列 grid(侧栏 190px 按需)+divider 拖拽扣侧栏偏移;FileBrowser viewbar ≡ 折叠钮+右键目录「收藏/取消收藏」

@@ -38,8 +38,14 @@
   }
 
   function onWindowResize() {
-    fit?.fit()
-    if (term) send(resizeMsg(term.cols, term.rows))
+    // 容器隐藏/零尺寸时 fit 会抛(dock 停车场里的终端就是这种状态)——
+    // 吞掉即可,等真正可见的那次 resize 再排
+    try {
+      fit?.fit()
+      if (term) send(resizeMsg(term.cols, term.rows))
+    } catch {
+      /* hidden container */
+    }
   }
 
   // 折行拼回:从 lineNo 所在的逻辑行(向上找非 isWrapped 起点、向下吃 isWrapped)

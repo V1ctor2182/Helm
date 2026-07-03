@@ -15,6 +15,7 @@ def _disable_memory_vectors(monkeypatch) -> None:
     # The vector path is covered directly in test_memory_vector.py with a fake
     # embedder (real ChromaDB, no network).
     monkeypatch.setenv("HELM_MEMORY_VECTORS", "0")
+    monkeypatch.setenv("HELM_PREVIEW_SERVER", "0")  # 预览源按需单测,不随 app 全起
 
 
 @pytest.fixture

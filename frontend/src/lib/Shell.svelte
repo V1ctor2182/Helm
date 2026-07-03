@@ -10,7 +10,7 @@
   import JournalView from './notes/JournalView.svelte'
   import Settings from './Settings.svelte'
   import CockpitView from './cockpit/CockpitView.svelte'
-  import Terminal from './cockpit/terminal/Terminal.svelte'
+  import { dock } from './cockpit/dock.svelte'
   import { applyShortcut } from './keymap'
   import { cockpit } from './cockpit/cockpit.svelte'
   import { layout } from './layout.svelte'
@@ -104,25 +104,7 @@
     {/if}
   </main>
 
-  {#if layout.terminalCollapsed}
-    <!-- 折叠态终端边条（承 helm-pro.html 40px `.edge`）：点击展开 -->
-    <button
-      class="term-edge"
-      aria-label="展开终端"
-      title="展开终端"
-      onclick={() => layout.toggleTerminal()}
-    >TERMINAL ⟩</button>
-  {:else}
-    <aside class="terminal" aria-label="Terminal panel">
-      {#if layout.mode === 'cockpit'}
-        {#key cockpit.cwd}
-          <Terminal />
-        {/key}
-      {:else}
-        <span class="term-hint">终端在驾驶舱模式下可用</span>
-      {/if}
-    </aside>
-  {/if}
+  <!-- 终端已迁入驾驶舱 dock(底栏默认,可拖拽换位);边条退役,statusbar 按钮直达 -->
 
   <!-- statusbar: CLI 面包屑 / 遥测 HUD（承 helm-pro.html） -->
   <footer class="statusbar">
@@ -136,7 +118,13 @@
     <span class="seg">NEXT</span>
     <span class="seg num">001/009</span>
     <button class="seg" title="监控 chrome 强/弱" onclick={() => layout.toggleChrome()}>◇ chrome</button>
-    <button class="seg" onclick={() => layout.toggleTerminal()}>终端 ⟩</button>
+    <button
+      class="seg"
+      onclick={() => {
+        dock.reveal('terminal')
+        layout.setMode('cockpit')
+      }}>终端 ⟩</button
+    >
     <button class="seg k" onclick={() => layout.openPalette()}>⌘K 命令面板</button>
     <button class="seg k" onclick={() => layout.openCapture()}>⌘N 速记</button>
   </footer>
@@ -149,12 +137,12 @@
   .shell {
     height: 100vh;
     display: grid;
-    grid-template-columns: var(--rail-w) auto 1fr auto;
+    grid-template-columns: var(--rail-w) auto 1fr;
     grid-template-rows: var(--titlebar-h) 1fr var(--statusbar-h);
     grid-template-areas:
-      'title title title title'
-      'rail context center terminal'
-      'status status status status';
+      'title title title'
+      'rail context center'
+      'status status status';
     background: var(--bg);
     color: var(--t2);
     font-family: var(--sans);
@@ -306,38 +294,6 @@
   }
   .empty {
     color: var(--t4);
-  }
-
-  /* terminal */
-  .terminal {
-    grid-area: terminal;
-    width: var(--term-w);
-    padding: 12px;
-    background: #050506;
-    border-left: 1px solid var(--hair);
-    color: var(--t3);
-    font-family: var(--mono);
-    font-size: 11px;
-  }
-  .term-hint { color: var(--t4); }
-
-  /* 折叠态终端边条（40px 竖排 TERMINAL ⟩） */
-  .term-edge {
-    grid-area: terminal;
-    width: 40px;
-    background: var(--panel);
-    border: 0;
-    border-left: 1px solid var(--hair);
-    color: var(--t4);
-    font-family: var(--mono);
-    font-size: 9px;
-    letter-spacing: 2px;
-    writing-mode: vertical-rl;
-    cursor: pointer;
-    transition: color var(--dur-micro) var(--ease);
-  }
-  .term-edge:hover {
-    color: var(--t2);
   }
 
   /* statusbar · CLI 面包屑 HUD */

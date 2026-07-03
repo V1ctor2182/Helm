@@ -45,6 +45,15 @@ def create_app(config: HelmConfig | None = None) -> FastAPI:
     # first encrypt/decrypt, so constructing it here is free.
     app.state.secret_box = SecretBox.from_data_dir(config.data_dir)
 
+    # 隔离 HTML 预览源(驾驶舱交互预览,承 FanBox):独立 origin 只发文件字节。
+    # 测试/多实例下端口被占则为 None,预览面板回退源码视图。
+    if os.getenv("HELM_PREVIEW_SERVER", "1") != "0":
+        from helm.cockpit.previewserver import start_preview_server
+
+        app.state.preview_server = start_preview_server()
+    else:
+        app.state.preview_server = None
+
     # Vector indexes (memory-rag-skills m2/m4): memory recall + RAG retrieval.
     # One fastembed embedder serves both (mirrors Odysseus sharing its
     # EmbeddingClient). Construction is cheap — the Chroma clients open local

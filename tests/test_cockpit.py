@@ -477,3 +477,55 @@ def test_search_route_modes(config, tmp_path):
     r2 = c.get("/api/cockpit/search", params={"q": "hello helm", "root": str(tmp_path), "mode": "content"}).json()
     assert r2["results"] and r2["results"][0]["path"].endswith("target.md")
 
+# ---- isolated preview server(阶段3.5:HTML 交互预览隔离源) ----------------
+
+
+def test_preview_server_serves_home_files_only():
+    import http.client
+    from pathlib import Path
+
+    from helm.cockpit.previewserver import start_preview_server
+
+    srv = start_preview_server(port=0)
+    assert srv is not None
+    port = srv.server_address[1]
+    home = Path.home()
+    f = home / ".helm-preview-test.html"
+    f.write_text("<h1>ok</h1>", encoding="utf-8")
+
+    def get(path: str):
+        c = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+        c.request("GET", path)
+        r = c.getresponse()
+        body = r.read()
+        c.close()
+        return r, body
+
+    try:
+        r, body = get(f"/fs{f}")
+        assert r.status == 200
+        assert "text/html" in (r.getheader("Content-Type") or "")
+        assert body == b"<h1>ok</h1>"
+        assert get("/fs/etc/hosts")[0].status == 404  # $HOME 外拒绝
+        assert get(f"/fs{home}/../../etc/hosts")[0].status == 404  # 穿越拒绝
+        assert get("/")[0].status == 404  # 非 /fs/ 前缀
+    finally:
+        f.unlink(missing_ok=True)
+        srv.shutdown()
+
+def test_project_remove_and_empty_name_guard(config, tmp_path):
+    c = TestClient(create_app(config))
+    proj = tmp_path / "myproj"
+    proj.mkdir()
+    c.post("/api/cockpit/projects", json={"path": str(proj)})
+    assert any(p["path"] == str(proj) for p in c.get("/api/cockpit/projects").json()["projects"])
+    r = c.delete("/api/cockpit/projects", params={"path": str(proj)})
+    assert r.status_code == 200
+    assert all(p["path"] != str(proj) for p in c.get("/api/cockpit/projects").json()["projects"])
+    assert c.delete("/api/cockpit/projects", params={"path": str(proj)}).status_code == 404
+    # 根路径注册不再产生空名
+    c.post("/api/cockpit/projects", json={"path": "/"})
+    root = [p for p in c.get("/api/cockpit/projects").json()["projects"] if p["path"] == "/"]
+    assert root and root[0]["name"] == "/"
+    c.delete("/api/cockpit/projects", params={"path": "/"})
+

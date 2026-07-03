@@ -3,7 +3,7 @@
   import { layout } from './layout.svelte'
   import { tasks } from './notes/tasksStore.svelte'
   import { agent } from './orchestration/agentStore.svelte'
-  import { cockpit } from './cockpit/cockpit.svelte'
+  import { dock } from './cockpit/dock.svelte'
 
   // 上下文面板（承 helm-pro.html `.ctx`）：当前项目 + Today 导航（真计数+可点跳转）
   // + 会话遥测块 + 坐标 chip + LOCAL 角标。遥测仍 mock（F8 账上待真流）。
@@ -34,9 +34,9 @@
     {
       label: 'Agent 收件箱',
       ct: String(agent.runs.filter((r) => r.status === 'running').length),
-      on: layout.mode === 'cockpit' && cockpit.rightTab === 'agent',
+      on: layout.mode === 'cockpit' && dock.isVisible('agent'),
       go: () => {
-        cockpit.rightTab = 'agent'
+        dock.reveal('agent')
         layout.setMode('cockpit')
       },
     },

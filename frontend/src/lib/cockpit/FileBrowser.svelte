@@ -4,6 +4,7 @@
   import { iconFor } from './fileIcons'
   import { previewKind } from './previewKind'
   import { layout } from '../layout.svelte'
+  import { dock } from './dock.svelte'
   import { localHHMM } from '../time'
 
   let pathInput = $state('')
@@ -305,8 +306,8 @@
       </select>
       <button
         class="vact"
-        class:on={cockpit.rightTab === 'agent'}
-        onclick={() => (cockpit.rightTab = cockpit.rightTab === 'agent' ? 'preview' : 'agent')}
+        class:on={dock.isVisible('agent')}
+        onclick={() => dock.reveal('agent')}
         aria-label="Agent 观察台"
       >
         AGENT

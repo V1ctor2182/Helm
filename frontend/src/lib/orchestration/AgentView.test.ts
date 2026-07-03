@@ -3,6 +3,7 @@ import { fireEvent } from '@testing-library/dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AgentView from './AgentView.svelte'
 import CockpitView from '../cockpit/CockpitView.svelte'
+import { dock } from '../cockpit/dock.svelte'
 import { cockpit } from '../cockpit/cockpit.svelte'
 import { agent } from './agentStore.svelte'
 
@@ -45,24 +46,28 @@ describe('AgentView', () => {
   })
 })
 
-describe('CockpitView(预览按需面板,阶段3.5 结构#1)', () => {
-  it('无选中时文件区铺满(右栏不渲染);选中滑出;×关闭回全宽', async () => {
-    const { container } = render(CockpitView)
-    expect(screen.queryByRole('tab', { name: '预览' })).toBeNull() // 按需:默认无右栏
-    cockpit.selected = { name: 'a.md', path: '/p/a.md', is_dir: false, size: 1, ext: 'md', mtime: 0 }
-    const agentTab = await screen.findByRole('tab', { name: 'Agent' })
-    expect(container.querySelector('.divider')).not.toBeNull() // 可拖中缝
-    await fireEvent.click(agentTab)
-    expect(screen.getByLabelText('Agent 指令')).toBeInTheDocument()
-    await fireEvent.click(screen.getByLabelText('关闭面板'))
-    expect(cockpit.selected).toBeNull()
-    expect(screen.queryByRole('tab', { name: 'Agent' })).toBeNull()
+describe('CockpitView(dock 布局,阶段3.5 用户拍板全模块吸附)', () => {
+  it('默认布局:文件@主区、预览+Agent@右栏 tab 栈、终端@底栏;点 AGENT tab 切换', async () => {
+    dock.resetLayout()
+    render(CockpitView)
+    expect(screen.getByText('文件 / FILES')).toBeInTheDocument()
+    expect(screen.getByText('终端 / TERMINAL')).toBeInTheDocument()
+    const agentTab = screen.getByText('AGENT')
+    await fireEvent.pointerDown(agentTab)
+    await fireEvent.pointerUp(window)
+    expect(dock.layout.active.right).toBe('agent')
+    expect(await screen.findByLabelText('Agent 指令')).toBeInTheDocument()
   })
 
-  it('rightTab=agent 时无选中也能开观察台', async () => {
-    cockpit.rightTab = 'agent'
+  it('dock.move 把终端搬去右栏成 tab 栈;折叠右栏出竖条', async () => {
+    dock.resetLayout()
     render(CockpitView)
-    expect(await screen.findByLabelText('Agent 指令')).toBeInTheDocument()
-    cockpit.rightTab = 'preview'
+    dock.move('terminal', 'right')
+    expect(dock.layout.zones.right).toEqual(['preview', 'agent', 'terminal'])
+    expect(dock.layout.active.right).toBe('terminal')
+    expect(dock.layout.zones.bottom).toEqual([])
+    dock.toggleCollapse('right')
+    expect(await screen.findByText(/预览 · AGENT · 终端/)).toBeInTheDocument()
+    dock.resetLayout()
   })
 })

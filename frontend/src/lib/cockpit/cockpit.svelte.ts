@@ -99,8 +99,6 @@ export class CockpitStore {
   projectActivity = $state<Record<string, number>>(loadJson('helm-ck-projact', {}))
   /** 侧栏折叠(承 FanBox 可折叠侧栏)。 */
   sidebarOpen = $state(loadJson('helm-ck-side', true))
-  /** 右侧面板 tab:preview 随选中出现;agent 可无选中固定打开。 */
-  rightTab = $state<'preview' | 'agent'>('preview')
   /** 图片灯箱(null=关);点预览图/双击网格图片打开。 */
   lightboxPath = $state<string | null>(null)
   // 「改·N」热度:变更按 cwd 顶层项聚合(count+子路径),4.5s 无新事件消退
