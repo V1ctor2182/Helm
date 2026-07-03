@@ -186,6 +186,8 @@
     display:flex; align-items:flex-end; gap:26px; flex:none;
     padding:26px 42px 20px; border-bottom:1px solid var(--line);
   }
+  /* 栏宽上限(2026-07-03 用户:左右隔太远)——锚行内容同收 940px */
+  .dial { max-width:940px; }
   .dial .clock {
     font:800 72px/0.94 var(--mono); letter-spacing:-2px;
     color:var(--t1); font-variant-numeric:tabular-nums;
@@ -204,7 +206,10 @@
 
   /* —— 账本式区块:左槽 mono tag + 中列 items + 右列 22px key —— */
   .ledger { flex:1; overflow:hidden; display:flex; flex-direction:column; }
+  /* 栏宽上限(2026-07-03 用户:左右隔太远,眼睛来回甩)——
+     行内容含右侧数字收进 900px 报纸栏宽;聚光底色仍然通栏 */
   .ledger .blk { padding:14px 42px 13px 40px; flex:none; }
+  .ledger .brow { max-width:900px; }
   .ledger .blk + .blk { border-top:1px solid var(--hair); }
   .ledger .blk:last-child { flex:1; }
   .brow {
@@ -268,6 +273,8 @@
   }
   .cp-head .stats b { display:block; font-size:22px; font-weight:700; color:var(--t1); letter-spacing:-.5px; }
   .cp-head .stats .g b { color:var(--green); }
+
+  .cp-head { max-width:940px; }
 
   .cp-body {
     flex:1; display:grid;
