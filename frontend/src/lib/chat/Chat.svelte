@@ -48,12 +48,25 @@
     }
   }
 
+  let modelErr = $state('')
+
   async function startSession() {
     if (newProviderId == null) return
     // 模型留空 → 用该 provider 的第一个已知模型(一键接入不该让人猜模型名)
     const provider = chat.providers.find((p) => p.id === newProviderId)
     const model = newModel.trim() || provider?.models[0] || ''
     if (!model) return
+    // claude-cli 只认别名或完整 claude-* id——错名(如 "claude")在这就拦,
+    // 别让它进会话再被 CLI 一句英文报错弄懵
+    if (
+      provider?.type === 'claude-cli' &&
+      !provider.models.includes(model) &&
+      !model.startsWith('claude-')
+    ) {
+      modelErr = `这个 provider 只认:${provider.models.join(' / ')}(或完整 claude-* 模型 id)`
+      return
+    }
+    modelErr = ''
     await chat.createSession(newProviderId, model, newSystem.trim() || null)
     newSystem = ''
     showProviders = false
@@ -72,6 +85,7 @@
       <datalist id="model-list">
         {#each newProvider?.models ?? [] as m (m)}<option value={m}></option>{/each}
       </datalist>
+      {#if modelErr}<p class="modelerr">{modelErr}</p>{/if}
       <input bind:value={newSystem} placeholder="system prompt(可选)" aria-label="系统提示词" />
       <button class="act pri" onclick={startSession} disabled={newProviderId == null || !newModel.trim()}>开始</button>
     </section>
@@ -156,6 +170,12 @@
 </div>
 
 <style>
+  .modelerr {
+    margin: 2px 0 0;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--red, #d33);
+  }
   .chat {
     display: grid;
     grid-template-columns: 210px 1fr;
