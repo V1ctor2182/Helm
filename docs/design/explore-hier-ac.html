@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Helm · 层级探索 A×C · 锚+聚光 Anchor & Spotlight</title>
+<!--
+  HELM — HIERARCHY EXPLORATION · A×C 合成 · 锚 + 聚光
+  拍板:「A 和 C 结合一下,我喜欢 C 的 focus、A 的清晰」。
+  合成公式(定死):
+  1) 屏锚层(A 赢):每屏顶部超大主读数(Today 72px 时钟 / 驾驶舱 28px 项目名)
+     永远全亮 t1,不参与聚光系统 — 屏幕的固定锚。
+  2) 区块层(C 赢):任务/日记/AGENT/最近/日程 与 文件/预览/终端 构成聚光系统。
+     焦点区块 = 背景提亮一档(dark #0d0d10 / light #f2efe6)+ 左缘 2px var(--acc) 实条 + 文字 t1/t2;
+     非焦点区块 = 背景透明 + 文字 t3/t4。点击聚光 280ms 气动滑移。
+  3) 数字层(A 的清晰渗进 C):每区块右侧关键数字一律 22px mono —
+     焦点区亮(accent-ink/t1),非焦点区保持 22px 但压到 t4:大而暗,层级全靠亮度。
+  字阶严格五级:9 / 12 / 15 / 22 / 72&28。
+  眯眼检验:每屏 = 一个永亮巨物(锚)+ 一个亮岛(焦点区)+ 若干大而暗的数字浮标 + 底噪。
+  探索稿(非定稿)。真相源仍是 helm-pro.html + DESIGN.md。
+-->
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; border-radius:0; }
+
+  :root {
+    --sans: -apple-system, "SF Pro Text", sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+    --ease: cubic-bezier(.32,.72,0,1);
+    --acc:#FFC53D;
+  }
+
+  [data-theme="dark"] {
+    --bg:#000; --chrome:#0a0a0c; --panel:#08080a;
+    --t1:#fff; --t2:rgba(255,255,255,.82); --t3:rgba(255,255,255,.52); --t4:rgba(255,255,255,.32);
+    --line:rgba(255,255,255,.14); --hair:rgba(255,255,255,.07);
+    --tile:#101012; --grid:rgba(255,255,255,.035);
+    --green:#34C759; --acc-ink:#FFC53D;
+    --focus:#0d0d10;
+  }
+  [data-theme="light"] {
+    --bg:#efece3; --chrome:#e7e3d8; --panel:#eae6dc;
+    --t1:#17140d; --t2:rgba(23,20,13,.74); --t3:rgba(23,20,13,.52); --t4:rgba(23,20,13,.34);
+    --line:rgba(23,20,13,.20); --hair:rgba(23,20,13,.10);
+    --tile:#e4dfd2; --grid:rgba(23,20,13,.05);
+    --green:#2a8f43; --acc-ink:#8a6410;
+    --focus:#f2efe6;
+  }
+
+  body { background:#141414; }
+  #root {
+    min-height:100vh; background:var(--bg); color:var(--t1);
+    font-family:var(--sans); padding:36px 40px 64px;
+    transition:background .25s var(--ease), color .25s var(--ease);
+  }
+
+  /* ---------- 页头:合成公式说明条 ---------- */
+  .page-head {
+    display:flex; align-items:baseline; gap:18px;
+    max-width:1180px; margin:0 auto 8px;
+  }
+  .page-head h1 { font:800 15px/1.2 var(--mono); letter-spacing:1px; color:var(--t1); flex:none; }
+  .page-head .sub { font:400 12px/1.5 var(--sans); color:var(--t3); }
+  .page-head .sub b { color:var(--t2); font-weight:600; }
+  .page-head .sub .a { color:var(--acc-ink); }
+  .theme-btn {
+    margin-left:auto; cursor:pointer; flex:none;
+    font:700 9px/1 var(--mono); letter-spacing:1px; text-transform:uppercase;
+    color:var(--t2); background:var(--chrome); border:1px solid var(--line);
+    padding:8px 14px;
+  }
+  .theme-btn:hover { color:var(--t1); border-color:var(--acc-ink); }
+
+  .screen-label {
+    max-width:1180px; margin:34px auto 10px;
+    font:700 9px/1 var(--mono); letter-spacing:2px; text-transform:uppercase; color:var(--t4);
+    display:flex; align-items:center; gap:10px;
+  }
+  .screen-label::after { content:""; flex:1; height:1px; background:var(--hair); }
+  .screen-label b { color:var(--acc-ink); font-weight:700; }
+
+  /* ---------- App 外壳 ---------- */
+  .app {
+    max-width:1180px; height:640px; margin:0 auto;
+    background:var(--bg); border:1px solid var(--line);
+    overflow:hidden;
+    display:grid;
+    grid-template-columns:58px 1fr;
+    grid-template-rows:1fr 26px;
+    font-family:var(--sans); color:var(--t2);
+  }
+
+  /* ---------- Rail(58px 细丝,chrome 恒暗) ---------- */
+  .rail {
+    grid-row:1; grid-column:1;
+    background:var(--chrome); border-right:1px solid var(--hair);
+    position:relative;
+    display:flex; flex-direction:column; align-items:center;
+    padding:18px 0 14px; gap:6px;
+  }
+  .rail .filament {
+    position:absolute; top:0; right:0; width:1px; height:100%;
+    background:var(--hair);
+  }
+  .rail .filament i {
+    position:absolute; right:0; width:1px; height:38px;
+    background:var(--acc); display:block;
+  }
+  .rail .ric {
+    width:34px; height:34px; display:flex; align-items:center; justify-content:center;
+    color:var(--t4); cursor:default;
+  }
+  .rail .ric.on { color:var(--t1); }
+  .rail .ric svg { display:block; }
+  .rail .spacer { flex:1; }
+  .rail .ver { font:400 9px/1 var(--mono); color:var(--t4); letter-spacing:1px; }
+
+  /* ---------- 主区共通(22px 点阵底纹) ---------- */
+  .main {
+    grid-row:1; grid-column:2;
+    background:radial-gradient(var(--grid) 1px, transparent 1px);
+    background-size:22px 22px;
+    overflow:hidden; position:relative;
+    display:flex; flex-direction:column;
+  }
+
+  /* ---------- 状态栏(26px mono 遥测,chrome 恒暗) ---------- */
+  .statusbar {
+    grid-row:2; grid-column:1 / -1;
+    background:var(--chrome); border-top:1px solid var(--hair);
+    display:flex; align-items:center; gap:0;
+    padding:0 12px;
+    font:400 9px/1 var(--mono); letter-spacing:.4px; color:var(--t3);
+    font-variant-numeric:tabular-nums;
+    white-space:nowrap; overflow:hidden;
+  }
+  .statusbar .seg { padding:0 10px; border-right:1px solid var(--hair); }
+  .statusbar .seg:first-child { padding-left:0; }
+  .statusbar .seg:last-child { border-right:0; margin-left:auto; padding-right:0; }
+  .statusbar .dot { color:var(--acc-ink); }
+  .statusbar .ok { color:var(--green); }
+
+  /* ============================================================
+     区块层 · C 的聚光系统
+     非焦点:--f1(正文)=t4 --f2(辅文)=t4 --f3(标签)=t4 --fk(22px 数字)=t4
+     焦点:  --f1=t1 --f2=t2 --f3=t3 --fk=accent-ink · 背景 --focus · 左缘 2px acc
+     ============================================================ */
+  .blk {
+    --f1:var(--t4); --f2:var(--t4); --f3:var(--t4); --fk:var(--t4);
+    background:transparent; border-left:2px solid transparent;
+    cursor:pointer; position:relative;
+    transition:background-color .28s var(--ease), border-color .28s var(--ease);
+  }
+  .blk.focus {
+    --f1:var(--t1); --f2:var(--t2); --f3:var(--t3); --fk:var(--acc-ink);
+    background:var(--focus); border-left-color:var(--acc); cursor:default;
+  }
+  .blk .hint {
+    position:absolute; right:16px; top:10px;
+    font:700 9px/1 var(--mono); letter-spacing:1px; color:var(--t4);
+    opacity:0; transition:opacity .15s;
+  }
+  .blk:not(.focus):hover .hint { opacity:1; }
+  /* 聚光切换时,块内文字颜色同步 280ms 气动过渡 */
+  .blk .tw { transition:color .28s var(--ease); }
+
+  /* 数字层 · A 的清晰:22px mono,大而暗 */
+  .key {
+    font:700 22px/1 var(--mono); color:var(--fk);
+    font-variant-numeric:tabular-nums; letter-spacing:-.5px;
+    text-align:right; align-self:start;
+    transition:color .28s var(--ease);
+  }
+  .key u {
+    text-decoration:none; display:block; margin-top:5px; text-align:right;
+    font:400 9px/1 var(--mono); color:var(--f3); letter-spacing:1px;
+    transition:color .28s var(--ease);
+  }
+
+  /* ============================================================
+     屏 ① TODAY
+     ============================================================ */
+  .today { padding:0; }
+
+  /* —— 屏锚(A 赢):72px 重磅时钟,永远全亮,不参与聚光 —— */
+  .dial {
+    display:flex; align-items:flex-end; gap:26px; flex:none;
+    padding:26px 42px 20px; border-bottom:1px solid var(--line);
+  }
+  .dial .clock {
+    font:800 72px/0.94 var(--mono); letter-spacing:-2px;
+    color:var(--t1); font-variant-numeric:tabular-nums;
+  }
+  .dial .clock .sec { font-size:22px; font-weight:700; color:var(--t4); letter-spacing:0; }
+  .dial .datecol { padding-bottom:6px; }
+  .dial .datecol .d1 { font:800 22px/1.1 var(--mono); color:var(--t1); letter-spacing:1px; font-variant-numeric:tabular-nums; }
+  .dial .datecol .d2 { font:400 12px/1.6 var(--mono); color:var(--t3); letter-spacing:2px; }
+  .dial .meta {
+    margin-left:auto; text-align:right; padding-bottom:6px;
+    font:700 9px/2 var(--mono); letter-spacing:1.5px; color:var(--t4); text-transform:uppercase;
+    font-variant-numeric:tabular-nums;
+  }
+  .dial .meta b { color:var(--t2); font-weight:700; }
+  .dial .meta .acc { color:var(--acc-ink); }
+
+  /* —— 账本式区块:左槽 mono tag + 中列 items + 右列 22px key —— */
+  .ledger { flex:1; overflow:hidden; display:flex; flex-direction:column; }
+  .ledger .blk { padding:14px 42px 13px 40px; flex:none; }
+  .ledger .blk + .blk { border-top:1px solid var(--hair); }
+  .ledger .blk:last-child { flex:1; }
+  .brow {
+    display:grid; grid-template-columns:96px 1fr auto;
+    align-items:baseline; column-gap:20px;
+  }
+  .brow .tag {
+    font:700 9px/1.4 var(--mono); letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--f3);
+  }
+  .brow .tag em { display:block; font-style:normal; color:var(--f3); margin-top:3px; }
+  .blk.focus .brow .tag em { color:var(--acc-ink); }
+
+  .items { display:flex; flex-direction:column; gap:7px; min-width:0; }
+  .item { display:flex; align-items:baseline; gap:10px; min-width:0; }
+  .item .bx { font:400 12px/1 var(--mono); color:var(--f3); }
+  .blk.focus .item .bx.done { color:var(--green); }
+  .item .tx { font:400 15px/1.35 var(--sans); color:var(--f1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .item .tx.done { color:var(--f3); text-decoration:line-through; }
+  .item .at { margin-left:auto; font:400 9px/1 var(--mono); color:var(--f3); letter-spacing:1px; font-variant-numeric:tabular-nums; flex:none; }
+
+  .ghost { font:400 15px/1.5 var(--sans); color:var(--f2); }
+  .ghost kbd {
+    font:700 9px/1 var(--mono); color:var(--f2); letter-spacing:1px;
+    border:1px solid var(--hair); padding:2px 5px; margin:0 2px;
+  }
+  .blk.focus .ghost kbd { border-color:var(--line); }
+
+  .agent-line { display:flex; align-items:baseline; gap:10px; }
+  .agent-line .pulse { font:400 12px/1 var(--mono); color:var(--f3); }
+  .agent-line .tx15 { font:400 15px/1.35 var(--sans); color:var(--f1); }
+
+  .chips { display:flex; gap:8px; flex-wrap:wrap; }
+  .chip {
+    font:400 12px/1 var(--mono); color:var(--f2); letter-spacing:.5px;
+    border:1px solid var(--hair); padding:6px 10px;
+    display:inline-flex; align-items:baseline; gap:8px;
+    transition:color .28s var(--ease), border-color .28s var(--ease), background-color .28s var(--ease);
+  }
+  .blk.focus .chip { background:var(--panel); }
+  .chip b { font-weight:700; color:var(--f1); }
+  .chip .k9 { font-size:9px; color:var(--f3); letter-spacing:1px; }
+  .blk.focus .chip.hot { border-color:var(--line); }
+
+  /* ============================================================
+     屏 ② COCKPIT
+     ============================================================ */
+  .cockpit { padding:0; }
+
+  /* —— 屏锚(A 赢):28px 项目名,永远全亮,不参与聚光 —— */
+  .cp-head {
+    display:flex; align-items:flex-end; gap:20px; flex:none;
+    padding:26px 32px 18px; border-bottom:1px solid var(--line);
+  }
+  .cp-head .proj { font:800 28px/1 var(--mono); letter-spacing:-.5px; color:var(--t1); }
+  .cp-head .path { font:400 12px/1.4 var(--mono); color:var(--t3); letter-spacing:.5px; padding-bottom:2px; }
+  .cp-head .stats {
+    margin-left:auto; display:flex; gap:22px; padding-bottom:2px;
+    font:700 9px/1.8 var(--mono); letter-spacing:1.5px; text-transform:uppercase; color:var(--t4);
+    font-variant-numeric:tabular-nums; text-align:right;
+  }
+  .cp-head .stats b { display:block; font-size:22px; font-weight:700; color:var(--t1); letter-spacing:-.5px; }
+  .cp-head .stats .g b { color:var(--green); }
+
+  .cp-body {
+    flex:1; display:grid;
+    grid-template-columns:1fr 330px;
+    grid-template-rows:1fr 168px;
+    min-height:0;
+  }
+  .cp-body .files { grid-row:1; grid-column:1; padding:16px 24px 14px 30px; overflow:hidden; }
+  .cp-body .prevb { grid-row:1; grid-column:2; padding:16px 32px 14px 22px; overflow:hidden; border-left:1px solid var(--hair); display:flex; flex-direction:column; }
+  .cp-body .termb { grid-row:2; grid-column:1 / -1; padding:10px 32px 12px 30px; overflow:hidden; border-top:1px solid var(--hair); display:flex; flex-direction:column; }
+
+  /* 区块头:9px 标签 + 右侧 22px key */
+  .bhead {
+    display:flex; align-items:flex-start; gap:8px; margin-bottom:12px;
+    font:700 9px/1 var(--mono); letter-spacing:2px; text-transform:uppercase; color:var(--f3);
+  }
+  .bhead .lab { padding-top:8px; }
+  .bhead .rule { flex:1; height:1px; background:var(--hair); margin-top:12px; }
+  .bhead .live { padding-top:8px; letter-spacing:.5px; color:var(--f3); }
+  .blk.focus .bhead .live { color:var(--green); }
+
+  /* —— 文件网格 —— */
+  .fgrid {
+    display:grid; grid-template-columns:repeat(3, 1fr); gap:1px;
+    background:var(--hair); border:1px solid var(--hair);
+  }
+  .fcard {
+    background:var(--cardbg, var(--bg)); padding:12px 14px 11px;
+    display:flex; flex-direction:column; gap:6px; min-width:0;
+    transition:background-color .28s var(--ease);
+  }
+  .blk { --cardbg:var(--bg); }
+  .blk.focus { --cardbg:var(--focus); }
+  .blk.focus .fcard:hover { background:var(--tile); }
+  .fcard .kind { font:700 9px/1 var(--mono); letter-spacing:1.5px; color:var(--f3); }
+  .fcard .kind i { font-style:normal; }
+  .blk.focus .fcard .kind i { color:var(--acc-ink); }
+  .fcard .name {
+    font:600 15px/1.25 var(--sans); color:var(--f1);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .fcard .meta { font:400 9px/1 var(--mono); color:var(--f3); letter-spacing:.5px; font-variant-numeric:tabular-nums; }
+  .blk.focus .fcard.sel { background:var(--tile); box-shadow:inset 0 0 0 1px var(--line); }
+
+  /* —— 预览视口 —— */
+  .pframe {
+    flex:1; border:1px solid var(--hair);
+    padding:16px 16px 12px; display:flex; flex-direction:column; min-height:0;
+    transition:border-color .28s var(--ease);
+  }
+  .blk.focus .pframe { border-color:var(--line); }
+  .pframe .ptitle { font:700 15px/1.3 var(--sans); color:var(--f1); margin-bottom:4px; }
+  .pframe .psub { font:400 9px/1 var(--mono); color:var(--f3); letter-spacing:1px; margin-bottom:12px; font-variant-numeric:tabular-nums; }
+  .pframe p { font:400 12px/1.65 var(--sans); color:var(--f2); margin-bottom:9px; }
+  .pframe p b { color:var(--f1); font-weight:600; }
+  .pframe .tele {
+    margin-top:auto; padding-top:10px; border-top:1px solid var(--hair);
+    display:grid; grid-template-columns:1fr 1fr; gap:3px 14px;
+    font:400 9px/1.7 var(--mono); letter-spacing:.5px; color:var(--f3);
+    font-variant-numeric:tabular-nums;
+  }
+  .pframe .tele b { color:var(--f2); font-weight:400; }
+
+  /* —— 终端 —— */
+  .termb pre {
+    flex:1; overflow:hidden; margin:0;
+    font:400 12px/1.75 var(--mono); color:var(--f2);
+    font-variant-numeric:tabular-nums;
+  }
+  .termb pre .p, .termb pre .c, .termb pre .g, .termb pre .dim { color:var(--f3); transition:color .28s var(--ease); }
+  .termb pre .c { color:var(--f2); }
+  .blk.focus pre .p { color:var(--acc-ink); }
+  .blk.focus pre .c { color:var(--t2); }
+  .blk.focus pre .g { color:var(--green); }
+  .blk.focus pre .dim { color:var(--t4); }
+  .termb .cursor { display:inline-block; width:7px; height:13px; background:var(--f3); vertical-align:-2px; animation:bl 1s steps(1) infinite; }
+  .blk.focus .cursor { background:var(--acc); }
+  @keyframes bl { 50% { opacity:0; } }
+
+  /* ---------- 三层规则脚注 ---------- */
+  .spec {
+    max-width:1180px; margin:26px auto 0; padding-top:14px; border-top:1px solid var(--hair);
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:20px;
+    font:400 12px/1.8 var(--sans); color:var(--t3);
+  }
+  .spec h4 { font:700 9px/1 var(--mono); letter-spacing:1.5px; text-transform:uppercase; color:var(--t4); margin-bottom:8px; }
+  .spec b { color:var(--t2); font-weight:600; }
+  .spec .m { font-family:var(--mono); font-size:12px; }
+  .spec .a { color:var(--acc-ink); }
+</style>
+</head>
+<body>
+<div id="root" data-theme="dark">
+
+  <!-- 说明条:合成公式 + 主题切换 -->
+  <div class="page-head">
+    <h1>EXPLORE · HIER-A×C</h1>
+    <span class="sub">合成公式:<b>锚 = A 全亮</b>(72px 时钟 / 28px 项目名,t1,不参聚光)· <b>区块 = C 聚光</b>(焦点提亮 + 左缘 2px <span class="a">accent</span>,点击 280ms 气动移光)· <b>数字 = 22px mono 大而暗</b>(焦点 accent-ink,非焦点保持 22px 压 t4)</span>
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">THEME · DARK ⇄ LIGHT</button>
+  </div>
+
+  <!-- ════════════════ 屏 ① TODAY ════════════════ -->
+  <div class="screen-label">SCREEN 01 — <b>TODAY</b> 锚:72px 重磅时钟恒亮 · 默认聚光「任务」· 眯眼 = 巨物 + 亮岛 + 暗数字浮标</div>
+
+  <div class="app" data-screen="today">
+    <div class="rail">
+      <div class="filament"><i style="top:16px"></i></div>
+      <div class="ric on" title="Today">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.2">
+          <circle cx="7.5" cy="7.5" r="6"/><path d="M7.5 4v3.5l2.5 1.5"/>
+        </svg>
+      </div>
+      <div class="ric" title="Cockpit">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.2">
+          <rect x="1.5" y="2.5" width="12" height="10"/><path d="M4.5 6l2 1.8-2 1.8M8 10h3"/>
+        </svg>
+      </div>
+      <div class="ric" title="Chat">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.2">
+          <path d="M1.5 2.5h12v8h-7l-3 2.5v-2.5h-2z"/>
+        </svg>
+      </div>
+      <div class="ric" title="Memory">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.2">
+          <rect x="2.5" y="1.5" width="10" height="12"/><path d="M5 4.5h5M5 7.5h5M5 10.5h3"/>
+        </svg>
+      </div>
+      <div class="spacer"></div>
+      <div class="ver">v0.1</div>
+    </div>
+
+    <div class="main today">
+
+      <!-- 屏锚(A):永远全亮,不参与聚光 -->
+      <div class="dial">
+        <div class="clock">15:42<span class="sec">:07</span></div>
+        <div class="datecol">
+          <div class="d1">07·03</div>
+          <div class="d2">周五 · W27</div>
+        </div>
+        <div class="meta">
+          <div><b>3</b> TASKS OPEN</div>
+          <div><b>0</b> RUNS ACTIVE</div>
+          <div class="acc">FOCUS 2H 10M LEFT</div>
+        </div>
+      </div>
+
+      <!-- 区块层(C):聚光系统 -->
+      <div class="ledger">
+
+        <section class="blk focus">
+          <span class="hint">CLICK TO FOCUS</span>
+          <div class="brow">
+            <div class="tag tw">TASKS<em class="tw">今日</em></div>
+            <div class="items">
+              <div class="item"><span class="bx tw">□</span><span class="tx tw">把 Today 页字阶从窄带拉开成五级</span><span class="at tw">P1 · 设计</span></div>
+              <div class="item"><span class="bx done tw">◆</span><span class="tx done tw">DESIGN.md 补每日 accent 色轮说明</span><span class="at tw">已完成 11:20</span></div>
+              <div class="item"><span class="bx tw">□</span><span class="tx tw">notch 面板 media source 图标换单色 SVG</span><span class="at tw">P2 · notch</span></div>
+            </div>
+            <div class="key">2<u class="tw">/ 3 待办</u></div>
+          </div>
+        </section>
+
+        <section class="blk">
+          <span class="hint">CLICK TO FOCUS</span>
+          <div class="brow">
+            <div class="tag tw">JOURNAL<em class="tw">15:42</em></div>
+            <div class="items">
+              <div class="ghost tw">今天还没有落笔 — 按 <kbd class="tw">⌘N</kbd> 记一行,或直接开始输入…</div>
+            </div>
+            <div class="key">0<u class="tw">字 · 连续 4 天</u></div>
+          </div>
+        </section>
+
+        <section class="blk">
+          <span class="hint">CLICK TO FOCUS</span>
+          <div class="brow">
+            <div class="tag tw">AGENT<em class="tw">IDLE</em></div>
+            <div class="items">
+              <div class="agent-line"><span class="pulse tw">○</span><span class="tx15 tw">CLAUDE 待命 — 上次运行 14:03,helm/frontend 重构 rail,12 文件通过</span></div>
+            </div>
+            <div class="key">14:03<u class="tw">上次运行</u></div>
+          </div>
+        </section>
+
+        <section class="blk">
+          <span class="hint">CLICK TO FOCUS</span>
+          <div class="brow">
+            <div class="tag tw">RECENT<em class="tw">项目</em></div>
+            <div class="items">
+              <div class="chips">
+                <span class="chip hot"><b class="tw">helm</b><span class="k9 tw">2 分钟前 · ⎇ main</span></span>
+                <span class="chip"><b class="tw">notch</b><span class="k9 tw">1 小时前</span></span>
+                <span class="chip"><b class="tw">fanbox</b><span class="k9 tw">昨天</span></span>
+              </div>
+            </div>
+            <div class="key">3<u class="tw">本周活跃</u></div>
+          </div>
+        </section>
+
+        <section class="blk">
+          <span class="hint">CLICK TO FOCUS</span>
+          <div class="brow">
+            <div class="tag tw">SCHEDULE<em class="tw">下一项</em></div>
+            <div class="items">
+              <div class="item"><span class="bx tw">▸</span><span class="tx tw">设计评审 — Today 页层级方案对比</span><span class="at tw">持续 45 分钟</span></div>
+              <div class="item"><span class="bx tw" style="color:transparent">▸</span><span class="tx tw" style="color:var(--f2)">之后:自由 focus 块直到 19:00</span><span class="at tw"></span></div>
+            </div>
+            <div class="key">17:00<u class="tw">还有 1H 18M</u></div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+
+    <div class="statusbar">
+      <span class="seg"><span class="dot">●</span> ~/helm</span>
+      <span class="seg">⎇ main ↑0</span>
+      <span class="seg">CLAUDE · tok 14.2k</span>
+      <span class="seg"><span class="ok">backend ok</span> · v0.0.1</span>
+      <span class="seg">⌘K 命令面板</span>
+    </div>
+  </div>
+
+  <!-- ════════════════ 屏 ② COCKPIT ════════════════ -->
+  <div class="screen-label">SCREEN 02 — <b>COCKPIT · 驾驶舱</b> 锚:28px 项目名恒亮 · 默认聚光「文件」· 预览/终端压暗待命</div>
+
+  <div class="app" data-screen="cockpit">
+    <div class="rail">
+      <div class="filament"><i style="top:56px"></i></div>
+      <div class="ric" title="Today">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.2">
+          <circle cx="7.5" cy="7.5" r="6"/><path d="M7.5 4v3.5l2.5 1.5"/>
+        </svg>
+      </div>
+      <div class="ric on" title="Cockpit">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.2">
+          <rect x="1.5" y="2.5" width="12" height="10"/><path d="M4.5 6l2 1.8-2 1.8M8 10h3"/>
+        </svg>
+      </div>
+      <div class="ric" title="Chat">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.2">
+          <path d="M1.5 2.5h12v8h-7l-3 2.5v-2.5h-2z"/>
+        </svg>
+      </div>
+      <div class="ric" title="Memory">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.2">
+          <rect x="2.5" y="1.5" width="10" height="12"/><path d="M5 4.5h5M5 7.5h5M5 10.5h3"/>
+        </svg>
+      </div>
+      <div class="spacer"></div>
+      <div class="ver">v0.1</div>
+    </div>
+
+    <div class="main cockpit">
+
+      <!-- 屏锚(A):28px 项目名,永远全亮 -->
+      <div class="cp-head">
+        <div class="proj">helm</div>
+        <div class="path">~/work/AI-workspace/helm · ⎇ main · 干净工作区</div>
+        <div class="stats">
+          <div>FILES<b>128</b></div>
+          <div>CHANGED<b>0</b></div>
+          <div class="g">CI<b>PASS</b></div>
+        </div>
+      </div>
+
+      <!-- 区块层(C):文件 / 预览 / 终端 -->
+      <div class="cp-body">
+
+        <section class="blk focus files">
+          <span class="hint">CLICK TO FOCUS</span>
+          <div class="bhead">
+            <span class="lab tw">FILES · ROOT</span>
+            <span class="rule"></span>
+            <span class="key" style="margin-left:8px">128<u class="tw">项 · 已索引</u></span>
+          </div>
+          <div class="fgrid">
+            <div class="fcard sel">
+              <div class="kind tw"><i>DIR</i></div>
+              <div class="name tw">frontend</div>
+              <div class="meta tw">42 项 · 2 分钟前</div>
+            </div>
+            <div class="fcard">
+              <div class="kind tw">DIR</div>
+              <div class="name tw">backend</div>
+              <div class="meta tw">31 项 · 1 小时前</div>
+            </div>
+            <div class="fcard">
+              <div class="kind tw">DIR</div>
+              <div class="name tw">notch</div>
+              <div class="meta tw">18 项 · 昨天</div>
+            </div>
+            <div class="fcard">
+              <div class="kind tw">DIR</div>
+              <div class="name tw">docs</div>
+              <div class="meta tw">24 项 · 20 分钟前</div>
+            </div>
+            <div class="fcard">
+              <div class="kind tw">MD</div>
+              <div class="name tw">DESIGN.md</div>
+              <div class="meta tw">14.8 KB · 今天 11:20</div>
+            </div>
+            <div class="fcard">
+              <div class="kind tw">MD</div>
+              <div class="name tw">CLAUDE.md</div>
+              <div class="meta tw">2.1 KB · 3 天前</div>
+            </div>
+            <div class="fcard">
+              <div class="kind tw">MD</div>
+              <div class="name tw">README.md</div>
+              <div class="meta tw">4.6 KB · 上周</div>
+            </div>
+            <div class="fcard">
+              <div class="kind tw">TOML</div>
+              <div class="name tw">helm.config.toml</div>
+              <div class="meta tw">0.9 KB · 上周</div>
+            </div>
+            <div class="fcard">
+              <div class="kind tw">SH</div>
+              <div class="name tw">dev.sh</div>
+              <div class="meta tw">1.2 KB · 2 周前</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="blk prevb">
+          <span class="hint">CLICK TO FOCUS</span>
+          <div class="bhead">
+            <span class="lab tw">PREVIEW · frontend/</span>
+            <span class="rule"></span>
+            <span class="key" style="margin-left:8px">42<u class="tw">项 · SVELTE</u></span>
+          </div>
+          <div class="pframe">
+            <div class="ptitle tw">frontend</div>
+            <div class="psub tw">SVELTE APP · 最近改动 src/lib/Rail.svelte</div>
+            <p class="tw">Svelte 桌面壳前端。<b class="tw">Shell + Today</b> 已按 helm-pro 设计稿落地,当前在做字阶层级重构。</p>
+            <p class="tw">最近 3 次提交都围绕 rail 细丝与状态栏遥测;无未提交改动。</p>
+            <div class="tele">
+              <span class="tw">SESSION <b class="tw">#0427</b></span><span class="tw">MODEL <b class="tw">CLAUDE-4.6</b></span>
+              <span class="tw">TOKENS <b class="tw">14.2K</b></span><span class="tw">AGENTS <b class="tw">0/2</b></span>
+            </div>
+          </div>
+        </section>
+
+        <section class="blk termb">
+          <span class="hint">CLICK TO FOCUS</span>
+          <div class="bhead" style="margin-bottom:6px">
+            <span class="lab tw">TERMINAL · zsh · ~/helm/frontend</span>
+            <span class="rule"></span>
+            <span class="live tw">● LIVE</span>
+            <span class="key" style="margin-left:12px">#0427<u class="tw">上次 RUN</u></span>
+          </div>
+          <pre><span class="dim">14:03:11</span>  <span class="p">❯</span> <span class="c">claude "重构 rail 组件,细丝动画照 DESIGN.md 招牌缓动"</span>
+<span class="dim">14:05:48</span>  <span class="g">✓</span> 12 文件改动 · svelte-check 通过 · vitest 34/34
+<span class="dim">14:05:50</span>  <span class="dim">run #0427 结束 · tok 14.2k · 2m 39s</span>
+<span class="dim">15:42:07</span>  <span class="p">❯</span> <span class="cursor"></span></pre>
+        </section>
+
+      </div>
+    </div>
+
+    <div class="statusbar">
+      <span class="seg"><span class="dot">●</span> ~/helm</span>
+      <span class="seg">⎇ main ↑0</span>
+      <span class="seg">CLAUDE · tok 14.2k</span>
+      <span class="seg"><span class="ok">backend ok</span> · v0.0.1</span>
+      <span class="seg">⌘K 命令面板</span>
+    </div>
+  </div>
+
+  <!-- ════════════════ 三层规则脚注 ════════════════ -->
+  <div class="spec">
+    <div>
+      <h4>1 · 屏锚层(A 赢)</h4>
+      Today <b class="m">72px</b> 重磅时钟 + <b class="m">22px</b> 日期;驾驶舱 <b class="m">28px</b> 项目名。
+      永远全亮 <b class="m">t1</b>,不挂 .blk、不参与聚光——屏幕的固定锚。
+    </div>
+    <div>
+      <h4>2 · 区块层(C 赢)</h4>
+      焦点:背景 dark <b class="m">#0d0d10</b> / light <b class="m">#f2efe6</b> + 左缘 <b class="m">2px var(--acc)</b> 实条 + 文字 t1/t2。
+      非焦点:背景透明 + 文字 t3/t4。点击任意区块聚光 <b class="m">280ms cubic-bezier(.32,.72,0,1)</b> 气动滑移,一屏只有一个亮岛。
+    </div>
+    <div>
+      <h4>3 · 数字层(A 渗进 C)</h4>
+      每区块右侧关键数字一律 <b class="m">22px mono</b>:焦点区 <span class="a">accent-ink</span>,非焦点区保持 22px 压 <b class="m">t4</b>——大而暗,扫一眼仍读得到。
+      字阶严格五级 <b class="m">9 / 12 / 15 / 22 / 72&amp;28</b>。眯眼:一个永亮巨物 + 一个亮岛 + 若干大而暗数字浮标 + 底噪。
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function toggleTheme() {
+    var root = document.getElementById('root');
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    document.getElementById('themeBtn').textContent =
+      'THEME · ' + (next === 'dark' ? 'DARK ⇄ LIGHT' : 'LIGHT ⇄ DARK');
+  }
+  // C 的聚光移动:每个 .app 内点击任意 .blk,焦点光环 280ms 气动移过去(一屏一亮岛)
+  document.querySelectorAll('.app').forEach(function (app) {
+    app.addEventListener('click', function (e) {
+      var b = e.target.closest('.blk');
+      if (!b || !app.contains(b) || b.classList.contains('focus')) return;
+      app.querySelectorAll('.blk.focus').forEach(function (x) { x.classList.remove('focus'); });
+      b.classList.add('focus');
+    });
+  });
+</script>
+</body>
+</html>
