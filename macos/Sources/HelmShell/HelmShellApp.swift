@@ -76,7 +76,8 @@ final class BackendProcess {
 // MARK: - App
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNavigationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNavigationDelegate,
+    WKScriptMessageHandler {
     let backend = BackendProcess()
     var window: NSWindow!
     var webView: WKWebView!
@@ -115,16 +116,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNaviga
     private func buildWindow() {
         let config = WKWebViewConfiguration()
         config.preferences.isElementFullscreenEnabled = true
+        // 网页标题栏 mousedown → 原生 performDrag(网页自绘 chrome,拖拽得由壳代劳)
+        config.userContentController.add(self, name: "helmDrag")
         webView = WKWebView(frame: .zero, configuration: config)
         webView.uiDelegate = self
         webView.navigationDelegate = self
+        // UA 标记:前端据此隐藏自绘假交通灯并给真灯让位
+        webView.customUserAgent = (webView.value(forKey: "userAgent") as? String ?? "Mozilla/5.0") + " HelmShell/0.1"
         if #available(macOS 13.3, *) { webView.isInspectable = true }  // Safari 开发者工具可连
 
         window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1440, height: 900),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered, defer: false)
         window.title = "Helm"
+        // 沉浸式:原生标题栏透明,真交通灯直接落在网页标题栏那一行(网页假灯由 UA 分支隐藏)
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
         window.minSize = NSSize(width: 1100, height: 700)
         window.contentView = webView
         window.backgroundColor = .black
@@ -132,6 +140,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNaviga
         window.setFrameAutosaveName("HelmMainWindow")
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    nonisolated func userContentController(_ userContentController: WKUserContentController,
+                                           didReceive message: WKScriptMessage) {
+        guard message.name == "helmDrag" else { return }
+        Task { @MainActor in
+            if let event = NSApp.currentEvent { self.window.performDrag(with: event) }
+        }
     }
 
     private func showSetupHint() {

@@ -11,6 +11,18 @@
   import Settings from './Settings.svelte'
   import CockpitView from './cockpit/CockpitView.svelte'
   import { dock } from './cockpit/dock.svelte'
+
+  // 桌面壳检测(macos/ 的 WKWebView 会在 UA 里带 HelmShell 标记)
+  const inShell = navigator.userAgent.includes('HelmShell')
+
+  function titlebarDrag(e: MouseEvent) {
+    // 只有壳内才把标题栏当拖拽把手;点在按钮/链接上不抢
+    if (!inShell || (e.target as HTMLElement).closest('button, a, input')) return
+    interface DragBridge {
+      webkit?: { messageHandlers?: { helmDrag?: { postMessage: (m: string) => void } } }
+    }
+    ;(window as unknown as DragBridge).webkit?.messageHandlers?.helmDrag?.postMessage('drag')
+  }
   import { applyShortcut } from './keymap'
   import { cockpit } from './cockpit/cockpit.svelte'
   import { layout } from './layout.svelte'
@@ -25,8 +37,10 @@
 <svelte:window onkeydown={onGlobalKey}  ondragover={(e) => e.preventDefault()} ondrop={(e) => e.preventDefault()} />
 
 <div class="shell" class:immersive={layout.immersive}>
-  <!-- titlebar: 交通灯 + wordmark + 路径 + 会话 meta（承 helm-pro.html） -->
-  <header class="titlebar">
+  <!-- titlebar: 交通灯 + wordmark + 路径 + 会话 meta（承 helm-pro.html）。
+       壳内(HelmShell UA):假灯隐藏、给原生真灯让位、整条变成窗口拖拽把手 -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <header class="titlebar" class:inshell={inShell} onmousedown={titlebarDrag}>
     <span class="tl r" aria-hidden="true"></span>
     <span class="tl y" aria-hidden="true"></span>
     <span class="tl g" aria-hidden="true"></span>
@@ -162,6 +176,13 @@
     width: 11px;
     height: 11px;
     border-radius: 50%;
+  }
+  /* 壳内:假灯藏掉,内容右移给原生真交通灯让位 */
+  .titlebar.inshell .tl {
+    display: none;
+  }
+  .titlebar.inshell {
+    padding-left: 84px;
   }
   .tl.r { background: #ff5f57; }
   .tl.y { background: #febc2e; }
