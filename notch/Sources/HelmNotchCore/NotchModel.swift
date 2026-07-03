@@ -412,6 +412,13 @@ public final class NotchModel {
     private var lyricsCache: [String: Lyrics] = [:]
     private var lyricsTrackKey = ""
 
+    /// Snapshot/预览专用:直接注入媒体+歌词状态(别在业务代码里用)。
+    public func debugSetMedia(_ np: NowPlaying?, lyrics l: Lyrics) {
+        nowPlaying = np
+        nowPlayingFetchedAt = Date()
+        lyrics = l
+    }
+
     public func refreshMedia() async {
         let snapshot = await media.nowPlaying()
         nowPlaying = snapshot

@@ -1040,9 +1040,8 @@ struct NotchView: View {
                 }
                 .padding(.bottom, 3)
 
-                HStack(spacing: 22) {
+                HStack(alignment: .top, spacing: 22) {
                     VStack(alignment: .leading, spacing: 0) {
-                        Spacer(minLength: 0)
                         coverArt(np, size: 84, radius: 14)
                             .shadow(color: .black.opacity(0.5), radius: 10, y: 6)
                         Text(title).font(.system(size: 14, weight: .heavy)).foregroundStyle(.white).lineLimit(1).padding(.top, 8)
@@ -1054,12 +1053,14 @@ struct NotchView: View {
                             Button { model.nextTrack() } label: { Text("▶▶").font(.system(size: 15)) }
                         }
                         .buttonStyle(.plain).foregroundStyle(.white).padding(.top, 8)
-                        Spacer(minLength: 0)
                     }
                     .frame(width: 190)
+                    // id 绑曲目:换曲把旧词整棵拆掉,不留跨曲残影;clipped 防越界压波形
                     lyricsColumn
+                        .id(model.nowPlaying.map { "\($0.title)|\($0.artist)" } ?? "none")
+                        .clipped()
                 }
-                .frame(maxHeight: .infinity)
+                .frame(maxHeight: .infinity, alignment: .top)
 
                 Waveform(playing: np?.isPlaying ?? true, color: accent)
                     .frame(height: 24).padding(.top, 7)
@@ -1146,7 +1147,8 @@ struct NotchView: View {
                             .lineLimit(1)
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .padding(.top, 14)
                 .animation(.easeOut(duration: 0.25), value: cur)
                 .mask(lyricsMask)
             }
@@ -1159,7 +1161,7 @@ struct NotchView: View {
                     }
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .mask(lyricsMask)
         case .none:
             VStack(spacing: 6) {

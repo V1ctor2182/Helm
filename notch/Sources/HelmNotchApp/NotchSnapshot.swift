@@ -13,6 +13,22 @@ enum NotchSnapshot {
         let views: [(name: String, configure: (NotchModel) -> Void)] = [
             ("dash", { $0.module = .dashboard }),
             ("media", { $0.module = .media }),
+            ("media-lyrics", {
+                $0.module = .media
+                $0.debugSetMedia(
+                    NowPlaying(title: "Mask Off (Remix)", artist: "Future", isPlaying: true,
+                               elapsed: 40, duration: 204),
+                    lyrics: .synced((0..<20).map {
+                        LyricLine(time: Double($0) * 10, text: "Line \($0) — call it how it is")
+                    }))
+            }),
+            ("media-plain", {
+                $0.module = .media
+                $0.debugSetMedia(
+                    NowPlaying(title: "dishonesty", artist: "Gareth.T", isPlaying: true,
+                               elapsed: 30, duration: 179),
+                    lyrics: .plain((0..<30).map { "纯文本第 \($0) 行,比较长比较长比较长" }))
+            }),
             ("cap", { $0.module = .capture; $0.captureKind = .note }),
             ("cal-month", { $0.module = .calendar; $0.calMonthView = true }),
             ("cal-week", { $0.module = .calendar; $0.calMonthView = false }),
