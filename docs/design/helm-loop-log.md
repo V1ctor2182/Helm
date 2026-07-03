@@ -6,6 +6,14 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-03 · macos-shell-mvp(日间,用户拍板)· Swift+WKWebView 桌面壳
+- 决策: 三路线对比(Swift/Tauri/Electron)+Odysseus 启动器路线勘察后,用户拍板 Swift+WKWebView(决策记 platform-shell room 93b13555;PRD 原案 pywebview/薄 Electron 被替代)
+- 落地: 新顶层 macos/ 独立 SwiftPM 包(不动 notch 构建)——HelmShellApp.swift(~230 行):BackendProcess(8769 健康探测→复用已跑实例/否则拉起 .venv python -m helm,日志 ~/Library/Logs/Helm,退出只杀自己拉起的)+NSWindow+WKWebView(1440×900,frameAutosave,isInspectable)+标准 ⌘ 菜单(Edit 菜单缺失会废掉 WKWebView 的复制粘贴)+关窗驻留 Dock 复开+_blank→系统浏览器+加载失败 1s 重试(冷启动竞态);HELM_SHELL_URL 可指 5174 走 vite 热更新;build-app.sh(承 Odysseus 打包思路)产 Helm.app(140KB)+Helm.dmg(48KB),HelmRoot 烘焙进 Info.plist,ad-hoc 签名
+- 验证: swift build 绿;真机 open Helm.app→进程在跑+后端 200(复用路径);.gitignore 排除 .build/dist
+- 待目视(WebKit 回归): xterm/Monaco/color-mix 在 Safari 内核下的表现——用户开壳窗口过一遍驾驶舱即知;壳内行为不在 Chrome e2e 覆盖内(知情代价,已记决策)
+- 后续账: 图标(.icns)/托盘/登录项/全局快捷键;远期主窗口与 notch 合一 App
+- 状态: ✅ commit(feat/cockpit-fanbox,未合 main)
+
 ## 2026-07-03 · cockpit-docking+html-preview(日间,用户拍板)· 结构#4 升级+HTML 预览提级
 - 需求: 用户:「terminal 放下面/所有模块可拖动吸附」+「内置浏览器有吗」→ AskUser 拍板:全面 docking + HTML 交互预览(任意网址浏览留原生壳)
 - 改动A dock: +dock.svelte.ts(三 zone/move/activate/reveal 幂等/resize 钳制/collapse/localStorage 自愈校验)+DockHost.svelte(grid areas+tab 栈拖拽 4px 阈值+zone 吸附高亮+空 zone 拖拽中撑 90/120px 落区+右/底分隔条+折叠条);模块常驻挂载 appendChild 迁移零重挂;CockpitView=Sidebar+DockHost;Shell 终端边条退役(statusbar 终端⟩→直达 dock);rightTab 语义废除(dock.reveal)

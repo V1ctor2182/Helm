@@ -26,3 +26,6 @@ notch/.build/
 
 # notch packaged app
 notch/Helm Notch.app/
+.gstack/
+macos/.build/
+macos/dist/
