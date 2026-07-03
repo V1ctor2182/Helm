@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { LayoutStore } from './layout.svelte'
 
 describe('LayoutStore', () => {
-  it('defaults: today mode, context open, terminal collapsed', () => {
+  it('defaults: today mode, context collapsed(2026-07-03 用户拍板), terminal collapsed', () => {
     const l = new LayoutStore()
     expect(l.mode).toBe('today')
-    expect(l.contextCollapsed).toBe(false)
+    expect(l.contextCollapsed).toBe(true) // 一列只摆几行字太浪费——默认折叠,⟨上下文 可展开
     expect(l.terminalCollapsed).toBe(true)
     expect(l.tabs).toEqual([])
   })
@@ -39,10 +39,11 @@ describe('LayoutStore', () => {
 
   it('immersive when both side panels are collapsed', () => {
     const l = new LayoutStore()
-    expect(l.immersive).toBe(false) // context open
+    expect(l.immersive).toBe(true) // 默认双折叠=沉浸
     l.toggleContext()
-    expect(l.immersive).toBe(true) // both collapsed
+    expect(l.immersive).toBe(false) // context 展开
+    l.toggleContext()
     l.toggleTerminal()
-    expect(l.immersive).toBe(false) // terminal now open
+    expect(l.immersive).toBe(false) // terminal 展开
   })
 })

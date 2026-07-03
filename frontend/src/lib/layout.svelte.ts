@@ -38,7 +38,16 @@ export interface Tab {
 
 export class LayoutStore {
   mode = $state<ModeId>('today')
-  contextCollapsed = $state(false)
+  // 上下文列默认折叠(2026-07-03 用户:一列只摆几行字太浪费);偏好持久
+  contextCollapsed = $state(
+    (() => {
+      try {
+        return localStorage.getItem('helm-ctx-collapsed') !== '0'
+      } catch {
+        return true
+      }
+    })(),
+  )
   terminalCollapsed = $state(true) // terminal hidden until a cockpit/agent needs it
   tabs = $state<Tab[]>([])
   activeTabId = $state<string | null>(null)
@@ -88,6 +97,11 @@ export class LayoutStore {
 
   toggleContext(): void {
     this.contextCollapsed = !this.contextCollapsed
+    try {
+      localStorage.setItem('helm-ctx-collapsed', this.contextCollapsed ? '1' : '0')
+    } catch {
+      /* 忽略 */
+    }
   }
 
   toggleTerminal(): void {
