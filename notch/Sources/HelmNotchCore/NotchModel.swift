@@ -74,12 +74,45 @@ public final class NotchModel {
     }
 
     /// Stop the focus session; returns the rounded minutes (min 1).
-    /// TODO(align-focus): POST /api/focus { what, minutes } once the backend exposes it.
     @discardableResult public func stopFocus(at now: Date = Date()) -> Int {
         let minutes = max(1, Int((Double(focusElapsed(at: now)) / 60).rounded()))
         focusOn = false
         focusWhat = ""
         return minutes
+    }
+
+    /// 停止专注并落库(kind=focus 的 note,记录页·日记时间线可见)。
+    public func stopFocusAndRecord(at now: Date = Date()) async {
+        let what = focusWhat
+        let minutes = stopFocus(at: now)
+        captureStatus = .sending
+        do {
+            try await backend.createNote(
+                content: "专注 \(minutes) 分钟 · \(what)", kind: "focus",
+                journalDate: Self.today())
+            captureStatus = .sent
+        } catch {
+            captureStatus = .failed
+        }
+    }
+
+    // ── ask(问大脑)+ 最近条 ────────────────────────────────────
+    public private(set) var askAnswer: String?
+    public private(set) var askQuestion = ""
+    public private(set) var recentNotes: [RecentNote] = []
+
+    /// 把上一问答存成速记。
+    public func saveAskAsNote() async {
+        guard let a = askAnswer, !askQuestion.isEmpty else { return }
+        try? await backend.createNote(
+            content: "问:\(askQuestion)\n答:\(a)", kind: "note", journalDate: nil)
+        captureStatus = .sent
+    }
+
+    /// 「最近」条:速记/日记走真数据(其余 kind 无来源,视图隐藏该条)。
+    public func loadRecents() async {
+        let kind = captureKind == .journal ? "journal" : "note"
+        recentNotes = (try? await backend.recentNotes(kind: kind, limit: 3)) ?? []
     }
 
     // MARK: Module switching (dock + view), ported from helm-notch-pro.html
@@ -144,9 +177,11 @@ public final class NotchModel {
         case .capture:
             captureKind == .focus
                 ? (focusOn ? 300 : 240)
-                : (captureShowRecent
-                    ? min(320, (captureKind == .task ? 258 : 214) + 64)
-                    : (captureKind == .task ? 258 : 214))
+                : (captureKind == .ask && askAnswer != nil
+                    ? 330
+                    : (captureShowRecent
+                        ? min(320, (captureKind == .task ? 258 : 214) + 64)
+                        : (captureKind == .task ? 258 : 214)))
         }
     }
 
@@ -636,25 +671,32 @@ public final class NotchModel {
         var ext = ""
         if let w = captureWhen { ext += " · \(w)" }
         if let p = captureWhere { ext += " · \(p)" }
+        // 拖进来的文件:名字折进内容(真文件上传等 journal 附件 schema,P2 在账)
+        if !captureFiles.isEmpty {
+            ext += "\n附件: " + captureFiles.map(\.name).joined(separator: ", ")
+        }
         captureStatus = .sending
         do {
             switch captureKind {
             case .note:
                 try await backend.createNote(content: text + ext, kind: "note", journalDate: nil)
             case .journal:
-                try await backend.createNote(content: text, kind: "journal", journalDate: Self.today())
+                try await backend.createNote(content: text + ext, kind: "journal", journalDate: Self.today())
             case .task:
                 try await backend.createTask(prompt: text + ext)
             case .focus:
                 return  // focus uses start/stop, not submit
             case .ask:
-                // TODO(align-ask): real brain query + answer channel; interim = stored note.
-                try await backend.createNote(content: text, kind: "ask", journalDate: nil)
+                // 真问大脑(POST /api/ask,走 Chat 配好的 provider)
+                askQuestion = text
+                askAnswer = nil
+                let answer = try await backend.ask(text)
+                askAnswer = answer
             }
             captureText = ""
             captureWhen = nil
             captureWhere = nil
-            captureFiles = []  // TODO(align-files): upload staged files to Helm.
+            captureFiles = []
             captureStatus = .sent
         } catch {
             captureStatus = .failed

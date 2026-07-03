@@ -14,11 +14,32 @@ public protocol HelmBackend: Sendable {
     func listRuns() async throws -> [AgentRun]
     /// Calendar events in `[start, end)` (for the notch's 日历 cell).
     func listEvents(start: Date, end: Date) async throws -> [CalEvent]
+    /// 一句话问大脑(POST /api/ask),返回答案文本。
+    func ask(_ q: String) async throws -> String
+    /// 最近的速记/日记(GET /api/notes?kind=),给「最近」条用。
+    func recentNotes(kind: String, limit: Int) async throws -> [RecentNote]
+}
+
+/// 「最近」条一行(速记/日记摘要)。
+public struct RecentNote: Sendable, Equatable, Identifiable {
+    public let id: Int
+    public let content: String
+    public let kind: String
+    public let createdAt: String  // 展示用 HH:mm 或原串
+
+    public init(id: Int, content: String, kind: String, createdAt: String) {
+        self.id = id
+        self.content = content
+        self.kind = kind
+        self.createdAt = createdAt
+    }
 }
 
 public extension HelmBackend {
     /// Default so fakes/tests that don't care about calendar still conform.
     func listEvents(start: Date, end: Date) async throws -> [CalEvent] { [] }
+    func ask(_ q: String) async throws -> String { throw URLError(.unsupportedURL) }
+    func recentNotes(kind: String, limit: Int) async throws -> [RecentNote] { [] }
 }
 
 /// Talks to the local Helm FastAPI backend over HTTP (default loopback:8769).
@@ -78,6 +99,43 @@ public struct HelmClient: HelmBackend {
             "api/tasks",
             Body(name: name, prompt: prompt, schedule_kind: "cron", schedule_value: ["expr": "0 9 * * *"])
         )
+    }
+
+    public func ask(_ q: String) async throws -> String {
+        struct Body: Encodable { let q: String }
+        struct Reply: Decodable { let answer: String }
+        var req = URLRequest(url: baseURL.appendingPathComponent("api/ask"))
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONEncoder().encode(Body(q: q))
+        req.timeoutInterval = 120  // claude-cli 冷启动+生成,别用默认 60 掐半截
+        let (data, resp) = try await session.data(for: req)
+        guard let http = resp as? HTTPURLResponse, http.statusCode == 200 else {
+            struct Err: Decodable { let detail: String? }
+            let msg = (try? JSONDecoder().decode(Err.self, from: data))?.detail
+            throw NSError(domain: "helm", code: 1,
+                          userInfo: [NSLocalizedDescriptionKey: msg ?? "ask 失败"])
+        }
+        return try JSONDecoder().decode(Reply.self, from: data).answer
+    }
+
+    public func recentNotes(kind: String, limit: Int) async throws -> [RecentNote] {
+        struct Note: Decodable {
+            let id: Int
+            let content: String
+            let kind: String
+            let created_at: String?
+        }
+        struct Reply: Decodable { let notes: [Note] }
+        var comps = URLComponents(
+            url: baseURL.appendingPathComponent("api/notes"), resolvingAgainstBaseURL: false)!
+        comps.queryItems = [URLQueryItem(name: "kind", value: kind)]
+        let (data, _) = try await session.data(from: comps.url!)
+        let notes = try JSONDecoder().decode(Reply.self, from: data).notes.prefix(limit)
+        return notes.map {
+            RecentNote(id: $0.id, content: $0.content, kind: $0.kind,
+                       createdAt: Self.clockTime($0.created_at) ?? "")
+        }
     }
 
     public func listRuns() async throws -> [AgentRun] {

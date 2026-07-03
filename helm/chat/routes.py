@@ -13,7 +13,7 @@ from fastapi import (
     Depends,
     HTTPException,
     WebSocket,
-    WebSocketDisconnect,
+    WebSocketDisconnect,    Request,
 )
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -53,6 +53,48 @@ def list_providers(
 ) -> dict:
     providers = ProviderService(session, box).list()
     return {"providers": [provider_public(p) for p in providers]}
+
+
+class AskBody(BaseModel):
+    q: str
+
+
+@router.post("/ask")
+async def ask_brain(
+    body: AskBody, request: Request,
+    session: Session = Depends(db_session), box: SecretBox = Depends(get_secret_box),
+) -> dict:
+    """一句话问大脑(notch 速记 ask 模式):用第一个 provider 一次性回答。"""
+    q = body.q.strip()
+    if not q:
+        raise HTTPException(status_code=422, detail="q 不能为空")
+    svc = ProviderService(session, box)
+    provider = next(iter(svc.list()), None)
+    if provider is None:
+        raise HTTPException(status_code=409, detail="没有可用的模型 provider — 先在 Chat 里配置一个")
+    messages = [{"role": "user", "content": q}]
+    system = "用中文简洁回答,直接给答案,不用客套。"
+    model = json.loads(provider.models_json or "[]")
+    default_model = model[0] if model else ""
+    chunks: list[str] = []
+    try:
+        if provider.type == "claude-cli":
+            stream = claudecli.chat_stream(
+                binary=provider.base_url, model=default_model, messages=messages,
+                system=system, cwd=request.app.state.config.data_dir)
+        else:
+            key = svc.api_key(provider.id)
+            stream = adapters.chat_stream(
+                provider_type=provider.type, base_url=provider.base_url,
+                model=default_model, messages=messages, system=system, api_key=key)
+        async for chunk in stream:
+            chunks.append(chunk)
+    except Exception as exc:  # 转成人话,别把栈炸给刘海
+        raise HTTPException(status_code=502, detail=f"大脑没回上来:{exc}") from None
+    answer = "".join(chunks).strip()
+    if not answer:
+        raise HTTPException(status_code=502, detail="大脑回了空——检查 provider")
+    return {"answer": answer, "provider": provider.name}
 
 
 @router.post("/providers/claude-cli-setup")

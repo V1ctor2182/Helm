@@ -1443,6 +1443,9 @@ struct NotchView: View {
             }
             .padding(.top, 10)
             statusLabel.padding(.top, 2)
+            if model.captureKind == .ask, let answer = model.askAnswer {
+                askAnswerCard(answer).padding(.top, 8)
+            }
             recentsSection.padding(.top, 6)
         }
         Spacer(minLength: 0)
@@ -1493,13 +1496,13 @@ struct NotchView: View {
                     }
                 }
                 Text(model.focusWhat).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white).lineLimit(1)
-                Button { _ = model.stopFocus() } label: {
+                Button { Task { await model.stopFocusAndRecord() } } label: {
                     Text("停止并记录").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color(red: 0.1, green: 0.07, blue: 0.03))
                         .padding(.horizontal, 22).padding(.vertical, 8)
                         .background(Capsule().fill(accent))
                 }
                 .buttonStyle(.plain)
-                Text("停止时自动写入 Helm /api/focus").font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
+                Text("停止即记录到 Helm(记录页 · 日记时间线)").font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
             }
             .frame(maxWidth: .infinity)
         } else {
@@ -1602,46 +1605,72 @@ struct NotchView: View {
     }
 
     /// 最近 速记/日记/任务 (HTML .recents) — seed data; real recents need backend.
-    // TODO(align-capture): replace recentSeed with a backend recents query.
-    private let recentSeed: [(kind: String, text: String, time: String)] = [
-        ("速记", "开会记得问 CI 的事", "2m"), ("速记", "刘海配色换 teal", "40m"),
-        ("任务", "明早 9 点跑回归测试", "1h"), ("任务", "review notch PR #51", "2h"),
-        ("日记", "今天把刘海重做了一版", "3h"),
-    ]
-
-    private var recentsSection: some View {
-        let label = model.captureKind.label
-        let items = recentSeed.filter { $0.kind == label }
-        return VStack(alignment: .leading, spacing: 0) {
-            Button { model.captureShowRecent.toggle() } label: {
-                Text("最近\(label) \(model.captureShowRecent ? "▴" : "▾")")
-                    .font(.system(size: 10, weight: .bold)).tracking(0.4).foregroundStyle(.white.opacity(0.34))
+    /// ask 答案卡:大脑的回答 + 存速记。
+    private func askAnswerCard(_ answer: String) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            ScrollView(.vertical, showsIndicators: false) {
+                Text(answer).font(.system(size: 12)).foregroundStyle(.white.opacity(0.9))
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .buttonStyle(.plain)
-            if model.captureShowRecent {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        if items.isEmpty {
-                            Text("暂无").font(.system(size: 11)).foregroundStyle(.white.opacity(0.34))
-                                .frame(width: 160, height: 52, alignment: .topLeading)
-                        } else {
-                            ForEach(items.indices, id: \.self) { i in
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text(items[i].kind).font(.system(size: 9, weight: .bold))
-                                        .foregroundStyle(Color(red: 0.1, green: 0.07, blue: 0.03))
-                                        .padding(.horizontal, 6).padding(.vertical, 1)
-                                        .background(RoundedRectangle(cornerRadius: 5).fill(accent))
-                                    Text(items[i].text).font(.system(size: 11)).foregroundStyle(.white.opacity(0.9)).lineLimit(1)
-                                    Text(items[i].time).font(.system(size: 9)).foregroundStyle(.white.opacity(0.34))
+            .frame(maxHeight: 96)
+            HStack {
+                Text("答 · \(model.askQuestion)").font(.system(size: 9))
+                    .foregroundStyle(.white.opacity(0.3)).lineLimit(1)
+                Spacer()
+                Button { Task { await model.saveAskAsNote() } } label: {
+                    Text("存速记").font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.7))
+                        .padding(.horizontal, 9).padding(.vertical, 3)
+                        .background(Capsule().fill(.white.opacity(0.1)))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 11).fill(.white.opacity(0.05)))
+        .overlay(RoundedRectangle(cornerRadius: 11).stroke(.white.opacity(0.09), lineWidth: 0.5))
+    }
+
+    /// 「最近」条:速记/日记走真数据(GET /api/notes);任务/问没有来源,不显示。
+    @ViewBuilder private var recentsSection: some View {
+        if model.captureKind == .note || model.captureKind == .journal {
+            VStack(alignment: .leading, spacing: 0) {
+                Button {
+                    model.captureShowRecent.toggle()
+                    if model.captureShowRecent { Task { await model.loadRecents() } }
+                } label: {
+                    Text("最近\(model.captureKind.label) \(model.captureShowRecent ? "▴" : "▾")")
+                        .font(.system(size: 10, weight: .bold)).tracking(0.4)
+                        .foregroundStyle(.white.opacity(0.34))
+                }
+                .buttonStyle(.plain)
+                if model.captureShowRecent {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            if model.recentNotes.isEmpty {
+                                Text("暂无").font(.system(size: 11)).foregroundStyle(.white.opacity(0.34))
+                                    .frame(width: 160, height: 52, alignment: .topLeading)
+                            } else {
+                                ForEach(model.recentNotes) { n in
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text(model.captureKind.label).font(.system(size: 9, weight: .bold))
+                                            .foregroundStyle(Color(red: 0.1, green: 0.07, blue: 0.03))
+                                            .padding(.horizontal, 6).padding(.vertical, 1)
+                                            .background(RoundedRectangle(cornerRadius: 5).fill(accent))
+                                        Text(n.content).font(.system(size: 11))
+                                            .foregroundStyle(.white.opacity(0.9)).lineLimit(1)
+                                        Text(n.createdAt).font(.system(size: 9))
+                                            .foregroundStyle(.white.opacity(0.34))
+                                    }
+                                    .frame(width: 160, alignment: .topLeading)
+                                    .padding(.horizontal, 11).padding(.vertical, 8)
+                                    .background(RoundedRectangle(cornerRadius: 11).fill(.white.opacity(0.04)))
+                                    .overlay(RoundedRectangle(cornerRadius: 11).stroke(.white.opacity(0.09), lineWidth: 0.5))
                                 }
-                                .frame(width: 160, alignment: .topLeading)
-                                .padding(.horizontal, 11).padding(.vertical, 8)
-                                .background(RoundedRectangle(cornerRadius: 11).fill(.white.opacity(0.04)))
-                                .overlay(RoundedRectangle(cornerRadius: 11).stroke(.white.opacity(0.09), lineWidth: 0.5))
                             }
                         }
+                        .padding(.top, 8)
                     }
-                    .padding(.top, 8)
                 }
             }
         }

@@ -119,7 +119,7 @@
 
   // One load, two derived views (kind split) — captures and journal share the table.
   const noteItems = $derived(notes.notes.filter((n) => n.kind === 'note'))
-  const journalItems = $derived(notes.notes.filter((n) => n.kind === 'journal'))
+  const journalItems = $derived(notes.notes.filter((n) => n.kind === 'journal' || n.kind === 'focus'))
 
   // Group journal entries by date (newest day first).
   const journalByDate = $derived(

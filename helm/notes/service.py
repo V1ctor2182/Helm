@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from helm.notes.models import Note
 
-KINDS = ("note", "journal")
+KINDS = ("note", "journal", "focus")  # focus=专注计时落库(notch),内容"专注 N 分钟 · 干什么"
 
 
 def note_public(n: Note) -> dict:

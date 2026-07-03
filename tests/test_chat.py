@@ -393,3 +393,30 @@ def test_claude_cli_setup_endpoint(config, monkeypatch):
     providers = c.get("/api/providers").json()["providers"]
     assert sum(1 for p in providers if p["type"] == "claude-cli") == 1
 
+def test_ask_brain_endpoint(config, monkeypatch):
+    from helm.chat import claudecli, routes
+
+    async def fake_stream(**kw):
+        assert kw["messages"][0]["content"] == "1+1=?"
+        yield "等于 "
+        yield "2"
+
+    monkeypatch.setattr(claudecli, "chat_stream", lambda **kw: fake_stream(**kw))
+    monkeypatch.setattr(claudecli, "detect_claude", lambda: "/usr/local/bin/claude")
+    c = TestClient(create_app(config))
+    # 没 provider → 409 人话
+    assert c.post("/api/ask", json={"q": "hi"}).status_code == 409
+    c.post("/api/providers/claude-cli-setup")
+    r = c.post("/api/ask", json={"q": "1+1=?"})
+    assert r.status_code == 200
+    assert r.json()["answer"] == "等于 2"
+    assert c.post("/api/ask", json={"q": "  "}).status_code == 422
+
+
+def test_focus_note_kind(config):
+    c = TestClient(create_app(config))
+    r = c.post("/api/notes", json={"content": "专注 25 分钟 · 写周报", "kind": "focus"})
+    assert r.status_code in (200, 201)
+    lst = c.get("/api/notes", params={"kind": "focus"}).json()["notes"]
+    assert lst and lst[0]["kind"] == "focus"
+
