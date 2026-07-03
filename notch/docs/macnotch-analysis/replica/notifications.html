@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MacNotch Replica — Notifications</title>
+<style>
+  :root{--bg:#0a0a0c;--t1:#fff;--t2:#9a9aa0;--green:#1db954;--pink:#fa2d6b;--red:#ff0000;--purple:#7b61ff;
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{min-height:100vh;color:var(--t1);overflow-x:hidden;background:linear-gradient(180deg,#2d5d72,#3a6577 30%,#6b6a52 62%,#3b4a3a)}
+  .menubar{position:fixed;top:0;left:0;right:0;height:26px;display:flex;align-items:center;gap:16px;padding:0 14px;font-size:13px;color:#fff;z-index:2}
+  .menubar .ml{display:flex;gap:16px;font-weight:600}
+  .hint{position:fixed;bottom:24px;left:0;right:0;text-align:center;font-size:12px;color:rgba(255,255,255,.6)}
+
+  .stage{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:5}
+  .notch{position:relative;background:var(--bg);overflow:hidden;
+    width:var(--w,200px);height:var(--h,28px);border-radius:0 0 8px 8px;
+    box-shadow:0 18px 50px rgba(0,0,0,.55);
+    transition:width .19s ease-out,height .19s ease-out,border-radius .19s ease}
+  .notch.big{border-radius:0 0 32px 32px}
+  .notch::before,.notch::after{content:"";position:absolute;top:0;width:13px;height:13px;background:var(--bg)}
+  .notch::before{left:-13px;-webkit-mask:radial-gradient(13px at 0 13px,transparent 98%,#000)}
+  .notch::after{right:-13px;-webkit-mask:radial-gradient(13px at 13px 13px,transparent 98%,#000)}
+  .view{position:absolute;inset:0;opacity:0;transition:opacity .32s ease;pointer-events:none}
+  .view.show{opacity:1;pointer-events:auto}
+
+  /* idle pill */
+  .pill{height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 12px}
+  .pill .cov{width:20px;height:20px;border-radius:5px;background:linear-gradient(135deg,#e8a07a,#6a4f8f)}
+  .eqp{display:flex;align-items:flex-end;gap:2px;height:12px}
+  .eqp i{width:2.5px;border-radius:1px;background:#fff;animation:eq .85s ease-in-out infinite}
+  .eqp i:nth-child(2){animation-delay:-.3s}.eqp i:nth-child(3){animation-delay:-.5s}.eqp i:nth-child(4){animation-delay:-.15s}
+  @keyframes eq{0%,100%{height:3px}50%{height:12px}}
+
+  /* header row */
+  .vhd{display:flex;align-items:center;justify-content:space-between;height:26px;padding:0 16px;font-size:13px;font-weight:600}
+  .vhd .r{font-size:11px;color:var(--t2);font-weight:400}
+  .vhd .chip{font-size:10px;background:rgba(255,255,255,.1);border-radius:8px;padding:2px 7px;color:#fff;font-weight:600;margin-left:6px}
+
+  /* reminder */
+  .rbody{display:flex;align-items:center;gap:14px;padding:6px 16px 16px}
+  .rico{width:60px;height:60px;border-radius:14px;background:linear-gradient(135deg,#2f6bff,#1a3a8f);display:flex;align-items:center;justify-content:center;font-size:26px;flex:none}
+  .rtxt{flex:1;min-width:0}
+  .rtxt .ti{font-size:17px;font-weight:700}
+  .rtxt .s{font-size:12px;color:var(--t2);margin-top:1px}
+  .rtxt .loc{font-size:12px;color:var(--t2);margin-top:2px;display:flex;align-items:center;gap:5px}
+  .rtxt .loc .d{width:7px;height:7px;border-radius:50%;background:var(--purple)}
+  .ract{display:flex;flex-direction:column;gap:7px;align-items:flex-end;flex:none}
+  .joinb{background:#f0f0f2;color:#1a1a1e;font-size:13px;font-weight:600;border-radius:20px;padding:8px 14px;display:flex;align-items:center;gap:7px;cursor:pointer}
+  .joinb .tlogo{width:16px;height:16px;border-radius:4px;background:var(--purple)}
+  .subacts{display:flex;gap:7px}
+  .sb{background:rgba(255,255,255,.1);border-radius:9px;padding:5px 11px;font-size:11px;color:#cfcfd2;cursor:pointer}
+
+  /* media */
+  .mbody{display:flex;gap:16px;padding:4px 16px 14px;align-items:center}
+  .mpick{display:flex;flex-direction:column;gap:6px;flex:none}
+  .mpick .a{width:30px;height:30px;border-radius:8px}
+  .mmid{flex:1;min-width:0}
+  .mmid .ti{font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mmid .s{font-size:11px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mbar{height:4px;border-radius:2px;background:rgba(255,255,255,.18);position:relative;margin:8px 0 4px}
+  .mbar i{position:absolute;inset:0 64% 0 0;border-radius:2px;background:#fff}
+  .mbar b{position:absolute;left:36%;top:50%;transform:translate(-50%,-50%);width:9px;height:9px;border-radius:50%;background:#fff}
+  .mt{display:flex;justify-content:space-between;font-size:9px;color:var(--t2)}
+  .mctrl{display:flex;align-items:center;justify-content:center;gap:16px;font-size:14px;margin-top:5px}
+  .mcov{width:64px;height:64px;border-radius:11px;background:linear-gradient(135deg,#1db954,#0a7f3a);flex:none}
+
+  .controls{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);z-index:20;display:flex;gap:6px;
+    background:rgba(0,0,0,.55);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:8px}
+  .opt{font-size:12px;color:rgba(255,255,255,.7);background:rgba(255,255,255,.07);border-radius:8px;padding:6px 12px;cursor:pointer}
+  .opt.on{background:#fff;color:#111;font-weight:600}
+</style>
+</head>
+<body>
+  <div class="menubar"><div class="ml"><span> MacNotch</span><span>View</span></div></div>
+  <div class="stage"><div class="notch" id="notch">
+    <div class="view" id="v-idle"><div class="pill"><span class="cov"></span><span class="eqp"><i></i><i></i><i></i><i></i></span></div></div>
+    <div class="view" id="v-rem"></div>
+    <div class="view" id="v-media"></div>
+  </div></div>
+
+  <div class="controls">
+    <span class="opt" data-a="idle">待机药丸</span>
+    <span class="opt on" data-a="notify">▶ 触发通知(完整动画)</span>
+    <span class="opt" data-a="media">切到 Media</span>
+  </div>
+  <div class="hint">「触发通知」= 药丸膨胀展开 Event Reminder(计时实时递增)→ 停留 → 交叉淡化切 Media</div>
+
+<script>
+const notch=document.getElementById('notch');
+const V={idle:document.getElementById('v-idle'),rem:document.getElementById('v-rem'),media:document.getElementById('v-media')};
+let timer=null,startT=0,tick=null;
+
+V.rem.innerHTML=`
+  <div class="vhd"><span>Event Reminder</span><span class="r"><span id="ago">Started 1 second ago</span></span></div>
+  <div class="rbody">
+    <div class="rico">📅</div>
+    <div class="rtxt"><div class="ti">Team standup</div>
+      <div class="s">12:12 – 12:42 · 30 min</div>
+      <div class="loc"><span class="d"></span>Zoom · Building 7, Floor 3</div></div>
+    <div class="ract"><div class="joinb"><span class="tlogo"></span>Join Microsoft Teams</div>
+      <div class="subacts"><span class="sb">Snooze</span><span class="sb">Dismiss</span></div></div>
+  </div>`;
+V.media.innerHTML=`
+  <div class="vhd"><span>Media <span class="chip">● Spotify</span></span><span class="r">⚙</span></div>
+  <div class="mbody">
+    <div class="mpick"><div class="a" style="background:var(--pink)"></div><div class="a" style="background:var(--green)"></div><div class="a" style="background:var(--red)"></div></div>
+    <div class="mmid"><div class="ti">Counting My Blessings</div><div class="s">Seph Schlueter · Counting My Blessings</div>
+      <div class="mbar"><i></i><b></b></div><div class="mt"><span>0:00</span><span>1:31</span></div>
+      <div class="mctrl">🔀 ⏮ ⏸ ⏭ 🔁</div></div>
+    <div class="mcov"></div>
+  </div>`;
+
+function size(w,h,big){notch.style.setProperty('--w',w+'px');notch.style.setProperty('--h',h+'px');notch.classList.toggle('big',!!big);}
+function show(which){Object.values(V).forEach(v=>v.classList.remove('show'));if(which)V[which].classList.add('show');}
+function clearTimers(){clearTimeout(timer);clearInterval(tick);}
+
+function toIdle(){clearTimers();size(200,28,false);show('idle');setOn('idle');}
+function toReminder(animate){
+  size(780,156,true);show('rem');
+  startT=Date.now();
+  const ago=document.getElementById('ago');
+  tick=setInterval(()=>{const s=Math.round((Date.now()-startT)/1000);if(ago)ago.textContent=`Started ${s} second${s===1?'':'s'} ago`;},1000);
+}
+function toMedia(){clearTimers();size(780,170,true);show('media');setOn('media');}
+function notify(){
+  setOn('notify');clearTimers();
+  // start from idle pill, then expand
+  size(200,28,false);show('idle');
+  setTimeout(()=>{ toReminder(true); }, 350);          // expand
+  timer=setTimeout(()=>{ clearInterval(tick); toMedia(); setOn('notify'); }, 350+5000); // dwell 5s then cross-dissolve
+}
+function setOn(a){document.querySelectorAll('.opt').forEach(o=>o.classList.toggle('on',o.dataset.a===a));}
+
+document.querySelector('.controls').addEventListener('click',e=>{
+  const o=e.target.closest('.opt');if(!o)return;
+  if(o.dataset.a==='idle')toIdle();
+  else if(o.dataset.a==='media')toMedia();
+  else notify();
+});
+notify();
+</script>
+</body>
+</html>

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MacNotch Replica — File Interactions</title>
+<style>
+  :root{--t1:#fff;--t2:#8e8e93;--t3:#5a5a5e;--blue:#0a84ff;--green:#30d158;--red:#ff3b30;--orange:#ff9f0a;
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{min-height:100vh;color:var(--t1);overflow-x:hidden;
+    background:linear-gradient(180deg,#2d5d72,#3a6577 30%,#6b6a52 62%,#3b4a3a)}
+  .menubar{position:fixed;top:0;left:0;right:0;height:26px;display:flex;align-items:center;gap:16px;padding:0 14px;font-size:13px;color:#fff;z-index:2}
+  .menubar .ml{display:flex;gap:16px;font-weight:600}
+  .hint{position:fixed;bottom:24px;left:0;right:0;text-align:center;font-size:12px;color:rgba(255,255,255,.6)}
+
+  .stage{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:5}
+  .notch{position:relative;background:#000;overflow:hidden;
+    width:var(--w,230px);min-height:var(--h,32px);border-radius:0 0 14px 14px;
+    box-shadow:0 16px 44px rgba(0,0,0,.5);
+    transition:width .3s cubic-bezier(.3,.8,.2,1),min-height .3s cubic-bezier(.3,.8,.2,1),border-radius .3s ease}
+  .notch.big{border-radius:0 0 28px 28px}
+  .notch::before,.notch::after{content:"";position:absolute;top:0;width:13px;height:13px;background:#000}
+  .notch::before{left:-13px;-webkit-mask:radial-gradient(13px at 0 13px,transparent 98%,#000)}
+  .notch::after{right:-13px;-webkit-mask:radial-gradient(13px at 13px 13px,transparent 98%,#000)}
+  .inner{opacity:1;transition:opacity .2s ease}
+
+  /* collapsed */
+  .pill{height:32px;display:flex;align-items:center;justify-content:space-between;padding:0 12px}
+  .pill .thumb{width:22px;height:22px;border-radius:5px;background-size:cover;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+  .pill .dots{color:var(--t2);letter-spacing:3px;font-size:10px}
+
+  /* drop actions bar */
+  .dphd{display:flex;align-items:center;justify-content:space-between;padding:11px 16px 6px;font-size:13px;font-weight:600}
+  .dphd .r{font-size:11px;color:var(--t2);font-weight:400}
+  .dprow{display:flex;padding:2px 8px 14px}
+  .dtile{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 6px;border-right:1px solid rgba(255,255,255,.08);cursor:pointer;position:relative}
+  .dtile:last-child{border-right:none}
+  .dtile .ic{font-size:24px;color:#9a9a9e;line-height:1}
+  .dtile .tt{font-size:13px;font-weight:600;color:#cfcfd2}
+  .dtile .ss{font-size:11px;color:var(--t2)}
+  .dtile.dis{opacity:.45}
+  .dtile.hl .ic,.dtile.hl .tt{color:#fff}
+  .dtile.hl{background:rgba(255,255,255,.05)}
+  .dtile .plus{position:absolute;top:4px;right:14px;width:16px;height:16px;border-radius:50%;background:var(--green);color:#fff;font-size:11px;display:none;align-items:center;justify-content:center}
+  .dtile.hl .plus{display:flex}
+
+  /* shelf */
+  .shd{display:flex;align-items:center;gap:9px;padding:11px 14px 8px}
+  .shd .ti{font-size:17px;font-weight:700}.shd .ct{font-size:12px;color:var(--t2)}
+  .shd .tools{margin-left:auto;display:flex;gap:7px;align-items:center}
+  .tbtn{height:26px;min-width:26px;padding:0 7px;border-radius:13px;background:#2c2c2e;color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer}
+  .drop{margin:0 14px 14px;border:1.5px dashed #5a5a5e;border-radius:16px;padding:12px;display:flex;gap:14px;min-height:92px;align-items:flex-start}
+  .ftile{width:60px;text-align:center;cursor:grab}
+  .ftile .thumb{width:48px;height:48px;border-radius:11px;background:#1c1c1e;box-shadow:inset 0 0 0 1px #3a3a3c;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto;position:relative;background-size:cover}
+  .ftile .sel{position:absolute;bottom:-3px;right:-3px;width:17px;height:17px;border-radius:50%;background:#48484a;color:#cfcfd2;font-size:10px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #000}
+  .ftile.on .sel{background:var(--blue);color:#fff}
+  .ftile .nm{font-size:11px;color:#cfcfd2;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--t2)}
+  .empty .a{color:#fff;font-size:14px;font-weight:600}.empty .b{font-size:12px}
+
+  .controls{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);z-index:20;display:flex;gap:6px;
+    background:rgba(0,0,0,.55);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:8px}
+  .opt{font-size:12px;color:rgba(255,255,255,.7);background:rgba(255,255,255,.07);border-radius:8px;padding:6px 11px;cursor:pointer}
+  .opt.on{background:#fff;color:#111;font-weight:600}
+</style>
+</head>
+<body>
+  <div class="menubar"><div class="ml"><span> MacNotch</span><span>File</span><span>Edit</span></div></div>
+  <div class="stage"><div class="notch" id="notch"><div class="inner" id="inner"></div></div></div>
+
+  <div class="controls" id="ctl">
+    <span class="opt" data-s="idle">待机</span>
+    <span class="opt" data-s="holding">持有文件</span>
+    <span class="opt on" data-s="drop">拖入中 (Drop Actions)</span>
+    <span class="opt" data-s="shelf">Shelf · 6 个</span>
+    <span class="opt" data-s="shelfEmpty">Shelf · 空</span>
+  </div>
+  <div class="hint">切状态看各界面 · Drop Actions 里 hover 磁贴会高亮 · 点 <b>Shelf</b> 进暂存架</div>
+
+<script>
+const IMG='linear-gradient(135deg,#e8a07a,#6a4f8f)';
+let st='drop';
+const FILES=[
+  {ic:'',nm:'image-sam…',bg:IMG},{ic:'🦅',nm:'Swift-code.…',bg:'#1c1c1e'},
+  {ic:'📄',nm:'sample.pdf',bg:'#1c1c1e'},{ic:'🗜',nm:'archive.zip',bg:'#1c1c1e'},
+  {ic:'🎵',nm:'audio-sam…',bg:'#1c1c1e'},{ic:'',nm:'photo-2.png',bg:'linear-gradient(135deg,#7ad0ff,#2f7bff)'}
+];
+const notch=document.getElementById('notch'),inner=document.getElementById('inner');
+
+function setSize(w,h,big){notch.style.setProperty('--w',w+'px');notch.style.setProperty('--h',h+'px');notch.classList.toggle('big',!!big);}
+
+function render(){
+  if(st==='idle'){setSize(230,32);inner.innerHTML=`<div class="pill"><span></span><span class="dots"></span></div>`;}
+  else if(st==='holding'){setSize(230,32);inner.innerHTML=`<div class="pill"><span class="thumb" style="background:${IMG}"></span><span class="dots">· · · · ·</span></div>`;}
+  else if(st==='drop'){setSize(660,104,true);inner.innerHTML=dropBar();bindTiles();}
+  else if(st==='shelf'){setSize(680,168,true);inner.innerHTML=shelf(FILES);}
+  else if(st==='shelfEmpty'){setSize(680,168,true);inner.innerHTML=shelf([]);}
+  document.querySelectorAll('#ctl .opt').forEach(o=>o.classList.toggle('on',o.dataset.s===st));
+}
+function dropBar(){
+  const tiles=[
+    {ic:'􀈂',t:'AirDrop',s:'Send nearby'},{ic:'􀇃',t:'iCloud',s:'Save to Drive'},
+    {ic:'􀈭',t:'Shelf',s:'Hold files',act:'shelf'},{ic:'􀂒',t:'Open with',s:'Add apps in Settings'},
+    {ic:'􀌞',t:'Convert',s:'Images only',dis:1},{ic:'􀐬',t:'Zip',s:'Compress'}];
+  return `<div class="dphd">Drop to Action<span class="r">Add actions in Settings → Notch → Drop Actions</span></div>
+    <div class="dprow">${tiles.map(t=>`<div class="dtile ${t.dis?'dis':''}" ${t.act?`data-act="${t.act}"`:''}>
+      <span class="plus">+</span><span class="ic">${t.ic}</span><span class="tt">${t.t}</span><span class="ss">${t.s}</span></div>`).join('')}</div>`;
+}
+function bindTiles(){
+  inner.querySelectorAll('.dtile').forEach(t=>{
+    if(t.classList.contains('dis'))return;
+    t.onmouseenter=()=>t.classList.add('hl');t.onmouseleave=()=>t.classList.remove('hl');
+    if(t.dataset.act==='shelf')t.onclick=()=>{st='shelf';render();};
+  });
+}
+function shelf(files){
+  const tools=`<div class="tools"><span class="tbtn">✓</span><span class="tbtn">✕</span><span class="tbtn">Move ⇅</span><span class="tbtn">🗑</span><span class="tbtn">ⓘ</span></div>`;
+  const body=files.length?
+    files.map((f,i)=>`<div class="ftile ${i===0?'on':''}"><div class="thumb" style="background:${f.bg}">${f.ic}<span class="sel">${i===0?'✓':''}</span></div><div class="nm">${f.nm}</div></div>`).join('')
+    :`<div class="empty"><div class="a">Drop files here</div><div class="b">Stash files here. Drag them out when you need.</div></div>`;
+  return `<div class="shd"><span class="ti">Shelf</span>📥<span class="ct">${files.length} items</span>${tools}</div>
+    <div class="drop">${body}</div>`;
+}
+document.getElementById('ctl').addEventListener('click',e=>{const o=e.target.closest('.opt');if(o){st=o.dataset.s;render();}});
+// shelf tile select toggle
+notch.addEventListener('click',e=>{const f=e.target.closest('.ftile');if(f){f.classList.toggle('on');f.querySelector('.sel').textContent=f.classList.contains('on')?'✓':'';}});
+render();
+</script>
+</body>
+</html>

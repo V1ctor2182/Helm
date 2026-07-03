@@ -406,10 +406,39 @@ public final class NotchModel {
         expandedHeight = min(max(height, 230), 560)
     }
 
+    // ── 歌词(换曲触发,内存缓存;fetcher 注入可测)──────────────────
+    public private(set) var lyrics: Lyrics = .none
+    public var lyricsFetcher = LyricsFetcher()
+    private var lyricsCache: [String: Lyrics] = [:]
+    private var lyricsTrackKey = ""
+
     public func refreshMedia() async {
         let snapshot = await media.nowPlaying()
         nowPlaying = snapshot
         nowPlayingFetchedAt = Date()
+        await refreshLyricsIfTrackChanged()
+    }
+
+    func refreshLyricsIfTrackChanged() async {
+        guard let np = nowPlaying, !np.title.isEmpty else {
+            lyrics = .none
+            lyricsTrackKey = ""
+            return
+        }
+        let key = "\(np.title)|\(np.artist)"
+        if key == lyricsTrackKey { return }
+        lyricsTrackKey = key
+        if let hit = lyricsCache[key] {
+            lyrics = hit
+            return
+        }
+        lyrics = .none  // 取词期间先诚实显示无
+        let got = await lyricsFetcher.fetch(title: np.title, artist: np.artist, duration: np.duration)
+        // 异步回来时可能已换曲——只在还是同一首时落地
+        if lyricsTrackKey == key {
+            lyricsCache[key] = got
+            lyrics = got
+        }
     }
 
     /// Live playback position in seconds, advanced from the last poll while

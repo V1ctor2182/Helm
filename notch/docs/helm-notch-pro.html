@@ -45,7 +45,7 @@
 
   /* ===== notch ===== */
   .stage{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:10}
-  .notch{position:relative;background:#000;overflow:hidden;color:#fff;
+  .notch{position:relative;background:var(--notchbg,#000);overflow:hidden;color:#fff;
     width:var(--cw,360px);height:var(--ch,30px);border-radius:0 0 16px 16px;
     box-shadow:0 18px 50px rgba(0,0,0,.55);
     transition:width .46s cubic-bezier(.32,.72,0,1),height .46s cubic-bezier(.32,.72,0,1),border-radius .4s}
@@ -53,9 +53,13 @@
   .notch.banner{width:620px;height:208px;border-radius:0 0 26px 26px}
   .notch.remind{width:560px;height:152px;border-radius:0 0 26px 26px}
   .notch.drag{outline:2px dashed rgba(255,197,61,.7);outline-offset:-6px}
-  .notch::before,.notch::after{content:"";position:absolute;top:0;width:13px;height:13px;background:#000;pointer-events:none}
+  .notch::before,.notch::after{content:"";position:absolute;top:0;width:13px;height:13px;background:var(--notchbg,#000);pointer-events:none}
   .notch::before{left:-13px;-webkit-mask:radial-gradient(13px at 0 13px,transparent 98%,#000)}
   .notch::after{right:-13px;-webkit-mask:radial-gradient(13px at 13px 13px,transparent 98%,#000)}
+  /* ===== 材质(notch 背景质感) ===== */
+  .notch.mat-darkglass{--notchbg:rgba(16,18,20,.6);-webkit-backdrop-filter:blur(26px) saturate(1.35);backdrop-filter:blur(26px) saturate(1.35);box-shadow:0 18px 50px rgba(0,0,0,.5),inset 0 0 0 .5px rgba(255,255,255,.08)}
+  .notch.mat-lightglass{--notchbg:rgba(255,255,255,.14);-webkit-backdrop-filter:blur(30px) saturate(1.5);backdrop-filter:blur(30px) saturate(1.5);box-shadow:0 18px 50px rgba(0,0,0,.35),inset 0 0 0 .5px rgba(255,255,255,.22)}
+  .notch.mat-vibrant{--notchbg:rgba(18,20,30,.4);-webkit-backdrop-filter:blur(36px) saturate(2);backdrop-filter:blur(36px) saturate(2);box-shadow:0 18px 50px rgba(0,0,0,.4),inset 0 0 0 .5px rgba(255,255,255,.12)}
 
   /* collapsed */
   #bar{position:absolute;top:0;left:0;right:0;height:30px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;transition:opacity .14s;z-index:4}
@@ -77,8 +81,57 @@
   #panel{position:absolute;inset:0;opacity:0;transform:translateY(-8px);transition:opacity .3s,transform .42s cubic-bezier(.32,.72,0,1);display:flex;flex-direction:column}
   .notch.open #panel,.notch.banner #panel{opacity:1;transform:translateY(0);transition:opacity .34s ease .12s,transform .46s cubic-bezier(.32,.72,0,1) .1s}
   .notch.banner #dock{display:none}
+  /* ===== notch 顶栏(logo + 设置) ===== */
+  .ntop{flex:none;height:30px;display:flex;align-items:center;justify-content:space-between;padding:0 13px}
+  .nlogo{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:#fff;cursor:pointer}
+  .nlogoic{width:16px;height:16px;color:var(--accent);display:inline-flex}
+  .nlogoic svg{width:16px;height:16px}
+  .nset{width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--t2);cursor:pointer;transition:.12s}
+  .nset svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .nset:hover{background:rgba(255,255,255,.1);color:#fff}
+  .notch.banner .ntop,.notch.remind .ntop{display:none}
+  /* ===== Settings 弹窗(modal) ===== */
+  .setmask{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.5);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+  .setmask.show{opacity:1;pointer-events:auto}
+  .setdlg{width:440px;max-width:92vw;max-height:80vh;background:#161719;border:.5px solid var(--hair);border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.6);display:flex;flex-direction:column;overflow:hidden;transform:scale(.95);transition:transform .24s cubic-bezier(.32,.72,0,1)}
+  .setmask.show .setdlg{transform:scale(1)}
+  .setdlg .dh{display:flex;align-items:center;gap:8px;padding:15px 18px;border-bottom:.5px solid var(--hair)}
+  .setdlg .dh .dt{font-size:15px;font-weight:800}
+  .setdlg .dh .dv{margin-left:auto;font-size:10px;color:var(--t3);font-family:ui-monospace,monospace}
+  .setdlg .dx{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;color:var(--t2);cursor:pointer;font-size:12px}
+  .setdlg .dx:hover{background:rgba(255,255,255,.18);color:#fff}
+  .setbody{padding:4px 18px 18px;overflow-y:auto}
+  .setbody::-webkit-scrollbar{width:0}
+  .matrow{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 4px}
+  .matopt{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);background:rgba(255,255,255,.05);border:1px solid var(--hair);border-radius:9px;padding:6px 10px;cursor:pointer;transition:.12s}
+  .matopt:hover{color:#fff}
+  .matopt.on{border-color:var(--accent);color:#fff}
+  .matsw{width:16px;height:16px;border-radius:5px;flex:none;box-shadow:inset 0 0 0 .5px rgba(255,255,255,.18)}
+  .mat-sw-black{background:#000}
+  .mat-sw-darkglass{background:rgba(40,44,48,.85);backdrop-filter:blur(2px)}
+  .mat-sw-lightglass{background:rgba(255,255,255,.55)}
+  .mat-sw-vibrant{background:linear-gradient(135deg,rgba(120,90,255,.6),rgba(52,214,192,.6))}
+  .accrow{display:flex;gap:9px;flex-wrap:wrap;margin:4px 0 6px}
+  .accdot{width:24px;height:24px;border-radius:50%;cursor:pointer;transition:transform .14s;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.3)}
+  .accdot:hover{transform:scale(1.12)}
+  .accdot.on{box-shadow:0 0 0 2px #161719,0 0 0 4px #fff}
+  .setsec{font-size:9px;font-weight:700;letter-spacing:.6px;color:var(--t3);margin:12px 0 4px}
+  .setsec:first-child{margin-top:0}
+  .setrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:.5px solid var(--hair)}
+  .setl{flex:1;min-width:0}
+  .setname{font-size:13px;color:#fff;font-weight:600}
+  .setsub{font-size:10px;color:var(--t3);margin-top:2px}
+  .setstat{font-size:11px;color:var(--t2);display:flex;align-items:center;gap:6px}
+  .sdot{width:7px;height:7px;border-radius:50%}.sdot.ok{background:var(--green)}
+  .setgo{font-size:11px;color:var(--accent);cursor:pointer;font-weight:600}
+  .setval{font-size:11px;color:var(--t2);cursor:pointer}
+  .sw{width:38px;height:22px;border-radius:999px;background:rgba(255,255,255,.14);position:relative;cursor:pointer;flex:none;transition:background .18s}
+  .sw.on{background:var(--accent)}
+  .sw .swk{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .2s cubic-bezier(.32,.72,0,1)}
+  .sw.on .swk{left:18px}
+
   .view{flex:1;min-height:0;overflow:hidden;padding:14px 16px}
-  .dock{display:flex;align-items:center;justify-content:center;gap:9px;padding:8px 6px 9px;border-top:.5px solid var(--hair)}
+  .dock{display:flex;align-items:center;justify-content:center;gap:9px;padding:8px 6px 9px}
   .dk{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--t2);cursor:pointer;position:relative;background:#1a1a1c;box-shadow:0 2px 6px rgba(0,0,0,.4);transition:.12s}
   .dk:hover{background:#252527;color:#fff}
   .dk.on{background:#2c2c2e;color:var(--accent);box-shadow:0 0 0 1.5px var(--accent)}
@@ -88,16 +141,13 @@
   /* ===== Dev category (vertical paging + small centered rail) ===== */
   .devwrap{display:flex;gap:6px;height:100%}
   .devstage{flex:1;min-width:0;position:relative;overflow:hidden}
-  .devpage{height:100%}
-  /* small centered sub-category rail (position indicator) */
-  .devrail{flex:none;width:34px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:15px}
-  .dri{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;
-    opacity:.32;transform:scale(.8);transform-origin:center;transition:opacity .24s,transform .26s cubic-bezier(.32,.72,0,1)}
-  .dri .ico{font-size:14px;color:var(--t2);transition:color .24s}
-  .dri .lab{font-size:7px;font-weight:700;letter-spacing:.3px;color:var(--t3);transition:color .24s;white-space:nowrap}
-  .dri.on{opacity:1;transform:scale(1.16)}
-  .dri.on .ico{color:var(--accent)}
-  .dri.on .lab{color:#fff}
+  .devpage{height:100%;overflow-y:auto}
+  .devpage::-webkit-scrollbar,.clip::-webkit-scrollbar{width:0}
+  /* 子分类导轨:极简竖向分页点 */
+  .devrail{flex:none;width:20px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:9px}
+  .dri{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.22);cursor:pointer;transition:height .26s cubic-bezier(.32,.72,0,1),background .24s,border-radius .24s}
+  .dri:hover{background:rgba(255,255,255,.5)}
+  .dri.on{height:18px;border-radius:3px;background:var(--accent)}
 
   /* ===== Dashboard bento ===== */
   .bento{display:grid;grid-template-columns:1.5fr 1fr;grid-template-rows:1fr 1fr;gap:10px;height:100%}
@@ -169,7 +219,12 @@
 
   /* ===== Media full ===== */
   .mfull{position:relative;height:100%;border-radius:10px;overflow:hidden;display:flex;flex-direction:column;padding:9px 16px 9px}
-  .mback{position:relative;z-index:1;font-size:12px;color:var(--t2);font-weight:600;cursor:pointer;margin-bottom:3px}
+  .mtop{position:relative;z-index:1;display:flex;align-items:center;margin-bottom:3px}
+  .mback{font-size:12px;color:var(--t2);font-weight:600;cursor:pointer}
+  .msrc{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--t2);background:rgba(255,255,255,.08);border-radius:8px;padding:4px 10px;cursor:pointer}
+  .msrc:hover{background:rgba(255,255,255,.16);color:#fff}
+  .msd{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+  .msc{font-size:9px;color:var(--t3)}
   .mrow{position:relative;z-index:1;display:flex;gap:22px;flex:1;min-height:0}
   .mleft{flex:none;width:190px;display:flex;flex-direction:column;justify-content:center}
   .mtitle3{font-size:14px;font-weight:800;margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -188,10 +243,26 @@
   .ports .pp2{font-family:ui-monospace,monospace;font-weight:700;color:#fff;min-width:56px}
   .ports .pn2{color:var(--t2);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ports .pgo{font-size:10px;color:var(--accent);cursor:pointer}
+  /* Dev · Reviews (PRs/MRs) */
+  .prs .prow2{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:.5px solid var(--hair)}
+  .prs .prow2:last-child{border-bottom:none}
+  .pav{width:26px;height:26px;border-radius:50%;background:var(--tile2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--t2);flex:none}
+  .pbody{flex:1;min-width:0}
+  .ptit{font-size:12px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pmeta{font-size:10px;color:var(--t2);margin-top:2px;display:flex;align-items:center;gap:6px;min-width:0}
+  .prepo{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .psrc{font-size:8px;font-weight:700;letter-spacing:.3px;color:var(--t3);background:rgba(255,255,255,.07);border-radius:4px;padding:1px 5px;flex:none}
+  .pgo2{font-size:13px;color:var(--accent);cursor:pointer;flex:none}
   .mfull .bgcov{position:absolute;inset:0;background:linear-gradient(135deg,#e8a07a,#b56a8f 55%,#6a4f8f);filter:blur(34px) saturate(1.4);transform:scale(1.3);opacity:.6}
   .mfull .bgcov::after{content:"";position:absolute;inset:0;background:rgba(0,0,0,.45)}
   .mfull>*{position:relative;z-index:1}
   .bigcov{width:84px;height:84px;border-radius:14px;background:linear-gradient(135deg,#1db954,#0a7f3a);box-shadow:0 10px 30px rgba(0,0,0,.5);flex:none;transition:.2s}
+  .npcov2{position:relative}
+  .coverexp{position:absolute;right:4px;bottom:4px;width:19px;height:19px;border-radius:6px;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;color:#fff;opacity:.55;transition:opacity .15s,transform .18s}
+  .coverexp svg{width:11px;height:11px}
+  .wmedia{cursor:pointer}
+  .wmedia:hover .coverexp{opacity:1;transform:scale(1.08)}
+  .wmedia:hover .npcov2{box-shadow:0 0 0 1.5px var(--accent)}
   /* media waveform visualizer (monochrome, daily --accent) */
   .mwave{position:relative;z-index:1;display:flex;align-items:flex-end;gap:3px;height:24px;margin-top:7px;
     -webkit-mask:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);mask:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent)}
@@ -220,11 +291,11 @@
   .chips{display:flex;gap:7px;margin-bottom:11px}
   .chip{font-size:12px;color:var(--t2);background:rgba(255,255,255,.07);border-radius:18px;padding:5px 14px;cursor:pointer}
   .chip.on{background:var(--accent);color:#1a1208;font-weight:600}
-  .capin{background:rgba(255,255,255,.06);border-radius:12px;padding:12px 14px;font-size:14px;flex:none;min-height:74px;cursor:text;outline:none;line-height:1.5}
+  .capin{background:rgba(255,255,255,.06);border-radius:12px;padding:11px 14px;font-size:14px;flex:none;min-height:22px;max-height:120px;overflow-y:auto;cursor:text;outline:none;line-height:1.5}
   .capin.on{box-shadow:0 0 0 1.5px rgba(255,197,61,.5)}.capin .ph{color:var(--t3)}
   .caret{display:inline-block;width:2px;height:16px;background:var(--accent);vertical-align:-3px;animation:bl 1s steps(1) infinite}@keyframes bl{50%{opacity:0}}
   .caprow{display:flex;align-items:center;margin-top:10px}.caprow .hintc{font-size:10px;color:var(--t3)}.caprow .sendb{margin-left:auto;background:var(--accent);color:#1a1208;font-weight:600;font-size:12px;border-radius:9px;padding:7px 16px;cursor:pointer}
-  .recent{margin-top:14px;overflow-y:auto;flex:1}
+  .recent{margin-top:12px;overflow-y:auto;flex:1;min-height:0}
   .recent .rt{font-size:9px;font-weight:700;letter-spacing:.5px;color:var(--t3);margin-bottom:7px}
   .recent .r{display:flex;gap:8px;align-items:center;font-size:12px;padding:6px 0;border-bottom:.5px solid var(--hair)}
   .recent .r .k{font-size:9px;color:#1a1208;background:var(--accent);border-radius:5px;padding:1px 6px;font-weight:700;flex:none}
@@ -240,11 +311,14 @@
   .calhd2 .cm{font-size:17px;font-weight:800}
   .calhd2 .cy{font-size:12px;color:var(--t3);font-weight:600}
   .calhd2 .sp{margin-left:auto}
-  .cpill{font-size:10px;font-weight:700;color:var(--t2);background:rgba(255,255,255,.08);border-radius:8px;padding:4px 9px;cursor:pointer}
-  .cnav{display:flex;gap:4px}
-  .cnav span{width:22px;height:22px;border-radius:7px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--t2);cursor:pointer}
-  .cexp{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--t2);cursor:pointer}
-  .cnav span:hover,.cexp:hover,.cpill:hover{background:rgba(255,255,255,.16);color:#fff}
+  .cpill{font-size:10px;font-weight:700;color:var(--t2);background:rgba(255,255,255,.08);border-radius:8px;padding:4px 9px;cursor:pointer;margin-left:4px}
+  .cseg{display:flex;gap:2px;background:rgba(255,255,255,.06);border-radius:9px;padding:2px}
+  .cseg span{width:25px;height:22px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--t2);cursor:pointer;transition:.12s}
+  .cseg span:hover{color:#fff}
+  .cseg span.on{background:var(--accent);color:#1a1208}
+  .cnav{display:flex;gap:5px}
+  .cnav span{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--t2);cursor:pointer}
+  .cnav span:hover,.cpill:hover{background:rgba(255,255,255,.16);color:#fff}
   /* week strip */
   .wstrip{flex:1;display:flex;align-items:center;gap:12px}
   .wbig{flex:none}
@@ -261,21 +335,36 @@
   .wcol.tod .wl,.wcol.tod .wnum{color:var(--accent)}
   /* month grid */
   .mgrid{flex:1;display:flex;flex-direction:column;min-height:0}
-  .mgh{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:5px}
+  .mgh{display:grid;grid-template-columns:30px repeat(7,1fr);margin-bottom:5px}
   .mgh span{font-size:9px;font-weight:700;letter-spacing:.3px;color:var(--t3);text-align:center}
-  .mgh span.we{color:#D8A24A}
-  .mgb{flex:1;display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:1fr;min-height:0}
-  .mcell{display:flex;align-items:center;justify-content:center;position:relative;font-size:12px;color:var(--t2);cursor:pointer}
+  .mgb{flex:1;display:grid;grid-template-columns:30px repeat(7,1fr);grid-auto-rows:1fr;min-height:0}
+  .mrail{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding-right:4px}
+  .mrail .rm{font-size:8px;font-weight:700;letter-spacing:.4px;color:var(--t3);line-height:1.1}
+  .mrail .rn{font-size:16px;font-weight:800;color:var(--t2);line-height:1}
+  .mrail.cur .rm,.mrail.cur .rn{color:var(--accent)}
+  .mrail .rd{width:4px;height:4px;border-radius:50%;background:var(--accent);margin-top:2px}
+  .mcell{display:flex;align-items:center;justify-content:center;position:relative;font-size:12.5px;font-weight:600;color:rgba(255,255,255,.86);cursor:pointer}
   .mcell>span{position:relative;z-index:1}
   .mcell.out>span{color:var(--t3);opacity:.45}
-  .mcell.we{color:rgba(255,255,255,.82)}
-  .mcell.tod{font-weight:800;color:#1a1208}
-  .mcell.tod::before{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:26px;height:26px;border-radius:50%;background:var(--accent)}
+  .mcell.tod{font-weight:800;color:#0c0f12}
+  .mcell.tod::before{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:26px;height:26px;border-radius:50%;background:#fff}
   .mcell .mev{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--accent);z-index:1}
-  .mcell.tod .mev{background:#1a1208}
   /* agenda */
   .agenda{flex:1;overflow-y:auto;display:flex;flex-direction:column}
   .agenda::-webkit-scrollbar{width:0}
+  .aghd{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px}
+  .aghd .agd{font-size:13px;font-weight:800;color:#fff}
+  .aghd .agn{font-size:10px;color:var(--t3)}
+  .evk{color:var(--t3)}
+  .evgo{align-self:center;font-size:10px;color:var(--accent);opacity:0;transition:opacity .12s;white-space:nowrap;margin-right:8px}
+  .evr{cursor:pointer}
+  .evr:hover{background:rgba(255,255,255,.03);border-radius:8px;margin:0 -6px;padding-left:6px;padding-right:6px}
+  .evr:hover .evgo{opacity:1}
+  .agempty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;flex:1;color:var(--t3);font-size:12px}
+  .agempty span{color:var(--accent);cursor:pointer}
+  .mcell.sel:not(.tod){color:#fff}
+  .mcell.sel:not(.tod)::before{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:26px;height:26px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--accent)}
+  .wcol.sel:not(.tod){box-shadow:inset 0 0 0 1.5px var(--accent)}
   .evr{display:flex;gap:11px;align-items:flex-start;padding:9px 0;border-bottom:.5px solid var(--hair)}
   .evr:last-child{border-bottom:none}
   .evtime{flex:none;width:44px}
@@ -287,6 +376,44 @@
   .evbody .lo svg{flex:none;color:var(--t3)}
   .evbody .lo span{overflow:hidden;text-overflow:ellipsis}
   .evdot{flex:none;width:7px;height:7px;border-radius:50%;margin-top:5px}
+
+  /* ===== Focus (并入速记) + 任务目标 ===== */
+  .ttog{display:inline-flex;border:.5px solid var(--hair);border-radius:8px;overflow:hidden;margin-bottom:11px}
+  .ttog span{font-size:11px;color:var(--t2);padding:5px 12px;cursor:pointer;transition:.12s}
+  .ttog span.on{background:var(--accent);color:#1a1208;font-weight:600}
+  .focusrun{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;flex:1;min-height:150px;padding:8px 0}
+  .focusrun .lab{font-size:10px;font-weight:700;letter-spacing:.6px;color:var(--t3)}
+  .focusrun .ft{font-size:42px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:1px;display:flex;align-items:center;gap:11px;color:#fff}
+  .focusrun .ft .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);animation:fpulse 1.1s ease-in-out infinite}
+  .focusrun .what{font-size:13px;color:#fff;font-weight:600;max-width:88%;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fstop{background:var(--accent);color:#1a1208;font-weight:600;font-size:12px;border-radius:9px;padding:8px 22px;cursor:pointer;margin-top:2px}
+  .bfocus{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+  .bfocus .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:fpulse 1.1s ease-in-out infinite}
+  @keyframes fpulse{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}
+  /* 速记:TAB 提示 + 附件(时间/地点)chip */
+  .vh .tabh{font-size:9px;font-weight:600;color:var(--t3);letter-spacing:.3px}
+  .attr2{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:10px}
+  .achip{display:inline-flex;align-items:center;gap:6px;background:#2a2a2c;border-radius:999px;padding:5px 9px 5px 11px;font-size:11px;color:#fff;font-variant-numeric:tabular-nums}
+  .achip .ai{display:inline-flex;align-items:center;color:var(--accent)}
+  .achip .ax{color:var(--t3);cursor:pointer;font-size:13px;line-height:1;padding-left:1px}
+  .achip .ax:hover{color:#fff}
+  .aadd{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:.5px solid var(--hair);border-radius:999px;padding:5px 12px;font-size:11px;color:var(--t2);cursor:pointer;transition:.12s}
+  .aadd:hover{color:#fff;border-color:rgba(255,255,255,.25)}
+  .aadd .ai{display:inline-flex;align-items:center;color:var(--t3)}
+  .ahint{font-size:10px;color:var(--t3);margin-left:2px}
+  .sendb{display:inline-flex;align-items:center;gap:5px;flex:none}
+  .capatt{display:flex;gap:7px;align-items:center;min-width:0;flex:1;overflow:hidden}
+  /* 最近:横向滑动卡片条 */
+  .recents{margin-top:12px;flex:none}
+  .rectog{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;letter-spacing:.4px;color:var(--t3);cursor:pointer;padding:3px 0}
+  .rectog:hover{color:#fff}
+  .rrow{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;margin-top:8px}
+  .rrow::-webkit-scrollbar{height:0}
+  .rcard{flex:none;width:160px;background:rgba(255,255,255,.04);border:.5px solid var(--hair);border-radius:11px;padding:8px 11px;cursor:pointer;transition:.12s}
+  .rcard:hover{background:rgba(255,255,255,.07)}
+  .rcard .k{font-size:9px;color:#1a1208;background:var(--accent);border-radius:5px;padding:1px 6px;font-weight:700}
+  .rcard .rx{font-size:11px;color:#e6e6ea;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rcard .rtm{font-size:9px;color:var(--t3);margin-top:3px}
 
   /* ===== Files / Shelf ===== */
   .files{display:flex;flex-direction:column;height:100%}
@@ -318,6 +445,7 @@
   .bbtns{display:flex;gap:10px}.bbtn{flex:1;text-align:center;border-radius:10px;padding:9px;font-size:12px;font-weight:600;cursor:pointer}.bbtn.allow{background:var(--accent);color:#1a1208}.bbtn.deny{background:rgba(255,255,255,.1)}
 
   /* ===== Clipboard ===== */
+  .clip{height:100%;overflow-y:auto}
   .clip .r{display:flex;align-items:center;gap:9px;font-size:12px;padding:8px 0;border-bottom:.5px solid var(--hair);cursor:pointer}
   .clip .r .ic{width:26px;height:26px;border-radius:7px;background:var(--tile);display:flex;align-items:center;justify-content:center;font-size:13px;flex:none}
   .clip .r .tx{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -344,8 +472,17 @@
 
   <div class="stage"><div class="notch" id="notch">
     <div id="bar"></div>
-    <div id="panel"><div class="view" id="view"></div><div class="dock" id="dock"></div></div>
+    <div id="panel">
+      <div class="ntop" id="ntop">
+        <div class="nlogo" data-act="openhelm" title="打开 Helm">
+          <span class="nlogoic"><svg viewBox="0 0 24 24"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5" fill="currentColor"/><path d="M8 7.5v9M16 7.5v9M8 12h8" stroke="#0b0e0f" stroke-width="2" stroke-linecap="round"/></svg></span>
+          <span>Helm</span></div>
+        <div class="nset" data-act="opensettings" title="设置 · 唤起 Helm"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.8 7.8 0 0 0 0-3l2-1.5-2-3.4-2.3 1a7.7 7.7 0 0 0-2.6-1.5L14 1.5h-4l-.5 2.6a7.7 7.7 0 0 0-2.6 1.5l-2.3-1-2 3.4 2 1.5a7.8 7.8 0 0 0 0 3l-2 1.5 2 3.4 2.3-1a7.7 7.7 0 0 0 2.6 1.5l.5 2.6h4l.5-2.6a7.7 7.7 0 0 0 2.6-1.5l2.3 1 2-3.4z"/></svg></div>
+      </div>
+      <div class="view" id="view"></div><div class="dock" id="dock"></div></div>
   </div></div>
+
+  <div class="setmask" id="setmask"></div>
 
   <div class="controls">
     <div class="cgrp"><span class="cl2">本机 AGENT</span><div class="opts" id="ctl-mode">
@@ -362,13 +499,21 @@
 <script>
 const palette=["#FB9E66","#FF6F61","#FFC53D","#B6E84F","#34D6C0","#4FD6E8","#5EA0FF","#7C9CFF","#B98CFF","#FF6FA5"];
 const di=Math.floor(Date.UTC(new Date().getFullYear(),new Date().getMonth(),new Date().getDate())/864e5);
-document.documentElement.style.setProperty('--accent',palette[((di%10)+10)%10]);
+const dailyAccent=palette[((di%10)+10)%10];
+document.documentElement.style.setProperty('--accent',dailyAccent);
+// 各材质的「有效背景色」(叠在壁纸上的观感),用于随机时算对比
+const MATS={black:{l:'纯黑',rep:[12,14,16]},darkglass:{l:'暗玻璃',rep:[40,44,48]},lightglass:{l:'白玻璃',rep:[208,208,214]},vibrant:{l:'彩色玻璃',rep:[42,46,58]}};
 
-const S={open:false,view:'dash',mode:'running',play:1,kind:'note',captext:'',capLock:false,
-  mediaLyrics:false,files:[],focusRunning:false,focusSec:25*60,devSec:0,calExpand:false,calOff:0,remind:null};
+const S={open:false,view:'dash',mode:'running',play:1,kind:'note',captext:'',capLock:false,taskTo:'self',
+  mediaLyrics:false,mediaSrc:0,files:[],focusOn:false,focusWhat:'',focusSec:0,capWhen:null,capWhere:null,capDay:null,showRecent:false,devSec:0,calExpand:true,calOff:0,remind:null,
+  calSel:new Date().getDate(),
+  setBack:null,bg:'black',accent:dailyAccent,cfg:{autostart:true,dailytheme:false,dailycolor:true,autohide:true,ccwatch:true}};
 const LYRICS=["I've been walking through the storm","Counting every blessing as it comes","Even when the night feels long","I know the morning's gonna come","So I'll keep counting my blessings","One by one by one"];
 let lyricI=2;
-const RECENT=[{k:'速记',x:'开会记得问 CI 的事',tm:'2m'},{k:'任务',x:'明早 9 点跑回归测试',tm:'1h'},{k:'日记',x:'今天把刘海重做了一版',tm:'3h'}];
+const RECENT=[
+  {k:'速记',x:'开会记得问 CI 的事',tm:'2m'},{k:'速记',x:'刘海配色换 teal',tm:'40m'},{k:'速记',x:'命令面板加搜索',tm:'5h'},
+  {k:'任务',x:'明早 9 点跑回归测试',tm:'1h'},{k:'任务',x:'review notch PR #51',tm:'2h'},{k:'任务',x:'接 /api/focus',tm:'1d'},
+  {k:'日记',x:'今天把刘海重做了一版',tm:'3h'},{k:'日记',x:'和 Sarah 午饭聊产品',tm:'1d'}];
 const CLIP=[{ic:'↗',tx:'https://github.com/V1ctor2182/Helm/pull/50',tm:'just now'},{ic:'≡',tx:'feat(notch): A×D 2×2 面板重做…',tm:'5m'},{ic:'#',tx:'127.0.0.1:8769',tm:'12m'},{ic:'▣',tx:'Screenshot 2026-06-29.png',tm:'20m'}];
 const EVENTS=[
   {s:'09:00',e:'09:30',t:'Team standup',loc:'Zoom · Building 2, Floor 3',c:'var(--blue)'},
@@ -376,19 +521,84 @@ const EVENTS=[
   {s:'13:00',e:'14:00',t:'Lunch with Sarah',loc:'The Green Kitchen · 42 Main St',c:'var(--green)'},
   {s:'15:00',e:'16:30',t:'Deep work block',loc:'Focus Room B',c:'var(--purple)'},
 ];
-const CAL_EVDAYS=[3,13,21,28];  // 本月有事件的日期(打点)
+// 每天的安排(事件/任务/日记)。今天=现有 EVENTS,另造几天演示。
+const _td=new Date().getDate();
+const CAL_ITEMS={};
+CAL_ITEMS[_td]=EVENTS.map(e=>({...e,kind:'事件'}));
+CAL_ITEMS[((_td-2+27)%28)+1]=[{kind:'任务',s:'09:00',e:'',t:'交周报',loc:'',c:'var(--orange)'}];
+CAL_ITEMS[((_td+2)%28)+1]=[{kind:'日记',s:'',e:'',t:'随手记:刘海配色换 teal',loc:'',c:'var(--purple)'},{kind:'事件',s:'14:00',e:'15:00',t:'设计评审',loc:'Zoom',c:'var(--blue)'}];
+CAL_ITEMS[((_td+7)%28)+1]=[{kind:'任务',s:'',e:'',t:'发布 Helm v0.2',loc:'',c:'var(--green)'}];
+const CAL_EVDAYS=Object.keys(CAL_ITEMS).map(Number);  // 有安排的日子打点
 const PIN='<svg viewBox="0 0 24 24" width="9" height="11" fill="currentColor"><path d="M12 2C7.9 2 4.5 5.4 4.5 9.5c0 5.6 7.5 12 7.5 12s7.5-6.4 7.5-12C19.5 5.4 16.1 2 12 2zm0 10.2a2.7 2.7 0 110-5.4 2.7 2.7 0 010 5.4z"/></svg>';
+const ICON_GRID='<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><rect x="3" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.6"/></svg>';
+const ICON_ROWS='<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><rect x="3" y="5" width="18" height="2.6" rx="1.3"/><rect x="3" y="10.7" width="18" height="2.6" rx="1.3"/><rect x="3" y="16.4" width="18" height="2.6" rx="1.3"/></svg>';
+const CLOCK='<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg>';
+const PLANE='<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M3 11l18-8-8 18-2.4-7.2z"/></svg>';
+const ICON_EXPAND='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H5a1 1 0 0 0-1 1v4M15 4h4a1 1 0 0 1 1 1v4M9 20H5a1 1 0 0 1-1-1v-4M15 20h4a1 1 0 0 1 1-1v-4"/></svg>';
 const CALSVG='<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3.2" y="5" width="17.6" height="16" rx="2.6"/><path d="M3.2 9.4h17.6M8 3v3.4M16 3v3.4"/></svg>';
 // 一个临近日程提醒(模拟「现在开始」)。join 表示有可加入的会议链接。
 const REMINDER={t:'Team standup',s:'10:00',e:'10:30',dur:'30 min',loc:'Zoom · Building 2, Floor 3',join:true};
 
 const notch=document.getElementById('notch'),bar=document.getElementById('bar'),view=document.getElementById('view'),dock=document.getElementById('dock');
+const NTOP=30;  // 顶栏高度,叠加到展开高度上
+document.getElementById('ntop').addEventListener('click',e=>{
+  if(e.target.closest('[data-act="opensettings"]'))openSettings();
+  else if(e.target.closest('[data-act="openhelm"]'))flash('唤起 Helm 主窗口');
+});
+/* ---------- 外观:背景材质 + 主题色 + 对比度感知随机 ---------- */
+function applyMat(m){notch.classList.remove('mat-darkglass','mat-lightglass','mat-vibrant');if(m!=='black')notch.classList.add('mat-'+m);S.bg=m;}
+function applyAccent(c){document.documentElement.style.setProperty('--accent',c);S.accent=c;}
+const _rgb=h=>{h=h.replace('#','');return [0,2,4].map(i=>parseInt(h.slice(i,i+2),16));};
+const _hex=a=>'#'+a.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
+const _lin=v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4);};
+const _lum=([r,g,b])=>.2126*_lin(r)+.7152*_lin(g)+.0722*_lin(b);
+const _contrast=(a,b)=>{const L1=_lum(a),L2=_lum(b);const hi=Math.max(L1,L2)+.05,lo=Math.min(L1,L2)+.05;return hi/lo;};
+// 随机一套:背景+主题,确保 accent 与背景观感对比 ≥ 3:1(看得清)
+function randomTheme(){
+  const mats=Object.keys(MATS);
+  const m=mats[Math.floor(Math.random()*mats.length)];
+  const bg=MATS[m].rep, bgLight=_lum(bg)>.4;
+  // 随机挑一个 palette 色,再按背景深浅调亮/调暗,直到对比 ≥ 3.2:1(看得清)
+  let rgb=_rgb(palette[Math.floor(Math.random()*palette.length)]),tries=0;
+  while(_contrast(rgb,bg)<3.2&&tries<8){rgb=bgLight?rgb.map(v=>v*0.55):rgb.map(v=>Math.min(255,v*1.2+28));tries++;}
+  const c=_contrast(rgb,bg);
+  applyMat(m);applyAccent(_hex(rgb));
+  openSettings();
+  flash('随机:'+MATS[m].l+' + 主题色 · 对比 '+c.toFixed(1)+':1');
+}
+// 每天随机一套:用当天 di 做种子(当天稳定、每天不同),同样保证对比
+function dailyRandTheme(){
+  let s=(di*2654435761>>>0)%2147483647||1;const rnd=()=>{s=(s*48271)%2147483647;return s/2147483647;};
+  const mats=Object.keys(MATS),m=mats[Math.floor(rnd()*mats.length)];
+  const bg=MATS[m].rep,bgLight=_lum(bg)>.4;
+  let rgb=_rgb(palette[Math.floor(rnd()*palette.length)]),t=0;
+  while(_contrast(rgb,bg)<3.2&&t<8){rgb=bgLight?rgb.map(v=>v*0.55):rgb.map(v=>Math.min(255,v*1.2+28));t++;}
+  applyMat(m);applyAccent(_hex(rgb));
+}
+
+/* ---------- 设置弹窗(独立 modal) ---------- */
+const setmask=document.getElementById('setmask');
+function openSettings(){setmask.innerHTML=settingsHTML();setmask.classList.add('show');}
+function closeSettings(){setmask.classList.remove('show');}
+setmask.addEventListener('click',e=>{
+  if(e.target===setmask){closeSettings();return;}  // 点遮罩关闭
+  const a=e.target.closest('[data-act]');if(!a)return;
+  const act=a.dataset.act;
+  if(act==='setclose')closeSettings();
+  else if(act==='setmat'){applyMat(a.dataset.m);openSettings();}
+  else if(act==='setacc'){applyAccent(a.dataset.c);openSettings();}
+  else if(act==='randomtheme'){randomTheme();}
+  else if(act==='cfg'){const k=a.dataset.k;S.cfg[k]=!S.cfg[k];if(k==='dailytheme'&&S.cfg[k])dailyRandTheme();openSettings();flash(({autostart:'开机自启',dailytheme:'每天随机一套',dailycolor:'每日变色',autohide:'点外收起',ccwatch:'监听 agent'})[k]+' · '+(S.cfg[k]?'开':'关'));}
+  else if(act==='srccycle'){S.mediaSrc=(S.mediaSrc+1)%SOURCES.length;openSettings();flash('已切换播放源 · '+SOURCES[S.mediaSrc]);}
+  else if(act==='opensettings')flash('打开 Helm 完整设置 · /settings');
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&setmask.classList.contains('show'))closeSettings();});
 
 const MODULES=[
   {id:'dash',icon:'⊞',name:'Dashboard'},
   {id:'cap',icon:'✎',name:'速记'},{id:'cal',icon:'◫',name:'Calendar'},
   {id:'dev',icon:'⌘',name:'Dev'},
-  {id:'clip',icon:'⧉',name:'Clipboard'},{id:'focus',icon:'◷',name:'Focus'},
+  {id:'clip',icon:'⧉',name:'Clipboard'},
 ];
 const PORTS=[
   {p:3000,name:'Frontend · next dev',col:'#34c759'},
@@ -397,37 +607,73 @@ const PORTS=[
   {p:11434,name:'Ollama',col:'#ff9500'},
   {p:6006,name:'Storybook',col:'#34c759'},
 ];
+// 待评审的 PR / MR(本机 dev 中枢)。源徽标走单色字母,不用品牌彩标。
+const PRS=[
+  {who:'VZ',t:'feat(notch): 日程提醒 banner + 波形',repo:'V1ctor2182/Helm',num:'#51',src:'GH'},
+  {who:'VZ',t:'fix(notch): AppDelegate @MainActor + @Sendable',repo:'V1ctor2182/Helm',num:'#50',src:'GH'},
+  {who:'BP',t:'Resolve "Implement integration test"',repo:'helm/bridge',num:'#123',src:'GL'},
+];
+// 媒体播放源(切换刘海控制的播放器)。名字为文本,不挂彩色品牌 logo。
+const SOURCES=['System','Apple Music','Spotify','Browser'];
 const HEAT=Array.from({length:7*19},()=>{const r=Math.random();return r<.4?0:r<.62?1:r<.82?2:r<.94?3:4;});
 const SPARK=[38,62,30,78,52,88,68];  // 近 7 天 token 用量 %
 // 每个模块的面板高度(含 dock)——内容矮的就矮,避免大片黑留白
-const VH={dash:172,media:330,cap:250,cal:226,dev:236,clip:232,focus:226};
+const VH={dash:172,media:330,cap:250,cal:226,dev:236,clip:232};
 // Dev 的子分类(纵向分页):图标/标题 + 各自页面高度
-const DEVSECS=[{i:'◉',l:'Agents',h:204},{i:'⇄',l:'Ports',h:248},{i:'▤',l:'Stats',h:252}];
+const DEVSECS=[{i:'◉',l:'Agents',h:204},{i:'⇄',l:'Ports',h:248},{i:'⎇',l:'Reviews',h:252},{i:'▤',l:'Stats',h:252}];
 
 /* ---------- collapsed bar ---------- */
 function renderBar(){
-  let left = S.play? `<span class="mart"></span><span class="eqp"><i></i><i></i><i></i><i></i></span><span class="cnp">Counting My Bless…</span>`
-                   : `<span class="mart" style="opacity:.5"></span><span style="font-size:11px;color:var(--t3)">⏸</span>`;
   const wait=S.mode==='waiting', run=S.mode==='running';
-  let right = wait? `<span style="color:var(--orange);font-weight:700">●</span><span class="cct" style="color:var(--orange)">1</span>`
+  let left = S.focusOn
+    ? `<span style="color:var(--accent);font-size:12px">◷</span><span class="cnp" style="color:#fff;max-width:104px">${S.focusWhat}</span>`
+    : S.play? `<span class="mart"></span><span class="eqp"><i></i><i></i><i></i><i></i></span><span class="cnp">Counting My Bless…</span>`
+            : `<span class="mart" style="opacity:.5"></span><span style="font-size:11px;color:var(--t3)">⏸</span>`;
+  let right;
+  if(S.focusOn){
+    const fm=String(Math.floor(S.focusSec/60)).padStart(2,'0'),fs=String(S.focusSec%60).padStart(2,'0');
+    right=`<span class="bfocus"><span class="dot"></span>${fm}:${fs}</span>`;
+  } else right = wait? `<span style="color:var(--orange);font-weight:700">●</span><span class="cct" style="color:var(--orange)">1</span>`
             : run? `<span class="cstar">✻</span><span class="cct">1</span>`
             : `<span class="cev"><b>10:00</b> 站会</span>`;
   bar.innerHTML=`<div class="cl">${left}</div><div class="cc"><span class="lens"></span></div><div class="cr">${right}</div>`;
 }
 
 /* ---------- views ---------- */
+const swrow=(key,name,sub)=>`<div class="setrow"><div class="setl"><div class="setname">${name}</div><div class="setsub">${sub}</div></div><span class="sw${S.cfg[key]?' on':''}" data-act="cfg" data-k="${key}"><span class="swk"></span></span></div>`;
+// 设置弹窗内容(独立 modal,不在 notch 视图里)
+function settingsHTML(){return `<div class="setdlg">
+    <div class="dh"><span class="dt">设置</span><span class="dv">Helm Notch v0.1</span><span class="dx" data-act="setclose">✕</span></div>
+    <div class="setbody">
+      <div class="setsec">外观</div>
+      <div class="setrow" style="border-bottom:none;padding-bottom:2px"><div class="setl"><div class="setname">背景材质</div><div class="setsub">玻璃材质会透出壁纸</div></div></div>
+      <div class="matrow">${Object.keys(MATS).map(m=>`<span class="matopt${S.bg===m?' on':''}" data-act="setmat" data-m="${m}"><span class="matsw mat-sw-${m}"></span>${MATS[m].l}</span>`).join('')}</div>
+      <div class="setrow" style="border-bottom:none;padding-bottom:2px"><div class="setl"><div class="setname">主题色</div><div class="setsub">驱动选中 / 聚焦 / LIVE</div></div></div>
+      <div class="accrow">${palette.map(c=>`<span class="accdot${S.accent.toLowerCase()===c.toLowerCase()?' on':''}" data-act="setacc" data-c="${c}" style="background:${c}"></span>`).join('')}</div>
+      <div class="setrow"><div class="setl"><div class="setname">随机一套</div><div class="setsub">背景+主题随机,自动保证对比清晰</div></div><span class="setgo" data-act="randomtheme">随机 ↻</span></div>
+      ${swrow('dailytheme','每天随机一套','背景+主题每天自动换,保证对比清晰')}
+      <div class="setsec">HELM 后端</div>
+      <div class="setrow"><div class="setl"><div class="setname">连接</div><div class="setsub">127.0.0.1:8769</div></div><span class="setstat"><span class="sdot ok"></span>已连接</span></div>
+      <div class="setrow"><div class="setl"><div class="setname">打开 Helm 完整设置</div><div class="setsub">在 Helm 主窗里配置</div></div><span class="setgo" data-act="opensettings">打开 ›</span></div>
+      <div class="setsec">通用</div>
+      ${swrow('autostart','开机自启','登录时自动启动刘海')}
+      ${swrow('dailycolor','每日强调色轮换','每天换一个 palette 颜色')}
+      ${swrow('autohide','点外自动收起','鼠标移开自动收起面板')}
+      <div class="setsec">本机 CLAUDE CODE</div>
+      ${swrow('ccwatch','监听 agent','显示运行中的 Claude Code session')}
+      <div class="setrow"><div class="setl"><div class="setname">Hook</div><div class="setsub">~/.claude/settings.json</div></div><span class="setstat"><span class="sdot ok"></span>已装</span></div>
+      <div class="setsec">媒体</div>
+      <div class="setrow"><div class="setl"><div class="setname">默认播放源</div><div class="setsub">折叠态控制的播放器</div></div><span class="setval" data-act="srccycle">${SOURCES[S.mediaSrc]} ⌄</span></div>
+    </div>
+  </div>`;}
 const V={
   dash:()=>`<div class="dashrow">
     <div class="dwid wmedia" data-go="media">
       <div class="dwh">NOW PLAYING</div>
-      <div class="npbig"><div class="npcov2"></div>
+      <div class="npbig"><div class="npcov2"><span class="coverexp" title="看歌词">${ICON_EXPAND}</span></div>
         <div class="npmeta"><div class="npt">Counting My Blessings</div><div class="npa">Seph Schlueter</div>
           <div class="npbar"><i></i></div>
           <div class="npctrl"><span data-stop>◀◀</span><span data-act="pp">${S.play?'❚❚':'▶'}</span><span data-stop>▶▶</span></div></div></div>
-    </div>
-    <div class="dwid wquick">
-      <div class="dwh">QUICK</div>
-      <div class="tgs1"><div class="tg1 on" title="勿扰">☾</div><div class="tg1" title="专注">◎</div><div class="tg1" title="录屏">●</div><div class="tg1" title="暗色">◐</div></div>
     </div>
     <div class="dwid">
       <div class="dwh">TODAY</div>
@@ -448,7 +694,8 @@ const V={
   </div>`,
 
   media:()=>`<div class="mfull"><div class="bgcov"></div>
-    <div class="mback" data-go="dash">‹ 返回</div>
+    <div class="mtop"><div class="mback" data-go="dash">‹ 返回</div>
+      <div class="msrc" data-act="srccycle" title="切换播放源"><span class="msd"></span>${SOURCES[S.mediaSrc]}<span class="msc">⌄</span></div></div>
     <div class="mrow">
       <div class="mleft">
         <div class="bigcov"></div>
@@ -466,48 +713,96 @@ const V={
   ports:()=>`<div class="ports"><div class="vh"><span>本地端口 · LISTENING</span><span>lsof -iTCP -sTCP:LISTEN</span></div>
     ${PORTS.map(x=>`<div class="prow"><span class="pd2" style="background:${x.col}"></span><span class="pp2">:${x.p}</span><span class="pn2">${x.name}</span><span class="pgo" data-stop>↗ 打开</span></div>`).join('')}</div>`,
 
+  prs:()=>`<div class="prs"><div class="vh"><span>◈ 待评审 · PRs / MRs</span><span>${PRS.length} 待处理</span></div>
+    ${PRS.map(p=>`<div class="prow2" data-stop><span class="pav">${p.who}</span>
+      <div class="pbody"><div class="ptit">${p.t}</div>
+        <div class="pmeta"><span class="prepo">${p.repo} ${p.num}</span><span class="psrc">${p.src}</span></div></div>
+      <span class="pgo2" data-stop>↗</span></div>`).join('')}</div>`,
+
   cap:()=>{
+    const CHIPS=()=>['note','journal','task','focus','ask'].map(x=>`<span class="chip${S.kind===x?' on':''}" data-k="${x}">${({note:'速记',journal:'日记',task:'任务',focus:'专注',ask:'问大脑'})[x]}</span>`).join('');
+    if(S.kind==='focus'){
+      if(S.focusOn){
+        const m=String(Math.floor(S.focusSec/60)).padStart(2,'0'),s=String(S.focusSec%60).padStart(2,'0');
+        return `<div class="cap"><div class="vh"><span>专注中 → Helm</span><span style="color:var(--accent)">● 计时</span></div>
+          <div class="chips">${CHIPS()}</div>
+          <div class="focusrun"><div class="lab">正在专注</div>
+            <div class="ft"><span class="dot"></span>${m}:${s}</div>
+            <div class="what">${S.focusWhat||'专注'}</div>
+            <div class="fstop" data-act="fstop">停止并记录</div>
+            <div class="hintc" style="font-size:10px;color:var(--t3)">停止时自动写入 Helm /api/focus</div></div>
+        </div>`;
+      }
+      return `<div class="cap"><div class="vh"><span>专注 → Helm</span>${S.capLock?'<span style="color:var(--accent)">● 输入中</span>':''}</div>
+        <div class="chips">${CHIPS()}</div>
+        <div class="capin${S.capLock?' on':''}" data-act="focus">${S.captext?S.captext+(S.capLock?'<span class="caret"></span>':''):(S.capLock?'<span class="caret"></span>':`<span class="ph">我现在在做什么…</span>`)}</div>
+        <div class="caprow"><span class="hintc">⏎ 开始 · 关掉时自动记录这段专注到 Helm</span><span class="sendb" data-act="fstart">开始专注</span></div>
+      </div>`;
+    }
     const att=S.files.length;
     const hint = att? '写点备注,发送 → Helm 帮你归档这些文件'
-               : S.kind==='ask'? '问 Helm 大脑 · ⏎ 发送'
-               : '⏎ 发送 · 拖文件进来可一起归档到 Helm';
-    return `<div class="cap"><div class="vh"><span>速记 → Helm</span>${S.capLock?'<span style="color:var(--accent)">● 输入中</span>':''}</div>
-    <div class="chips">${['note','journal','task','ask'].map(k=>`<span class="chip${S.kind===k?' on':''}" data-k="${k}">${({note:'速记',journal:'日记',task:'任务',ask:'问大脑'})[k]}</span>`).join('')}</div>
+               : S.kind==='ask'? 'TAB 切换 · 问 Helm 大脑 · ⏎ 发送'
+               : S.kind==='task'? (S.taskTo==='agent'?'TAB 切换 · 交给 agent · ⏎ 派发到 Cockpit':'TAB 切换 · 给自己 · ⏎ 加到 Helm 任务')
+               : 'TAB 切换 · ⏎ 发送 · 可加时间/地点上日历';
+    return `<div class="cap"><div class="vh"><span>速记 → Helm</span>${S.capLock?'<span style="color:var(--accent)">● 输入中</span>':'<span class="tabh">TAB 切换模式</span>'}</div>
+    <div class="chips">${CHIPS()}</div>
+    ${S.kind==='task'?`<div class="ttog"><span class="${S.taskTo!=='agent'?'on':''}" data-tt="self">给自己</span><span class="${S.taskTo==='agent'?'on':''}" data-tt="agent">交给 agent</span></div>`:''}
     <div class="capin${S.capLock?' on':''}" data-act="focus">${S.captext?S.captext+(S.capLock?'<span class="caret"></span>':''):(S.capLock?'<span class="caret"></span>':`<span class="ph">${att?'给这些文件写点备注…':ph()}</span>`)}</div>
     ${att?`<div class="attrow">${S.files.map((f,i)=>fileChip(f,i)).join('')}</div>`:''}
-    <div class="caprow"><span class="hintc">${hint}</span><span class="sendb" data-act="send">${att?'发送并归档':(S.kind==='ask'?'问':'发送')}</span></div>
-    ${att?'':`<div class="recent"><div class="rt">最近</div>${RECENT.map(r=>`<div class="r"><span class="k">${r.k}</span><span class="x">${r.x}</span><span class="tm">${r.tm}</span></div>`).join('')}</div>`}
+    <div class="caprow">${(S.kind==='note'||S.kind==='task')?`<div class="capatt">
+        ${S.capWhen?`<span class="achip"><span class="ai">${CLOCK}</span>${S.capWhen}<span class="ax" data-act="rmwhen">×</span></span>`:`<span class="aadd" data-act="addwhen"><span class="ai">${CLOCK}</span>时间</span>`}
+        ${S.capWhere?`<span class="achip"><span class="ai">${PIN}</span>${S.capWhere}<span class="ax" data-act="rmwhere">×</span></span>`:`<span class="aadd" data-act="addwhere"><span class="ai">${PIN}</span>地点</span>`}
+      </div>`:`<span class="hintc">${hint}</span>`}<span class="sendb" data-act="send">${PLANE}${att?'发送并归档':(S.kind==='ask'?'问':(S.kind==='task'&&S.taskTo==='agent'?'派发':'发送'))}</span></div>
+    ${(!att&&(S.kind==='note'||S.kind==='journal'||S.kind==='task'))?(()=>{const tag={note:'速记',journal:'日记',task:'任务'}[S.kind];const list=RECENT.filter(r=>r.k===tag);
+      return `<div class="recents"><span class="rectog" data-act="rectog">最近${tag}${S.showRecent?' ▴':' ▾'}</span>${S.showRecent?`<div class="rrow">${list.length?list.map(r=>`<div class="rcard"><span class="k">${r.k}</span><div class="rx">${r.x}</div><div class="rtm">${r.tm}</div></div>`).join(''):'<div class="rcard" style="color:var(--t3)">暂无</div>'}</div>`:''}</div>`;})():''}
   </div>`;},
 
   cal:()=>{
     const t=new Date(),off=S.calOff||0;
     const vd=new Date(t.getFullYear(),t.getMonth()+off,1),Y=vd.getFullYear(),M=vd.getMonth();
     const mname=vd.toLocaleString('en',{month:'long'});
-    const WL=['SUN','MON','TUE','WED','THU','FRI','SAT'];
+    const WLh=['MON','TUE','WED','THU','FRI','SAT','SUN'];  // 周一开头
     const same=(a,b)=>a.toDateString()===b.toDateString();
+    const moff=d=>(d.getDay()+6)%7;  // 周一=0
     let left;
-    if(S.calExpand){  // 放大:整月网格
-      const start=new Date(Y,M,1);start.setDate(1-start.getDay());let cells='';
-      for(let i=0;i<42;i++){const d=new Date(start);d.setDate(start.getDate()+i);
-        const out=d.getMonth()!==M,we=(d.getDay()===0||d.getDay()===6),tod=same(d,t),has=!out&&CAL_EVDAYS.includes(d.getDate());
-        cells+=`<div class="mcell${out?' out':''}${we&&!out?' we':''}${tod?' tod':''}"><span>${d.getDate()}</span>${has?'<span class="mev"></span>':''}</div>`;}
-      left=`<div class="mgrid"><div class="mgh">${WL.map((w,i)=>`<span class="${i===0||i===6?'we':''}">${w}</span>`).join('')}</div><div class="mgb">${cells}</div></div>`;
-    }else{  // 缩小:本周条
-      const base=off===0?new Date(t):new Date(Y,M,1);const ws=new Date(base);ws.setDate(base.getDate()-base.getDay());let cols='';
+    if(S.calExpand){  // 月网格 + 左侧月份导轨
+      const start=new Date(Y,M,1);start.setDate(1-moff(start));
+      let body='',prevMon=-1;
+      for(let r=0;r<6;r++){
+        const rs=new Date(start);rs.setDate(start.getDate()+r*7);
+        const rmon=rs.getMonth(),show=rmon!==prevMon,cur=rmon===M;prevMon=rmon;
+        body+= show
+          ? `<div class="mrail${cur?' cur':''}"><span class="rm">${new Date(rs.getFullYear(),rmon,1).toLocaleString('en',{month:'short'}).toUpperCase()}</span><span class="rn">${String(rmon+1).padStart(2,'0')}</span>${cur?'<span class="rd"></span>':''}</div>`
+          : `<div class="mrail"></div>`;
+        for(let i=0;i<7;i++){const d=new Date(rs);d.setDate(rs.getDate()+i);
+          const out=d.getMonth()!==M,tod=same(d,t),has=!out&&CAL_EVDAYS.includes(d.getDate());
+          const sel=!out&&d.getDate()===S.calSel;
+          body+=`<div class="mcell${out?' out':''}${tod?' tod':''}${sel?' sel':''}" data-act="calpick"${out?'':` data-day="${d.getDate()}"`}><span>${d.getDate()}</span>${has?'<span class="mev"></span>':''}</div>`;}
+      }
+      left=`<div class="mgrid"><div class="mgh"><span></span>${WLh.map(w=>`<span>${w}</span>`).join('')}</div><div class="mgb">${body}</div></div>`;
+    }else{  // 周条(周一开头)
+      const base=off===0?new Date(t):new Date(Y,M,1);const ws=new Date(base);ws.setDate(base.getDate()-moff(base));let cols='';
       for(let i=0;i<7;i++){const d=new Date(ws);d.setDate(ws.getDate()+i);
-        const we=(d.getDay()===0||d.getDay()===6),tod=same(d,t),has=d.getMonth()===M&&CAL_EVDAYS.includes(d.getDate());
-        cols+=`<div class="wcol${tod?' tod':''}"><span class="wl${we?' we':''}">${WL[d.getDay()]}</span><span class="wnum">${d.getDate()}</span>${has?'<span class="wev"></span>':''}</div>`;}
+        const tod=same(d,t),has=d.getMonth()===M&&CAL_EVDAYS.includes(d.getDate());
+        const wsel=d.getMonth()===M&&d.getDate()===S.calSel;
+        cols+=`<div class="wcol${tod?' tod':''}${wsel?' sel':''}" data-act="calpick"${d.getMonth()===M?` data-day="${d.getDate()}"`:''}><span class="wl">${WLh[i]}</span><span class="wnum">${d.getDate()}</span>${has?'<span class="wev"></span>':''}</div>`;}
       left=`<div class="wstrip"><div class="wbig"><div class="wm">${mname.slice(0,3)}</div><div class="wy">${Y}</div></div><div class="wdays">${cols}</div></div>`;
     }
-    const agenda=EVENTS.slice(0,S.calExpand?EVENTS.length:3).map(ev=>`<div class="evr">
-        <div class="evtime"><div class="s">${ev.s}</div><div class="e">${ev.e}</div></div>
-        <div class="evbody"><div class="nm">${ev.t}</div><div class="lo">${PIN}<span>${ev.loc}</span></div></div>
-        <span class="evdot" style="background:${ev.c}"></span></div>`).join('');
+    const items=CAL_ITEMS[S.calSel]||[];
+    const isToday=S.calSel===t.getDate()&&off===0;
+    const agenda=`<div class="aghd"><span class="agd">${isToday?'今天 · ':''}${M+1}月${S.calSel}日</span><span class="agn">${items.length?items.length+' 项':'无安排'}</span></div>`+
+      (items.length
+        ? items.map(ev=>`<div class="evr" data-act="caledit" data-t="${ev.t}">
+            <div class="evtime"><div class="s">${ev.s||'·'}</div>${ev.e?`<div class="e">${ev.e}</div>`:''}</div>
+            <div class="evbody"><div class="nm">${ev.t}</div><div class="lo">${ev.loc?PIN+'<span>'+ev.loc+'</span>':'<span class="evk">'+ev.kind+'</span>'}</div></div>
+            <span class="evgo">在 Helm 改 ›</span><span class="evdot" style="background:${ev.c}"></span></div>`).join('')
+        : `<div class="agempty"><div>这天没有安排</div><span data-act="caledit" data-t="新建">＋ 到 Helm 新建</span></div>`);
     return `<div class="calview">
-      <div class="calhd2"><span class="cm">${mname}</span><span class="cy">${Y}</span><span class="sp"></span>
+      <div class="calhd2"><span class="cm">${mname}</span><span class="cy">${Y}</span>
         ${off!==0?`<span class="cpill" data-act="caltoday">Today</span>`:''}
-        <span class="cnav"><span data-act="calprev">‹</span><span data-act="calnext">›</span></span>
-        <span class="cexp" data-act="calexp">${S.calExpand?'⤡':'⤢'}</span></div>
+        <span class="sp"></span>
+        <span class="cseg"><span class="${S.calExpand?'on':''}" data-act="calmonth" title="月视图">${ICON_GRID}</span><span class="${!S.calExpand?'on':''}" data-act="calweek" title="周视图">${ICON_ROWS}</span></span>
+        <span class="cnav"><span data-act="calprev">‹</span><span data-act="calnext">›</span></span></div>
       <div class="calbody"><div class="calL">${left}</div><div class="calR"><div class="agenda">${agenda}</div></div></div>
     </div>`;},
 
@@ -531,7 +826,7 @@ const V={
   dev:()=>`<div class="devwrap">
    <div class="devstage"><div class="devpage" id="devpage">${devPage(S.devSec)}</div></div>
    <div class="devrail" id="devrail">
-     ${DEVSECS.map((r,k)=>`<div class="dri${k===S.devSec?' on':''}" data-sec="${k}"><span class="ico">${r.i}</span><span class="lab">${r.l}</span></div>`).join('')}
+     ${DEVSECS.map((r,k)=>`<div class="dri${k===S.devSec?' on':''}" data-sec="${k}" title="${r.l}"></div>`).join('')}
    </div>
   </div>`,
 
@@ -552,17 +847,12 @@ const V={
       <div class="srow"><span class="pd done"></span>helm<span style="color:var(--t3);font-size:11px;margin-left:6px">~/helm</span><span class="stag">完成</span></div>`;
   },
 
-  clip:()=>`<div class="clip"><div class="vh"><span>📋 CLIPBOARD 历史</span><span>点→复制 / 存速记</span></div>
+  clip:()=>`<div class="clip"><div class="vh"><span>⧉ CLIPBOARD 历史</span><span>点→复制 / 存速记</span></div>
     ${CLIP.map(c=>`<div class="r"><span class="ic">${c.ic}</span><span class="tx">${c.tx}</span><span class="tm">${c.tm}</span></div>`).join('')}</div>`,
 
-  focus:()=>{const m=Math.floor(S.focusSec/60),s=S.focusSec%60;const p=Math.round((1-S.focusSec/(25*60))*100);
-    return `<div class="focus"><div class="vh" style="position:absolute;top:14px;left:16px">FOCUS</div>
-      <div class="ring" style="--p:${p}%"><span class="tm">${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}</span></div>
-      <div class="ftask">专注:重做刘海 Pro 原型</div>
-      <div class="fctrl"><span class="fb go" data-act="ftoggle">${S.focusRunning?'暂停':'开始'}</span><span class="fb" data-act="freset">重置</span></div></div>`;},
 };
-function ph(){return {note:'随手记一笔…',journal:'今天发生了什么?',task:'到点让 agent 做什么…',ask:'问问 Helm 大脑…'}[S.kind];}
-function devPage(i){return [V.agents,V.ports,V.stats][i]();}  // Dev 子分类各自整页(复用原布局)
+function ph(){return {note:'随手记一笔…',journal:'今天发生了什么?',task:'记个任务,或交给 agent…',ask:'问问 Helm 大脑…',focus:'我现在在做什么…'}[S.kind];}
+function devPage(i){return [V.agents,V.ports,V.prs,V.stats][i]();}  // Dev 子分类各自整页(复用原布局)
 function fileChip(f,i){
   const vis = f.url?`<span class="ath" style="background-image:url(${f.url})"></span>`:`<span class="abadge">${f.ext}</span>`;
   return `<div class="attchip"><span class="x" data-rm="${i}">×</span>${vis}<span class="anm">${f.name}</span></div>`;
@@ -606,6 +896,13 @@ function remindHTML(){
 function viewHeight(){
   if(S.view==='dev') return DEVSECS[S.devSec].h;
   if(S.view==='cal') return S.calExpand?312:240;
+  if(S.view==='cap'){
+    if(S.kind==='focus')return S.focusOn?300:268;
+    const hist=(S.kind==='note'||S.kind==='journal'||S.kind==='task');
+    let h=(S.kind==='task')?300:(hist?256:240);
+    if(S.showRecent&&hist)h+=64;
+    return Math.min(360,h);
+  }
   return VH[S.view];
 }
 function render(){
@@ -613,7 +910,7 @@ function render(){
   notch.classList.toggle('banner',banner);
   notch.classList.toggle('remind',!!S.remind);  // 提醒 banner 有独立尺寸(更矮)
   notch.classList.toggle('open',S.open && !banner);
-  if(!banner) notch.style.setProperty('--eh',(viewHeight()||236)+'px');  // 按模块/子分类/展开态自适应高度
+  if(!banner) notch.style.setProperty('--eh',((viewHeight()||236)+NTOP)+'px');  // 含顶栏高度;各视图预算不变
   renderBar();
   view.innerHTML = banner ? (S.remind ? remindHTML() : bannerHTML()) : (V[S.view]||V.dash)();
   renderDock();
@@ -627,6 +924,10 @@ function syncCtl(){
   document.querySelectorAll('#ctl-remind .opt').forEach(o=>o.classList.toggle('on',o.dataset.remind===(S.remind?'1':'0')));
 }
 
+/* ---------- focus (并入速记;正向计时,关掉自动记录到 Helm) ---------- */
+function startFocus(){S.focusOn=true;S.focusWhat=(S.captext||'').trim()||'专注';S.focusSec=0;S.captext='';S.capLock=false;flash('开始专注 · '+S.focusWhat);}
+function stopFocus(){const mins=Math.max(1,Math.round(S.focusSec/60));RECENT.unshift({k:'专注',x:S.focusWhat+' · '+mins+'m',tm:'now'});flash('已记录 Helm /api/focus · 专注 '+mins+' 分钟');S.focusOn=false;S.focusWhat='';S.focusSec=0;}
+
 /* ---------- events ---------- */
 notch.addEventListener('mouseenter',()=>{if(!S.open){S.open=true;render();}});
 notch.addEventListener('mouseleave',()=>{if(S.mode==='waiting')return;if(S.open&&!S.capLock){S.open=false;render();}});
@@ -635,27 +936,43 @@ view.addEventListener('click',e=>{
   if(e.target.closest('[data-stop]'))return;  // 媒体上一首/下一首:不触发进模块
   const rm=e.target.closest('[data-rm]');if(rm){S.files.splice(+rm.dataset.rm,1);render();return;}
   const k=e.target.closest('[data-k]');if(k){S.kind=k.dataset.k;render();return;}
+  const tt=e.target.closest('[data-tt]');if(tt){S.taskTo=tt.dataset.tt;render();return;}
   const act=e.target.closest('[data-act]');
   const go=e.target.closest('[data-go]');
-  if(!act){if(go){const g=go.dataset.go;if(g==='media-flip'){S.mediaLyrics=!S.mediaLyrics;}else{S.view=g;if(g==='dev')S.devSec=0;}render();}return;}
+  if(!act){if(go){const g=go.dataset.go;if(g==='media-flip'){S.mediaLyrics=!S.mediaLyrics;render();}else{zoomTo(g);}}return;}
   const a=act.dataset.act;
   if(a==='focus'){S.capLock=true;}
+  else if(a==='fstart'){startFocus();}
+  else if(a==='fstop'){stopFocus();}
+  else if(a==='rectog'){S.showRecent=!S.showRecent;}
+  else if(a==='addwhen'){S.capWhen='今天 15:00';}
+  else if(a==='addwhere'){S.capWhere='Brooklyn, New York';}
+  else if(a==='rmwhen'){S.capWhen=null;S.capDay=null;}
+  else if(a==='rmwhere'){S.capWhere=null;}
+  else if(a==='calpick'){if(act.dataset.day)S.calSel=+act.dataset.day;}
+  else if(a==='caledit'){flash('在 Helm 打开编辑 · '+(act.dataset.t||'')+' · /api/calendar');}
   else if(a==='send'){
+    const ext=(S.capWhen?' · '+S.capWhen:'')+(S.capWhere?' · '+S.capWhere:'');
+    if(S.capDay&&!CAL_EVDAYS.includes(S.capDay))CAL_EVDAYS.push(S.capDay);
+    const onCal=S.capDay?' · 已上日历':'';
     if(S.files.length){flash('已把 '+S.files.length+' 个文件 + 备注发给 Helm 归档(Journal / RAG)');S.files=[];}
-    else flash(S.kind==='ask'?'已问 Helm 大脑':'已记录到 Helm');
-    S.captext='';S.capLock=false;}
+    else if(S.kind==='task'){flash((S.taskTo==='agent'?'已派给 agent · /api/agent/tasks → Cockpit':'已加任务 · /api/tasks')+onCal+ext);}
+    else if(S.kind==='ask'){flash('已问 Helm 大脑');}
+    else if(S.kind==='journal'){flash('已记日记 · /api/notes');}
+    else flash('已记录 · /api/notes'+onCal+ext);
+    S.captext='';S.capLock=false;S.capWhen=null;S.capWhere=null;S.capDay=null;}
   else if(a==='pp'){S.play=S.play?0:1;}
   else if(a==='resolve'){S.mode='running';S.open=false;S.view='dash';}
   else if(a==='addev'){flash('（演示）打开「加事件」表单');}
-  else if(a==='calexp'){S.calExpand=!S.calExpand;}
+  else if(a==='calmonth'){S.calExpand=true;}
+  else if(a==='calweek'){S.calExpand=false;}
   else if(a==='caltoday'){S.calOff=0;}
   else if(a==='calprev'){S.calOff=(S.calOff||0)-1;}
   else if(a==='calnext'){S.calOff=(S.calOff||0)+1;}
+  else if(a==='srccycle'){S.mediaSrc=(S.mediaSrc+1)%SOURCES.length;flash('已切换播放源 · '+SOURCES[S.mediaSrc]);}
   else if(a==='rmdjoin'){flash('已加入 · '+S.remind.t);S.remind=null;}
   else if(a==='rmdsnooze'){flash('已稍后提醒(5 分钟)');S.remind=null;}
   else if(a==='rmddismiss'){S.remind=null;}
-  else if(a==='ftoggle'){S.focusRunning=!S.focusRunning;}
-  else if(a==='freset'){S.focusRunning=false;S.focusSec=25*60;}
   render();
 });
 // 全局左右滑动 → 切换模块(触控板横扫 / 鼠标拖拽),带方向性滑入动画
@@ -683,6 +1000,22 @@ function slideTo(next,dir){
     setTimeout(()=>{animating=false;view.style.transition='';},310);
   },170);
 }
+// data-go 钻入式过渡(放大):dash↔media / dash↔dev 等,比直接 render 丝滑
+function zoomTo(next){
+  if(next===S.view){render();return;}
+  if(animating){S.view=next;S.mediaLyrics=false;if(next==='dev')S.devSec=0;render();return;}
+  animating=true;
+  view.style.transition='transform .16s ease,opacity .16s ease';
+  view.style.transform='scale(.97)';view.style.opacity='0';
+  setTimeout(()=>{
+    S.view=next;S.mediaLyrics=false;if(next==='dev')S.devSec=0;render();
+    view.style.transition='none';view.style.transform='scale(.955)';view.style.opacity='0';
+    void view.offsetWidth;
+    view.style.transition='transform .34s cubic-bezier(.32,.72,0,1),opacity .26s ease';
+    view.style.transform='scale(1)';view.style.opacity='1';
+    setTimeout(()=>{animating=false;view.style.transition='';},340);
+  },160);
+}
 notch.addEventListener('wheel',e=>{
   if(!S.open||S.mode==='waiting')return;
   const ax=Math.abs(e.deltaX),ay=Math.abs(e.deltaY);
@@ -697,8 +1030,10 @@ notch.addEventListener('pointerup',e=>{if(dragX==null)return;const dx=e.clientX-
   if(Math.abs(dx)>55)switchModule(dx<0?1:-1);});
 document.addEventListener('keydown',e=>{
   if(S.mode==='waiting'){const k=e.key.toLowerCase();if(k==='y'||k==='n'){S.mode='running';S.open=false;S.view='dash';render();}return;}
+  if(e.key==='Tab'&&S.open&&S.view==='cap'&&!S.focusOn){e.preventDefault();const ks=['note','journal','task','focus','ask'];S.kind=ks[(ks.indexOf(S.kind)+(e.shiftKey?-1:1)+ks.length)%ks.length];render();return;}
   if(!S.capLock)return;
-  if(e.key==='Escape'||e.key==='Enter'){S.captext='';S.capLock=false;render();return;}
+  if(e.key==='Enter'){if(S.kind==='focus'&&!S.focusOn){startFocus();render();return;}S.captext='';S.capLock=false;render();return;}
+  if(e.key==='Escape'){S.captext='';S.capLock=false;render();return;}
   if(e.key==='Backspace'){S.captext=S.captext.slice(0,-1);render();e.preventDefault();return;}
   if(e.key.length===1){S.captext+=e.key;render();}
 });
@@ -718,7 +1053,7 @@ function slideDev(next,dir){
   animating=true;
   page.style.transition='transform .16s ease,opacity .16s ease';
   page.style.transform=`translateY(${dir>0?-34:34}px)`;page.style.opacity='0';
-  notch.style.setProperty('--eh',DEVSECS[next].h+'px');  // 高度同步过渡
+  notch.style.setProperty('--eh',(DEVSECS[next].h+NTOP)+'px');  // 高度同步过渡(含顶栏)
   setTimeout(()=>{
     S.devSec=next;page.innerHTML=devPage(next);
     document.querySelectorAll('#devrail .dri').forEach((it,i)=>it.classList.toggle('on',i===next));
@@ -748,12 +1083,12 @@ function addFiles(list){
     const it={name:f.name,ext,url:null};
     if(f.type&&f.type.startsWith('image/'))it.url=URL.createObjectURL(f);
     S.files.push(it);});
-  S.view='cap';render();
+  S.view='cap';if(S.kind==='focus')S.kind='note';render();
 }
 
 /* ---------- timers ---------- */
-setInterval(()=>{ // focus countdown
-  if(S.focusRunning&&S.focusSec>0){S.focusSec--;if(S.view==='focus')render();}
+setInterval(()=>{ // focus 正向计时(关掉时记录)
+  if(S.focusOn){S.focusSec++;if(S.open&&S.view==='cap'&&S.kind==='focus')render();else renderBar();}
 },1000);
 setInterval(()=>{ // lyrics advance
   if(S.view==='media'&&S.play){lyricI=(lyricI+1)%LYRICS.length;render();}
@@ -767,6 +1102,7 @@ function flash(msg){clearTimeout(flashEl);let f=document.getElementById('flash')
 document.querySelectorAll('#ctl-mode .opt').forEach(o=>o.onclick=()=>{S.mode=o.dataset.mode;render();});
 document.querySelectorAll('#ctl-play .opt').forEach(o=>o.onclick=()=>{S.play=+o.dataset.play;render();});
 document.querySelectorAll('#ctl-remind .opt').forEach(o=>o.onclick=()=>{S.remind=o.dataset.remind==='1'?REMINDER:null;render();});
+if(S.cfg.dailytheme)dailyRandTheme();  // 开了「每天随机一套」就按当天种子应用
 S.open=true;render();
 </script>
 </body>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>MacNotch 复刻 — 索引</title>
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;background:#0c0b10;color:#fff;
+    min-height:100vh;margin:0;padding:48px 24px;display:flex;flex-direction:column;align-items:center;gap:24px}
+  h1{font-size:20px;font-weight:700}.sub{color:#8a8a8e;font-size:13px;margin-top:-16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;max-width:900px;width:100%}
+  a.card{display:block;background:#16151c;border:1px solid #2a2a2c;border-radius:16px;padding:20px;text-decoration:none;color:#fff;transition:.15s}
+  a.card:hover{background:#1e1d26;transform:translateY(-2px)}
+  .card h2{font-size:15px;margin:0 0 6px}.card p{font-size:12px;color:#8a8a8e;line-height:1.5;margin:0}
+  .tag{display:inline-block;font-size:10px;color:#3ddcc0;background:rgba(61,220,192,.12);border-radius:6px;padding:2px 7px;margin-bottom:8px}
+  .docs{font-size:12px;color:#6a6a70;max-width:900px;line-height:1.7}
+  .docs a{color:#8a8a8e}
+</style>
+</head>
+<body>
+  <h1>MacNotch · HTML 复刻</h1>
+  <div class="sub">基于 reference/macnotch 的视频与图片逐模块复刻 · 可交互原型</div>
+  <div class="grid">
+    <a class="card" href="dashboard.html"><span class="tag">M1 · Dashboard</span><h2>Dashboard 看板</h2>
+      <p>4 widget 列(Quick toggles / Screen Time 环形图 / Launcher / Actions)+ 顶栏页签 + 右侧 rail。点 › 切页、点胶囊展开 Profiles。</p></a>
+    <a class="card" href="file.html"><span class="tag">M2 · File</span><h2>文件交互 / Shelf</h2>
+      <p>Drop to Action 多目标投放条(AirDrop/iCloud/Shelf/Open with/Convert/Zip)+ Shelf 暂存架 + 折叠持有提示。切状态查看。</p></a>
+    <a class="card" href="notifications.html"><span class="tag">M3 · Notifications</span><h2>刘海通知</h2>
+      <p>待机 now-playing 药丸 → 膨胀展开 Event Reminder(计时递增)→ 交叉淡化切 Media 面板。点「触发通知」看完整动画。</p></a>
+  </div>
+  <div class="docs">
+    分析文档(落盘):<a href="../00-overview.md">00-overview</a> ·
+    <a href="../10-dashboard.md">10-dashboard</a> ·
+    <a href="../20-file.md">20-file</a> ·
+    <a href="../30-notifications.md">30-notifications</a>
+  </div>
+</body>
+</html>

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MacNotch Replica — Dashboard</title>
+<style>
+  :root{
+    --panel:#0a0a0b;--tile:#1a1a1c;--tile2:#262628;--sep:#2a2a2c;
+    --t1:#fff;--t2:#c7c7cc;--t3:#8a8a8e;--t4:#6a6a70;
+    --mint:#3ddcc0;--blue:#2f6bff;--cyan:#5ac8fa;--green:#34c759;--orange:#ff9500;--red:#ff3b30;
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Rounded","Helvetica Neue",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{min-height:100vh;color:var(--t1);overflow-x:hidden;
+    background:linear-gradient(180deg,#2d5d72 0%,#3a6577 30%,#6b6a52 62%,#3b4a3a 100%)}
+  /* faux desktop + menubar */
+  .menubar{position:fixed;top:0;left:0;right:0;height:26px;display:flex;align-items:center;gap:16px;
+    padding:0 14px;font-size:13px;color:#fff;z-index:2}
+  .menubar .ml{display:flex;gap:18px;font-weight:600}.menubar .ml .app{font-weight:700}
+  .menubar .mr{margin-left:auto;display:flex;align-items:center;gap:13px;opacity:.95;font-size:12px}
+  .hint{position:fixed;bottom:24px;left:0;right:0;text-align:center;font-size:12px;color:rgba(255,255,255,.6)}
+  .hint b{color:#fff}
+
+  /* ===== Notch panel ===== */
+  .stage{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:5}
+  .panel{position:relative;background:var(--panel);border-radius:0 0 26px 26px;
+    box-shadow:0 18px 50px rgba(0,0,0,.55);display:flex;align-items:stretch;
+    padding:0;overflow:hidden;backdrop-filter:blur(20px)}
+  /* top concave wings */
+  .panel::before,.panel::after{content:"";position:absolute;top:0;width:14px;height:14px;background:var(--panel)}
+  .panel::before{left:-14px;-webkit-mask:radial-gradient(14px at 0 14px,transparent 98%,#000)}
+  .panel::after{right:-14px;-webkit-mask:radial-gradient(14px at 14px 14px,transparent 98%,#000)}
+
+  .body{padding:11px 16px 13px;min-width:760px}
+  /* top bar */
+  .top{display:flex;align-items:center;gap:10px;height:30px;margin-bottom:7px}
+  .title{font-size:15px;font-weight:700;letter-spacing:.2px}
+  .pill{display:flex;align-items:center;gap:7px;background:#1c1c1e;border-radius:13px;padding:5px 9px;cursor:pointer}
+  .pill .pic{color:var(--mint);font-size:12px;display:flex}
+  .pill .pn{font-size:12px;font-weight:700}
+  .pill .chev{color:var(--t3);font-size:11px}
+  .toptools{margin-left:auto;display:flex;align-items:center;gap:12px;color:var(--t3);font-size:12px}
+
+  /* profiles bar (pill expanded) */
+  .profiles{display:none;align-items:center;gap:6px;height:30px;margin-bottom:7px}
+  .profiles.show{display:flex}
+  .plabel{font-size:11px;color:var(--t3);font-weight:700;margin-right:4px}
+  .pchip{display:flex;align-items:center;gap:5px;background:#1c1c1e;border-radius:12px;padding:4px 10px;font-size:12px;color:var(--t2);cursor:pointer}
+  .pchip.on{background:#2c2c2e;color:#fff}
+  .pchip .x{color:var(--t4);font-size:10px;margin-left:2px}
+  .padd{width:24px;height:24px;border-radius:12px;background:#1c1c1e;color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer}
+
+  /* columns */
+  .cols{display:flex;align-items:stretch;gap:0;min-height:96px}
+  .col{padding:0 18px;border-right:1px solid var(--sep);min-width:120px}
+  .col:last-child{border-right:none;padding-right:6px}
+  .col:first-child{padding-left:0}
+  .chd{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--t2);margin-bottom:9px;white-space:nowrap}
+  .chd .ci{font-size:12px;opacity:.85}
+  .chd .extra{margin-left:auto;color:var(--t3);font-size:10px;display:flex;align-items:center;gap:3px}
+  .dotnav{text-align:center;margin-top:7px}.dotnav i{display:inline-block;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.3)}
+
+  /* toggles */
+  .tggrow{display:flex;gap:6px}
+  .tg{width:42px;height:42px;border-radius:13px;background:var(--tile2);display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;transition:.12s}
+  .tg.on{background:#3a3a3d;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+  .tg:hover{background:#333}
+
+  /* screentime */
+  .st{display:flex;gap:14px;align-items:center}
+  .donut{width:62px;height:62px;border-radius:50%;flex:none;position:relative;
+    background:conic-gradient(var(--blue) 0 32%,var(--cyan) 32% 55%,var(--orange) 55% 78%,var(--green) 78% 90%,#48484a 90% 100%)}
+  .donut::after{content:"";position:absolute;inset:11px;border-radius:50%;background:var(--panel)}
+  .donut .ctr{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1}
+  .donut .ctr b{font-size:14px;font-weight:700}.donut .ctr s{font-size:8px;color:var(--t3);text-decoration:none}
+  .stlist{display:flex;flex-direction:column;gap:5px;font-size:11px}
+  .stlist .r{display:flex;align-items:center;gap:6px;white-space:nowrap}
+  .stlist .r .d{width:6px;height:6px;border-radius:50%;flex:none}
+  .stlist .r .ic{width:14px;height:14px;border-radius:4px;flex:none}
+  .stlist .r .nm{color:#fff}.stlist .r .tm{margin-left:auto;color:#fff;padding-left:10px}
+
+  /* launcher / actions icons */
+  .icrow{display:flex;align-items:center}
+  .lic{width:48px;height:48px;border-radius:14px;flex:none;margin-left:-6px;box-shadow:0 3px 8px rgba(0,0,0,.4);background-size:cover;cursor:pointer;transition:.12s}
+  .lic:first-child{margin-left:0}
+  .lic:hover{transform:translateY(-3px)}
+  .acrow{display:flex;align-items:center;gap:10px}
+  .aic{width:46px;height:46px;border-radius:13px;flex:none;position:relative;box-shadow:0 3px 8px rgba(0,0,0,.4);cursor:pointer}
+  .aic .badge{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;border-radius:8px;background:var(--red);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px}
+
+  /* generic widgets (other pages) */
+  .big{font-size:26px;font-weight:700}.sub{font-size:11px;color:var(--t3)}
+  .tasks .r{display:flex;align-items:center;gap:7px;font-size:11px;margin-bottom:6px}
+  .tasks .r .d{width:7px;height:7px;border-radius:50%;flex:none}.tasks .r .tm{margin-left:auto;color:var(--t3);font-size:10px}
+  .pomo{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .pctrl{display:flex;gap:10px}.pctrl b{width:26px;height:26px;border-radius:50%;background:var(--tile2);display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer}
+  .media{display:flex;gap:10px;align-items:center}.cover{width:46px;height:46px;border-radius:9px;background:linear-gradient(135deg,#e8a07a,#6a4f8f)}
+  .mctrl{display:flex;gap:14px;font-size:13px;margin-top:6px}
+  .airpods .bar{height:5px;border-radius:3px;background:var(--tile2);position:relative;margin:4px 0}.airpods .bar i{position:absolute;inset:0 auto 0 0;border-radius:3px;background:var(--green)}
+  .quote{font-size:14px;font-weight:600;line-height:1.3}.quote .by{font-size:11px;color:var(--t3);font-weight:400;margin-top:6px}
+  .empty{display:flex;align-items:center;gap:18px;padding:6px 10px}
+  .empty .gi{font-size:30px;color:var(--t3)}.empty .et{font-size:14px;font-weight:700}.empty .es{font-size:11px;color:var(--t3)}
+  .addbtn{background:#fff;color:#111;font-size:12px;font-weight:600;border-radius:9px;padding:7px 14px;cursor:pointer}
+
+  /* right rail */
+  .rail{display:flex;flex-direction:column;gap:11px;padding:12px 12px 0 6px;align-items:center}
+  .rail .ri{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--t3);cursor:pointer}
+  .rail .ri.on{color:var(--mint)}
+</style>
+</head>
+<body>
+  <div class="menubar">
+    <div class="ml"><span class="app"> MacNotch</span><span>Edit</span><span>View</span><span>Window</span><span>Help</span></div>
+    <div class="mr"><span>84%</span><span>􀙇</span><span>1h 56m</span><span>􀛨</span><span>00:13</span></div>
+  </div>
+
+  <div class="stage"><div class="panel">
+    <div class="body">
+      <div class="top">
+        <span class="title">Dashboard</span>
+        <span class="pill" id="pill"><span class="pic" id="pic">▦</span><span class="pn" id="pn">Quick</span><span class="chev" id="chev">›</span></span>
+        <span class="toptools"><span>􀈎</span><span>􀏃</span><span>􀅴</span><span>􀈄</span></span>
+      </div>
+      <div class="profiles" id="profiles"></div>
+      <div class="cols" id="cols"></div>
+    </div>
+    <div class="rail" id="rail"></div>
+  </div></div>
+
+  <div class="hint">点 <b>›</b> 循环切页 · 点 <b>Quick 胶囊</b>展开 Profiles · hover 图标 · 右侧 rail 切模块</div>
+
+<script>
+const ICN={ // gradient app-icon stand-ins
+  finder:'linear-gradient(135deg,#7ad0ff,#2f7bff)',discord:'linear-gradient(135deg,#5865f2,#404eed)',
+  music:'linear-gradient(135deg,#fb5c74,#fa2d48)',folder:'linear-gradient(135deg,#7fc4ff,#3a8bff)',
+  logic:'linear-gradient(135deg,#2b2b2e,#0a0a0a)',unity:'linear-gradient(135deg,#3a3a3d,#1a1a1a)',
+  vscode:'linear-gradient(135deg,#37a0e3,#1f6fb8)',appstore:'linear-gradient(135deg,#1f8bff,#0a5cff)',
+  xcode:'linear-gradient(135deg,#4a90e2,#2b6fd0)',cursor:'linear-gradient(135deg,#3a3a3d,#111)'
+};
+const PROFILES=[
+  {name:'Quick',icon:'▦',color:'#3ddcc0',cols:[
+    {type:'toggles'},{type:'screentime'},{type:'launcher'},{type:'actions'}]},
+  {name:'Work',icon:'🧳',color:'#5ac8fa',cols:[
+    {type:'tasks'},{type:'launcher'},{type:'pomodoro'},{type:'dayprogress'}]},
+  {name:'Simple',icon:'○',color:'#34c759',cols:[
+    {type:'media'},{type:'dayprogress'},{type:'quote'}]},
+  {name:'Personal',icon:'👤',color:'#ff9500',cols:[
+    {type:'calendar'},{type:'airpods'},{type:'media'}]},
+  {name:'New P…',icon:'＋',color:'#8a8a8e',cols:[{type:'empty'}]},
+];
+let cur=0, showProfiles=false;
+
+const W={
+  toggles:()=>col('⇄','Quick toggles',`<div class="tggrow">
+    <div class="tg on" title="Sparkle">✨</div><div class="tg" title="Do Not Disturb">🌙</div>
+    <div class="tg" title="Search">🔍</div><div class="tg" title="Grid">▦</div>
+    <div class="tg" title="Focus">🎯</div><div class="tg" title="Display">🖥️</div></div>
+    <div class="dotnav"><i></i></div>`),
+  screentime:()=>col('🕐','Screen Time',`<div class="st">
+      <div class="donut"><div class="ctr"><b>10m</b><s>Today</s></div></div>
+      <div class="stlist">
+        <div class="r"><span class="d" style="background:var(--blue)"></span><span class="ic" style="background:${ICN.cursor}"></span><span class="nm">Cursor</span><span class="tm">3m</span></div>
+        <div class="r"><span class="d" style="background:var(--cyan)"></span><span class="ic" style="background:${ICN.finder}"></span><span class="nm">Dia</span><span class="tm">2m</span></div>
+        <div class="r"><span class="d" style="background:var(--orange)"></span><span class="ic" style="background:${ICN.unity}"></span><span class="nm">MacNotch</span><span class="tm">2m</span></div>
+        <div class="r"><span class="d" style="background:var(--green)"></span><span class="ic" style="background:${ICN.music}"></span><span class="nm">Scroll Re…</span><span class="tm">0m</span></div>
+      </div></div>`,`<span class="extra">⇄ 35 switches</span>`),
+  launcher:()=>col('▣','Launcher',`<div class="icrow">
+      ${['finder','discord','logic','folder','folder','music'].map(k=>`<div class="lic" style="background:${ICN[k]}" data-name="${k}"></div>`).join('')}
+    </div><div class="dotnav"><i></i></div>`,'',true),
+  actions:()=>col('⚡','Actions',`<div class="acrow">
+      <div class="aic" style="background:${ICN.unity}"><span class="badge">1</span></div>
+      <div class="aic" style="background:${ICN.vscode}"></div>
+      <div class="aic" style="background:${ICN.appstore}"></div>
+      <div class="aic" style="background:${ICN.xcode}"></div></div><div class="dotnav"><i></i></div>`),
+  tasks:()=>col('✓','Tasks',`<div class="tasks">
+      <div class="r"><span class="d" style="background:var(--blue)"></span>Team standup<span class="tm">09:00</span></div>
+      <div class="r"><span class="d" style="background:var(--orange)"></span>Product review<span class="tm">11:00</span></div>
+      <div class="r"><span class="d" style="background:var(--green)"></span>1:1 sync<span class="tm">15:00</span></div></div>`),
+  pomodoro:()=>col('⏱','Pomodoro',`<div class="pomo"><div class="big">25:00</div><div class="sub">Paused</div>
+      <div class="pctrl"><b>◀</b><b>▶</b></div></div>`),
+  dayprogress:()=>col('📊','Day Progress',`<div class="sub">Starts in</div><div class="big">7h 29m</div>
+      <div class="sub" style="margin-top:6px">— Stay hydrated —</div>`),
+  media:()=>col('♪','Now Playing',`<div class="media"><div class="cover"></div>
+      <div><div style="font-weight:700;font-size:13px">WALK</div><div class="sub">Hulvey & Lecrae</div></div></div>
+      <div class="mctrl">◀◀ ⏸ ▶▶</div>`),
+  calendar:()=>col('📅','Calendar',`<div style="font-size:11px;color:var(--orange);font-weight:700">WEDNESDAY</div>
+      <div class="big" style="font-size:22px">13 May</div>
+      <div class="sub">01:31 Mainz · 9°C Cloudy</div><div class="sub">Today · 4 events</div>`),
+  airpods:()=>col('🎧','AirPods Pro',`<div class="airpods">
+      <div class="sub">L</div><div class="bar"><i style="width:85%"></i></div>
+      <div class="sub">Case</div><div class="bar"><i style="width:100%"></i></div>
+      <div class="sub">R</div><div class="bar"><i style="width:90%"></i></div></div>`),
+  quote:()=>col('“','Quote',`<div class="quote">Never give in.<div class="by">— Winston Churchill</div></div>`),
+  empty:()=>`<div class="empty"><div class="gi">▦</div>
+      <div><div class="et">No widgets yet</div><div class="es">Add widgets from Settings to get started</div></div>
+      <div class="addbtn">Add Widgets</div></div>`,
+};
+function col(icon,title,inner,extra='',launcher=false){
+  return `<div class="col"><div class="chd"><span class="ci">${icon}</span>${title}${extra}</div>${inner}</div>`;
+}
+
+function render(){
+  const p=PROFILES[cur];
+  document.getElementById('pic').textContent=p.icon;
+  document.getElementById('pic').style.color=p.color;
+  document.getElementById('pn').textContent=p.name;
+  document.getElementById('cols').innerHTML=p.cols.map(c=>W[c.type]()).join('');
+  // profiles bar
+  const pf=document.getElementById('profiles');pf.classList.toggle('show',showProfiles);
+  pf.innerHTML='<span class="plabel">Profiles</span>'+PROFILES.map((x,i)=>
+    `<span class="pchip${i===cur?' on':''}" data-i="${i}">${x.icon} ${x.name}${i===cur?' <span class="x">×</span>':''}</span>`).join('')
+    +'<span class="padd">＋</span>';
+  // rail
+  document.getElementById('rail').innerHTML=['▦','🎧','📅','✓','♪']
+    .map((r,i)=>`<div class="ri${i===0?' on':''}">${r}</div>`).join('');
+  // launcher hover names
+  document.querySelectorAll('.lic').forEach(l=>{
+    l.onmouseenter=()=>{const h=document.querySelector('.col .chd .extra');};
+  });
+}
+document.getElementById('chev').parentElement.addEventListener('click',e=>{
+  if(e.target.id==='chev'){cur=(cur+1)%PROFILES.length;showProfiles=false;render();}
+  else {showProfiles=!showProfiles;render();}
+});
+document.getElementById('profiles').addEventListener('click',e=>{
+  const c=e.target.closest('.pchip');if(c){cur=+c.dataset.i;showProfiles=false;render();}
+});
+document.querySelectorAll('.tg').forEach;
+document.addEventListener('click',e=>{ if(e.target.classList.contains('tg'))e.target.classList.toggle('on'); });
+render();
+</script>
+</body>
+</html>

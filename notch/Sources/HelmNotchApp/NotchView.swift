@@ -1014,19 +1014,10 @@ struct NotchView: View {
     // TODO(align-media-height): HTML `VH.media`=330 — per-view auto-height isn't
     // ported yet; this renders within the current resizable panel height.
 
-    private let lyricsDemo = [
-        "I've been walking through the storm",
-        "Counting every blessing as it comes",
-        "Even when the night feels long",
-        "I know the morning's gonna come",
-        "So I'll keep counting my blessings",
-        "One by one by one",
-    ]
-
     private var mediaModule: some View {
         let np = model.nowPlaying
-        let title = np?.title ?? "Counting My Blessings"
-        let artist = (np.map { $0.artist.isEmpty ? "Seph Schlueter" : $0.artist }) ?? "Seph Schlueter"
+        let title = np?.title ?? "未在播放"
+        let artist = np.map { $0.artist.isEmpty ? "—" : $0.artist } ?? "打开任意播放器开始"
         return ZStack {
             mediaBgCover
             VStack(spacing: 0) {
@@ -1116,7 +1107,7 @@ struct NotchView: View {
         TimelineView(.periodic(from: .now, by: 0.5)) { context in
             let total = np?.duration ?? 0
             let pos = model.livePosition(at: context.date)
-            let frac = total > 0 ? min(1, pos / total) : 0.42
+            let frac = total > 0 ? min(1, pos / total) : 0
             VStack(spacing: 3) {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
@@ -1129,33 +1120,63 @@ struct NotchView: View {
                 }
                 .frame(height: 10)
                 HStack {
-                    Text(total > 0 ? timeString(pos) : "0:42"); Spacer(); Text(total > 0 ? timeString(total) : "1:31")
+                    Text(total > 0 ? timeString(pos) : "-:--"); Spacer(); Text(total > 0 ? timeString(total) : "-:--")
                 }
                 .font(.system(size: 9)).foregroundStyle(.white.opacity(0.55)).monospacedDigit()
             }
         }
     }
 
-    /// `.lyrics` — scrolling lyrics with the current line lit, masked top/bottom.
-    /// TODO(align-media): demo lyrics; real synced lyrics need a provider.
-    private var lyricsColumn: some View {
-        TimelineView(.periodic(from: .now, by: 2.6)) { context in
-            let playing = model.nowPlaying?.isPlaying ?? true
-            let cur = playing ? Int(context.date.timeIntervalSince1970 / 2.6) % lyricsDemo.count : 2
-            VStack(alignment: .leading, spacing: 7) {
-                ForEach(lyricsDemo.indices, id: \.self) { i in
-                    Text(lyricsDemo[i])
-                        .font(.system(size: i == cur ? 14 : 13, weight: i == cur ? .bold : .regular))
-                        .foregroundStyle(i == cur ? .white : .white.opacity(0.38))
-                        .lineLimit(1)
+    /// `.lyrics` — 真歌词三态:同步(lrclib LRC,按播放位置点亮+滚动)/
+    /// 纯文本(静态列表)/无词(诚实提示)。demo 词已删(2026-07-03)。
+    @ViewBuilder private var lyricsColumn: some View {
+        switch model.lyrics {
+        case .synced(let lines):
+            TimelineView(.periodic(from: .now, by: 0.4)) { context in
+                let pos = model.livePosition(at: context.date)
+                let cur = currentLyricIndex(lines, position: pos)
+                let window = 6
+                let lo = max(0, min(cur - 2, lines.count - window))
+                let hi = min(lines.count, lo + window)
+                VStack(alignment: .leading, spacing: 7) {
+                    ForEach(lo..<hi, id: \.self) { i in
+                        Text(lines[i].text)
+                            .font(.system(size: i == cur ? 14 : 13, weight: i == cur ? .bold : .regular))
+                            .foregroundStyle(i == cur ? .white : .white.opacity(0.38))
+                            .lineLimit(1)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                .animation(.easeOut(duration: 0.25), value: cur)
+                .mask(lyricsMask)
+            }
+        case .plain(let lines):
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 7) {
+                    ForEach(lines.indices, id: \.self) { i in
+                        Text(lines[i]).font(.system(size: 13))
+                            .foregroundStyle(.white.opacity(0.7)).lineLimit(2)
+                    }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            .mask(LinearGradient(
-                stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.22),
-                        .init(color: .black, location: 0.78), .init(color: .clear, location: 1)],
-                startPoint: .top, endPoint: .bottom))
+            .mask(lyricsMask)
+        case .none:
+            VStack(spacing: 6) {
+                Text("没有找到歌词").font(.system(size: 12)).foregroundStyle(.white.opacity(0.4))
+                if model.nowPlaying != nil {
+                    Text("lrclib 无此曲目").font(.system(size: 10)).foregroundStyle(.white.opacity(0.25))
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+    }
+
+    private var lyricsMask: LinearGradient {
+        LinearGradient(
+            stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.22),
+                    .init(color: .black, location: 0.78), .init(color: .clear, location: 1)],
+            startPoint: .top, endPoint: .bottom)
     }
 
     // MARK: Clipboard module (V.clip) — seed data; real history is a later block.
