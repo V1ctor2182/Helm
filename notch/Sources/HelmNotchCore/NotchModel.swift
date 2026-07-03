@@ -458,9 +458,37 @@ public final class NotchModel {
         return position
     }
 
-    public func playPause() { media.playPause() }
-    public func nextTrack() { media.nextTrack() }
-    public func previousTrack() { media.previousTrack() }
+    // 播控三连:命令本身 ~40ms,但轮询 5s 一跳——不做乐观更新的话
+    // 图标要等下一跳才变脸(2026-07-03 用户:暂停有挺长延迟)。
+    // 本地先翻状态,300ms 后立即回查校准(切歌 600ms,等新曲元数据就位)。
+    public func playPause() {
+        media.playPause()
+        if let np = nowPlaying {
+            nowPlaying = NowPlaying(
+                title: np.title, artist: np.artist, isPlaying: !np.isPlaying,
+                artworkBase64: np.artworkBase64,
+                elapsed: livePosition(), duration: np.duration)
+            nowPlayingFetchedAt = Date()
+        }
+        reconcileMedia(after: .milliseconds(300))
+    }
+
+    public func nextTrack() {
+        media.nextTrack()
+        reconcileMedia(after: .milliseconds(600))
+    }
+
+    public func previousTrack() {
+        media.previousTrack()
+        reconcileMedia(after: .milliseconds(600))
+    }
+
+    private func reconcileMedia(after delay: Duration) {
+        Task { [weak self] in
+            try? await Task.sleep(for: delay)
+            await self?.refreshMedia()
+        }
+    }
 
     /// Poll the backend once and fold the result into `connection`.
     public func refresh() async {
