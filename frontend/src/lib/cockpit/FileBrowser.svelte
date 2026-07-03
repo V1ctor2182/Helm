@@ -282,7 +282,8 @@
   {#if cockpit.cwd}
     <div class="viewbar">
       <span class="vseg" role="tablist" aria-label="视图">
-        <button class="vact" class:on={cockpit.viewMode === 'grid'} role="tab" aria-selected={cockpit.viewMode === 'grid'} onclick={() => cockpit.setViewMode('grid')}>网格</button>
+        <button class="vact" onclick={() => cockpit.toggleSidebar()} aria-label="侧栏开关" title="侧栏">≡</button>
+      <button class="vact" class:on={cockpit.viewMode === 'grid'} role="tab" aria-selected={cockpit.viewMode === 'grid'} onclick={() => cockpit.setViewMode('grid')}>网格</button>
         <button class="vact" class:on={cockpit.viewMode === 'list'} role="tab" aria-selected={cockpit.viewMode === 'list'} onclick={() => cockpit.setViewMode('list')}>列表</button>
       </span>
       {#if cockpit.viewMode === 'grid'}
@@ -449,6 +450,11 @@
         {@const en = menu.entry}
         <button class="mi" onclick={() => { cockpit.select(en); closeMenu() }}>{en.is_dir ? '打开' : '预览'}</button>
         <button class="mi" onclick={() => copyPath(en.path)}>复制路径</button>
+        {#if en.is_dir}
+          <button class="mi" onclick={() => { cockpit.toggleFavorite(en.path); closeMenu() }}>
+            {cockpit.isFav(en.path) ? '取消收藏' : '收藏'}
+          </button>
+        {/if}
         <button class="mi" onclick={() => askRename(en.path, en.name)}>重命名</button>
         <div class="msep"></div>
         <button class="mi danger" onclick={() => askTrash(en)}>丢进废纸篓</button>

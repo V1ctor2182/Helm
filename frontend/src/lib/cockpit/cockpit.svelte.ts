@@ -7,6 +7,23 @@ import { layout } from '../layout.svelte'
 import { isNoisyChange } from './watchFilter'
 import { termStatus } from './terminal/termStatus.svelte'
 
+function loadJson<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key)
+    return raw === null ? fallback : (JSON.parse(raw) as T)
+  } catch {
+    return fallback
+  }
+}
+
+function saveJson(key: string, v: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(v))
+  } catch {
+    /* 私隐模式/jsdom 兜底 */
+  }
+}
+
 export interface Entry {
   name: string
   path: string
@@ -76,6 +93,12 @@ export class CockpitStore {
   gridSize = $state<'sm' | 'md' | 'lg'>('md')
   sortKey = $state<'name' | 'mtime' | 'size'>('name')
   showHidden = $state(false)
+  /** 收藏目录(星标,localStorage 持久)。 */
+  favorites = $state<string[]>(loadJson('helm-ck-favs', []))
+  /** 各项目最近 agent 活跃时间戳(watch 事件驱动,localStorage 持久)。 */
+  projectActivity = $state<Record<string, number>>(loadJson('helm-ck-projact', {}))
+  /** 侧栏折叠(承 FanBox 可折叠侧栏)。 */
+  sidebarOpen = $state(loadJson('helm-ck-side', true))
   /** 右侧面板 tab:preview 随选中出现;agent 可无选中固定打开。 */
   rightTab = $state<'preview' | 'agent'>('preview')
   /** 图片灯箱(null=关);点预览图/双击网格图片打开。 */
@@ -335,6 +358,33 @@ export class CockpitStore {
     this.selected = { name, path, is_dir: false, size: 0, ext }
   }
 
+  toggleSidebar(): void {
+    this.sidebarOpen = !this.sidebarOpen
+    saveJson('helm-ck-side', this.sidebarOpen)
+  }
+
+  isFav(path: string): boolean {
+    return this.favorites.includes(path)
+  }
+
+  toggleFavorite(path: string): void {
+    this.favorites = this.isFav(path)
+      ? this.favorites.filter((p) => p !== path)
+      : [...this.favorites, path]
+    saveJson('helm-ck-favs', this.favorites)
+  }
+
+  /** watch 事件驱动项目活跃度(侧栏徽章「刚刚/N 分钟前」的数据源)。 */
+  #touchProjectActivity(path: string): void {
+    for (const pr of this.projects) {
+      if (path === pr.path || path.startsWith(pr.path + '/')) {
+        this.projectActivity = { ...this.projectActivity, [pr.path]: Date.now() }
+        saveJson('helm-ck-projact', this.projectActivity)
+        return
+      }
+    }
+  }
+
   /** 手动接管即停(承 FanBox):导航/点文件/编辑任一动作关掉跟随。 */
   manualTakeover(): void {
     if (this.followMode) this.followMode = false
@@ -346,6 +396,7 @@ export class CockpitStore {
     if (isNoisyChange(rel)) return
     this.markChanged(ev.path)
     this.#pushInbox(ev.path)
+    this.#touchProjectActivity(ev.path)
     if (this.followMode && ev.kind !== 'deleted') {
       // 归属双判定:在监听范围内(startWatching 已限 cwd)+ 绑定 agent 此刻在干活
       if (!this.#agentActive()) return

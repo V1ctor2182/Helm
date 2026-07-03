@@ -3,6 +3,7 @@
   import PreviewPane from './PreviewPane.svelte'
   import AgentView from '../orchestration/AgentView.svelte'
   import Lightbox from './Lightbox.svelte'
+  import Sidebar from './Sidebar.svelte'
   import { cockpit } from './cockpit.svelte'
 
   // 预览按需面板(承 FanBox,阶段3.5 结构#1):文件区永远是主角——
@@ -27,7 +28,8 @@
     const move = (ev: MouseEvent) => {
       const r = rootEl?.getBoundingClientRect()
       if (!r) return
-      split = Math.min(0.72, Math.max(0.28, (ev.clientX - r.left) / r.width))
+      const off = cockpit.sidebarOpen ? 190 : 0
+      split = Math.min(0.72, Math.max(0.28, (ev.clientX - r.left - off) / (r.width - off)))
     }
     const up = () => {
       dragging = false
@@ -53,8 +55,14 @@
   class="split"
   class:dragging
   bind:this={rootEl}
-  style={showRight ? `grid-template-columns: ${(split * 100).toFixed(2)}% 5px 1fr` : ''}
+  style={(() => {
+    const side = cockpit.sidebarOpen ? '190px ' : ''
+    return showRight ? `grid-template-columns: ${side}${(split * 100).toFixed(2)}% 5px 1fr` : `grid-template-columns: ${side}1fr`
+  })()}
 >
+  {#if cockpit.sidebarOpen}
+    <Sidebar />
+  {/if}
   <div class="left"><FileBrowser /></div>
   {#if showRight}
     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -97,7 +105,7 @@
 <style>
   .split {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr; /* 实际列由内联样式驱动(侧栏/预览按需) */
     height: 100%;
     min-height: 0;
     font-family: var(--sans);

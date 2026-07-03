@@ -6,6 +6,16 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-03 · phase3.5-round2-sidebar(夜间模式)· P0·结构 #2 ｜ 用户 stop,loop 已停
+- 对齐: 阶段3.5 轮2——左侧栏(FanBox 侧栏:快速入口/收藏/Agent 项目/⌘K/折叠/当前目录统一高亮)
+- 改动: +Sidebar.svelte(搜索钮→openPalette/QUICK 四入口/FAV 星标列表 hover ×/PROJ+活跃度徽章 30s 自刷新 刚刚·m·h·d/当前目录 accent 左沿);store(+favorites/projectActivity/sidebarOpen 全 localStorage loadJson·saveJson try-catch;toggleFavorite/toggleSidebar;applyChange→#touchProjectActivity 按项目前缀记活跃);CockpitView 三列 grid(侧栏 190px 按需)+divider 拖拽扣侧栏偏移;FileBrowser viewbar ≡ 折叠钮+右键目录「收藏/取消收藏」
+- 功能可用性: e2e 真机:侧栏渲染四快速入口;右键 docs→收藏→FAV 现身(测后已清);touch README→PROJ 徽章「刚刚」;≡ 折叠/展开;⌘K 钮开面板(组件测)
+- 教训: 新 shell 默认 cwd=reference/fanbox-master,曾误跑 FanBox 自家 225 测试(78 红)——以后 npm/vitest 命令一律显式 cd helm/frontend
+- 契约/notch 影响: 无(纯前端)
+- VibeHub: record_decision(F1)→ 见下条;矩阵 P0·结构 2/5
+- 验证: 前端 build ✓/check 0/0(260 文件)/test 199(+3);后端未动;dark 侧栏截图
+- 状态: ✅ 全绿收尾 commit(feat/cockpit-fanbox,未合 main)｜用户 stop → cron ee763a50 已删,阶段3.5 剩 3 件(面包屑/终端 dock/网格呼吸感)待重新点火
+
 ## 2026-07-03 · phase3.5-round1-ondemand-preview(夜间模式)· P0·结构 #1
 - 对齐: 阶段3.5 轮1——预览按需面板(2026-07-03 FanBox 真机并排对比结论#1:文件区必须是主角)
 - 前置: 阶段3.5 全节已立法进 helm-loop-procedure.md(P0·结构五件套账本);矩阵加「P0·结构」层
