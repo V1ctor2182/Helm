@@ -49,8 +49,12 @@
   }
 
   async function startSession() {
-    if (newProviderId == null || !newModel.trim()) return
-    await chat.createSession(newProviderId, newModel.trim(), newSystem.trim() || null)
+    if (newProviderId == null) return
+    // 模型留空 → 用该 provider 的第一个已知模型(一键接入不该让人猜模型名)
+    const provider = chat.providers.find((p) => p.id === newProviderId)
+    const model = newModel.trim() || provider?.models[0] || ''
+    if (!model) return
+    await chat.createSession(newProviderId, model, newSystem.trim() || null)
     newSystem = ''
     showProviders = false
   }
@@ -64,7 +68,7 @@
         <option value={null}>选择 provider</option>
         {#each chat.providers as p (p.id)}<option value={p.id}>{p.name}</option>{/each}
       </select>
-      <input bind:value={newModel} list="model-list" placeholder="模型 id" aria-label="模型" />
+      <input bind:value={newModel} list="model-list" placeholder="模型 id(留空用默认)" aria-label="模型" />
       <datalist id="model-list">
         {#each newProvider?.models ?? [] as m (m)}<option value={m}></option>{/each}
       </datalist>
