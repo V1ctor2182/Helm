@@ -3,25 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Helm · 层级探索 A×C v2 · 两区制 · 内容左列 + 仪表右柱</title>
+<title>Helm · 层级探索 A×C v3 · 数字回区块头 · 右柱=世界输入</title>
 <!--
-  HELM — HIERARCHY EXPLORATION · A×C 合成 v2 · 两区制
-  v1 问题(2026-07-03 用户):「光是变窄治标不治本——应该重要的信息都在左边,
-  右边也放些集中的信息,这样我就左边看、右边看」。
-  v2 公式(取代"每行左内容右数字"):
-  1) 屏锚层(不变):每屏顶部超大主读数(Today 72px 时钟 / 驾驶舱 28px 项目名)
-     横跨两区之上,永远全亮 t1,不参与聚光。
-  2) 左列 · 内容区(flex 1):任务/日记/AGENT/最近/日程 的正文,行内不再挂
-     右侧 22px key 数字。聚光系统(C)保留在左列:焦点岛提亮 + accent 左缘,
-     点击 280ms 气动移光,一屏一亮岛。
-  3) 右柱 · 仪表柱(固定 240px,通高):原来散在各行的关键数字全部集中堆叠。
-     每格 = 9px mono 标签 + 22px mono 数字 + 一行 12px 辅注,格间发丝线。
-     右柱是常亮 chrome(数字 t1 / 重点 accent-ink),不参与聚光、不压暗——
-     右看一眼 = 全部要害。格子可点:点任务格 → 左列聚光滑到任务区。
-  左列与右柱之间 1px var(--line);右柱底色 var(--chrome),有"柱"的实体感。
-  字阶严格五级:9 / 12 / 15 / 22 / 72&28。
-  眯眼检验:左边一片有一处发亮(焦点岛),右边一根整齐的数字柱,顶上一个巨物。
-  眼睛只需要两个停靠点。
+  HELM — HIERARCHY EXPLORATION · A×C 合成 v3
+  v2 问题(2026-07-03 用户第三轮):右柱那些数字(TASKS 2/3、JOURNAL 0 字、
+  AGENT 14:03、PROJECTS 3、NEXT 17:00)「应该就在左边 TASKS 今日 那里一起展示」;
+  右边改放其他东西——新闻、以及后续要接的其他信息源的汇总。
+  v3 公式(取代"数字集右柱"):
+  1) 屏锚层(不变):72px 时钟 / 28px 项目名横跨两区,永远全亮 t1,不参与聚光。
+  2) 左列 · 区块自带数字:每个区块头一行 = 区块名(15px/700)+ 9px mono 标签
+     + 发丝线 + 该区块的 22px key 数字挂在区块头右端(行内右端,不贴屏幕边)。
+     例:「任务 TASKS ————— 2/3 待办」「日记 JOURNAL ————— 0 字·连4天」。
+     聚光系统不变:焦点岛 + 280ms 气动移光;焦点区数字 accent-ink,
+     非焦点区数字压 t4 但保持 22px。
+  3) 右柱 · 简报柱 BRIEFING(~300px 通高,var(--chrome) 底 + 1px line 分隔):
+     世界的输入,常亮 chrome 不参与聚光——新闻 / 邮件分诊 / 未来源占位(ghost)。
+     左=我的一天,右=外面的世界;左右内容性质不同,不再重复。
+  4) 驾驶舱对应:文件区块头行内挂「128 项 · 0 改动 · CI PASS」(PASS 绿);
+     右柱=预览(上)+ RUN #0427 小格(下)——驾驶舱的"其他东西"就是预览,不放新闻。
+     终端底部全宽不变。
+  字阶严格五级:9 / 12 / 15 / 22 / 72&28(简报标题 12.5px 属 12 级微调)。
+  眯眼检验:顶部巨物 + 左列一处亮岛(区块头右端有个亮数字)+ 右柱一列安静的简报。
   探索稿(非定稿)。真相源仍是 helm-pro.html + DESIGN.md。
 -->
 <style>
@@ -160,7 +162,7 @@
     background:var(--focus); border-left-color:var(--acc); cursor:default;
   }
   .blk .hint {
-    position:absolute; right:16px; top:10px;
+    position:absolute; right:16px; top:8px;
     font:700 9px/1 var(--mono); letter-spacing:1px; color:var(--t4);
     opacity:0; transition:opacity .15s;
   }
@@ -169,41 +171,79 @@
   .blk .tw { transition:color .28s var(--ease); }
 
   /* ============================================================
-     右柱 · 仪表柱(240px 通高 · 常亮 chrome · 不参与聚光)
-     每格 = 9px 标签 + 22px 数字 + 12px 辅注 · 格间发丝线
+     区块头(v3 核心):区块名 15px + 9px 标签 + 发丝线 + 22px key 数字挂行内右端
+     焦点区数字 accent-ink · 非焦点区数字压 t4 但保持 22px
      ============================================================ */
-  .gauge {
-    grid-row:1 / -1; grid-column:2;
+  .bhd {
+    display:flex; align-items:baseline; gap:10px; margin-bottom:9px;
+  }
+  .bhd .bname { font:700 15px/1.2 var(--sans); color:var(--f1); flex:none; }
+  .bhd .btag {
+    font:700 9px/1 var(--mono); letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--f3); flex:none;
+  }
+  .bhd .brule { flex:1; height:1px; background:var(--hair); align-self:center; min-width:20px; }
+  .bhd .bkey {
+    font:700 22px/1 var(--mono); color:var(--t4); flex:none;
+    font-variant-numeric:tabular-nums; letter-spacing:-.5px;
+  }
+  .blk.focus .bhd .bkey { color:var(--acc-ink); }
+  .bhd .bkey small { font-size:12px; font-weight:400; letter-spacing:0; color:var(--f3); }
+  .bhd .bkey .pass { color:var(--green); font-weight:700; }
+
+  /* ============================================================
+     右柱 · 简报柱 BRIEFING(300px 通高 · 常亮 chrome · 不参与聚光)
+     世界的输入:新闻 / 邮件分诊 / 未来源占位 · 格间发丝线 · 整柱 overflow 隐
+     ============================================================ */
+  .brief {
+    grid-row:1; grid-column:2;
     background:var(--chrome); border-left:1px solid var(--line);
     display:flex; flex-direction:column; overflow:hidden;
   }
-  .gcell {
-    flex:none; padding:15px 20px 14px;
-    cursor:pointer;
-    transition:background-color .15s var(--ease);
-  }
-  .gcell + .gcell { border-top:1px solid var(--hair); }
-  .gcell:hover { background:var(--focus); }
-  .gcell .glab {
+  .brief .bchead {
+    flex:none; padding:12px 20px 11px;
     font:700 9px/1 var(--mono); letter-spacing:2px; text-transform:uppercase;
-    color:var(--t4); margin-bottom:8px;
-    display:flex; align-items:baseline; gap:8px;
+    color:var(--t4); border-bottom:1px solid var(--hair);
+    display:flex; align-items:baseline;
   }
-  .gcell .glab i { font-style:normal; margin-left:auto; letter-spacing:1px; color:var(--t4); }
-  .gcell .gnum {
-    font:700 22px/1 var(--mono); color:var(--t1);
-    font-variant-numeric:tabular-nums; letter-spacing:-.5px;
+  .brief .bchead i { font-style:normal; margin-left:auto; letter-spacing:1px; }
+  .bcell { flex:none; padding:13px 20px 13px; }
+  .bcell + .bcell { border-top:1px solid var(--hair); }
+  .bcell .blab {
+    font:700 9px/1 var(--mono); letter-spacing:2px; text-transform:uppercase;
+    color:var(--t4); margin-bottom:10px;
+    display:flex; align-items:baseline;
   }
-  .gcell .gnum small { font-size:12px; font-weight:400; color:var(--t3); letter-spacing:0; }
-  .gcell.acc .gnum { color:var(--acc-ink); }
-  .gcell .gnote { font:400 12px/1.45 var(--sans); color:var(--t3); margin-top:6px; }
-  .gcell .gnote b { color:var(--t2); font-weight:600; }
-  .gcell .gnote .ok { color:var(--green); }
-  .gauge .gfill { flex:1; }
+  .bcell .blab i { font-style:normal; margin-left:auto; letter-spacing:1px; }
+  .nitem + .nitem { margin-top:10px; }
+  .nitem .ntitle {
+    font:400 12.5px/1.35 var(--sans); color:var(--t2);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    cursor:pointer;
+  }
+  .nitem .ntitle:hover { color:var(--t1); }
+  .nitem .ntitle b { font-weight:600; color:var(--acc-ink); }
+  .nitem .nmeta {
+    font:400 9px/1 var(--mono); color:var(--t4); letter-spacing:.5px;
+    margin-top:4px; font-variant-numeric:tabular-nums;
+  }
+  .bghost {
+    border:1px dashed var(--line); padding:11px 13px;
+    font:400 11px/1.6 var(--sans); color:var(--t4);
+  }
+  .bghost .k9 { font:400 9px/1 var(--mono); letter-spacing:1px; }
+  .brief .bfill { flex:1; }
 
-  /* 右柱下半 · 预览段(驾驶舱用):同属常亮 chrome,不聚光 */
+  /* ============================================================
+     驾驶舱右柱(300px · 常亮 chrome):上=预览(flex 1)· 下=RUN 小格
+     ============================================================ */
+  .gauge {
+    grid-row:1; grid-column:2;
+    background:var(--chrome); border-left:1px solid var(--line);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
   .gprev {
-    flex:1; min-height:0; border-top:1px solid var(--line);
+    flex:1; min-height:0;
     padding:15px 20px 14px; display:flex; flex-direction:column; overflow:hidden;
   }
   .gprev .glab {
@@ -221,6 +261,25 @@
     font-variant-numeric:tabular-nums;
   }
   .gprev .tele b { color:var(--t3); font-weight:400; }
+  .gcell {
+    flex:none; padding:14px 20px 13px; border-top:1px solid var(--line);
+    cursor:pointer;
+    transition:background-color .15s var(--ease);
+  }
+  .gcell:hover { background:var(--focus); }
+  .gcell .glab {
+    font:700 9px/1 var(--mono); letter-spacing:2px; text-transform:uppercase;
+    color:var(--t4); margin-bottom:8px;
+    display:flex; align-items:baseline; gap:8px;
+  }
+  .gcell .glab i { font-style:normal; margin-left:auto; letter-spacing:1px; color:var(--t4); }
+  .gcell .gnum {
+    font:700 22px/1 var(--mono); color:var(--t1);
+    font-variant-numeric:tabular-nums; letter-spacing:-.5px;
+  }
+  .gcell.acc .gnum { color:var(--acc-ink); }
+  .gcell .gnote { font:400 12px/1.45 var(--sans); color:var(--t3); margin-top:6px; }
+  .gcell .gnote b { color:var(--t2); font-weight:600; }
 
   /* ============================================================
      屏 ① TODAY
@@ -248,30 +307,20 @@
   .dial .meta b { color:var(--t2); font-weight:700; }
   .dial .meta .acc { color:var(--acc-ink); }
 
-  /* —— 两区制主体:左列内容(flex 1)+ 右柱仪表(240px 通高) —— */
+  /* —— 两区制主体:左列内容(flex 1)+ 右柱简报(300px 通高) —— */
   .body2 {
     flex:1; min-height:0;
-    display:grid; grid-template-columns:1fr 240px; grid-template-rows:1fr;
+    display:grid; grid-template-columns:1fr 300px; grid-template-rows:1fr;
   }
   .body2 > .ledger { grid-row:1; grid-column:1; }
 
-  /* —— 左列账本:左槽 mono tag + 内容 items(不再挂右 key 列) —— */
+  /* —— 左列账本:区块头自带 key 数字 + 正文 items —— */
   .ledger { overflow:hidden; display:flex; flex-direction:column; min-width:0; }
-  .ledger .blk { padding:14px 42px 13px 40px; flex:none; }
+  .ledger .blk { padding:11px 42px 10px 40px; flex:none; }
   .ledger .blk + .blk { border-top:1px solid var(--hair); }
   .ledger .blk:last-child { flex:1; }
-  .brow {
-    display:grid; grid-template-columns:96px 1fr;
-    align-items:baseline; column-gap:20px;
-  }
-  .brow .tag {
-    font:700 9px/1.4 var(--mono); letter-spacing:1.5px; text-transform:uppercase;
-    color:var(--f3);
-  }
-  .brow .tag em { display:block; font-style:normal; color:var(--f3); margin-top:3px; }
-  .blk.focus .brow .tag em { color:var(--acc-ink); }
 
-  .items { display:flex; flex-direction:column; gap:7px; min-width:0; }
+  .items { display:flex; flex-direction:column; gap:6px; min-width:0; }
   .item { display:flex; align-items:baseline; gap:10px; min-width:0; }
   .item .bx { font:400 12px/1 var(--mono); color:var(--f3); }
   .blk.focus .item .bx.done { color:var(--green); }
@@ -321,18 +370,18 @@
   }
   .cp-head .now b { color:var(--t2); font-weight:700; }
 
-  /* —— 驾驶舱两区制:左=文件网格 右=仪表柱(上仪表格·下预览) 底=终端全宽 —— */
+  /* —— 驾驶舱两区制:左=文件网格 右=预览柱(上预览·下 RUN)· 底=终端全宽 —— */
   .cp-body {
     flex:1; min-height:0;
     display:grid;
-    grid-template-columns:1fr 240px;
+    grid-template-columns:1fr 300px;
     grid-template-rows:1fr 168px;
   }
-  .cp-body .files { grid-row:1; grid-column:1; padding:16px 28px 14px 30px; overflow:hidden; min-width:0; }
+  .cp-body .files { grid-row:1; grid-column:1; padding:14px 28px 14px 30px; overflow:hidden; min-width:0; }
   .cp-body .gauge { grid-row:1; grid-column:2; }
   .cp-body .termb { grid-row:2; grid-column:1 / -1; padding:10px 32px 12px 30px; overflow:hidden; border-top:1px solid var(--hair); display:flex; flex-direction:column; }
 
-  /* 区块头:9px 标签(不再挂右 key) */
+  /* 终端区块头:9px 标签 */
   .bhead {
     display:flex; align-items:baseline; gap:8px; margin-bottom:12px;
     font:700 9px/1 var(--mono); letter-spacing:2px; text-transform:uppercase; color:var(--f3);
@@ -395,15 +444,15 @@
 <body>
 <div id="root" data-theme="dark">
 
-  <!-- 说明条:两区制公式 + 主题切换 -->
+  <!-- 说明条:v3 公式 + 主题切换 -->
   <div class="page-head">
-    <h1>EXPLORE · HIER-A×C v2</h1>
-    <span class="sub">两区制:<b>内容沉左列</b>(正文 + 聚光焦点岛,左缘 2px <span class="a">accent</span>)· <b>数字集右柱</b>(240px 常亮仪表柱,9px 标签 + 22px 数字 + 12px 辅注,点格移光)· <b>锚恒亮</b>(72px 时钟 / 28px 项目名横跨两区)· <b>焦点跟点击</b>(280ms 气动移光)</span>
+    <h1>EXPLORE · HIER-A×C v3</h1>
+    <span class="sub"><b>数字回区块头</b>(区块名 15px + 9px 标签 + 22px key 数字挂区块头右端,焦点 <span class="a">accent</span> / 非焦点压 t4)· <b>右柱=世界输入</b>(300px 简报柱:新闻 / 邮件 / 未来源,常亮 chrome)· <b>左=我的一天,右=外面的世界</b> · 锚恒亮 + 280ms 气动移光不变</span>
     <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">THEME · DARK ⇄ LIGHT</button>
   </div>
 
   <!-- ════════════════ 屏 ① TODAY ════════════════ -->
-  <div class="screen-label">SCREEN 01 — <b>TODAY</b> 锚:72px 时钟横跨两区 · 左列内容默认聚光「任务」· 右柱五格仪表常亮 · 左看内容右看数字</div>
+  <div class="screen-label">SCREEN 01 — <b>TODAY</b> 锚:72px 时钟横跨两区 · 左列区块头自带 key 数字(默认聚光「任务」)· 右柱=简报柱(新闻/邮件/未来源)常亮</div>
 
   <div class="app" data-screen="today">
     <div class="rail">
@@ -447,99 +496,119 @@
         </div>
       </div>
 
-      <!-- 两区制:左列内容(聚光)+ 右柱仪表(常亮) -->
+      <!-- 两区制:左列=我的一天(聚光,区块头自带数字)· 右柱=外面的世界(常亮简报) -->
       <div class="body2">
 
-        <!-- 左列 · 内容区:行内不再挂 key 数字 -->
+        <!-- 左列 · 内容区:每个区块头右端挂该区块的 22px key 数字 -->
         <div class="ledger">
 
           <section class="blk focus" data-blk="tasks">
             <span class="hint">CLICK TO FOCUS</span>
-            <div class="brow">
-              <div class="tag tw">TASKS<em class="tw">今日</em></div>
-              <div class="items">
-                <div class="item"><span class="bx tw">□</span><span class="tx tw">把 Today 页字阶从窄带拉开成五级</span><span class="at tw">P1 · 设计</span></div>
-                <div class="item"><span class="bx done tw">◆</span><span class="tx done tw">DESIGN.md 补每日 accent 色轮说明</span><span class="at tw">已完成 11:20</span></div>
-                <div class="item"><span class="bx tw">□</span><span class="tx tw">notch 面板 media source 图标换单色 SVG</span><span class="at tw">P2 · notch</span></div>
-              </div>
+            <div class="bhd">
+              <span class="bname tw">任务</span>
+              <span class="btag tw">TASKS · 今日</span>
+              <span class="brule"></span>
+              <span class="bkey tw">2/3<small> 待办</small></span>
+            </div>
+            <div class="items">
+              <div class="item"><span class="bx tw">□</span><span class="tx tw">把 Today 页字阶从窄带拉开成五级</span><span class="at tw">P1 · 设计</span></div>
+              <div class="item"><span class="bx done tw">◆</span><span class="tx done tw">DESIGN.md 补每日 accent 色轮说明</span><span class="at tw">已完成 11:20</span></div>
+              <div class="item"><span class="bx tw">□</span><span class="tx tw">notch 面板 media source 图标换单色 SVG</span><span class="at tw">P2 · notch</span></div>
             </div>
           </section>
 
           <section class="blk" data-blk="journal">
             <span class="hint">CLICK TO FOCUS</span>
-            <div class="brow">
-              <div class="tag tw">JOURNAL<em class="tw">15:42</em></div>
-              <div class="items">
-                <div class="ghost tw">今天还没有落笔 — 按 <kbd class="tw">⌘N</kbd> 记一行,或直接开始输入…</div>
-              </div>
+            <div class="bhd">
+              <span class="bname tw">日记</span>
+              <span class="btag tw">JOURNAL · 15:42</span>
+              <span class="brule"></span>
+              <span class="bkey tw">0<small> 字 · 连 4 天</small></span>
+            </div>
+            <div class="items">
+              <div class="ghost tw">今天还没有落笔 — 按 <kbd class="tw">⌘N</kbd> 记一行,或直接开始输入…</div>
             </div>
           </section>
 
           <section class="blk" data-blk="agent">
             <span class="hint">CLICK TO FOCUS</span>
-            <div class="brow">
-              <div class="tag tw">AGENT<em class="tw">IDLE</em></div>
-              <div class="items">
-                <div class="agent-line"><span class="pulse tw">○</span><span class="tx15 tw">CLAUDE 待命 — 上次运行 14:03,helm/frontend 重构 rail,12 文件通过</span></div>
-              </div>
+            <div class="bhd">
+              <span class="bname tw">智能体</span>
+              <span class="btag tw">AGENT · IDLE</span>
+              <span class="brule"></span>
+              <span class="bkey tw">14:03<small> 上次运行</small></span>
+            </div>
+            <div class="items">
+              <div class="agent-line"><span class="pulse tw">○</span><span class="tx15 tw">CLAUDE 待命 — helm/frontend 重构 rail,12 文件通过</span></div>
             </div>
           </section>
 
           <section class="blk" data-blk="recent">
             <span class="hint">CLICK TO FOCUS</span>
-            <div class="brow">
-              <div class="tag tw">RECENT<em class="tw">项目</em></div>
-              <div class="items">
-                <div class="chips">
-                  <span class="chip hot"><b class="tw">helm</b><span class="k9 tw">2 分钟前 · ⎇ main</span></span>
-                  <span class="chip"><b class="tw">notch</b><span class="k9 tw">1 小时前</span></span>
-                  <span class="chip"><b class="tw">fanbox</b><span class="k9 tw">昨天</span></span>
-                </div>
+            <div class="bhd">
+              <span class="bname tw">最近</span>
+              <span class="btag tw">RECENT · 项目</span>
+              <span class="brule"></span>
+              <span class="bkey tw">3<small> 活跃</small></span>
+            </div>
+            <div class="items">
+              <div class="chips">
+                <span class="chip hot"><b class="tw">helm</b><span class="k9 tw">2 分钟前 · ⎇ main</span></span>
+                <span class="chip"><b class="tw">notch</b><span class="k9 tw">1 小时前</span></span>
+                <span class="chip"><b class="tw">fanbox</b><span class="k9 tw">昨天</span></span>
               </div>
             </div>
           </section>
 
           <section class="blk" data-blk="schedule">
             <span class="hint">CLICK TO FOCUS</span>
-            <div class="brow">
-              <div class="tag tw">SCHEDULE<em class="tw">下一项</em></div>
-              <div class="items">
-                <div class="item"><span class="bx tw">▸</span><span class="tx tw">设计评审 — Today 页层级方案对比</span><span class="at tw">持续 45 分钟</span></div>
-                <div class="item"><span class="bx tw" style="color:transparent">▸</span><span class="tx tw" style="color:var(--f2)">之后:自由 focus 块直到 19:00</span><span class="at tw"></span></div>
-              </div>
+            <div class="bhd">
+              <span class="bname tw">日程</span>
+              <span class="btag tw">SCHEDULE · 下一项</span>
+              <span class="brule"></span>
+              <span class="bkey tw">17:00<small> 还有 1H 18M</small></span>
+            </div>
+            <div class="items">
+              <div class="item"><span class="bx tw">▸</span><span class="tx tw">设计评审 — Today 页层级方案对比</span><span class="at tw">持续 45 分钟</span></div>
+              <div class="item"><span class="bx tw" style="color:transparent">▸</span><span class="tx tw" style="color:var(--f2)">之后:自由 focus 块直到 19:00</span><span class="at tw"></span></div>
             </div>
           </section>
 
         </div>
 
-        <!-- 右柱 · 仪表柱:关键数字集中堆叠,常亮 chrome,点格移光 -->
-        <aside class="gauge">
-          <div class="gcell" data-target="tasks">
-            <div class="glab">TASKS<i>今日</i></div>
-            <div class="gnum">2<small> / 3 待办</small></div>
-            <div class="gnote"><b>1</b> 已完成 · 最高 P1 设计</div>
+        <!-- 右柱 · 简报柱:世界的输入(新闻/邮件/未来源),常亮 chrome,不参与聚光 -->
+        <aside class="brief">
+          <div class="bchead">BRIEFING<i>世界输入</i></div>
+
+          <div class="bcell">
+            <div class="blab">NEWS<i>科技 · 3 条</i></div>
+            <div class="nitem">
+              <div class="ntitle">Anthropic 发布 Claude Fable 5 桌面协作栈</div>
+              <div class="nmeta">The Verge · 32 分钟前</div>
+            </div>
+            <div class="nitem">
+              <div class="ntitle">SwiftUI 新窗口 API 进 beta,macOS SDK 同步更新</div>
+              <div class="nmeta">Hacker News · 1 小时前</div>
+            </div>
+            <div class="nitem">
+              <div class="ntitle">SQLite 3.50 发布:WAL2 模式默认启用</div>
+              <div class="nmeta">lobste.rs · 3 小时前</div>
+            </div>
           </div>
-          <div class="gcell" data-target="journal">
-            <div class="glab">JOURNAL<i>连续</i></div>
-            <div class="gnum">0<small> 字</small></div>
-            <div class="gnote">连续记录 <b>4</b> 天 · 别断</div>
+
+          <div class="bcell">
+            <div class="blab">MAIL<i>AI 分诊</i></div>
+            <div class="nitem">
+              <div class="ntitle"><b>1 紧急</b> — Anthropic:API 用量 82%</div>
+              <div class="nmeta">billing@anthropic.com · 14:55 · 其余 6 封已归档</div>
+            </div>
           </div>
-          <div class="gcell" data-target="agent">
-            <div class="glab">AGENT<i>IDLE</i></div>
-            <div class="gnum">14:03</div>
-            <div class="gnote">上次运行 · <span class="ok">12 文件通过</span></div>
+
+          <div class="bcell">
+            <div class="bghost">+ 接入更多源<br><span class="k9">RSS · 行情 · NEWSLETTER</span></div>
           </div>
-          <div class="gcell" data-target="recent">
-            <div class="glab">PROJECTS<i>本周</i></div>
-            <div class="gnum">3<small> 活跃</small></div>
-            <div class="gnote"><b>helm</b> 最近 · 2 分钟前</div>
-          </div>
-          <div class="gcell acc" data-target="schedule">
-            <div class="glab">NEXT<i>还有 1H 18M</i></div>
-            <div class="gnum">17:00</div>
-            <div class="gnote">设计评审 · 45 分钟</div>
-          </div>
-          <div class="gfill"></div>
+
+          <div class="bfill"></div>
         </aside>
 
       </div>
@@ -555,7 +624,7 @@
   </div>
 
   <!-- ════════════════ 屏 ② COCKPIT ════════════════ -->
-  <div class="screen-label">SCREEN 02 — <b>COCKPIT · 驾驶舱</b> 锚:28px 项目名恒亮 · 左=文件网格(默认聚光)· 右柱=上仪表格下预览 · 终端底部全宽</div>
+  <div class="screen-label">SCREEN 02 — <b>COCKPIT · 驾驶舱</b> 锚:28px 项目名恒亮 · 文件区块头挂「128 项 · 0 改动 · CI PASS」· 右柱=预览 + RUN 小格 · 终端底部全宽</div>
 
   <div class="app" data-screen="cockpit">
     <div class="rail">
@@ -593,14 +662,16 @@
         <div class="now"><b>15:42</b> · SESSION #0427</div>
       </div>
 
-      <!-- 两区制:左=文件(聚光)· 右柱=仪表格+预览(常亮)· 底=终端全宽 -->
+      <!-- 两区制:左=文件(聚光,区块头挂数字)· 右柱=预览+RUN(常亮)· 底=终端全宽 -->
       <div class="cp-body">
 
         <section class="blk focus files" data-blk="files">
           <span class="hint">CLICK TO FOCUS</span>
-          <div class="bhead">
-            <span class="lab tw">FILES · ROOT</span>
-            <span class="rule"></span>
+          <div class="bhd">
+            <span class="bname tw">文件</span>
+            <span class="btag tw">FILES · ROOT</span>
+            <span class="brule"></span>
+            <span class="bkey tw">128<small> 项 · </small>0<small> 改动 · CI </small><span class="pass">PASS</span></span>
           </div>
           <div class="fgrid">
             <div class="fcard sel">
@@ -651,28 +722,8 @@
           </div>
         </section>
 
-        <!-- 右柱:上=仪表格(FILES/CHANGED/CI/RUN)· 下=预览 · 常亮不聚光 -->
+        <!-- 右柱:上=预览(驾驶舱的"其他东西",不放新闻)· 下=RUN 小格 · 常亮不聚光 -->
         <aside class="gauge">
-          <div class="gcell" data-target="files">
-            <div class="glab">FILES<i>已索引</i></div>
-            <div class="gnum">128<small> 项</small></div>
-            <div class="gnote">根目录 <b>9</b> 项 · frontend 最近</div>
-          </div>
-          <div class="gcell" data-target="files">
-            <div class="glab">CHANGED<i>工作区</i></div>
-            <div class="gnum">0</div>
-            <div class="gnote">干净 · ⎇ main ↑0</div>
-          </div>
-          <div class="gcell" data-target="terminal">
-            <div class="glab">CI<i>最新</i></div>
-            <div class="gnum" style="color:var(--green)">PASS</div>
-            <div class="gnote">vitest <b>34/34</b> · svelte-check 通过</div>
-          </div>
-          <div class="gcell acc" data-target="terminal">
-            <div class="glab">RUN<i>上次</i></div>
-            <div class="gnum">#0427</div>
-            <div class="gnote">14:03 · tok 14.2k · 2m 39s</div>
-          </div>
           <div class="gprev">
             <div class="glab">PREVIEW · frontend/</div>
             <div class="ptitle">frontend</div>
@@ -683,6 +734,11 @@
               <span>SESSION <b>#0427</b></span><span>MODEL <b>CLAUDE-4.6</b></span>
               <span>TOKENS <b>14.2K</b></span><span>AGENTS <b>0/2</b></span>
             </div>
+          </div>
+          <div class="gcell acc" data-target="terminal">
+            <div class="glab">RUN<i>上次</i></div>
+            <div class="gnum">#0427</div>
+            <div class="gnote">14:03 · tok 14.2k · 2m 39s</div>
           </div>
         </aside>
 
@@ -711,7 +767,7 @@
     </div>
   </div>
 
-  <!-- ════════════════ 三格规则脚注(两区制 v2) ════════════════ -->
+  <!-- ════════════════ 三格规则脚注(v3) ════════════════ -->
   <div class="spec">
     <div>
       <h4>1 · 屏锚层(恒亮)</h4>
@@ -719,17 +775,19 @@
       横跨左列与右柱之上,永远全亮 <b class="m">t1</b>,不挂 .blk、不参与聚光——屏幕的固定锚。
     </div>
     <div>
-      <h4>2 · 左列 · 内容区(聚光)</h4>
-      任务/日记/AGENT/最近/日程(与驾驶舱文件网格)的正文全部沉在左列,行内<b>不再挂右侧 22px key 数字</b>。
-      聚光系统保留:焦点岛背景 dark <b class="m">#0d0d10</b> / light <b class="m">#f2efe6</b> + 左缘 <b class="m">2px var(--acc)</b>,
-      点击 <b class="m">280ms cubic-bezier(.32,.72,0,1)</b> 气动移光,一屏只有一个亮岛。
+      <h4>2 · 左列 · 区块自带数字(聚光)</h4>
+      <b>数字回区块头</b>:每个区块头一行 = 区块名 <b class="m">15px/700</b> + <b class="m">9px</b> mono 标签 + 发丝线 +
+      该区块的 <b class="m">22px</b> key 数字挂在<b>区块头行内右端</b>(不贴屏幕边)。
+      例:「任务 TASKS —— 2/3 待办」「日记 JOURNAL —— 0 字·连4天」。
+      聚光不变:焦点岛 + 左缘 <b class="m">2px var(--acc)</b> + <b class="m">280ms cubic-bezier(.32,.72,0,1)</b> 气动移光;
+      焦点区数字 <span class="a">accent-ink</span>,非焦点区数字压 <b class="m">t4</b> 但保持 22px。一屏一亮岛。
     </div>
     <div>
-      <h4>3 · 右柱 · 仪表柱(常亮)</h4>
-      固定 <b class="m">240px</b> 通高,底色 <b class="m">var(--chrome)</b> + 左缘 <b class="m">1px var(--line)</b>。
-      关键数字集中堆叠:每格 = <b class="m">9px</b> 标签 + <b class="m">22px</b> 数字(t1 / 重点 <span class="a">accent-ink</span>)+ <b class="m">12px</b> 辅注,格间发丝线。
-      不参与聚光、不压暗——右看一眼 = 全部要害;点格 → 左列聚光滑到对应区。
-      字阶严格五级 <b class="m">9 / 12 / 15 / 22 / 72&amp;28</b>。眯眼:左边一处发亮 + 右边一根数字柱 + 顶上一个巨物,眼睛只需两个停靠点。
+      <h4>3 · 右柱 · 简报柱(世界输入 · 常亮)</h4>
+      <b class="m">300px</b> 通高,底色 <b class="m">var(--chrome)</b> + <b class="m">1px var(--line)</b> 分隔,常亮不参与聚光。
+      放<b>外面的世界</b>:新闻(12.5px 标题一行截断 + 9px 来源·时间)、邮件 AI 分诊、未来源诚实占位(虚线 ghost:RSS · 行情 · Newsletter)。
+      驾驶舱右柱=预览 + RUN 小格,不放新闻。<b>左=我的一天,右=外面的世界</b>,左右内容性质不同、不再重复。
+      眯眼:顶部巨物 + 左列一处亮岛(区块头右端有个亮数字)+ 右柱一列安静的简报。
     </div>
   </div>
 
@@ -755,7 +813,7 @@
       var b = e.target.closest('.blk');
       if (b && app.contains(b)) focusBlk(app, b);
     });
-    // 右柱仪表格:点格 → 左列聚光滑到对应区(复用同一 280ms 移光)
+    // 驾驶舱 RUN 小格:点格 → 左列聚光滑到对应区(复用同一 280ms 移光)
     app.querySelectorAll('.gcell[data-target]').forEach(function (g) {
       g.addEventListener('click', function () {
         focusBlk(app, app.querySelector('.blk[data-blk="' + g.dataset.target + '"]'));
