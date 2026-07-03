@@ -125,7 +125,7 @@ struct NotchView: View {
     private var collapsedBar: some View {
         HStack(spacing: 0) {
             collapsedLeft
-                .frame(width: model.collapsedLeftWing - 11, alignment: .trailing)
+                .padding(.leading, 13)
                 .padding(.trailing, 11)
             // Physical notch / camera gap, with the HTML camera lens dot.
             Color.clear.frame(width: CGFloat(model.notchWidth))
@@ -135,9 +135,17 @@ struct NotchView: View {
                         .frame(width: 7, height: 7).padding(.top, 8)
                 }
             collapsedRight
-                .frame(width: model.collapsedRightWing - 11, alignment: .leading)
                 .padding(.leading, 11)
+                .padding(.trailing, 13)
         }
+        .fixedSize(horizontal: true, vertical: false)
+        .frame(height: collapsedBarHeight)
+        // 实测内容宽度回填 model(窗口和黑壳都用它)——定宽估算会戳壳/留黑边
+        .background(GeometryReader { g in
+            Color.clear
+                .onAppear { model.collapsedMeasuredWidth = ceil(g.size.width) }
+                .onChange(of: g.size.width) { _, w in model.collapsedMeasuredWidth = ceil(w) }
+        })
         .frame(width: collapsedWidth, height: collapsedBarHeight)
         .contentShape(Rectangle())
         .onTapGesture { model.toggleExpanded() }
@@ -160,6 +168,7 @@ struct NotchView: View {
                 }
                 Text(np.title).font(.system(size: 10)).foregroundStyle(.white.opacity(0.56))
                     .lineLimit(1).truncationMode(.tail)
+                    .frame(maxWidth: 104, alignment: .leading) // 承 HTML cnp max-width:104px
             }
         } else {
             HStack(spacing: 6) {

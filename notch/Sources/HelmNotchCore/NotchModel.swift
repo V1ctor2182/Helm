@@ -267,8 +267,14 @@ public final class NotchModel {
         return 40
     }
 
+    /// 折叠条实测宽度(视图量完回填);nil=首帧未量,先用估算。
+    public var collapsedMeasuredWidth: CGFloat?
+
     public var collapsedWidth: CGFloat {
-        CGFloat(notchWidth) + collapsedLeftWing + collapsedRightWing
+        let estimate = CGFloat(notchWidth) + collapsedLeftWing + collapsedRightWing
+        guard let m = collapsedMeasuredWidth else { return estimate }
+        // 实测为准,但不窄于物理刘海+两侧最小呼吸
+        return max(m, CGFloat(notchWidth) + 76)
     }
 
     public var localAttentionCount: Int { localSessions.lazy.filter(\.needsAttention).count }
