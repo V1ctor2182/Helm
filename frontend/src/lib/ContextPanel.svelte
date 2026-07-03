@@ -1,18 +1,44 @@
 <script lang="ts">
   import { projects } from './project.svelte'
+  import { tasks } from './notes/tasksStore.svelte'
+  import { notes } from './notes/notesStore.svelte'
+  import { agent } from './orchestration/agentStore.svelte'
 
-  // 上下文面板（承 helm-pro.html `.ctx`）：当前项目 + 会话遥测块 + 坐标 chip
-  // + LOCAL 角标。原 TODAY 导航列与左侧 Rail 重复,2026-07-03 用户拍板删除。
-  // 遥测仍 mock(F8 账上待真流)。
+  // 上下文面板(承 helm-pro.html `.ctx`,内容重做):原 TODAY 导航与 Rail 重复
+  // 已删;原遥测块全是阶段1假数据,2026-07-03 同日换真仪表——每行都有数据源,
+  // 没有的行宁可不显示(真能用,不画饼)。
   const projName = $derived(projects.current?.name ?? 'helm')
-  const telem = [
-    ['SESSION', 'AAN·541GAQ'],
-    ['MODEL', 'claude-opus-4.8'],
-    ['TOKENS', '14213 / 1.0M'],
-    ['AGENTS', '2 LIVE / 5 IDLE'],
-    ['RAG', 'IDLE · 0 QUEUED'],
-    ['UPTIME', '10:58:23 · LOCAL'],
-  ]
+
+  let backendLabel = $state('…')
+
+  $effect(() => {
+    void tasks.load()
+    void notes.load()
+    void agent.loadRuns()
+    void (async () => {
+      try {
+        const r = await fetch('/healthz')
+        const j = (await r.json()) as { version?: string }
+        backendLabel = r.ok ? `OK · v${j.version ?? '?'}` : `HTTP ${r.status}`
+      } catch {
+        backendLabel = '离线'
+      }
+    })()
+  })
+
+  const enabledTasks = $derived(tasks.tasks.filter((t) => t.enabled).length)
+  const todayNotes = $derived.by(() => {
+    const today = new Date().toDateString()
+    return notes.notes.filter((n) => n.created_at && new Date(n.created_at).toDateString() === today).length
+  })
+  const runningRuns = $derived(agent.runs.filter((r) => r.status === 'running').length)
+
+  const telem = $derived([
+    ['BACKEND', backendLabel],
+    ['任务', `${enabledTasks} 启用 / ${tasks.tasks.length}`],
+    ['今日记录', `${todayNotes} 条`],
+    ['AGENT', `${runningRuns} 运行 / ${agent.runs.length} 历史`],
+  ])
 </script>
 
 <div class="ctxbody">
@@ -20,7 +46,9 @@
     <span class="pic" aria-hidden="true"></span>
     <div>
       <div class="pn">{projName}</div>
-      <div class="pb">⎇ feat/notch-media</div>
+      {#if projects.current?.path}
+        <div class="pb" title={projects.current.path}>{projects.current.path}</div>
+      {/if}
     </div>
   </div>
 
@@ -64,8 +92,13 @@
     font-size: 10px;
     color: var(--t4);
     margin-top: 1px;
+    max-width: 190px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
                 .telem {
+    font-variant-numeric: tabular-nums;
     margin-top: 18px;
     font-family: var(--mono);
     font-size: 10px;
