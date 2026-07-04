@@ -1076,24 +1076,26 @@ struct NotchView: View {
 
     /// `.bgcov` — the cover blurred + scaled behind everything, with a dark scrim.
     private var mediaBgCover: some View {
-        ZStack {
-            // Solid floor: whatever the material/cover brightness, the media panel
-            // never reads translucent and lyrics keep contrast (device feedback).
-            Color.black
-            Group {
-                if let np = model.nowPlaying, let art = nsArtwork(np) {
-                    Image(nsImage: art).resizable().aspectRatio(contentMode: .fill)
-                } else {
-                    LinearGradient(
-                        colors: [Color(red: 0.91, green: 0.63, blue: 0.48), Color(red: 0.71, green: 0.42, blue: 0.56), Color(red: 0.42, green: 0.31, blue: 0.56)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing)
+        // Color floor SIZES this view; the blurred cover rides in an overlay so its
+        // `.fill` aspect ratio can never inflate the layout. (Bug: as a ZStack child,
+        // a square cover answered a 582-wide proposal with 582×582 → the whole media
+        // module laid out at ~582pt tall inside the 360pt shell → centered content
+        // sank below the clip and controls/waveform were cut off.)
+        Color.black
+            .overlay {
+                Group {
+                    if let np = model.nowPlaying, let art = nsArtwork(np) {
+                        Image(nsImage: art).resizable().aspectRatio(contentMode: .fill)
+                    } else {
+                        LinearGradient(
+                            colors: [Color(red: 0.91, green: 0.63, blue: 0.48), Color(red: 0.71, green: 0.42, blue: 0.56), Color(red: 0.42, green: 0.31, blue: 0.56)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing)
+                    }
                 }
+                .blur(radius: 34).scaleEffect(1.3).opacity(0.6)
             }
-            .blur(radius: 34).scaleEffect(1.3).opacity(0.6)
-            Color.black.opacity(0.58)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .clipped()
+            .overlay(Color.black.opacity(0.58))
+            .clipped()
     }
 
     private func coverArt(_ np: NowPlaying?, size: CGFloat, radius: CGFloat) -> some View {
