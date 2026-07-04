@@ -241,7 +241,9 @@ struct NotchView: View {
                 .transition(moduleTransition)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .animation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.36), value: model.module)
-            dockBar
+            // HTML .mfull:媒体是全屏视图,用 ‹返回 导航、不显 dock——之前 dock 被
+            // 媒体的 maxHeight 挤出面板底缘,露半截圆钮被裁(2026-07-04 用户截图)。
+            if model.module != .media { dockBar }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         // Extra breathing room from the rounded panel edges (device feedback).

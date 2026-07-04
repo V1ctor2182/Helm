@@ -455,7 +455,17 @@ public final class NotchModel {
     }
 
     public func refreshMedia() async {
-        let snapshot = await media.nowPlaying()
+        var snapshot = await media.nowPlaying()
+        // 暂停/状态切换时 MediaRemote 偶尔不回传 artwork——同一首歌就沿用上一帧,
+        // 别让封面闪成 fallback 渐变(2026-07-04 用户:暂停会变绿一下)。
+        if let new = snapshot, new.artworkBase64 == nil,
+           let old = nowPlaying, old.title == new.title, old.artist == new.artist,
+           old.artworkBase64 != nil {
+            snapshot = NowPlaying(
+                title: new.title, artist: new.artist, isPlaying: new.isPlaying,
+                artworkBase64: old.artworkBase64,
+                elapsed: new.elapsed, duration: new.duration)
+        }
         nowPlaying = snapshot
         nowPlayingFetchedAt = Date()
         await refreshLyricsIfTrackChanged()
