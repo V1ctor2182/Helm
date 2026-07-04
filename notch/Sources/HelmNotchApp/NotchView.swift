@@ -80,13 +80,38 @@ struct NotchView: View {
             }
             return true
         }
-        .onHover { model.hover($0) }
+        // SwiftUI 的 hover tracking 会随子树重建(如媒体歌词 TimelineView 每 0.3s
+        // tick)反复失效——鼠标贴顶边时只发 exited 不补 entered → 面板收起,收起后
+        // 又 entered → 展开,循环"抽风"(2026-07-04 用户)。false 一律用全局鼠标位置
+        // 对活动区做权威复核,误报直接吞掉;真离开照常收起。
+        .onHover { inside in
+            if !inside && Self.mouseInsideActiveRegion(model: model) { return }
+            model.hover(inside)
+        }
         // iOS-style shell grow (content has its own, delayed, animations above).
         .animation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.54), value: model.expanded)
         // Animate the height re-flow when the active view changes (HTML notch
         // width/height transition = .46s cubic-bezier(.32,.72,0,1)).
         .animation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.46), value: model.autoExpandedHeight)
         .frame(maxWidth: .infinity, alignment: .top)  // center the shell in the canvas
+    }
+
+    /// AppKit 权威判定:全局鼠标是否仍在面板活动区(屏幕顶部中央 W×H,含容差)。
+    /// 用来吞掉 SwiftUI onHover 因子树重建(媒体 TimelineView tick)发出的虚假 exited。
+    private static func mouseInsideActiveRegion(model: NotchModel) -> Bool {
+        guard let screen = NSScreen.main else { return false }
+        let waiting = model.localSessions.first(where: { $0.needsAttention })
+        let w: CGFloat = waiting != nil
+            ? model.bannerSize.width
+            : (model.reminder != nil ? 560 : (model.expanded ? model.expandedWidth : model.collapsedWidth))
+        let h: CGFloat = waiting != nil
+            ? model.bannerSize.height
+            : (model.reminder != nil ? 152 : (model.expanded ? CGFloat(model.autoExpandedHeight) : 32))
+        let f = screen.frame
+        let m = NSEvent.mouseLocation
+        let pad: CGFloat = 4
+        return m.x >= f.midX - w / 2 - pad && m.x <= f.midX + w / 2 + pad
+            && m.y >= f.maxY - h - pad && m.y <= f.maxY
     }
 
     /// Notch background per the chosen material (HTML MATS). `.black` is the
