@@ -56,12 +56,20 @@ final class AdapterMediaController: MediaController, @unchecked Sendable {
         } else {
             playing = true
         }
+        // MediaRemote 的 elapsedTime 是「上次状态变化时的快照」,不随播放递增——
+        // 必须用同 payload 的 timestamp 折算到当下,否则每次轮询都把位置拉回
+        // 快照值(实测 6s 只走 1s),livePosition 冻结、歌词不滚(2026-07-04)。
+        var elapsed = number(dict, "elapsedTime", "elapsed", "position")
+        if playing, let snap = elapsed, let ts = dict["timestamp"] as? String,
+           let snapAt = ISO8601DateFormatter().date(from: ts) {
+            elapsed = snap + max(0, Date().timeIntervalSince(snapAt))
+        }
         return NowPlaying(
             title: title,
             artist: artist,
             isPlaying: playing,
             artworkBase64: dict["artworkData"] as? String,
-            elapsed: number(dict, "elapsedTime", "elapsed", "position"),
+            elapsed: elapsed,
             duration: number(dict, "duration", "totalTime", "length"))
     }
 
