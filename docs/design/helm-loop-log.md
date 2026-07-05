@@ -6,6 +6,14 @@
 
 <!-- 新条目追加到这条注释下面 -->
 
+## 2026-07-05 · today-v3-hierarchy(日间,用户定稿方向)· 层级三层制+左内右外落地第一屏
+- 决策链: 用户「layout/字体不清没重点」→ 三方向探索(A字号/B重量/C亮度)→ 拍板 A×C → 三轮迭代(v1 行内左右太远→v2 数字集右柱→v3 数字回区块头+右柱=世界输入)→ DESIGN.md 新增「层级三层制+左内右外」章节(a888dbe),决策记 workspace-layout room 060222f7
+- 改动: +helm/briefing.py(HN Firebase API 免费无 key,top3,10 分钟进程缓存,_make_client 注入可测,断网旧缓存/空数组降级);Today.svelte 全面重排 v3——72px 秒级活时钟锚(恒亮)+日期列+右上 meta;五区块聚光制(默认任务,点击 280ms 招牌缓动移光,焦点岛 tile 底+accent 左缘 inset shadow);区块头右端 22px mono key 全真数据(任务 启用/总、日记 今日字数+连续天数(journal_date 回溯)、智能体 上次运行 HH:MM、最近 项目数、日程 下一项时刻+还有 XH XM);右柱 300px 简报(NEWS=真 HN 3 条可点开、ghost「+接入更多源 RSS·行情·Newsletter」);无源 key 显示 — 不造假
+- 验证: pytest 208(+3 briefing:top3 跳坏条/离线空/缓存命中);前端 201(Today 测试重写:锚/区块/空态/聚光移动/世界输入);check 0/0;e2e 真机:HN 三条真头条渲染、聚光点击移到智能体、dark+light 截图
+- 疑点记录: 后端冷启动首个 briefing 请求超时返回空(6s 超时内 TLS 未就绪),缓存未污染二次即中;可接受
+- 契约/notch: 新增 GET /api/briefing,notch 不消费
+- 状态: ✅ commit(feat/cockpit-fanbox);后续:驾驶舱屏对齐 v3(28px 锚+文件区块头 key)在账
+
 ## 2026-07-03 · macos-shell-mvp(日间,用户拍板)· Swift+WKWebView 桌面壳
 - 决策: 三路线对比(Swift/Tauri/Electron)+Odysseus 启动器路线勘察后,用户拍板 Swift+WKWebView(决策记 platform-shell room 93b13555;PRD 原案 pywebview/薄 Electron 被替代)
 - 落地: 新顶层 macos/ 独立 SwiftPM 包(不动 notch 构建)——HelmShellApp.swift(~230 行):BackendProcess(8769 健康探测→复用已跑实例/否则拉起 .venv python -m helm,日志 ~/Library/Logs/Helm,退出只杀自己拉起的)+NSWindow+WKWebView(1440×900,frameAutosave,isInspectable)+标准 ⌘ 菜单(Edit 菜单缺失会废掉 WKWebView 的复制粘贴)+关窗驻留 Dock 复开+_blank→系统浏览器+加载失败 1s 重试(冷启动竞态);HELM_SHELL_URL 可指 5174 走 vite 热更新;build-app.sh(承 Odysseus 打包思路)产 Helm.app(140KB)+Helm.dmg(48KB),HelmRoot 烘焙进 Info.plist,ad-hoc 签名

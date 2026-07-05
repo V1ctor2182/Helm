@@ -33,27 +33,27 @@ afterEach(() => {
 })
 
 describe('Today · instrument readout(真数据)', () => {
-  it('renders the readout header, real rows and empty states', async () => {
-    tasks.tasks = [
-      {
-        id: 1, name: '每日邮件摘要', prompt: 'p', schedule_kind: 'cron', schedule_value: { expr: '0 9 * * *' },
-        execution_mode: 'new_conversation', enabled: true, next_run: '2026-07-03T01:00:00+00:00',
-        last_status: null, run_count: 0, linked_note_id: null,
-      },
-    ]
-    agent.runs = [
-      { id: 9, agent: 'claude-code', status: 'completed', prompt: '修构建', project_path: '/p', started_at: '2026-07-02T01:00:00', ended_at: null },
-    ]
-    cockpit.projects = [{ path: '/tmp/helm', name: 'helm', badges: [], last_opened: '2026-07-01T00:00:00' }]
+  it('renders the v3 dial anchor, block keys and briefing column', async () => {
     render(Today)
-    expect(screen.getByRole('heading', { name: /Today/ })).toBeInTheDocument()
-    expect(screen.getByText(/任务 \/ TASKS/)).toBeInTheDocument()
-    expect(await screen.findByText('每日邮件摘要')).toBeInTheDocument()
-    expect(screen.getByText('claude-code')).toBeInTheDocument()
-    expect(screen.getByText(/最近项目 \/ PROJECTS/)).toBeInTheDocument()
-    expect(screen.getByText('helm')).toBeInTheDocument()
-    // 日程空态
-    expect(screen.getByText(/没有即将到来的日程/)).toBeInTheDocument()
+    // 屏锚:时钟(HH:MM)与日期列
+    expect(document.querySelector('.clock')).not.toBeNull()
+    expect(document.querySelector('.datecol .d1')).not.toBeNull()
+    // 区块头 key:任务 0/0 启用(空库)
+    expect(await screen.findByText('任务')).toBeInTheDocument()
+    expect(screen.getByText('日记')).toBeInTheDocument()
+    expect(screen.getByText('智能体')).toBeInTheDocument()
+    // 空态
+    expect(screen.getByText(/没有定时任务/)).toBeInTheDocument()
+    expect(screen.getByText(/没有 agent 运行/)).toBeInTheDocument()
+    // 右柱:世界输入
+    expect(screen.getByLabelText('世界输入')).toBeInTheDocument()
+    expect(screen.getByText('BRIEFING')).toBeInTheDocument()
+    // 聚光:默认任务区 focus,点日记区移光
+    const blocks = document.querySelectorAll('.blk')
+    expect(blocks[0].className).toContain('focus')
+    await fireEvent.click(blocks[1])
+    expect(blocks[1].className).toContain('focus')
+    expect(blocks[0].className).not.toContain('focus')
   })
 
   it('shows empty states without data', () => {

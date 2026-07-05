@@ -111,6 +111,9 @@ def create_app(config: HelmConfig | None = None) -> FastAPI:
     app.include_router(tasks_router)
     # app.include_router(mail_router)  # mail disabled — re-add later
     app.include_router(calendar_router)
+    from helm.briefing import router as briefing_router
+
+    app.include_router(briefing_router)
 
     # Create tables now that every router module has imported its models.
     db.create_all()
