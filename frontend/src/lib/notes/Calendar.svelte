@@ -3,6 +3,7 @@
   // still sits under mail/ from the original email-calendar room; mail itself
   // is currently disabled but the calendar capability stands alone.
   import { calendar, type CalEvent } from '../mail/calendarStore.svelte'
+  import { tasks, type Task } from './tasksStore.svelte'
   import { localDate, localHHMM } from '../time'
   import { ConfirmGate } from '../confirm.svelte'
 
@@ -61,7 +62,21 @@
     monthCursor = new Date(monthCursor.getFullYear(), monthCursor.getMonth() + delta, 1)
   }
 
-  // 月网格:周一开头,前置空位 + 当月各天(挂上当日事件)
+  // 任务上日历(2026-07-06 用户:记录页还有任务,要 calendarview 式的呈现):
+  // 启用任务按 next_run 的本地日分组,与事件并排落格。
+  const tasksByDay = $derived(
+    (() => {
+      const byDay = new Map<string, Task[]>()
+      for (const t of tasks.tasks) {
+        if (!t.enabled || !t.next_run) continue
+        const k = localDate(t.next_run)
+        ;(byDay.get(k) ?? byDay.set(k, []).get(k)!).push(t)
+      }
+      return byDay
+    })(),
+  )
+
+  // 月网格:周一开头,前置空位 + 当月各天(挂上当日事件 + 当日将跑的任务)
   const monthCells = $derived(
     (() => {
       const y = monthCursor.getFullYear()
@@ -73,11 +88,11 @@
       }
       const lead = (new Date(y, m, 1).getDay() + 6) % 7
       const days = new Date(y, m + 1, 0).getDate()
-      const cells: { date: string | null; day: number; events: CalEvent[] }[] = []
-      for (let i = 0; i < lead; i++) cells.push({ date: null, day: 0, events: [] })
+      const cells: { date: string | null; day: number; events: CalEvent[]; dayTasks: Task[] }[] = []
+      for (let i = 0; i < lead; i++) cells.push({ date: null, day: 0, events: [], dayTasks: [] })
       for (let d = 1; d <= days; d++) {
         const key = fmtDay(y, m, d)
-        cells.push({ date: key, day: d, events: byDay.get(key) ?? [] })
+        cells.push({ date: key, day: d, events: byDay.get(key) ?? [], dayTasks: tasksByDay.get(key) ?? [] })
       }
       return cells
     })(),
@@ -92,6 +107,19 @@
         ;(groups.get(d) ?? groups.set(d, []).get(d)!).push(ev)
       }
       return [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+    })(),
+  )
+
+  // 列表(agenda)合流:事件 + 任务同一天并排(先事件后任务)。
+  const agendaDays = $derived(
+    (() => {
+      const evMap = new Map(eventsByDay)
+      const days = new Set<string>([...evMap.keys(), ...tasksByDay.keys()])
+      return [...days].sort().map((d) => ({
+        day: d,
+        evs: evMap.get(d) ?? [],
+        dts: tasksByDay.get(d) ?? [],
+      }))
     })(),
   )
 </script>
@@ -152,18 +180,24 @@
             {#each c.events.slice(0, 2) as ev (ev.id)}
               <span class="mev" title={ev.summary}>{ev.summary}</span>
             {/each}
-            {#if c.events.length > 2}<span class="mmore">+{c.events.length - 2}</span>{/if}
+            {#each c.dayTasks.slice(0, Math.max(0, 2 - c.events.length)) as t (t.id)}
+              <span class="mtask" title={`任务 · ${t.name}`}>▸ {t.name}</span>
+            {/each}
+            {#if c.events.length + c.dayTasks.length > 2}
+              <span class="mmore">+{c.events.length + c.dayTasks.length - 2}</span>
+            {/if}
           {/if}
         </div>
       {/each}
     </div>
-  {:else if calendar.events.length === 0}
-    <p class="empty">还没有日程 — 加一个事件,或导入 .ics。</p>
+    <div class="legend"><span class="lgev">▪ 事件</span><span class="lgtask">▸ 任务(下次触发)</span></div>
+  {:else if agendaDays.length === 0}
+    <p class="empty">还没有日程 — 加一个事件、导入 .ics,或建一个定时任务。</p>
   {:else}
-    {#each eventsByDay as [day, evs] (day)}
+    {#each agendaDays as g (g.day)}
       <section class="day">
-        <h3>{day}</h3>
-        {#each evs as ev (ev.id)}
+        <h3>{g.day}</h3>
+        {#each g.evs as ev (ev.id)}
           <div class="event">
             <span class="when">{ev.all_day ? '全天' : localHHMM(ev.start)}</span>
             <span class="esum">{ev.summary}</span>
@@ -175,6 +209,14 @@
               aria-label={`删除 ${ev.summary}`}
               onclick={() => del.confirm(`ev-${ev.id}`) && calendar.remove(ev.id)}
             >{del.pending === `ev-${ev.id}` ? '确认' : '×'}</button>
+          </div>
+        {/each}
+        {#each g.dts as t (t.id)}
+          <div class="event taskrow">
+            <span class="when">{t.next_run ? localHHMM(t.next_run) : '—'}</span>
+            <span class="tmark" aria-hidden="true">▸</span>
+            <span class="esum">{t.name}</span>
+            <span class="esrc">任务</span>
           </div>
         {/each}
       </section>
@@ -434,6 +476,34 @@
     white-space: nowrap;
     border-left: 2px solid var(--acc);
     padding-left: 4px;
+  }
+  /* 任务落格:mono ▸ 行,青色左沿与事件(accent)区分 */
+  .mtask {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--t3);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-left: 2px solid var(--cyan);
+    padding-left: 4px;
+  }
+  .legend {
+    display: flex;
+    gap: 14px;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.5px;
+    color: var(--t4);
+    margin-top: 2px;
+  }
+  .legend .lgev { color: var(--acc-ink); }
+  .legend .lgtask { color: var(--cyan); }
+  .event.taskrow .esum { color: var(--t3); }
+  .tmark {
+    font-family: var(--mono);
+    color: var(--cyan);
+    font-size: 10px;
   }
   .mmore {
     font-family: var(--mono);

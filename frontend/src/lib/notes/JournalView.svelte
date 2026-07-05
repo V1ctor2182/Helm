@@ -6,7 +6,7 @@
   import { notes, type Note } from './notesStore.svelte'
   import { tasks } from './tasksStore.svelte'
   import { calendar } from '../mail/calendarStore.svelte'
-  import { localHHMM, localDateTime } from '../time'
+  import { localHHMM, localDate, localDateTime } from '../time'
   import { ConfirmGate } from '../confirm.svelte'
   import Calendar from './Calendar.svelte'
 
@@ -117,9 +117,31 @@
     view = 'tasks'
   }
 
-  // One load, two derived views (kind split) — captures and journal share the table.
+  // One load, three derived views (kind split) — captures/journal/todos share the table.
   const noteItems = $derived(notes.notes.filter((n) => n.kind === 'note'))
   const journalItems = $derived(notes.notes.filter((n) => n.kind === 'journal' || n.kind === 'focus'))
+  // 「给自己」的任务(notch/捕获坞分流后落 notes kind:task)——任务 tab 顶部待办段。
+  const todoItems = $derived(notes.notes.filter((n) => n.kind === 'task'))
+
+  // 速记按天分组(最新日在前;今天/昨天友好标)——2026-07-06 用户:页面要结构化。
+  const notesByDate = $derived(
+    (() => {
+      const groups = new Map<string, Note[]>()
+      for (const n of noteItems) {
+        const d = n.created_at ? localDate(n.created_at) : '未知时间'
+        ;(groups.get(d) ?? groups.set(d, []).get(d)!).push(n)
+      }
+      return [...groups.entries()].sort((a, b) => b[0].localeCompare(a[0]))
+    })(),
+  )
+  function dayLabel(d: string): string {
+    const t = new Date()
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const todayK = `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`
+    const y = new Date(t.getTime() - 86400000)
+    const yestK = `${y.getFullYear()}-${pad(y.getMonth() + 1)}-${pad(y.getDate())}`
+    return d === todayK ? `今天 · ${d.slice(5)}` : d === yestK ? `昨天 · ${d.slice(5)}` : d
+  }
 
   // Group journal entries by date (newest day first).
   const journalByDate = $derived(
@@ -196,8 +218,10 @@
         {#if noteItems.length === 0}
           <p class="empty">还没有速记 — 上面记一笔,或用 ⌘N 随手记。</p>
         {:else}
+          {#each notesByDate as [d, items] (d)}
+          <div class="dstamp">{dayLabel(d)}<span class="dn">{items.length} 条</span></div>
           <ul class="list">
-            {#each noteItems as n (n.id)}
+            {#each items as n (n.id)}
               <li class="note">
                 <span class="nt">{localHHMM(n.created_at)}</span>
                 {#if editingId === n.id}
@@ -225,6 +249,7 @@
               </li>
             {/each}
           </ul>
+          {/each}
         {/if}
       </div>
     </div>
@@ -330,10 +355,38 @@
       </form>
     </div>
     {#if tasks.error}<p class="err" role="alert">{tasks.error}</p>{/if}
+    <!-- 待办(给自己):notch/捕获坞「给自己」的任务落 notes kind:task,在这归账 -->
+    <div class="row">
+      <div class="gut"><span class="tm">待办</span><br />{todoItems.length} 条</div>
+      <div>
+        <div class="h">待办 / MINE(给自己)</div>
+        {#if todoItems.length === 0}
+          <p class="empty">没有待办 — 捕获坞/刘海里选「任务 · 给自己」记一条。</p>
+        {:else}
+          <ul class="list">
+            {#each todoItems as n (n.id)}
+              <li class="note">
+                <span class="nt">{localHHMM(n.created_at)}</span>
+                <span class="body">{n.content}</span>
+                <span class="acts">
+                  <button class="act" title="转为定时任务(交给 agent)" onclick={() => noteToTask(n)}>→交给 agent</button>
+                  <button
+                    class="act del"
+                    class:armed={del.pending === `todo-${n.id}`}
+                    aria-label={`删除 ${n.content}`}
+                    onclick={() => del.confirm(`todo-${n.id}`) && notes.remove(n.id)}
+                  >{del.pending === `todo-${n.id}` ? '确认' : '×'}</button>
+                </span>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </div>
+    </div>
     <div class="row">
       <div class="gut"><span class="tm">定时</span><br />{tasks.tasks.length} 项</div>
       <div>
-        <div class="h">任务 / SCHEDULED</div>
+        <div class="h">任务 / SCHEDULED · 交给 AGENT</div>
         {#if tasks.tasks.length === 0}
           <p class="empty">还没有定时任务 — 加一个,到点自动触发 agent。</p>
         {:else}
@@ -396,7 +449,7 @@
   .jnt {
     height: 100%;
     overflow: auto;
-    padding: 18px 24px 24px 14px; /* 左侧留白:设计稿原为 0,用户反馈字贴边(2026-07-03) */
+    padding: 18px 24px 24px 22px; /* 左侧留白:用户反馈字贴边(07-03);07-06 再提一档 */
     font-family: var(--sans);
     color: var(--t2);
     max-width: 860px; /* 阅读行长上限(承旧版 760 的约束) */
@@ -479,6 +532,20 @@
     padding-top: 3px;
     letter-spacing: .3px;
   }
+  /* 速记按天界标(今天/昨天/日期 + 条数) */
+  .dstamp {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--acc-ink);
+    letter-spacing: 0.6px;
+    margin: 12px 0 4px;
+  }
+  .dstamp:first-of-type { margin-top: 2px; }
+  .dstamp .dn { color: var(--t4); font-size: 9px; }
+
   .h {
     font-family: var(--mono);
     font-size: 10px;
