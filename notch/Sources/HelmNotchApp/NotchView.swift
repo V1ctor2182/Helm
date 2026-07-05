@@ -1091,13 +1091,20 @@ struct NotchView: View {
                     }
                 }
                 .frame(maxHeight: .infinity, alignment: noLyrics ? .center : .top)
-
-                Waveform(playing: np?.isPlaying ?? true, color: accent)
-                    .frame(height: 24).padding(.top, 7)
             }
             .padding(EdgeInsets(top: 9, leading: 16, bottom: 9, trailing: 16))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // 波形贴在背景底部,不占布局行——内容/歌词区拿回这块空间
+        // (2026-07-05 用户:动态放背景,别额外开下面的空间)。
+        .overlay(alignment: .bottom) {
+            Waveform(playing: np?.isPlaying ?? true, color: accent)
+                .frame(height: 24)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 4)
+                .opacity(0.55)
+                .allowsHitTesting(false)
+        }
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
