@@ -1493,14 +1493,11 @@ struct NotchView: View {
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(accent.opacity(model.locked ? 0.5 : 0), lineWidth: 1.5))
                 .padding(.top, 7)
             if !model.captureFiles.isEmpty { captureFilesRow.padding(.top, 8) }
-            // caprow — 时间/地点 chips(note/task)或 hint,右侧 发送(HTML .caprow).
+            // caprow — hint + 发送(HTML .caprow)。时间/地点手选已删:发送后由
+            // Helm 侧 AI 解析内容自动补(2026-07-05 用户)。
             HStack(alignment: .center, spacing: 8) {
-                if model.captureKind == .note || model.captureKind == .task {
-                    attachmentRow
-                } else {
-                    Text(captureHint).font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
-                    Spacer(minLength: 0)
-                }
+                Text(captureHint).font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
+                Spacer(minLength: 0)
                 sendButton
             }
             .padding(.top, 10)
@@ -1540,7 +1537,8 @@ struct NotchView: View {
         if !model.captureFiles.isEmpty { return "写点备注,发送 → Helm 帮你归档这些文件" }
         switch model.captureKind {
         case .ask: return "TAB 切换 · 问 Helm 大脑 · ⏎ 发送"
-        default: return "TAB 切换 · ⏎ 发送 · 可加时间/地点上日历"
+        case .journal: return "TAB 切换 · ⏎ 发送"
+        default: return "TAB 切换 · ⏎ 发送 · AI 自动整理时间/地点"
         }
     }
 
@@ -1629,42 +1627,7 @@ struct NotchView: View {
         }
     }
 
-    /// 时间 / 地点 chips (HTML .capatt). Demo values; real pickers are a TODO.
-    private var attachmentRow: some View {
-        HStack(spacing: 7) {
-            attachmentChip(systemImage: "clock", value: model.captureWhen,
-                           add: { model.captureWhen = "今天 15:00" }, remove: { model.captureWhen = nil }, label: "时间")
-            attachmentChip(systemImage: "mappin.and.ellipse", value: model.captureWhere,
-                           add: { model.captureWhere = "Brooklyn, New York" }, remove: { model.captureWhere = nil }, label: "地点")
-            Spacer(minLength: 0)
-        }
-    }
-
-    private func attachmentChip(systemImage: String, value: String?, add: @escaping () -> Void, remove: @escaping () -> Void, label: String) -> some View {
-        Group {
-            if let value {
-                HStack(spacing: 6) {
-                    Image(systemName: systemImage).font(.system(size: 10)).foregroundStyle(accent)
-                    Text(value).font(.system(size: 11)).foregroundStyle(.white)
-                    Button { remove() } label: { Image(systemName: "xmark").font(.system(size: 8)).foregroundStyle(.white.opacity(0.34)) }
-                        .buttonStyle(.plain)
-                }
-                .padding(.horizontal, 9).padding(.vertical, 5)
-                .background(Capsule().fill(Color(white: 0.16)))
-            } else {
-                Button(action: add) {
-                    HStack(spacing: 6) {
-                        Image(systemName: systemImage).font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
-                        Text(label).font(.system(size: 11)).foregroundStyle(.white.opacity(0.56))
-                    }
-                    .padding(.horizontal, 12).padding(.vertical, 5)
-                    .background(Capsule().fill(.white.opacity(0.06)))
-                    .overlay(Capsule().stroke(.white.opacity(0.09), lineWidth: 0.5))
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
+    // 时间/地点手选 chips 已删(2026-07-05):发送后由 Helm 侧 AI 解析补全。
 
     /// 最近 速记/日记/任务 (HTML .recents) — seed data; real recents need backend.
     /// ask 答案卡:大脑的回答 + 存速记。

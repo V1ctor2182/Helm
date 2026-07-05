@@ -38,6 +38,13 @@ final class FakeBackend: HelmBackend, @unchecked Sendable {
         if shouldFailCapture { throw HelmError.badStatus(500) }
         tasks.append(prompt)
     }
+
+    func ask(_ q: String) async throws -> String {
+        if shouldFailCapture { throw HelmError.badStatus(500) }
+        asked.append(q)
+        return "答:\(q)"
+    }
+    private(set) var asked: [String] = []
 }
 
 struct StubError: Error {}
@@ -316,9 +323,9 @@ final class NotchModuleTests: XCTestCase {
         XCTAssertEqual(model.viewHeight(), 240)
         model.module = .capture
         model.captureKind = .task
-        XCTAssertEqual(model.viewHeight(), 258)
+        XCTAssertEqual(model.viewHeight(), 232)
         model.captureKind = .note
-        XCTAssertEqual(model.viewHeight(), 214)
+        XCTAssertEqual(model.viewHeight(), 208)
     }
 
     @MainActor
@@ -356,9 +363,9 @@ final class NotchModuleTests: XCTestCase {
         let model = NotchModel(backend: FakeBackend())
         model.module = .capture
         model.captureKind = .note
-        XCTAssertEqual(model.viewHeight(), 214)
+        XCTAssertEqual(model.viewHeight(), 208)
         model.captureShowRecent = true
-        XCTAssertEqual(model.viewHeight(), 278)  // 214 + 64
+        XCTAssertEqual(model.viewHeight(), 272)  // 208 + 64
     }
 
     @MainActor
@@ -368,18 +375,31 @@ final class NotchModuleTests: XCTestCase {
     }
 
     @MainActor
-    func testCaptureFoldsTimeAndPlaceAndResets() async {
+    func testTaskForMyselfPostsAsTaskNote() async {
+        // 给自己 = 记录型待办 → notes(kind:task),不进调度任务。
         let backend = FakeBackend()
         let model = NotchModel(backend: backend)
-        model.captureKind = .note
+        model.captureKind = .task
+        model.taskTarget = .me
         model.captureText = "买牛奶"
-        model.captureWhen = "今天 15:00"
-        model.captureWhere = "Brooklyn"
         await model.submit()
         XCTAssertEqual(backend.notes.count, 1)
-        XCTAssertEqual(backend.notes[0].content, "买牛奶 · 今天 15:00 · Brooklyn")
-        XCTAssertNil(model.captureWhen)
-        XCTAssertNil(model.captureWhere)
+        XCTAssertEqual(backend.notes[0].kind, "task")
+        XCTAssertEqual(backend.notes[0].content, "买牛奶")
+        XCTAssertTrue(backend.tasks.isEmpty)
+    }
+
+    @MainActor
+    func testTaskForAgentPostsAsScheduledTask() async {
+        // 交给 agent = 调度任务 → /api/tasks。
+        let backend = FakeBackend()
+        let model = NotchModel(backend: backend)
+        model.captureKind = .task
+        model.taskTarget = .agent
+        model.captureText = "到点跑测试"
+        await model.submit()
+        XCTAssertEqual(backend.tasks, ["到点跑测试"])
+        XCTAssertTrue(backend.notes.isEmpty)
     }
 
     @MainActor
@@ -417,14 +437,16 @@ final class NotchModuleTests: XCTestCase {
     }
 
     @MainActor
-    func testAskPostsAsAskNote() async {
+    func testAskQueriesBrainAndShowsAnswer() async {
+        // 2026-07-03 语义:ask = 真问大脑(/api/ask),显示答案,不落 note。
         let backend = FakeBackend()
         let model = NotchModel(backend: backend)
         model.captureKind = .ask
         model.captureText = "Helm 怎么配后端?"
         await model.submit()
-        XCTAssertEqual(backend.notes.count, 1)
-        XCTAssertEqual(backend.notes[0].kind, "ask")
+        XCTAssertEqual(backend.asked, ["Helm 怎么配后端?"])
+        XCTAssertEqual(model.askAnswer, "答:Helm 怎么配后端?")
+        XCTAssertTrue(backend.notes.isEmpty)
         XCTAssertEqual(model.captureStatus, .sent)
     }
 
@@ -531,9 +553,11 @@ final class CaptureTests: XCTestCase {
 
     @MainActor
     func testTaskCapturePostsTask() async {
+        // 2026-07-05 语义:默认 taskTarget=.me → 记录型待办;.agent 才进调度任务。
         let backend = FakeBackend()
         let model = NotchModel(backend: backend)
         model.captureKind = .task
+        model.taskTarget = .agent
         model.captureText = "汇总今日进展"
         await model.submit()
         XCTAssertEqual(backend.tasks, ["汇总今日进展"])

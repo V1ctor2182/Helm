@@ -18,12 +18,9 @@ public final class NotchModel {
     public var captureText = ""
     public private(set) var captureStatus: CaptureStatus = .idle
 
-    // Capture extras (HTML S.taskTo / capWhen / capWhere / showRecent).
-    /// For a task: send to myself (`/api/tasks`) or hand to an agent.
+    // Capture extras (HTML S.taskTo / showRecent).
+    /// For a task: keep it for myself (notes) or hand it to an agent (tasks).
     public var taskTarget: TaskTarget = .me
-    /// Optional time / place attachments appended to the capture.
-    public var captureWhen: String?
-    public var captureWhere: String?
     /// Whether the "最近" recents strip is expanded (affects panel height).
     public var captureShowRecent = false
     /// Files dragged onto the notch, staged for the capture (HTML S.files).
@@ -174,14 +171,16 @@ public final class NotchModel {
             }
         // Tightened vs the HTML prototype — the Swift content is more compact, so
         // the taller HTML budgets left too much empty space below (device feedback).
+        // 删掉时间/地点行后内容更矮,预算跟着收(2026-07-05 用户:任务下面空太大)。
+        // 预算含 dock(~54):note 208 / task +24(target 行) / ask+answer 322。
         case .capture:
             captureKind == .focus
                 ? (focusOn ? 300 : 240)
                 : (captureKind == .ask && askAnswer != nil
-                    ? 330
+                    ? 322
                     : (captureShowRecent
-                        ? min(320, (captureKind == .task ? 258 : 214) + 64)
-                        : (captureKind == .task ? 258 : 214)))
+                        ? min(320, (captureKind == .task ? 232 : 208) + 64)
+                        : (captureKind == .task ? 232 : 208)))
         }
     }
 
@@ -671,16 +670,13 @@ public final class NotchModel {
         captureStatus = .idle
     }
 
-    /// Submit the current capture text to Helm via the kind's endpoint. Time /
-    /// place attachments are folded into the content (HTML `ext`).
-    /// TODO(align-capture): taskTarget=.agent should route to the Cockpit agent
-    /// endpoint; for now both targets use `/api/tasks`.
+    /// Submit the current capture text to Helm via the kind's endpoint.
+    /// 时间/地点不再手选——发送后由 Helm 侧 AI 解析内容自动补(2026-07-05 用户:
+    /// 除日记外的记录都走 AI 优化+parse;TODO(ai-parse) 属 F6 阶段2)。
     public func submit() async {
         let text = captureText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         var ext = ""
-        if let w = captureWhen { ext += " · \(w)" }
-        if let p = captureWhere { ext += " · \(p)" }
         // 拖进来的文件:名字折进内容(真文件上传等 journal 附件 schema,P2 在账)
         if !captureFiles.isEmpty {
             ext += "\n附件: " + captureFiles.map(\.name).joined(separator: ", ")
@@ -693,7 +689,12 @@ public final class NotchModel {
             case .journal:
                 try await backend.createNote(content: text + ext, kind: "journal", journalDate: Self.today())
             case .task:
-                try await backend.createTask(prompt: text + ext)
+                // 给自己 = 记录型待办(notes/kind:task);交给 agent = 调度任务(/api/tasks)。
+                if taskTarget == .me {
+                    try await backend.createNote(content: text + ext, kind: "task", journalDate: nil)
+                } else {
+                    try await backend.createTask(prompt: text + ext)
+                }
             case .focus:
                 return  // focus uses start/stop, not submit
             case .ask:
@@ -704,8 +705,6 @@ public final class NotchModel {
                 askAnswer = answer
             }
             captureText = ""
-            captureWhen = nil
-            captureWhere = nil
             captureFiles = []
             captureStatus = .sent
         } catch {
