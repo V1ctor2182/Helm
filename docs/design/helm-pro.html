@@ -131,9 +131,18 @@
   .projline .pp{color:var(--t2)}.projline .br{font-family:var(--mono);font-size:10px;color:var(--t4);margin-left:auto}
   .mailn{display:flex;align-items:center;gap:10px;padding:4px 0;font-size:12.5px}
   .mailn .fl{width:6px;height:6px;border-radius:50%;background:var(--red);flex:none}
-  .qacts{padding-left:60px;margin-top:15px;display:flex;gap:8px}
-  .qa{font-family:var(--mono);font-size:11px;color:var(--t3);border:1px solid var(--line);padding:6px 11px;cursor:pointer}
-  .qa:hover{color:var(--t1)}.qa.pri{color:var(--acc-ink);border-color:var(--acc-ink)}
+  /* 捕获坞(2026-07-06 用户拍板,替代原 qacts 快速动作行——那三个钮与 Rail/本坞重复) */
+  .capdock{position:relative;border:1px solid var(--line);padding:10px 12px;margin:4px 0 12px 60px}
+  .capdock::before,.capdock::after{content:"";position:absolute;width:9px;height:9px;border:1.4px solid var(--acc-ink)}
+  .capdock::before{top:-1px;left:-1px;border-right:none;border-bottom:none}
+  .capdock::after{bottom:-1px;right:-1px;border-left:none;border-top:none}
+  .cchips{display:flex;gap:6px}
+  .cchip{font-family:var(--mono);font-size:11px;color:var(--t3);border:1px solid var(--hair);padding:4px 10px;cursor:pointer}
+  .cchip.on{color:var(--acc-ink);border-color:var(--acc-ink)}
+  .crow{display:flex;gap:8px;margin-top:9px;align-items:center}
+  .cph{flex:1;border-bottom:1px solid var(--hair);color:var(--t4);font-size:13.5px;padding:5px 1px 6px}
+  .csend{font-family:var(--mono);font-size:11px;color:var(--acc-ink);border:1px solid var(--acc-ink);padding:5px 12px;cursor:pointer}
+  .chint{margin-top:6px;font-family:var(--mono);font-size:10px;color:var(--t4);letter-spacing:.3px}
 
   .edge{background:var(--panel);border-left:1px solid var(--hair);writing-mode:vertical-rl;display:flex;align-items:center;justify-content:center;color:var(--t4);font-family:var(--mono);font-size:9px;letter-spacing:2px;cursor:pointer}
 
@@ -229,6 +238,17 @@
       <div class="rd">
         <div class="rdhead"><h3>TODAY</h3><span class="date">周三 · 25.03 · 08:41</span><span class="pg">LOADING · 001/009</span></div>
 
+        <!-- 捕获坞(2026-07-06 用户拍板):notch 5-kind 同款,统一捕获入口。
+             同时删掉页底快速动作行(＋新Chat/发起研究/记一条)——与 Rail 的
+             Chat/Research 图标及本坞重复,一个入口一件事。 -->
+        <div class="capdock">
+          <div class="cchips">
+            <span class="cchip on">速记</span><span class="cchip">日记</span><span class="cchip">任务</span><span class="cchip">专注</span><span class="cchip">问大脑</span>
+          </div>
+          <div class="crow"><span class="cph">随手记一笔…<span class="car"></span></span><span class="csend">发送</span></div>
+          <div class="chint">⏎ 发送 · AI 自动整理时间/地点</div>
+        </div>
+
         <div class="rdrow"><div class="gut"><span class="tm">今日</span><br>3 未完</div><div>
           <div class="h">任务 / TASKS</div>
           <div class="task"><span class="cbx"></span>对齐 notch scroll 手感（实机复验）<span class="due hot">今天</span></div>
@@ -261,7 +281,7 @@
           <div class="mailn"><span class="fl"></span><span style="color:var(--t2)">Anthropic</span><span style="color:var(--t4)">— API 用量本月…</span><span class="due" style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--orange)">紧急</span></div>
         </div></div>
 
-        <div class="qacts"><span class="qa pri">＋ 新 Chat</span><span class="qa">发起研究</span><span class="qa">记一条 · ⌘N</span></div>
+        <!-- 快速动作行已删(2026-07-06):与 Rail 导航/捕获坞重复 -->
       </div>
     </main>
 

@@ -101,14 +101,7 @@
     return m < 60 ? `还有 ${m}M` : `还有 ${Math.floor(m / 60)}H ${m % 60}M`
   })
 
-  function newChat() {
-    layout.setMode('chat')
-    layout.openTab('New Chat', 'chat')
-  }
-  function newResearch() {
-    layout.setMode('research')
-    layout.openTab('Research', 'research')
-  }
+  // 快速动作行已删(2026-07-06 用户:与 Rail 导航/捕获坞重复,一个入口一件事)。
   function openProject(path: string) {
     void cockpit.openProject(path)
     layout.setMode('cockpit')
@@ -257,11 +250,6 @@
         {/if}
       </section>
 
-      <div class="qacts">
-        <button class="qa pri" onclick={newChat}>＋ 新 Chat</button>
-        <button class="qa" onclick={newResearch}>发起研究</button>
-        <button class="qa" onclick={() => layout.openCapture()}>记一条 · ⌘N</button>
-      </div>
     </div>
 
     <!-- 右柱:世界输入(常亮 chrome,不参与聚光) -->
@@ -570,29 +558,6 @@
   .blk.last {
     flex: none;
   }
-  .qacts {
-    display: flex;
-    gap: 10px;
-    padding: 18px 30px 22px 40px;
-    margin-top: auto;
-  }
-  .qa {
-    font: 600 13px/1 var(--sans);
-    color: var(--t2);
-    background: transparent;
-    border: 1px solid var(--line);
-    padding: 9px 14px;
-    cursor: pointer;
-  }
-  .qa.pri {
-    border-color: var(--t2);
-    color: var(--t1);
-  }
-  .qa:hover {
-    border-color: var(--acc);
-    color: var(--t1);
-  }
-
   /* —— 右柱:世界输入(常亮) —— */
   .brief {
     border-left: 1px solid var(--line);

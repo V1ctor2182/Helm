@@ -66,17 +66,12 @@ describe('Today · instrument readout(真数据)', () => {
     expect(screen.getByText(/还没有项目/)).toBeInTheDocument()
   })
 
-  it('New Chat switches to chat mode and opens a tab', async () => {
+  it('quick-action row is gone (dedup: Rail/CaptureDock own those entries)', () => {
+    // 2026-07-06 用户拍板:＋新Chat/发起研究/记一条 与 Rail 导航、捕获坞重复,删。
     render(Today)
-    await fireEvent.click(screen.getByRole('button', { name: /新 Chat/ }))
-    expect(layout.mode).toBe('chat')
-    expect(layout.tabs.some((t) => t.mode === 'chat')).toBe(true)
-  })
-
-  it('发起研究 switches to research mode', async () => {
-    render(Today)
-    await fireEvent.click(screen.getByRole('button', { name: /发起研究/ }))
-    expect(layout.mode).toBe('research')
+    expect(screen.queryByRole('button', { name: /新 Chat/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /发起研究/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /记一条/ })).toBeNull()
   })
 
   it('clicking a recent project enters cockpit mode', async () => {
