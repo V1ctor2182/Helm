@@ -38,10 +38,13 @@ describe('Today · instrument readout(真数据)', () => {
     // 屏锚:时钟(HH:MM)与日期列
     expect(document.querySelector('.clock')).not.toBeNull()
     expect(document.querySelector('.datecol .d1')).not.toBeNull()
-    // 区块头 key:任务 0/0 启用(空库)
-    expect(await screen.findByText('任务')).toBeInTheDocument()
-    expect(screen.getByText('日记')).toBeInTheDocument()
+    // 区块头 key(捕获坞 chips 也叫「任务/日记」→ 限定在 .bt 区块标题里找)
+    const blockTitles = [...document.querySelectorAll('.bt')].map((el) => el.textContent)
+    expect(blockTitles).toContain('任务')
+    expect(blockTitles).toContain('日记')
     expect(screen.getByText('智能体')).toBeInTheDocument()
+    // 捕获坞也在(5 kind chips)
+    expect(screen.getByRole('button', { name: '问大脑' })).toBeInTheDocument()
     // 空态
     expect(screen.getByText(/没有定时任务/)).toBeInTheDocument()
     expect(screen.getByText(/没有 agent 运行/)).toBeInTheDocument()

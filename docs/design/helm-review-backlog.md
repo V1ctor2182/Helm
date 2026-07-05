@@ -9,7 +9,8 @@
 
 <!-- 新发现追加到对应严重度下；修掉移到「Done」或就地改 [x] -->
 
-- [ ] [notch][P1][bug] swift test 遗留竞态失败：testAskPostsAsAskNote 稳定红（"0"≠"1"）+ ContiguousArrayBuffer Index out of range crash——速记 ask 链路（e89ffba 全链路完善后引入），已隔离验证与媒体视觉修无关；修好前 notch 硬门无法全绿  (媒体排查/2026-07-03)
+- [x] [notch][P1][bug] swift test 遗留失败 testAskPostsAsAskNote → 修于 01491ec（定性纠正：非竞态——7/3 ask 改「真问大脑」后的过时断言，断言失败后访问 notes[0] 才 Index crash；FakeBackend +ask、测试改断新语义。notch 硬门恢复全绿）  (媒体排查→用户五条/2026-07-05)
+- [ ] [F6][P1][gap] AI parse 记录：除日记外（速记/任务/问大脑）发送后由 Helm 后端 AI 优化+解析（时间/地点/结构）——notch 已删手选 chips 并按此语义留 hint；需后端 /api/notes 侧加 AI parse 管线（用户 2026-07-05 拍板）  (用户五条/2026-07-05)
 
 - [ ] [F8][P2][gap] context 面板会话遥测(SESSION/MODEL/TOKENS)与状态栏 tok/latency 仍 mock——规划中的遥测流(可并进 orchestration WS)未建,属 F5 后续  (轮12/2026-07-02)
 - [ ] [记录][P2][gap] 日记附图(intent#2)未做——Note 无附件字段,需 schema 迁移(不可逆),留人拍板  (轮1/2026-07-02;清账轮复确认)

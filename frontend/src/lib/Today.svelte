@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import CaptureDock from './CaptureDock.svelte'
   import { layout } from './layout.svelte'
   import { tasks } from './notes/tasksStore.svelte'
   import { notes } from './notes/notesStore.svelte'
@@ -131,6 +132,8 @@
   <div class="body3">
     <!-- 左列:我的一天(聚光系统) -->
     <div class="ledger" role="list">
+      <!-- 捕获坞:notch 5-kind 同款(2026-07-05 用户:这几个放在一起) -->
+      <CaptureDock />
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
       <section role="listitem" class="blk" class:focus={focus === 'tasks'} onclick={() => (focus = 'tasks')}>
         <div class="bh">

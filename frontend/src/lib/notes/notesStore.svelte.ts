@@ -59,7 +59,7 @@ export class NotesStore {
 
   async create(
     content: string,
-    kind: 'note' | 'journal' = 'note',
+    kind: 'note' | 'journal' | 'task' = 'note',
     journalDate: string | null = null,
   ): Promise<boolean> {
     if (!content.trim()) return false
