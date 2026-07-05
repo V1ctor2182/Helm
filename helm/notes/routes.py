@@ -5,7 +5,10 @@ from __future__ import annotations
 
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+import asyncio
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -15,6 +18,7 @@ from helm.chat.models import Provider
 from helm.chat.service import ProviderService
 from helm.crypto import SecretBox
 from helm.notes import models  # noqa: F401  (register notes table on Base)
+from helm.notes.enrich import enrich_note
 from helm.notes.models import Note
 from helm.notes.service import KINDS, NoteService, note_public
 from helm.notes.summary import summarize_journal
@@ -58,7 +62,11 @@ def list_notes(
 
 
 @router.post("")
-def create_note(body: NoteBody, session: Session = Depends(db_session)) -> dict:
+async def create_note(
+    body: NoteBody,
+    request: Request,
+    session: Session = Depends(db_session),
+) -> dict:
     if not body.content.strip() and not (body.title or "").strip():
         raise HTTPException(status_code=422, detail="content or title required")
     _check_kind(body.kind)
@@ -71,6 +79,28 @@ def create_note(body: NoteBody, session: Session = Depends(db_session)) -> dict:
         source=body.source,
         journal_date=body.journal_date,
     )
+    # 速记 AI 管线(2026-07-06):除日记外,发送后后台 enrich(链接 parse/AI 整理)。
+    # 不用 BackgroundTasks——BaseHTTPMiddleware 会在响应结束时取消未完的
+    # background(著名坑,实测 enrich 被静默杀掉);asyncio.create_task 与响应
+    # 生命周期解耦。先显式 commit 让任务的独立 session 读得到这条 note;
+    # 任务引用挂 app.state 防 GC。
+    if body.kind != "journal":
+        session.commit()
+        task = asyncio.create_task(enrich_note(
+            request.app.state.db, request.app.state.secret_box,
+            note.id, request.app.state.config.data_dir))
+        pending = getattr(request.app.state, "enrich_tasks", None)
+        if pending is None:
+            pending = request.app.state.enrich_tasks = set()
+        pending.add(task)
+
+        def _on_done(t: asyncio.Task) -> None:
+            pending.discard(t)
+            if not t.cancelled() and t.exception() is not None:
+                logging.getLogger("uvicorn.error").warning(
+                    "notes enrich task failed: %r", t.exception())
+
+        task.add_done_callback(_on_done)
     return note_public(note)
 
 

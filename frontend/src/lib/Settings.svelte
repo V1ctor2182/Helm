@@ -15,6 +15,12 @@
   let mcp = $state<{ config_path: string; exists: boolean; injected: boolean; error?: string | null } | null>(null)
   let mcpMsg = $state('')
 
+  // 全局 AI provider(2026-07-06):速记 enrich / 问大脑 / 小结等一律走这一个旋钮。
+  interface ProviderRow { id: number; name: string; type: string }
+  let providers = $state<ProviderRow[]>([])
+  let aiProviderId = $state('')
+  let aiMsg = $state('')
+
   onMount(() => {
     void probe()
   })
@@ -23,6 +29,21 @@
     const h = (await jsonFetch('/healthz')) as { status: string; version: string } | null
     backend = h ? { ok: h.status === 'ok', version: h.version } : { ok: false }
     mcp = (await jsonFetch('/api/orchestration/mcp')) as typeof mcp
+    const ps = (await jsonFetch('/api/providers')) as { providers?: ProviderRow[] } | null
+    providers = ps?.providers ?? []
+    const cur = (await jsonFetch('/api/settings/ai.provider_id')) as { value?: string } | null
+    aiProviderId = cur?.value ?? ''
+  }
+
+  async function saveAiProvider(id: string) {
+    aiProviderId = id
+    aiMsg = ''
+    const r = await jsonFetch('/api/settings/ai.provider_id', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ value: id }),
+    })
+    aiMsg = r ? '已保存 — 速记整理/问大脑/小结都走它' : '保存失败'
   }
 
   async function inject() {
@@ -74,6 +95,32 @@
         {/each}
       </div>
       <p class="note">每日自动轮换一色;手动选择仅本次会话生效(午夜回到当日色)。</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="gut"><span class="tm">AI</span></div>
+    <div>
+      <div class="h">AI 系统 / PROVIDER</div>
+      {#if providers.length === 0}
+        <p class="empty">还没有模型 provider — 去 Chat 的 PROVIDERS 配一个。</p>
+      {:else}
+        <div class="line">
+          <select
+            class="sel"
+            aria-label="全局 AI provider"
+            value={aiProviderId}
+            onchange={(e) => void saveAiProvider(e.currentTarget.value)}
+          >
+            <option value="">默认(第一个 provider)</option>
+            {#each providers as p (p.id)}
+              <option value={String(p.id)}>{p.name} · {p.type}</option>
+            {/each}
+          </select>
+          {#if aiMsg}<span class="mono dim">{aiMsg}</span>{/if}
+        </div>
+        <p class="note">速记 AI 整理(链接 parse/摘要)、问大脑、今日小结统一走这个 provider。</p>
+      {/if}
     </div>
   </div>
 
@@ -236,6 +283,18 @@
     gap: 10px;
     font-size: 13px;
     margin-bottom: 8px;
+  }
+  .sel {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--t1);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    padding: 6px 9px;
+    outline: none;
+  }
+  .sel:focus {
+    border-color: var(--acc-ink);
   }
   .dot {
     width: 6px;

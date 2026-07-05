@@ -10,6 +10,7 @@ const N = (over: Record<string, unknown> = {}) => ({
   title: null,
   content: 'a note',
   tags: [],
+  meta: null,
   pinned: false,
   source: 'user',
   journal_date: null,

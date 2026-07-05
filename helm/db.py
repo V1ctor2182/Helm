@@ -76,6 +76,25 @@ class Database:
         from helm import models  # noqa: F401  (registers tables on Base)
 
         Base.metadata.create_all(self.engine)
+        self._ensure_columns()
+
+    def _ensure_columns(self) -> None:
+        """Additive micro-migrations: ``create_all`` never alters existing
+        tables, so lossless ``ADD COLUMN`` upgrades live here (no Alembic yet).
+        """
+        additions = {
+            # 2026-07-06 速记 AI 管线:enrichment(类型/摘要/预览元数据)JSON。
+            "notes": [("meta_json", "TEXT")],
+        }
+        with self.engine.connect() as conn:
+            for table, cols in additions.items():
+                existing = {
+                    row[1] for row in conn.exec_driver_sql(f"PRAGMA table_info({table})")
+                }
+                for name, ddl in cols:
+                    if name not in existing:
+                        conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}")
+                conn.commit()
 
     def session(self) -> Session:
         return self._session_factory()

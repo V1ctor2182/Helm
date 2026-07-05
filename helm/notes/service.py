@@ -23,6 +23,7 @@ def note_public(n: Note) -> dict:
         "title": n.title,
         "content": n.content,
         "tags": json.loads(n.tags_json or "[]"),
+        "meta": json.loads(n.meta_json) if n.meta_json else None,
         "pinned": n.pinned,
         "source": n.source,
         "journal_date": n.journal_date.isoformat() if n.journal_date else None,

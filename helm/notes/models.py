@@ -20,6 +20,10 @@ class Note(Base):
     title: Mapped[str | None] = mapped_column(String, nullable=True)
     content: Mapped[str] = mapped_column(Text, nullable=False, default="")
     tags_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    # AI enrichment(2026-07-06):链接 parse/摘要/预览等结构化元数据,JSON 或 NULL。
+    # 形如 {"type":"youtube|paper|article|inspiration|text","title":...,
+    #       "summary":...,"image":...,"site":...,"url":...,"tags":[...]}
+    meta_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     pinned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     source: Mapped[str] = mapped_column(String(16), nullable=False, default="user")  # user|capture|agent
     # Set when kind='journal' — the day this entry belongs to.

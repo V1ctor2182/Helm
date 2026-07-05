@@ -6,12 +6,26 @@ import { capture } from '../capture.svelte'
 
 import { jsonFetch, jsonList } from '../api'
 
+/** AI enrichment(速记管线):链接 parse/摘要/预览元数据。 */
+export interface NoteMeta {
+  type?: 'youtube' | 'paper' | 'article' | 'inspiration' | 'text'
+  url?: string
+  title?: string
+  summary?: string
+  image?: string
+  site?: string
+  tags?: string[]
+  when?: string
+  where?: string
+}
+
 export interface Note {
   id: number
   kind: string
   title: string | null
   content: string
   tags: string[]
+  meta: NoteMeta | null
   pinned: boolean
   source: string
   journal_date: string | null

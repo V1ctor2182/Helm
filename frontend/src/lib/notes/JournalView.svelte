@@ -245,6 +245,29 @@
                     onclick={() => del.confirm(`note-${n.id}`) && notes.remove(n.id)}
                   >{del.pending === `note-${n.id}` ? '确认' : '×'}</button>
                 </span>
+                {#if n.meta?.url}
+                  <!-- AI 收藏卡:链接 parse 结果(YouTube/论文/文章/灵感) -->
+                  <div class="mcard">
+                    {#if n.meta.image}<img class="mimg" src={n.meta.image} alt="" loading="lazy" />{/if}
+                    <div class="mbody">
+                      <div class="mline1">
+                        <span class="mtype">{({ youtube: 'YOUTUBE', paper: 'PAPER', inspiration: 'INSPO' } as Record<string, string>)[n.meta.type ?? ''] ?? 'WEB'}</span>
+                        <a class="mtitle" href={n.meta.url} target="_blank" rel="noreferrer">{n.meta.title ?? n.meta.url}</a>
+                      </div>
+                      {#if n.meta.summary}<p class="msum">{n.meta.summary}</p>{/if}
+                      <div class="mfoot">
+                        {#if n.meta.site}<span>{n.meta.site}</span>{/if}
+                        {#each n.meta.tags ?? [] as t (t)}<span class="mtag">#{t}</span>{/each}
+                      </div>
+                    </div>
+                  </div>
+                {:else if n.meta && (n.meta.tags?.length || n.meta.when || n.meta.where)}
+                  <div class="mlite">
+                    {#each n.meta.tags ?? [] as t (t)}<span class="mtag">#{t}</span>{/each}
+                    {#if n.meta.when}<span>⏱ {n.meta.when}</span>{/if}
+                    {#if n.meta.where}<span>◎ {n.meta.where}</span>{/if}
+                  </div>
+                {/if}
                 {/if}
               </li>
             {/each}
@@ -709,6 +732,73 @@
     gap: 10px;
     padding: 4px 0;
     font-size: 13px;
+    flex-wrap: wrap; /* AI 收藏卡换行占满整行 */
+  }
+
+  /* —— AI 收藏卡(链接 parse 结果) —— */
+  .mcard {
+    width: 100%;
+    display: flex;
+    gap: 10px;
+    margin: 2px 0 4px 44px;
+    padding: 8px 10px;
+    border: 1px solid var(--hair);
+    border-left: 2px solid var(--acc-ink);
+  }
+  .mimg {
+    width: 96px;
+    height: 60px;
+    object-fit: cover;
+    flex: none;
+  }
+  .mbody { min-width: 0; }
+  .mline1 {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+  }
+  .mtype {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--acc-ink);
+    flex: none;
+  }
+  .mtitle {
+    color: var(--t1);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mtitle:hover { text-decoration: underline; }
+  .msum {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: var(--t3);
+    line-height: 1.5;
+  }
+  .mfoot {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    color: var(--t4);
+  }
+  .mtag { color: var(--cyan); }
+  .mlite {
+    width: 100%;
+    display: flex;
+    gap: 10px;
+    margin-left: 44px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--t4);
   }
   .note .nt {
     font-family: var(--mono);
