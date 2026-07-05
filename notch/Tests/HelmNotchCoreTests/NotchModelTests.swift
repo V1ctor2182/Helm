@@ -369,6 +369,20 @@ final class NotchModuleTests: XCTestCase {
     }
 
     @MainActor
+    func testCaptureMultilineInputGrowsBudgetClamped() {
+        // 多行输入:实测超高计入预算;clamp 0...60 防失控。
+        let model = NotchModel(backend: FakeBackend())
+        model.module = .capture
+        model.captureKind = .note
+        model.captureInputExtraHeight = 36  // 两行额外
+        XCTAssertEqual(model.viewHeight(), 244)  // 208 + 36
+        model.captureInputExtraHeight = 999
+        XCTAssertEqual(model.viewHeight(), 268)  // clamp 到 +60
+        model.captureInputExtraHeight = -5
+        XCTAssertEqual(model.viewHeight(), 208)  // clamp 到 0
+    }
+
+    @MainActor
     func testTaskTargetDefaultsToMe() {
         let model = NotchModel(backend: FakeBackend())
         XCTAssertEqual(model.taskTarget, .me)

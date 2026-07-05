@@ -1489,8 +1489,13 @@ struct NotchView: View {
                 .lineLimit(1...3).focused($captureFocused)
                 .onSubmit { Task { await model.submit() } }
                 .padding(11)
-                .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(model.locked ? 0.1 : 0.06)))
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(model.locked ? 0.1 : 0.06)))
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(accent.opacity(model.locked ? 0.5 : 0), lineWidth: 1.5))
+                // 实测输入框高度,超出单行(~39pt 含 padding)的部分写回模型,
+                // 面板预算跟着长——多行输入不再被面板底裁掉(2026-07-06 用户)。
+                .background(InputHeightProbe { h in
+                    model.captureInputExtraHeight = max(0, h - 39)
+                })
                 .padding(.top, 7)
             if !model.captureFiles.isEmpty { captureFilesRow.padding(.top, 8) }
             // caprow — hint + 发送(HTML .caprow)。时间/地点手选已删:发送后由
@@ -1926,5 +1931,17 @@ private struct Waveform: View {
                 startPoint: .leading, endPoint: .trailing))
         }
         .onAppear { animate = true }
+    }
+}
+
+/// 量子视图高度的探针(background 用):抽成独立 View 免得长修饰链类型检查歧义。
+private struct InputHeightProbe: View {
+    let onHeight: (Double) -> Void
+    var body: some View {
+        GeometryReader { g in
+            Color.clear.onChange(of: g.size.height, initial: true) { _, h in
+                onHeight(h)
+            }
+        }
     }
 }

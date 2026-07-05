@@ -23,6 +23,11 @@ public final class NotchModel {
     public var taskTarget: TaskTarget = .me
     /// Whether the "最近" recents strip is expanded (affects panel height).
     public var captureShowRecent = false
+    /// Extra height of the vertical-axis input beyond one line (App 实测写入,
+    /// 面板预算跟着长——多行输入不再被面板底裁掉;clamp 防失控)。
+    public var captureInputExtraHeight: Double = 0 {
+        didSet { captureInputExtraHeight = min(max(captureInputExtraHeight, 0), 60) }
+    }
     /// Files dragged onto the notch, staged for the capture (HTML S.files).
     public private(set) var captureFiles: [CaptureFile] = []
     private var fileSeq = 0
@@ -173,14 +178,15 @@ public final class NotchModel {
         // the taller HTML budgets left too much empty space below (device feedback).
         // 删掉时间/地点行后内容更矮,预算跟着收(2026-07-05 用户:任务下面空太大)。
         // 预算含 dock(~54):note 208 / task +24(target 行) / ask+answer 322。
+        // 多行输入时加 captureInputExtraHeight(App 实测),面板随输入框长。
         case .capture:
             captureKind == .focus
                 ? (focusOn ? 300 : 240)
                 : (captureKind == .ask && askAnswer != nil
-                    ? 322
+                    ? 322 + captureInputExtraHeight
                     : (captureShowRecent
                         ? min(320, (captureKind == .task ? 232 : 208) + 64)
-                        : (captureKind == .task ? 232 : 208)))
+                        : (captureKind == .task ? 232 : 208)) + captureInputExtraHeight)
         }
     }
 
