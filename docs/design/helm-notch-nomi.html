@@ -47,8 +47,27 @@
     background:#fff;border-radius:0 0 14px 14px;overflow:hidden;cursor:pointer;color:var(--ink);
     transition:width .46s var(--ease),border-radius .4s var(--ease),box-shadow .4s var(--ease)}
   .shell.open{width:440px;border-radius:0 0 26px 26px;box-shadow:var(--shadow-xl);cursor:default}
-  .hw{width:236px;height:34px;margin:0 auto;background:#000;border-radius:0 0 14px 14px;
-    display:flex;align-items:center;padding:0 12px;gap:9px}
+  .toprow{display:flex;align-items:stretch;height:34px}
+  .tl,.tr{flex:1;display:flex;align-items:center;gap:8px;padding:0 14px;opacity:0;
+    pointer-events:none;transition:opacity .25s .16s linear;white-space:nowrap}
+  .tr{justify-content:flex-end}
+  .shell.open .tl,.shell.open .tr{opacity:1;pointer-events:auto}
+  .tl .lg{display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12.5px;font-weight:700;color:var(--ink)}
+  .tl .lg svg{color:var(--logo)}
+  .shell.dark .tl .lg svg{color:var(--ink)}
+  .tr .wx{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink3)}
+  .tr .wx svg{width:13px;height:13px}
+  .tr .gear{width:26px;height:26px;border-radius:50%;background:transparent;border:none;color:var(--ink3);cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .tr .gear:hover{color:var(--ink);background:var(--pill)}
+  .tr .gear svg{width:14px;height:14px}
+  .hw{width:236px;height:34px;flex:none;background:#000;border-radius:0 0 14px 14px;
+    display:flex;align-items:center;padding:0 12px;gap:9px;position:relative}
+  .hw .fold{display:flex;align-items:center;gap:9px;flex:1;transition:opacity .2s linear}
+  .shell.open .hw .fold{opacity:0}
+  .hw .cam{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:8px;height:8px;
+    border-radius:50%;background:#1a1a1e;box-shadow:inset 0 0 2px #000,0 0 0 2.5px #0a0a0c;
+    opacity:0;transition:opacity .2s .1s}
+  .shell.open .hw .cam{opacity:1}
   .hw svg.logo{color:#fff;opacity:.92;flex:none}
   .hw .minicover{width:18px;height:18px;border-radius:5px;flex:none;
     background:linear-gradient(135deg,#3a2f18,#1c1c22);display:flex;align-items:center;justify-content:center}
@@ -306,12 +325,22 @@
 
 <!-- 单体刘海壳:折叠=黑条;hover=同一元素生长成面板(黑条留作摄像头凹槽) -->
 <div class="shell dark" id="shell">
-  <div class="hw" id="notch" title="悬停展开 Helm">
-    <svg class="logo" width="19" height="14"><use href="#helm-logo"/></svg>
-    <span class="minicover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg></span>
-    <span class="wave" id="wave"><i></i><i></i><i></i><i></i></span>
-    <span class="sp"></span>
-    <span class="stat"><span class="dot"></span><span>1 live</span></span>
+  <div class="toprow">
+    <div class="tl"><span class="lg" title="打开 Helm"><svg width="19" height="14"><use href="#helm-logo"/></svg>Helm</span></div>
+    <div class="hw" id="notch" title="悬停展开 Helm">
+      <div class="fold">
+        <svg class="logo" width="19" height="14"><use href="#helm-logo"/></svg>
+        <span class="minicover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg></span>
+        <span class="wave" id="wave"><i></i><i></i><i></i><i></i></span>
+        <span class="sp"></span>
+        <span class="stat"><span class="dot"></span><span>1 live</span></span>
+      </div>
+      <span class="cam"></span>
+    </div>
+    <div class="tr">
+      <span class="wx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M4.9 4.9l1.9 1.9M17.2 17.2l1.9 1.9M4.9 19.1l1.9-1.9M17.2 6.8l1.9-1.9"/></svg>26°</span>
+      <button class="gear" title="设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1 1.55V21a2 2 0 11-4 0v-.09a1.7 1.7 0 00-1-1.55 1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.7 1.7 0 00.34-1.87 1.7 1.7 0 00-1.55-1H3a2 2 0 110-4h.09a1.7 1.7 0 001.55-1 1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06a1.7 1.7 0 001.87.34h0a1.7 1.7 0 001-1.55V3a2 2 0 114 0v.09a1.7 1.7 0 001 1.55h0a1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06a1.7 1.7 0 00-.34 1.87v0a1.7 1.7 0 001.55 1H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.55 1z"/></svg></button>
+    </div>
   </div>
   <div class="grow"><div id="pwrap">
   <!-- 凹槽即头部(logo/live 已在黑条里,不重复)——折叠态直接生长出 dock -->
@@ -323,7 +352,6 @@
     <button class="mtab" data-t="agents">智能体</button>
     <button class="mtab" data-t="files">暂存</button>
   </div>
-  <button class="open-helm" title="打开 Helm"><svg width="15" height="12"><use href="#helm-logo"/></svg></button>
   </div>
   <div class="pbody" id="pbody"></div>
   </div>
