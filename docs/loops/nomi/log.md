@@ -19,3 +19,8 @@
 - 对齐: 逻辑层零改动,纯换皮——白卡容器(圆角+阴影,L 角/边框退场)/kind 胶囊(黑激活)/任务双轨渐变胶囊/灰胶囊输入行/渐变发送钮(disabled=灰胶囊)/问大脑答案卡(白卡+spark)。
 - 门: build ✓ / check 0/0 / test 204 全绿
 - 视觉: shots/r04-capture.png——今日板块(问候+坞+七卡)整体成型
+## R05 · 2026-07-07 00:24 · 记录页整体换皮
+- 对齐: JournalView 皮肤层——tab 白胶囊容器+黑激活/输入行灰胶囊盒+渐变主钮/天组白卡化(圆角+阴影)/收藏卡圆角浅底/AI 小结框圆角化(L 角退场)/日界标 sans 化/标题中文化(记录)。结构与功能(编辑/四向转化/确认删/收藏卡/待办/定时/日历)零改动。
+- 门: build ✓ / check 0/0 / test 204 全绿
+- 视觉: shots/r05-journal.png——速记流已是 NOMI 脸(白卡天组+圆角收藏卡)
+- 缺口: 三视图信息架构(Timeline/Canvas/Calendar 黑胶囊)未动——现仍是 速记/日记/任务/日历 四 tab;Canvas 视图不存在 → backlog P1;Calendar.svelte 仍 ORAGE 皮 → backlog P1

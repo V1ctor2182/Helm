@@ -173,8 +173,8 @@
 
 <section class="jnt" aria-label="日记 / 速记">
   <header class="head">
-    <h1>JOURNAL</h1>
-    <span class="hd">记录</span>
+    <h1>记录</h1>
+    <span class="hd">速记 · 日记 · 任务 · 日历</span>
     <span class="pg">{pad3(noteItems.length)} NOTES · {pad3(journalItems.length)} ENTRIES · {pad3(tasks.tasks.length)} TASKS</span>
   </header>
 
@@ -488,64 +488,55 @@
     margin-bottom: 6px;
   }
   .head h1 {
-    font-family: var(--mono);
-    font-size: 24px;
-    font-weight: 800;
-    letter-spacing: 1px;
+    font: 800 22px/1.2 var(--sans);
+    letter-spacing: -0.2px;
     color: var(--t1);
     margin: 0;
   }
   .head .hd {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--acc-ink);
-    font-weight: 700;
+    font: 400 13px/1 var(--sans);
+    color: var(--t4);
   }
   .head .pg {
     margin-left: auto;
-    font-family: var(--mono);
-    font-size: 10px;
+    font: 400 11px/1 var(--sans);
     color: var(--t4);
-    letter-spacing: .5px;
     font-variant-numeric: tabular-nums;
   }
   /* 分段 = mono 大写 tag + accent 底线(无胶囊无圆角) */
   .seg {
-    display: flex;
-    gap: 18px;
-    padding-left: var(--gutter-w);
-    border-bottom: 1px solid var(--hair);
-    margin-bottom: 2px;
+    display: inline-flex;
+    gap: 4px;
+    background: var(--card);
+    border-radius: var(--radius-pill);
+    padding: 4px;
+    box-shadow: var(--shadow);
+    margin: 4px 0 12px;
   }
   .seg button {
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 1px;
+    font: 500 13px/1 var(--sans);
     color: var(--t3);
     background: transparent;
     border: 0;
-    border-bottom: 2px solid transparent;
-    padding: 4px 1px 6px;
+    border-radius: var(--radius-pill);
+    padding: 8px 18px;
     cursor: pointer;
-    transition: color .12s var(--ease);
+    transition: all .18s var(--ease);
   }
   .seg button:hover {
     color: var(--t1);
   }
   .seg button.active {
-    color: var(--t1);
-    border-bottom-color: var(--acc);
+    background: var(--t1);
+    color: var(--onink);
+    font-weight: 600;
   }
   /* 账本行:左槽 mono + 发丝分隔(承 Today .rdrow) */
   .row {
     display: grid;
     grid-template-columns: var(--gutter-w) 1fr;
-    border-top: 1px solid var(--hair);
-    padding: 10px 0;
-  }
-  /* 紧跟 tab 条的第一行不画顶线(避免和 .seg 底线叠成双线) */
-  .seg + .row {
     border-top: none;
+    padding: 10px 0;
   }
   .gut {
     font-family: var(--mono);
@@ -560,11 +551,9 @@
     display: flex;
     align-items: baseline;
     gap: 8px;
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--acc-ink);
-    letter-spacing: 0.6px;
-    margin: 12px 0 4px;
+    font: 700 13px/1 var(--sans);
+    color: var(--t1);
+    margin: 16px 0 8px;
   }
   .dstamp:first-of-type { margin-top: 2px; }
   .dstamp .dn { color: var(--t4); font-size: 9px; }
@@ -584,26 +573,26 @@
     gap: 9px;
   }
   .car {
-    width: 2px;
-    height: 14px;
-    background: var(--acc);
-    flex: none;
-    margin-top: 5px;
-    animation: blink 1s steps(1) infinite;
+    display: none;
   }
   @keyframes blink {
     50% { opacity: 0; }
+  }
+  .compose {
+    background: var(--pill);
+    border-radius: var(--radius);
+    padding: 8px 8px 8px 14px;
+    align-items: center;
   }
   .compose textarea,
   .compose input {
     flex: 1;
     background: transparent;
     border: 0;
-    border-bottom: 1px solid var(--hair);
     color: var(--t1);
     font-family: var(--sans);
     font-size: 13px;
-    padding: 3px 0 6px;
+    padding: 6px 0;
     resize: vertical;
     min-width: 0;
   }
@@ -614,7 +603,6 @@
   .compose textarea:focus,
   .compose input:focus {
     outline: none;
-    border-bottom-color: var(--acc-ink);
   }
   .compose input.cron {
     flex: none;
@@ -639,27 +627,29 @@
   }
   /* 动作按钮 = mono 小字,主动作 accent 描边 */
   .act {
-    font-family: var(--mono);
-    font-size: 10px;
+    font: 500 11px/1 var(--sans);
     color: var(--t4);
     background: transparent;
     border: 0;
-    padding: 2px 4px;
+    border-radius: var(--radius-pill);
+    padding: 4px 8px;
     cursor: pointer;
-    transition: color .12s var(--ease);
+    transition: all .12s var(--ease);
   }
   .act:hover {
     color: var(--t1);
+    background: var(--pill);
   }
   .act.pri {
-    color: var(--acc-ink);
-    border: 1px solid var(--acc-ink);
-    padding: 4px 10px;
+    color: #fff;
+    background: var(--grad);
+    padding: 7px 14px;
     flex: none;
+    font-weight: 600;
   }
   .act.pri:disabled {
+    background: var(--pill);
     color: var(--t4);
-    border-color: var(--line);
     cursor: default;
   }
   .act.del:hover,
@@ -714,8 +704,11 @@
   }
   .list {
     list-style: none;
-    margin: 0;
-    padding: 0;
+    margin: 0 0 6px;
+    padding: 4px 14px;
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
   }
   .note,
   .taskli {
@@ -740,10 +733,10 @@
     width: 100%;
     display: flex;
     gap: 10px;
-    margin: 2px 0 4px 44px;
-    padding: 8px 10px;
-    border: 1px solid var(--hair);
-    border-left: 2px solid var(--acc-ink);
+    margin: 2px 0 6px 44px;
+    padding: 10px 12px;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
   }
   .mimg {
     width: 96px;
@@ -868,31 +861,12 @@
   }
   /* AI 小结 = 框选视口(frame + accent L 角,ORAGE) */
   .framed {
-    position: relative;
-    border: 1px solid var(--line);
-    padding: 10px 12px; /* 与 Today .framed 对齐,消漂移 */
-    margin-top: 8px;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-top: 10px;
   }
   .framed::before,
-  .framed::after {
-    content: '';
-    position: absolute;
-    width: 9px;
-    height: 9px;
-    border: 1.4px solid var(--acc-ink);
-  }
-  .framed::before {
-    top: -1px;
-    left: -1px;
-    border-right: none;
-    border-bottom: none;
-  }
-  .framed::after {
-    bottom: -1px;
-    right: -1px;
-    border-left: none;
-    border-top: none;
-  }
   .summary {
     margin: 0;
     font-size: 13px;
