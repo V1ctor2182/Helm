@@ -32,31 +32,25 @@ afterEach(() => {
   calendar.events = []
 })
 
-describe('Today · instrument readout(真数据)', () => {
-  it('renders the v3 dial anchor, block keys and briefing column', async () => {
+describe('Today · NOMI 六卡仪表(真数据)', () => {
+  it('renders greeting, capture dock and dashboard cards', () => {
     render(Today)
-    // 屏锚:时钟(HH:MM)与日期列
-    expect(document.querySelector('.clock')).not.toBeNull()
-    expect(document.querySelector('.datecol .d1')).not.toBeNull()
-    // 区块头 key(捕获坞 chips 也叫「任务/日记」→ 限定在 .bt 区块标题里找)
-    const blockTitles = [...document.querySelectorAll('.bt')].map((el) => el.textContent)
-    expect(blockTitles).toContain('任务')
-    expect(blockTitles).toContain('日记')
-    expect(screen.getByText('智能体')).toBeInTheDocument()
+    // 问候行 + 日期摘要
+    expect(document.querySelector('.hi')).not.toBeNull()
+    expect(document.querySelector('.sub')).not.toBeNull()
+    // 卡标题(捕获坞 chips 也叫「任务/日记」→ 限定在 .ti 卡标题里找)
+    const cardTitles = [...document.querySelectorAll('.ti')].map((el) => el.textContent)
+    expect(cardTitles).toContain('任务 · 今日')
+    expect(cardTitles).toContain('日记 · 今天')
+    expect(cardTitles).toContain('智能体')
+    expect(cardTitles).toContain('简报 · 世界输入')
     // 捕获坞也在(5 kind chips)
     expect(screen.getByRole('button', { name: '问大脑' })).toBeInTheDocument()
     // 空态
     expect(screen.getByText(/没有定时任务/)).toBeInTheDocument()
     expect(screen.getByText(/没有 agent 运行/)).toBeInTheDocument()
-    // 右柱:世界输入
+    // 简报卡保留世界输入语义(功能不减)
     expect(screen.getByLabelText('世界输入')).toBeInTheDocument()
-    expect(screen.getByText('BRIEFING')).toBeInTheDocument()
-    // 聚光:默认任务区 focus,点日记区移光
-    const blocks = document.querySelectorAll('.blk')
-    expect(blocks[0].className).toContain('focus')
-    await fireEvent.click(blocks[1])
-    expect(blocks[1].className).toContain('focus')
-    expect(blocks[0].className).not.toContain('focus')
   })
 
   it('shows empty states without data', () => {

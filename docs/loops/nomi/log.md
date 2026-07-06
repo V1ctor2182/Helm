@@ -9,3 +9,9 @@
 - 门: build ✓ / check 0/0 / test 204 全绿
 - 视觉: shots/r02-sidebar.png——与稿侧栏一致(hover/激活胶囊/圆钮)
 - 缺口: 导航计数(记录 12/对话 3)未接真数据 → backlog P2;titlebar/statusbar 仍 ORAGE mono(后续壳块)
+## R03 · 2026-07-07 00:17 · 块③ 今日板块
+- 对齐: Today.svelte 整件重写——问候(时段词,Victor)+日期摘要行 → CaptureDock → NOMI 七卡网格(任务/日程/日记/智能体/最近项目/今日收藏/简报·世界输入)。真数据 derived 全量移植(tasks/notes/agent/cockpit/calendar/briefing);A×C v3 时钟锚/区块聚光/右柱退场,briefing 功能收进第七卡(功能不减)。新增今日收藏卡(AI 管线产出:meta.type 色点+标签)。
+- 修型: 4 个 check 错(Task.schedule_kind/CalEvent.summary/inspiration 枚举/prompt null)当轮修
+- 门: build ✓ / check 0/0 / test 204 全绿(Today.test 断言随新结构更新,语义保留)
+- 视觉: shots/r03-today.png——问候/卡网格/空态/HN 简报真数据 ✓
+- 缺口: CaptureDock 仍 ORAGE 皮(独立块) → backlog P1
