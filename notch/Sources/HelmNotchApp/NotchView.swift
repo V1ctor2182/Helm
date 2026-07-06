@@ -324,9 +324,10 @@ struct NotchView: View {
                         .overlay(Circle().stroke(Color(white: 0.04), lineWidth: 2.5))
                         .frame(width: 8, height: 8)
                 }
-            HStack(spacing: 7) {
-                HelmLogoView(color: Color(p.logo), size: 19)
-                Text("Helm").font(.system(size: 12.5, weight: .bold)).foregroundStyle(Color(p.ink))
+            HStack(spacing: 5) {
+                HelmLogoView(color: Color(p.logo), size: 17)
+                Text("Helm").font(.system(size: 12, weight: .bold)).foregroundStyle(Color(p.ink))
+                    .lineLimit(1).fixedSize()
                 Spacer()
                 if model.locked {
                     Button { model.collapse() } label: {
@@ -341,7 +342,7 @@ struct NotchView: View {
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.horizontal, 10)
+            .padding(.horizontal, 8)
         }
         .frame(height: CGFloat(NomiTheme.foldedHeight))
     }
@@ -779,9 +780,11 @@ struct NotchView: View {
                             .lineLimit(1).truncationMode(.tail)
                         Spacer(minLength: 6)
                         Text(r.chip).font(.system(size: 9.5))
-                            .foregroundStyle(r.warn ? Color(RGB(hex: "ffc58a")) : Color(RGB(hex: "7fe0a0")))
+                            .foregroundStyle(Color(RGB(hex: model.nomiDark
+                                ? (r.warn ? "ffc58a" : "7fe0a0") : (r.warn ? "c05e00" : "177a36"))))
                             .padding(.horizontal, 8).padding(.vertical, 3)
-                            .background(Capsule().fill(r.warn ? Color(RGB(hex: "3a2c1e")) : Color(RGB(hex: "1e3a26"))))
+                            .background(Capsule().fill(Color(RGB(hex: model.nomiDark
+                                ? (r.warn ? "3a2c1e" : "1e3a26") : (r.warn ? "fff4e8" : "e9f8ee")))))
                     }
                     Text(r.sub).font(.system(size: 10.5)).foregroundStyle(Color(pal.ink3)).lineLimit(1)
                 }
@@ -911,7 +914,7 @@ struct NotchView: View {
                 // 优雅降级:静态可滚全词 + 一行说明(2026-07-03 用户:歌词没动)
                 VStack(alignment: .leading, spacing: 6) {
                     Text("该播放源不提供进度 — 歌词不跟唱")
-                        .font(.system(size: 9)).foregroundStyle(.white.opacity(0.45))
+                        .font(.system(size: 9)).foregroundStyle(Color(model.nomi.ink3))
                     ScrollView(.vertical, showsIndicators: false) {
                         VStack(alignment: .leading, spacing: 9) {
                             ForEach(lines.indices, id: \.self) { i in
@@ -963,9 +966,9 @@ struct NotchView: View {
             .mask(lyricsMask)
         case .none:
             VStack(spacing: 6) {
-                Text("没有找到歌词").font(.system(size: 12)).foregroundStyle(.white.opacity(0.55))
+                Text("没有找到歌词").font(.system(size: 12)).foregroundStyle(Color(model.nomi.ink2))
                 if model.nowPlaying != nil {
-                    Text("lrclib 无此曲目").font(.system(size: 10)).foregroundStyle(.white.opacity(0.38))
+                    Text("lrclib 无此曲目").font(.system(size: 10)).foregroundStyle(Color(model.nomi.ink3))
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1062,13 +1065,13 @@ struct NotchView: View {
         return m == 0 ? "刚刚" : (m < 60 ? "\(m) 分钟前" : "\(m / 60) 小时前")
     }
 
-    private func cellHeader(_ title: String, accentTitle: Bool = false, trailing: String? = nil, trailingColor: Color = .white.opacity(0.35)) -> some View {
+    private func cellHeader(_ title: String, accentTitle: Bool = false, trailing: String? = nil, trailingColor: Color? = nil) -> some View {
         HStack {
             Text(title)
                 .font(.system(size: 9, weight: .bold)).tracking(0.6)
-                .foregroundStyle(accentTitle ? accent : .white.opacity(0.35))
+                .foregroundStyle(accentTitle ? Color(NomiTheme.g1) : Color(model.nomi.ink3))
             Spacer()
-            if let trailing { Text(trailing).font(.system(size: 9, weight: .semibold)).foregroundStyle(trailingColor) }
+            if let trailing { Text(trailing).font(.system(size: 9, weight: .semibold)).foregroundStyle(trailingColor ?? Color(model.nomi.ink3)) }
         }
     }
 
@@ -1293,7 +1296,7 @@ struct NotchView: View {
         cellHeader(
             model.captureKind == .focus ? "专注 → Helm" : "速记 → Helm",
             trailing: model.locked ? "● 输入中" : (model.captureKind == .focus ? nil : "TAB 切换模式"),
-            trailingColor: model.locked ? accent : .white.opacity(0.34))
+            trailingColor: model.locked ? Color(NomiTheme.g1) : nil)
         HStack(spacing: 6) {
             ForEach(CaptureKind.allCases) { kind in
                 let on = model.captureKind == kind
@@ -1454,18 +1457,18 @@ struct NotchView: View {
             HStack(spacing: 8) {
                 ForEach(model.captureFiles) { f in
                     HStack(spacing: 7) {
-                        Text(f.ext).font(.system(size: 8, weight: .bold)).foregroundStyle(.white.opacity(0.56))
+                        Text(f.ext).font(.system(size: 8, weight: .bold)).foregroundStyle(Color(model.nomi.ink2))
                             .frame(width: 26, height: 26)
-                            .background(RoundedRectangle(cornerRadius: 6).fill(Color(white: 0.10)))
-                        Text(f.name).font(.system(size: 11)).foregroundStyle(.white.opacity(0.9)).lineLimit(1)
+                            .background(RoundedRectangle(cornerRadius: 6).fill(Color(model.nomi.pill)))
+                        Text(f.name).font(.system(size: 11)).foregroundStyle(Color(model.nomi.ink)).lineLimit(1)
                             .frame(maxWidth: 120, alignment: .leading)
                         Button { model.removeFile(f.id) } label: {
-                            Image(systemName: "xmark").font(.system(size: 8)).foregroundStyle(.white.opacity(0.6))
+                            Image(systemName: "xmark").font(.system(size: 8)).foregroundStyle(Color(model.nomi.ink2))
                         }.buttonStyle(.plain)
                     }
                     .padding(.horizontal, 6).padding(.vertical, 5)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(.white.opacity(0.06)))
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(.white.opacity(0.09), lineWidth: 0.5))
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Color(model.nomi.pill).opacity(0.6)))
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(model.nomi.hair), lineWidth: 1))
                 }
             }
         }
@@ -1489,13 +1492,13 @@ struct NotchView: View {
             .frame(maxHeight: 96)
             HStack {
                 Text("答 · \(model.askQuestion)").font(.system(size: 9))
-                    .foregroundStyle(.white.opacity(0.3)).lineLimit(1)
+                    .foregroundStyle(Color(model.nomi.ink3)).lineLimit(1)
                 Spacer()
                 Button { Task { await model.saveAskAsNote() } } label: {
                     Text("存速记").font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.7))
+                        .foregroundStyle(Color(model.nomi.ink2))
                         .padding(.horizontal, 9).padding(.vertical, 3)
-                        .background(Capsule().fill(.white.opacity(0.1)))
+                        .background(Capsule().fill(Color(model.nomi.pill)))
                 }
                 .buttonStyle(.plain)
             }
@@ -1525,7 +1528,7 @@ struct NotchView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             if model.recentNotes.isEmpty {
-                                Text("暂无").font(.system(size: 11)).foregroundStyle(.white.opacity(0.34))
+                                Text("暂无").font(.system(size: 11)).foregroundStyle(Color(model.nomi.ink3))
                                     .frame(width: 160, height: 52, alignment: .topLeading)
                             } else {
                                 ForEach(model.recentNotes) { n in
@@ -1535,14 +1538,14 @@ struct NotchView: View {
                                             .padding(.horizontal, 6).padding(.vertical, 1)
                                             .background(RoundedRectangle(cornerRadius: 5).fill(accent))
                                         Text(n.content).font(.system(size: 11))
-                                            .foregroundStyle(.white.opacity(0.9)).lineLimit(1)
+                                            .foregroundStyle(Color(model.nomi.ink)).lineLimit(1)
                                         Text(n.createdAt).font(.system(size: 9))
-                                            .foregroundStyle(.white.opacity(0.34))
+                                            .foregroundStyle(Color(model.nomi.ink3))
                                     }
                                     .frame(width: 160, alignment: .topLeading)
                                     .padding(.horizontal, 11).padding(.vertical, 8)
-                                    .background(RoundedRectangle(cornerRadius: 11).fill(.white.opacity(0.04)))
-                                    .overlay(RoundedRectangle(cornerRadius: 11).stroke(.white.opacity(0.09), lineWidth: 0.5))
+                                    .background(RoundedRectangle(cornerRadius: 11).fill(Color(model.nomi.pill).opacity(0.55)))
+                                    .overlay(RoundedRectangle(cornerRadius: 11).stroke(Color(model.nomi.hair), lineWidth: 1))
                                 }
                             }
                         }
@@ -1623,7 +1626,7 @@ struct NotchView: View {
     @ViewBuilder private var statusLabel: some View {
         switch model.captureStatus {
         case .idle: EmptyView()
-        case .sending: Text("发送中…").font(.system(size: 10)).foregroundStyle(.white.opacity(0.5))
+        case .sending: Text("发送中…").font(.system(size: 10)).foregroundStyle(Color(model.nomi.ink3))
         case .sent: Text("已记录 ✓").font(.system(size: 10)).foregroundStyle(.green)
         case .failed: Text("失败,重试").font(.system(size: 10)).foregroundStyle(.red)
         }
@@ -1702,7 +1705,7 @@ struct ShineText: View {
     private var font: Font { .system(size: size, weight: .medium) }
 
     var body: some View {
-        Text(text).font(font).foregroundStyle(.white.opacity(0.35)).lineLimit(1)
+        Text(text).font(font).foregroundStyle(Color(white: 0.55, opacity: 0.9)).lineLimit(1)  // 中性灰,双模式可读
             .overlay {
                 GeometryReader { geo in
                     LinearGradient(colors: [.clear, .white, accent, .clear],

@@ -51,6 +51,7 @@ final class NotchController {
             model.notchWidth = detectNotchWidth(screen)
         }
         if let w = defaults.object(forKey: widthKey) as? Double { model.expandedWidth = w }
+        if let dark = defaults.object(forKey: "notch.nomiDark") as? Bool { model.nomiDark = dark }
 
         let panel = makePanel()
         self.panel = panel

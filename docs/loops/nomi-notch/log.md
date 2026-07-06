@@ -73,3 +73,9 @@
 - 选择题横幅同套 NOMI:spark 头/选项 pill+渐变描边选中/提交=渐变胶囊/终端作答+打开会话;答案注回 updatedInput 链路不变。
 - ⌘Y/⌘N 文案保留(快捷键接线仍在账上,非本稿新增);reminder 横幅未 NOMI 化(设计稿无此稿面,B11 顺手)。
 - 全测试绿;快照 b10-banner-perm/ask。
+
+## 2026-07-07 迭代 12 — B11 浅色+收尾 ✅(loop 完成)
+- 面板残留硬编码白色清扫(cellHeader/附件 chips/ask 卡/recents/statusLabel→palette;折叠条/媒体大卡 meta 等黑底场景白色保留是正确的)。
+- 设置「外观」区:旧材质/每日主题控件退役 → 「深色面板」开关(UserDefaults notch.nomiDark 持久化,Controller 启动读回)。
+- 快照套件加 light-dash/cap/agents/banner 四浅色位;修浅色暴露的两个瑕疵:顶行 Helm 字被凹槽压边(左翼收紧 17/5/12/8)、PR chip 写死深色值(改双模式)。
+- 全测试绿;终报 reports/final-b1-b11.md。**B1-B11 全部对齐,loop 收工——CI 过后留用户合并。**

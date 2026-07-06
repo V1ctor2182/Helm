@@ -72,8 +72,16 @@ enum NotchSnapshot {
                     assistant: "三块能力已经落地:选择题横幅在 notch 内直接作答(答案经阻塞 hook 的 updatedInput 注回 CLI);Dev/Agents 点行进详情;idle 会话可从 notch 注入回复到 tmux/Ghostty。"))
                 $0.selectedLocalSessionID = "s-detail"
             }),
-            ("mat-darkglass", { $0.module = .dashboard; $0.backgroundMaterial = .darkGlass }),
-            ("mat-lightglass", { $0.module = .dashboard; $0.backgroundMaterial = .lightGlass }),
+            // NOMI 浅色变体(深浅=整套色板切换)
+            ("light-dash", { $0.module = .dashboard; $0.nomiDark = false }),
+            ("light-cap", { $0.module = .capture; $0.captureKind = .note; $0.nomiDark = false }),
+            ("light-agents", { $0.module = .agents; $0.agentPage = .prs; $0.nomiDark = false }),
+            ("light-banner", {
+                $0.nomiDark = false
+                $0.applyHook(HookMessage(event: "PermissionRequest", session: "notch",
+                                         cwd: "~/notch", tool: "Edit",
+                                         detail: "src/auth/middleware.ts", reply: true))
+            }),
             ("mat-vibrant", { $0.module = .dashboard; $0.backgroundMaterial = .vibrant }),
         ]
 

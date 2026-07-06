@@ -30,16 +30,12 @@ struct SettingsView: View {
                 header
 
                 section("外观")
-                rowLabel("背景材质", sub: "玻璃材质会透出壁纸(默认纯黑)")
-                materialPicker.padding(.vertical, 4)
-                rowLabel("主题色", sub: "驱动选中 / 聚焦 / 进度 / 折叠态波形")
-                palette.padding(.vertical, 4)
-                rowLabel("配色模式", sub: "每日轮换 · 连续色相 · 固定")
-                modePicker.padding(.bottom, 6)
-                tapRow("随机一套", sub: "背景+主题随机,自动保证对比清晰", action: "随机 ↻") {
-                    model.randomTheme()
-                }
-                toggleRow("每天随机一套", sub: "背景+主题每天自动换,保证对比清晰", isOn: $model.dailyRandomTheme)
+                // NOMI 双模式:深默认+浅色,整套色板切换(旧材质/每日轮换主题随稿退役)。
+                toggleRow("深色面板", sub: "关闭=NOMI 浅色(白卡浅底);渐变主色不随模式变",
+                          isOn: Binding(
+                            get: { model.nomiDark },
+                            set: { model.nomiDark = $0
+                                   UserDefaults.standard.set($0, forKey: "notch.nomiDark") }))
 
                 section("HELM 后端")
                 connectionRow
