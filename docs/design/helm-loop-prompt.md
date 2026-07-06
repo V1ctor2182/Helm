@@ -80,6 +80,31 @@
 - **日间档**:去掉 `/loop 1m` 与【夜间模式】,每搬完一条停下 review、不自动 commit。
 - **指定起点**:加一句"先搬 <终端路径可点击 / Option 选中 / …>"。
 
+## 🎨 阶段 4 · NOMI 全站重塑(当前阶段,2026-07-06 用户拍板换皮)
+
+设计方向大转向:**全站从 ORAGE 座舱皮换成 NOMI 风**(白/黑双面板、大圆角卡、柔和阴影、橙紫渐变、用户娃娃脸 logo)。新的只读设计基线:
+
+- **主工作台**:`docs/design/helm-journal-pro.html` —— 六板块全交互稿(今日/记录三视图/对话/研究/驾驶舱/设置 + 侧栏全局导航 + logo)
+- **notch**:`docs/design/helm-notch-nomi.html` —— 单体生长 morph/折叠态摄像头空档/顶行左 logo 右天气设置/底部圆钮 dock/智能体上下滑子页/左右横扫切模块/单体 banner/深(默认)浅双主题
+- `DESIGN.md` 的 NOMI 段 + 老规矩:**设计稿只读,改代码**;禁 emoji 仍然有效(色块字母/内联 SVG)
+
+功能不减:换皮过程中现有已接通的后端功能(AI 管线收藏卡/任务双轨/日历/chat/provider 设置…)必须全部保留并穿新皮;交互对齐设计稿(拖拽 Canvas/周历/滑动)。建议顺序(可自行判断):① NOMI token 重铸(app.css 全套换:白底/圆角/阴影/渐变,theme store 改浅深双面板) → ② 侧栏全局导航+logo → ③ 今日 → ④ 记录三视图(最大块:Timeline/Canvas 拖拽连线/Calendar 周历) → ⑤ 对话 → ⑥ 研究 → ⑦ 驾驶舱 → ⑧ 设置 → ⑨ 动效收尾。硬门/复查/backlog/VibeHub/重启壳,全部照阶段 2 的规矩。
+
+**4A · 主工作台(日间档)**:
+```
+读 docs/design/helm-loop-procedure.md + DESIGN.md 的 NOMI 段,把只读设计稿 docs/design/helm-journal-pro.html 从头读懂(六板块+交互 JS),对照现状 frontend/ 逐块重塑成 NOMI 皮(功能不减、契约不破):挑一块→精读稿→进 Svelte(新 token/禁 emoji)→npm build+check+test 绿(动后端加 pytest)→browse 截稿与实现对比→重启 Helm.app→record+写 log;每块停下让我 review,不自动 commit(分支 feat/nomi-*)。
+```
+
+**4A · 夜间模式**:
+```
+/loop 1m 读 docs/design/helm-loop-procedure.md,以【夜间模式】把 docs/design/helm-journal-pro.html(只读)逐块重塑进 frontend/ 到一模一样,功能不减、notch 契约不破,整夜自主:每块 精读稿→进 Svelte(NOMI token/禁 emoji)→npm build+check+test 绿(动后端加 pytest;3 轮不绿 skip+add_question)→browse 视觉对比→复查(diff code-review+完整性)记 helm-review-backlog.md→record+log+report→自 commit 到 feat/nomi-* 并 push→下一块(P0/P1 优先)。硬底线:设计稿/DESIGN.md 只读;非绿不 commit;不合 main;不改坏 notch;不可逆操作不猜。全部块对齐或全卡住才停。
+```
+
+**4B · notch(Swift,建议 4A 皮肤基建落地后再开)**:
+```
+/loop 1m 读 notch 现状(Sources/HelmNotch*)与只读设计稿 docs/design/helm-notch-nomi.html,以【夜间模式】把 notch 原生 UI 重塑成该稿:单体生长/折叠态(左组—摄像头空档—右组)/顶行(左 logo+Helm 右天气+设置)/底部圆钮 dock 5 模块/智能体上下滑子页(会话/端口/PR)/横扫切模块/banner 单体化/深默认+浅色。每块 swift build && swift test 绿才 commit(feat/notch-nomi-*,不合 main;macOS CI 过了留我合),快照视觉对比,record+log+report。后端契约不动;拿不准的产品行为 add_question 别猜。全部块对齐或全卡住才停。
+```
+
 ## 调参
 
 - **对齐粒度 N**:命令里 `每对齐 1 块` 的块数。默认 1 最稳(尤其起步 token/主题/外壳这些基础设施块)。

@@ -342,3 +342,22 @@ $B screenshot /tmp/actual-dark.png                          # 和 /tmp/target-*.
 - 验证: npm build ✓ / check 零错 / test <N 通过>;视觉:靶图对比 <dark+light 一致 / 待用户目视>
 - 状态: ✅ 待 review  |  ❓需确认: <…>
 ```
+
+---
+
+## 阶段 4 · NOMI 全站重塑(2026-07-06 用户拍板换皮,当前阶段)
+
+设计方向大转向,老流程全部沿用(每一轮/硬门/report/复查/backlog/VibeHub),只换基线与范围:
+
+**只读设计基线(新)**:
+- 主工作台:`docs/design/helm-journal-pro.html`(NOMI 六板块全交互稿:侧栏全局导航+logo/今日/记录三视图/对话/研究/驾驶舱/设置)
+- notch:`docs/design/helm-notch-nomi.html`(单体生长/折叠态摄像头空档/顶行/底部圆钮 dock/上下滑子页/横扫切模块/单体 banner/深默认+浅)
+- `DESIGN.md` NOMI 段。旧 `helm-pro.html`/ORAGE 语言 = 存档,不再是对齐目标。
+
+**铁律**:
+- **功能不减**:已接通的一切(AI 收藏管线/任务双轨/日历/chat/provider/驾驶舱…)换皮后必须照常能用;换皮 ≠ 重写逻辑,优先只动样式层与布局层。
+- **契约不破**:共用 /api 端点一个不动;动了必同步 notch + swift 绿(阶段 2 规矩)。
+- 设计稿只读;禁 emoji(色块字母/内联 SVG);渐变只做"关系"元素(连线/进度/开关/FAB)。
+- 建议块序:token 重铸 → 侧栏导航 → 今日 → 记录三视图(最大块,可再拆 Timeline/Canvas/Calendar 三轮) → 对话 → 研究 → 驾驶舱 → 设置 → 动效收尾。自己判断可调。
+- 视觉门:browse 同屏截设计稿块 vs dev(5174) 实现块对比;每批收尾重启 Helm.app(壳缓存)。
+- notch 轨(4B):同一套流程映射到 Swift(swift build+test 硬门/快照对比/feat/notch-nomi-* 分支/CI 过留用户合)。
