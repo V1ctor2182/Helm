@@ -38,38 +38,38 @@
     background:linear-gradient(160deg,#e8e6f2 0%,#f3ece2 45%,#e4eef0 100%)}
 
   /* ── 菜单栏 + 刘海 ─────────────── */
-  .menubar{position:relative;z-index:60;height:34px;background:#0a0a0c;display:flex;align-items:center;
+  .menubar{position:relative;height:34px;background:#0a0a0c;display:flex;align-items:center;
     padding:0 16px;color:rgba(255,255,255,.85);font-size:12.5px;gap:18px;user-select:none}
   .menubar .r{margin-left:auto;display:flex;gap:14px;color:rgba(255,255,255,.6);font-size:11.5px}
-  .notch{position:absolute;left:50%;transform:translateX(-50%);top:0;height:34px;width:236px;
-    background:#000;border-radius:0 0 14px 14px;display:flex;align-items:center;
-    padding:0 12px;gap:9px;cursor:pointer;z-index:50;transition:width .3s var(--ease)}
-  .notch:hover{width:252px}
-  .notch svg.logo{color:#fff;opacity:.92;flex:none}
-  .notch .minicover{width:18px;height:18px;border-radius:5px;flex:none;
+  /* shell=单体生长(参考 notch-pro):折叠=黑条本身;展开=同一元素变宽+向下长,
+     黑条变成常驻摄像头凹槽,内容从凹槽下方开始(避开摄像头) */
+  .shell{position:absolute;top:0;left:50%;transform:translateX(-50%);width:236px;z-index:70;
+    background:#fff;border-radius:0 0 14px 14px;overflow:hidden;cursor:pointer;
+    transition:width .46s var(--ease),border-radius .4s var(--ease),box-shadow .4s var(--ease)}
+  .shell.open{width:440px;border-radius:0 0 26px 26px;box-shadow:var(--shadow-xl);cursor:default}
+  .hw{width:236px;height:34px;margin:0 auto;background:#000;border-radius:0 0 14px 14px;
+    display:flex;align-items:center;padding:0 12px;gap:9px}
+  .hw svg.logo{color:#fff;opacity:.92;flex:none}
+  .hw .minicover{width:18px;height:18px;border-radius:5px;flex:none;
     background:linear-gradient(135deg,#3a2f18,#1c1c22);display:flex;align-items:center;justify-content:center}
-  .notch .minicover svg{width:9px;height:9px;color:rgba(255,255,255,.8)}
-  .notch .wave{display:flex;align-items:flex-end;gap:2px;height:12px;flex:none}
-  .notch .wave i{width:2.5px;border-radius:2px;background:linear-gradient(180deg,var(--g1),var(--g2));animation:wv 1s var(--ease) infinite alternate}
-  .notch .wave i:nth-child(1){height:5px}
-  .notch .wave i:nth-child(2){height:10px;animation-delay:.15s}
-  .notch .wave i:nth-child(3){height:7px;animation-delay:.3s}
-  .notch .wave i:nth-child(4){height:11px;animation-delay:.45s}
+  .hw .minicover svg{width:9px;height:9px;color:rgba(255,255,255,.8)}
+  .hw .wave{display:flex;align-items:flex-end;gap:2px;height:12px;flex:none}
+  .hw .wave i{width:2.5px;border-radius:2px;background:linear-gradient(180deg,var(--g1),var(--g2));animation:wv 1s var(--ease) infinite alternate}
+  .hw .wave i:nth-child(1){height:5px}
+  .hw .wave i:nth-child(2){height:10px;animation-delay:.15s}
+  .hw .wave i:nth-child(3){height:7px;animation-delay:.3s}
+  .hw .wave i:nth-child(4){height:11px;animation-delay:.45s}
   @keyframes wv{to{transform:scaleY(.45)}}
-  .notch .sp{flex:1}
-  .notch .stat{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.75)}
-  .notch .stat .dot{width:6px;height:6px;border-radius:50%;background:var(--ok)}
-  .notch.dragover{outline:2px dashed var(--g1);outline-offset:-5px}
+  .hw .sp{flex:1}
+  .hw .stat{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.75)}
+  .hw .stat .dot{width:6px;height:6px;border-radius:50%;background:var(--ok)}
+  .shell.dragover{outline:2px dashed var(--g1);outline-offset:-5px}
 
   /* ── 主面板 ─────────────── */
-  /* 展开=刘海生长(参考 notch-pro):宽 236→440 + grid-rows 0fr→1fr(纯 CSS 贴内容高) */
-  .panel{position:absolute;left:50%;transform:translateX(-50%);top:33px;width:236px;
-    display:grid;grid-template-rows:0fr;
-    background:#fff;border-radius:0 0 20px 20px;box-shadow:var(--shadow-xl);z-index:40;
-    pointer-events:none;opacity:0;
-    transition:width .46s var(--ease),grid-template-rows .46s var(--ease),border-radius .4s var(--ease),opacity .2s linear}
-  .panel.open{width:440px;grid-template-rows:1fr;border-radius:0 0 26px 26px;pointer-events:auto;opacity:1}
-  #pwrap{overflow:hidden;min-height:0}
+  .grow{display:grid;grid-template-rows:0fr;transition:grid-template-rows .46s var(--ease)}
+  .shell.open .grow{grid-template-rows:1fr}
+  #pwrap{overflow:hidden;min-height:0;opacity:0;transition:opacity .3s .12s linear}
+  .shell.open #pwrap{opacity:1}
   .phead{display:flex;align-items:center;gap:9px;padding:13px 18px 7px}
   .phead svg{color:var(--logo)}
   .phead .nm{font-size:13.5px;font-weight:700}
@@ -264,13 +264,6 @@
 <div class="menubar">
   <span style="font-weight:700">◆</span><span>Finder</span><span>文件</span><span>编辑</span><span>显示</span>
   <span class="r"><span>电池 100%</span><span>周一 7月6日</span><span id="clk">14:20</span></span>
-  <div class="notch" id="notch" title="点击展开 Helm">
-    <svg class="logo" width="19" height="14"><use href="#helm-logo"/></svg>
-    <span class="minicover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg></span>
-    <span class="wave" id="wave"><i></i><i></i><i></i><i></i></span>
-    <span class="sp"></span>
-    <span class="stat"><span class="dot"></span><span>1 live</span></span>
-  </div>
 </div>
 
 <!-- 权限 banner 态 -->
@@ -289,9 +282,16 @@
   </div>
 </div>
 
-<!-- 主面板 -->
-<div class="panel" id="panel">
- <div id="pwrap">
+<!-- 单体刘海壳:折叠=黑条;hover=同一元素生长成面板(黑条留作摄像头凹槽) -->
+<div class="shell" id="shell">
+  <div class="hw" id="notch" title="悬停展开 Helm">
+    <svg class="logo" width="19" height="14"><use href="#helm-logo"/></svg>
+    <span class="minicover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg></span>
+    <span class="wave" id="wave"><i></i><i></i><i></i><i></i></span>
+    <span class="sp"></span>
+    <span class="stat"><span class="dot"></span><span>1 live</span></span>
+  </div>
+  <div class="grow"><div id="pwrap">
   <div class="phead">
     <svg width="22" height="17"><use href="#helm-logo"/></svg>
     <span class="nm">Helm</span>
@@ -309,7 +309,7 @@
     <button class="mtab" data-t="files">暂存</button>
   </div>
   <div class="pbody" id="pbody"></div>
- </div>
+  </div></div>
 </div>
 
 <div class="deskhint">悬停刘海展开 · 全部可点 · 总览点封面=放大媒体
@@ -504,7 +504,6 @@ function bindFocus(){
   $('#fRe').onclick=()=>{focusRun=false;focusLeft=focusTotal;renderBody()};
 }
 
-const _rb=renderBody; renderBody=function(){_rb();if(typeof relayout==='function')relayout()};
 function fileHTML(f,i){
   return `<div class="wcard file" data-i="${i}">
     <span class="fic" style="background:${f.c}">${f.k}</span>
@@ -521,20 +520,19 @@ function addEv(){const i=$('#evIn');if(!i.value.trim())return;i.value='';i.place
 function qcSend(){const i=$('#qc');if(!i.value.trim())return;i.value='';i.placeholder='已发送 — AI 解析中…';setTimeout(()=>i.placeholder='速记一笔 — ⏎ 发送,链接自动解析…',1500)}
 
 /* tab/panel 控制 */
-function switchTab(t){tab=t;renderTabs();renderBody();relayout()}
+function switchTab(t){tab=t;renderTabs();renderBody()}
 function renderTabs(){
   document.querySelectorAll('.mtab').forEach(x=>{
     x.classList.toggle('on',x.dataset.t===tab);
     x.onclick=()=>switchTab(x.dataset.t);
   });
 }
-function relayout(){/* 高度由 CSS grid-rows 0fr→1fr 贴内容,无需 JS 测量 */}
-function openPanel(t){open=true;$('#panel').classList.add('open');if(t)switchTab(t);relayout()}
-function closePanel(){open=false;$('#panel').classList.remove('open');relayout()}
-$('#notch').onclick=()=>{open?closePanel():openPanel()};
+function openPanel(t){open=true;$('#shell').classList.add('open');if(t)switchTab(t)}
+function closePanel(){open=false;$('#shell').classList.remove('open')}
+$('#notch').onclick=e=>{if(!open)openPanel()};
 /* hover 展开(对齐现行稿 helm-notch-pro):悬停刘海→开,移出刘海+面板→220ms 后收 */
 let hoverT;
-for(const el of [document.getElementById('notch'),document.getElementById('panel')]){
+for(const el of [document.getElementById('shell')]){
   el.addEventListener('mouseenter',()=>{clearTimeout(hoverT);if(!open)openPanel()});
   el.addEventListener('mouseleave',()=>{clearTimeout(hoverT);
     hoverT=setTimeout(closePanel,220)});
@@ -546,7 +544,7 @@ function showBanner(){closePanel();$('#banner').classList.add('show')}
 function hideBanner(){$('#banner').classList.remove('show')}
 
 /* 刘海拖文件 */
-const notchEl=$('#notch');
+const notchEl=$('#shell');
 notchEl.addEventListener('dragover',e=>{e.preventDefault();notchEl.classList.add('dragover')});
 notchEl.addEventListener('dragleave',()=>notchEl.classList.remove('dragover'));
 notchEl.addEventListener('drop',e=>{e.preventDefault();notchEl.classList.remove('dragover');
