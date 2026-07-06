@@ -39,10 +39,10 @@ enum NotchSnapshot {
             ("cap", { $0.module = .capture; $0.captureKind = .note }),
             ("cal-month", { $0.module = .calendar; $0.calMonthView = true }),
             ("cal-week", { $0.module = .calendar; $0.calMonthView = false }),
-            ("dev-agents", { $0.module = .dev; $0.devSection = .agents }),
-            ("dev-ports", { $0.module = .dev; $0.devSection = .ports }),
-            ("dev-stats", { $0.module = .dev; $0.devSection = .stats }),
-            ("clip", { $0.module = .clipboard }),
+            ("agents-sessions", { $0.module = .agents; $0.agentPage = .sessions }),
+            ("agents-ports", { $0.module = .agents; $0.agentPage = .ports }),
+            ("agents-prs", { $0.module = .agents; $0.agentPage = .prs }),
+            ("files", { $0.module = .files }),
             ("collapsed", { $0.expanded = false }),
             ("banner-permission", {
                 $0.applyHook(HookMessage(event: "PermissionRequest", session: "notch",
@@ -61,8 +61,8 @@ enum NotchSnapshot {
                     """#))
             }),
             ("dev-agent-detail", {
-                $0.module = .dev
-                $0.devSection = .agents
+                $0.module = .agents
+                $0.agentPage = .sessions
                 $0.applyHook(HookMessage(
                     event: "UserPromptSubmit", session: "s-detail", cwd: "~/work/helm/notch",
                     prompt: "优化 notch 的 vibeisland 效果,可以点开会话看详情、回答问题",

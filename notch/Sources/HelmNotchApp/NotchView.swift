@@ -302,25 +302,43 @@ struct NotchView: View {
             removal: .notchSlide(dx: f ? -46 : 46, dy: 0))
     }
 
-    /// `.ntop` — Helm wordmark on the left, an X (when locked) + gear on the right.
+    /// NOMI toprow:左 tl(娃娃脸 logo+Helm)· 中 hw 黑条常驻摄像头凹槽 ·
+    /// 右 tr(锁态 X+齿轮)。天气位暂空——无真实数据源,不放假灯(backlog Q3)。
     private var topBar: some View {
-        HStack(spacing: 7) {
-            logoMark
-            Text("Helm").font(.system(size: 12, weight: .bold)).foregroundStyle(.white)
-            Spacer()
-            if model.locked {
-                Button { model.collapse() } label: {
-                    Image(systemName: "xmark").font(.system(size: 11, weight: .semibold))
+        let p = model.nomi
+        // 凹槽必须盖住物理摄像头;设计值 310,窄刘海机器也不低于物理宽+呼吸。
+        let stripW = max(CGFloat(NomiTheme.foldedWidth), CGFloat(model.notchWidth) + 20)
+        return ZStack {
+            UnevenRoundedRectangle(
+                bottomLeadingRadius: CGFloat(NomiTheme.foldedRadius),
+                bottomTrailingRadius: CGFloat(NomiTheme.foldedRadius), style: .continuous)
+                .fill(.black)
+                .frame(width: stripW, height: CGFloat(NomiTheme.foldedHeight))
+                .overlay {
+                    Circle().fill(Color(white: 0.09))
+                        .overlay(Circle().stroke(Color(white: 0.04), lineWidth: 2.5))
+                        .frame(width: 8, height: 8)
                 }
-                .buttonStyle(.plain).foregroundStyle(.white.opacity(0.45))
+            HStack(spacing: 7) {
+                HelmLogoView(color: Color(p.logo), size: 19)
+                Text("Helm").font(.system(size: 12.5, weight: .bold)).foregroundStyle(Color(p.ink))
+                Spacer()
+                if model.locked {
+                    Button { model.collapse() } label: {
+                        Image(systemName: "xmark").font(.system(size: 11, weight: .semibold))
+                    }
+                    .buttonStyle(.plain).foregroundStyle(Color(p.ink3))
+                }
+                Button { model.openSettings?() } label: {
+                    Image(systemName: "gearshape").font(.system(size: 13))
+                        .foregroundStyle(Color(p.ink3))
+                        .frame(width: 24, height: 24)
+                }
+                .buttonStyle(.plain)
             }
-            Button { model.openSettings?() } label: {
-                Image(systemName: "gearshape").font(.system(size: 13)).fontWeight(.regular)
-            }
-            .buttonStyle(.plain).foregroundStyle(.white.opacity(0.56))
+            .padding(.horizontal, 10)
         }
-        .frame(height: 30)
-        .padding(.horizontal, 13)
+        .frame(height: CGFloat(NomiTheme.foldedHeight))
     }
 
     /// The HTML logo SVG: an accent rounded square with a dark "H" (`M8 7.5v9 M16 7.5v9 M8 12h8`).
@@ -355,14 +373,16 @@ struct NotchView: View {
 
     private func dockButton(_ m: NotchModule) -> some View {
         let on = model.module == m
-        let badge = (m == .dev && model.localAttentionCount > 0)
+        let badge = (m == .agents && model.localAttentionCount > 0)
+        let p = model.nomi
         return Button { model.selectModule(m) } label: {
-            Text(m.glyph)
-                .font(.system(size: 14))
-                .foregroundStyle(on ? accent : .white.opacity(0.56))
-                .frame(width: 34, height: 34)
-                .background(Circle().fill(Color(white: on ? 0.17 : 0.10)))
-                .overlay(Circle().stroke(accent, lineWidth: on ? 1.5 : 0))
+            Image(systemName: m.symbol)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(on ? Color(p.ink) : Color(p.ink2))
+                .frame(width: 40, height: 40)
+                .background(Circle().fill(Color(p.pill)))
+                // NOMI 激活态:渐变描边环(HTML .mtab.on border-box 渐变)。
+                .overlay(Circle().stroke(Nomi.gradient, lineWidth: on ? 2 : 0))
                 .overlay(alignment: .topTrailing) {
                     if badge {
                         Circle().fill(Color.orange).frame(width: 9, height: 9)
@@ -384,9 +404,10 @@ struct NotchView: View {
             moduleScroll { captureCell }
         case .calendar:
             calendarModule
-        case .dev:
-            devModule
-        case .clipboard:
+        case .agents:
+            agentsModule
+        case .files:
+            // B8 落地完整暂存页;先挂剪贴板列表(设计稿 files 页含剪贴板段)。
             moduleScroll { clipboardBody }
         case .media:
             mediaModule
@@ -558,7 +579,7 @@ struct NotchView: View {
         .padding(.horizontal, 16).padding(.vertical, 2)
         .frame(maxHeight: .infinity, alignment: .top)
         .contentShape(Rectangle())
-        .onTapGesture { model.selectModule(.dev) }
+        .onTapGesture { model.selectModule(.agents) }
     }
 
     // MARK: Calendar module (V.cal — header · week strip ⇄ month grid · agenda)
@@ -833,50 +854,49 @@ struct NotchView: View {
         }
     }
 
-    // MARK: Dev module (V.dev — vertical rail paging agents/ports/reviews/stats)
+    // MARK: 智能体 module(NOMI:会话/端口/PR 三子页;B9 换上下滑 snap+sdots)
 
     /// `.devwrap` — the current sub-page on the left, a minimal vertical pager
     /// rail on the right. The rail dot for the active section elongates in accent.
-    private var devModule: some View {
+    private var agentsModule: some View {
         HStack(spacing: 6) {
-            devStage
-                .id(model.devSection)
-                .transition(devTransition)
+            agentStage
+                .id(model.agentPage)
+                .transition(agentPageTransition)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .clipped()
-                .animation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.36), value: model.devSection)
-            devRail
+                .animation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.36), value: model.agentPage)
+            agentRail
         }
         .padding(.top, 14).padding(.horizontal, 16).padding(.bottom, 6)
     }
 
     /// Vertical slide (HTML slideDev): down → new enters from the bottom.
-    private var devTransition: AnyTransition {
+    private var agentPageTransition: AnyTransition {
         // HTML slideDev: a subtle ±34px translateY + fade.
-        let f = model.devSwitchForward
+        let f = model.agentPageForward
         return .asymmetric(
             insertion: .notchSlide(dx: 0, dy: f ? 34 : -34),
             removal: .notchSlide(dx: 0, dy: f ? -34 : 34))
     }
 
-    @ViewBuilder private var devStage: some View {
-        switch model.devSection {
-        case .agents: VStack(alignment: .leading, spacing: 0) { agentCell }
-        case .ports: devPorts
-        case .reviews: devReviews
-        case .stats: devStats
+    @ViewBuilder private var agentStage: some View {
+        switch model.agentPage {
+        case .sessions: VStack(alignment: .leading, spacing: 0) { agentCell }
+        case .ports: portsPage
+        case .prs: prsPage
         }
     }
 
-    private var devRail: some View {
+    private var agentRail: some View {
         VStack(spacing: 9) {
-            ForEach(DevSection.allCases) { s in
-                let on = model.devSection == s
+            ForEach(AgentPage.allCases) { s in
+                let on = model.agentPage == s
                 RoundedRectangle(cornerRadius: 2.5, style: .continuous)
                     .fill(on ? accent : .white.opacity(0.22))
                     .frame(width: 5, height: on ? 18 : 5)
                     .contentShape(Rectangle())
-                    .onTapGesture { model.selectDev(s) }
+                    .onTapGesture { model.selectAgentPage(s) }
             }
         }
         .frame(width: 20)
@@ -892,7 +912,7 @@ struct NotchView: View {
         (6006, "Storybook", .green),
     ]
 
-    private var devPorts: some View {
+    private var portsPage: some View {
         VStack(alignment: .leading, spacing: 0) {
             cellHeader("本地端口 · LISTENING", trailing: "lsof -iTCP -sTCP:LISTEN")
             ForEach(portSeed.indices, id: \.self) { i in
@@ -919,7 +939,7 @@ struct NotchView: View {
         ("BP", "Resolve \"Implement integration test\"", "helm/bridge", "#123", "GL"),
     ]
 
-    private var devReviews: some View {
+    private var prsPage: some View {
         VStack(alignment: .leading, spacing: 0) {
             cellHeader("◈ 待评审 · PRs / MRs", trailing: "\(prSeed.count) 待处理")
             ForEach(prSeed.indices, id: \.self) { i in
@@ -946,101 +966,6 @@ struct NotchView: View {
             }
             Spacer(minLength: 0)
         }
-    }
-
-    // Stats (V.stats). TODO(align-dev-stats): heatmap/tokens/commits are seed
-    // data — real numbers need GitHub + Claude-Code token tracking.
-    private let sparkSeed: [Int] = [38, 62, 30, 78, 52, 88, 68]
-
-    private var devStats: some View {
-        GeometryReader { geo in
-            let heatW = (geo.size.width - 18) * 1.45 / 2.45
-            HStack(spacing: 18) {
-                VStack(alignment: .leading, spacing: 0) {
-                    cellHeader("GITHUB · 1,284 contributions")
-                    heatmap.padding(.top, 4)
-                    HStack(spacing: 3) {
-                        Text("Less").font(.system(size: 9)).foregroundStyle(.white.opacity(0.34))
-                        ForEach(1..<5) { l in RoundedRectangle(cornerRadius: 2).fill(accent).opacity(heatOpacity(l)).frame(width: 9, height: 9) }
-                        Text("More").font(.system(size: 9)).foregroundStyle(.white.opacity(0.34))
-                    }
-                    .padding(.top, 8)
-                }
-                .frame(width: heatW, alignment: .leading)
-
-                VStack(spacing: 10) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("CLAUDE CODE TOKENS · TODAY").font(.system(size: 9, weight: .bold)).tracking(0.5).foregroundStyle(.white.opacity(0.34))
-                        HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            (Text("2.4").font(.system(size: 24, weight: .heavy)) + Text("M").font(.system(size: 13)).foregroundColor(.white.opacity(0.56)))
-                                .foregroundStyle(.white)
-                            Text("· 48M 总").font(.system(size: 11, weight: .semibold)).foregroundStyle(.white.opacity(0.34))
-                        }
-                        .padding(.top, 3)
-                        HStack(alignment: .bottom, spacing: 3) {
-                            ForEach(sparkSeed.indices, id: \.self) { i in
-                                RoundedRectangle(cornerRadius: 2).fill(accent).opacity(0.85)
-                                    .frame(maxWidth: .infinity).frame(height: CGFloat(sparkSeed[i]) / 100 * 24)
-                            }
-                        }
-                        .frame(height: 24).padding(.top, 8)
-                    }
-                    .padding(.horizontal, 13).padding(.vertical, 10)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.04)))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.09), lineWidth: 0.5))
-
-                    HStack(spacing: 10) {
-                        statTile("COMMITS · 本周") { Text(verbatim: "37").font(.system(size: 18, weight: .heavy)) }
-                        statTile("PULL REQUESTS") {
-                            // HTML .sv2 small — big numbers, small unit words.
-                            Text(verbatim: "3").font(.system(size: 18, weight: .heavy))
-                                + Text(verbatim: " open").font(.system(size: 11)).foregroundColor(.white.opacity(0.56))
-                                + Text(verbatim: " · 12").font(.system(size: 18, weight: .heavy))
-                                + Text(verbatim: " merged").font(.system(size: 11)).foregroundColor(.white.opacity(0.56))
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .top)
-            }
-        }
-    }
-
-    private func statTile<V: View>(_ label: String, @ViewBuilder _ value: () -> V) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label).font(.system(size: 9, weight: .bold)).tracking(0.5).foregroundStyle(.white.opacity(0.34))
-            value().foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.85)
-        }
-        .padding(.horizontal, 12).padding(.vertical, 10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.04)))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.09), lineWidth: 0.5))
-    }
-
-    /// `.hmap` — 19 columns × 7 rows; level→opacity from a deterministic hash
-    /// (HTML seeds it with Math.random; we use a stable hash for reproducibility).
-    private var heatmap: some View {
-        HStack(spacing: 3) {
-            ForEach(0..<19, id: \.self) { col in
-                VStack(spacing: 3) {
-                    ForEach(0..<7, id: \.self) { row in
-                        RoundedRectangle(cornerRadius: 2).fill(accent)
-                            .opacity(heatOpacity(heatLevel(col * 7 + row)))
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
-                }
-            }
-        }
-    }
-
-    private func heatLevel(_ i: Int) -> Int {
-        let r = heatHash(i)
-        return r < 0.4 ? 0 : r < 0.62 ? 1 : r < 0.82 ? 2 : r < 0.94 ? 3 : 4
-    }
-    private func heatOpacity(_ level: Int) -> Double { [0.09, 0.3, 0.52, 0.74, 1.0][level] }
-    private func heatHash(_ i: Int) -> Double {
-        let x = sin(Double(i) * 12.9898 + 78.233) * 43758.5453
-        return x - floor(x)
     }
 
     // MARK: Media module (V.media / .mfull — blurred cover · cover/lyrics · waveform)

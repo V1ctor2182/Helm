@@ -92,19 +92,19 @@ final class NotchModuleTests: XCTestCase {
     func testStartsOnDashboard() {
         let model = NotchModel(backend: FakeBackend())
         XCTAssertEqual(model.module, .dashboard)
-        XCTAssertEqual(model.devSection, .agents)
+        XCTAssertEqual(model.agentPage, .sessions)
     }
 
     @MainActor
     func testDockOrderExcludesMedia() {
-        XCTAssertEqual(NotchModule.dock, [.dashboard, .capture, .calendar, .dev, .clipboard])
+        XCTAssertEqual(NotchModule.dock, [.dashboard, .capture, .calendar, .agents, .files])
         XCTAssertFalse(NotchModule.dock.contains(.media))
     }
 
     @MainActor
     func testSwitchModuleWrapsForward() {
         let model = NotchModel(backend: FakeBackend())
-        model.module = .clipboard  // last in the dock
+        model.module = .files  // last in the dock
         model.switchModule(1)
         XCTAssertEqual(model.module, .dashboard)  // wraps to first
     }
@@ -113,7 +113,7 @@ final class NotchModuleTests: XCTestCase {
     func testSwitchModuleWrapsBackward() {
         let model = NotchModel(backend: FakeBackend())
         model.switchModule(-1)  // from dashboard (first)
-        XCTAssertEqual(model.module, .clipboard)  // wraps to last
+        XCTAssertEqual(model.module, .files)  // wraps to last
     }
 
     @MainActor
@@ -202,7 +202,7 @@ final class NotchModuleTests: XCTestCase {
         model.switchModule(-1)
         XCTAssertFalse(model.moduleSwitchForward)  // backward
         // dock click: dashboard(0) → dev(3) is forward; → capture(1) back is not
-        model.selectModule(.dev)
+        model.selectModule(.agents)
         XCTAssertTrue(model.moduleSwitchForward)
         model.selectModule(.capture)
         XCTAssertFalse(model.moduleSwitchForward)
@@ -211,44 +211,44 @@ final class NotchModuleTests: XCTestCase {
     @MainActor
     func testEnteringDevResetsSubSection() {
         let model = NotchModel(backend: FakeBackend())
-        model.devSection = .stats
-        model.selectModule(.dev)
-        XCTAssertEqual(model.devSection, .agents)
+        model.agentPage = .prs
+        model.selectModule(.agents)
+        XCTAssertEqual(model.agentPage, .sessions)
     }
 
     @MainActor
     func testSelectDevTracksDirection() {
         let model = NotchModel(backend: FakeBackend())
-        model.devSection = .agents
-        model.selectDev(.stats)  // forward (down)
-        XCTAssertTrue(model.devSwitchForward)
-        XCTAssertEqual(model.devSection, .stats)
-        model.selectDev(.agents)  // backward (up)
-        XCTAssertFalse(model.devSwitchForward)
-        model.devSection = .ports
-        model.switchDev(1)
-        XCTAssertTrue(model.devSwitchForward)
+        model.agentPage = .sessions
+        model.selectAgentPage(.prs)  // forward (down)
+        XCTAssertTrue(model.agentPageForward)
+        XCTAssertEqual(model.agentPage, .prs)
+        model.selectAgentPage(.sessions)  // backward (up)
+        XCTAssertFalse(model.agentPageForward)
+        model.agentPage = .ports
+        model.switchAgentPage(1)
+        XCTAssertTrue(model.agentPageForward)
     }
 
     @MainActor
     func testSwitchDevClampsAtEnds() {
         let model = NotchModel(backend: FakeBackend())
-        model.devSection = .agents
-        model.switchDev(-1)  // already at top
-        XCTAssertEqual(model.devSection, .agents)  // clamped, no wrap
-        model.devSection = .stats
-        model.switchDev(1)  // already at bottom
-        XCTAssertEqual(model.devSection, .stats)  // clamped, no wrap
+        model.agentPage = .sessions
+        model.switchAgentPage(-1)  // already at top
+        XCTAssertEqual(model.agentPage, .sessions)  // clamped, no wrap
+        model.agentPage = .prs
+        model.switchAgentPage(1)  // already at bottom
+        XCTAssertEqual(model.agentPage, .prs)  // clamped, no wrap
     }
 
     @MainActor
     func testSwitchDevPagesThrough() {
         let model = NotchModel(backend: FakeBackend())
-        model.devSection = .agents
-        model.switchDev(1)
-        XCTAssertEqual(model.devSection, .ports)
-        model.switchDev(1)
-        XCTAssertEqual(model.devSection, .reviews)
+        model.agentPage = .sessions
+        model.switchAgentPage(1)
+        XCTAssertEqual(model.agentPage, .ports)
+        model.switchAgentPage(1)
+        XCTAssertEqual(model.agentPage, .prs)
     }
 
     @MainActor
@@ -299,17 +299,17 @@ final class NotchModuleTests: XCTestCase {
         XCTAssertEqual(model.viewHeight(), 172)
         model.module = .media
         XCTAssertEqual(model.viewHeight(), 330)
-        model.module = .clipboard
+        model.module = .files
         XCTAssertEqual(model.viewHeight(), 232)
     }
 
     @MainActor
     func testViewHeightFollowsDevSection() {
         let model = NotchModel(backend: FakeBackend())
-        model.module = .dev
-        model.devSection = .agents
+        model.module = .agents
+        model.agentPage = .sessions
         XCTAssertEqual(model.viewHeight(), 204)
-        model.devSection = .stats
+        model.agentPage = .prs
         XCTAssertEqual(model.viewHeight(), 252)
     }
 

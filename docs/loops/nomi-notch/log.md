@@ -20,3 +20,10 @@
 - 壳:展开底色走 nomi.shellBG(深 #0f0f11 默认),折叠纯黑;圆角 14/26;expandedWidth 默认 600→440。玻璃材质暂时退役(B11 定去留);焦点态折叠显示保留旧行为(设计稿未覆盖)。
 - build+test 绿(无失败无崩溃);快照 shots/b2-collapsed.png(logo/摄像头点/状态点就位)。
 - 遗留:壳生长动画仍 .36s(设计 .46s,B3 顶行改造时一起调);窗口级 shadow-xl 待查 NSPanel 阴影可行性。
+
+## 2026-07-07 迭代 4 — B3 顶行+dock+模块重组 ✅
+- NotchModule 重组:dashboard/capture/calendar/agents/files(+media zoom 目标);clipboard 模块退役(列表暂挂 files 页,B8 重做);DevSection→AgentPage(sessions/ports/prs),reviews/stats 内容删除(设计稿无此页)。
+- NOMI toprow:左娃娃脸 logo+Helm、中黑条常驻摄像头凹槽(≥310/物理宽+20,底角 14)、右齿轮;topBarHeight 30→34。天气位留空不放假灯(Q3)。
+- dock:5 圆钮 40px SF 符号,激活=渐变描边环(mtab.on);agents 待批橙点徽章保留。
+- 横扫切模块/上下滑子页机制沿用(改指 agents);智能体徽章/详情页防误翻逻辑随迁。
+- 全测试绿(0 失败 0 崩溃);快照 b3-dash/b3-agents(dock+toprow 就位;各页内容仍旧版式,B4-B9 逐页重做)。

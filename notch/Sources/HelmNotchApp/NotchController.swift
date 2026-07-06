@@ -149,10 +149,10 @@ final class NotchController {
             let cooled = Date().timeIntervalSince(lastSwitchAt) > 0.30
             // 会话详情页打开时竖滑留给内容滚动,不翻 Dev 子页
             // (2026-07-06 用户:详情里一滑就跳到下个 category)。
-            let devPagingEnabled = model.module == .dev && model.selectedLocalSessionID == nil
+            let devPagingEnabled = model.module == .agents && model.selectedLocalSessionID == nil
             if devPagingEnabled, abs(gestureAccumY) > abs(gestureAccumX), abs(gestureAccumY) > threshold {
                 gestureSwitched = true
-                if cooled { animatedSwitch { model.switchDev(gestureAccumY > 0 ? 1 : -1) } }
+                if cooled { animatedSwitch { model.switchAgentPage(gestureAccumY > 0 ? 1 : -1) } }
             } else if abs(gestureAccumX) > abs(gestureAccumY), abs(gestureAccumX) > threshold {
                 gestureSwitched = true
                 if cooled { animatedSwitch { model.switchModule(gestureAccumX > 0 ? 1 : -1) } }
@@ -162,8 +162,8 @@ final class NotchController {
 
         // Mouse wheel (discrete, no phase): a short cooldown paces the steps.
         guard Date().timeIntervalSince(lastSwitchAt) > 0.30 else { return }
-        if model.module == .dev, model.selectedLocalSessionID == nil, abs(dy) > abs(dx), abs(dy) > 1 {
-            animatedSwitch { model.switchDev(dy > 0 ? 1 : -1) }
+        if model.module == .agents, model.selectedLocalSessionID == nil, abs(dy) > abs(dx), abs(dy) > 1 {
+            animatedSwitch { model.switchAgentPage(dy > 0 ? 1 : -1) }
         } else if abs(dx) > abs(dy), abs(dx) > 1 {
             animatedSwitch { model.switchModule(dx > 0 ? 1 : -1) }
         }

@@ -127,13 +127,13 @@ public final class NotchModel {
     /// The module shown in the expanded panel (HTML `S.view`).
     public var module: NotchModule = .dashboard
     /// The Dev module's active sub-section (HTML `S.devSec`).
-    public var devSection: DevSection = .agents
+    public var agentPage: AgentPage = .sessions
     /// Direction of the last module switch — drives the slide-in transition
     /// (HTML `slideTo(dir)`): true = forward (new enters from the right).
     public private(set) var moduleSwitchForward = true
     /// Direction of the last Dev sub-page change — drives the vertical slide
     /// (HTML `slideDev(dir)`): true = down (new enters from the bottom).
-    public private(set) var devSwitchForward = true
+    public private(set) var agentPageForward = true
     /// The player the transport controls (HTML `S.mediaSrc`).
     public private(set) var mediaSource: MediaSource = .system
 
@@ -162,7 +162,7 @@ public final class NotchModel {
     // MARK: Per-view height (HTML viewHeight() + NTOP)
 
     /// Height of the top bar, added on top of every view budget (HTML `NTOP`).
-    public static let topBarHeight: Double = 30
+    public static let topBarHeight: Double = 34  // NOMI toprow(=折叠条高)
 
     /// The view+dock budget for the current module (HTML `viewHeight()` / `VH`).
     /// Each module is as tall as its content needs — no big black void.
@@ -170,15 +170,14 @@ public final class NotchModel {
         switch module {
         case .dashboard: 172
         case .media: 330
-        case .clipboard: 232
         case .calendar: calMonthView ? 312 : 240
-        case .dev:
-            switch devSection {
-            // 详情页(prompt+最后回复+回复框)比列表高。
-            case .agents: selectedLocalSessionID != nil ? 316 : 204
+        case .files: 232
+        case .agents:
+            switch agentPage {
+            // 详情页(prompt+最后回复+回复框)比列表高;B9 上下滑落地后统一预算。
+            case .sessions: selectedLocalSessionID != nil ? 316 : 204
             case .ports: 248
-            case .reviews: 252
-            case .stats: 252
+            case .prs: 252
             }
         // Tightened vs the HTML prototype — the Swift content is more compact, so
         // the taller HTML budgets left too much empty space below (device feedback).
@@ -220,29 +219,28 @@ public final class NotchModel {
     private func setModule(_ m: NotchModule, forward: Bool) {
         moduleSwitchForward = forward
         module = m
-        if m == .dev { devSection = .agents } else { selectedLocalSessionID = nil }
+        if m == .agents { agentPage = .sessions } else { selectedLocalSessionID = nil }
         // Leaving 速记 ends the capture lock so hover-away can collapse again.
         if m != .capture { locked = false }
     }
 
-    /// Page the Dev sub-sections vertically (HTML `switchDev(dir)`). Clamps at
-    /// the ends — no wrap.
-    public func switchDev(_ direction: Int) {
-        let all = DevSection.allCases
-        guard let i = all.firstIndex(of: devSection) else { return }
+    /// 智能体子页上下滑翻页(HTML .swipe snap)。Clamps at the ends — no wrap.
+    public func switchAgentPage(_ direction: Int) {
+        let all = AgentPage.allCases
+        guard let i = all.firstIndex(of: agentPage) else { return }
         let next = i + direction
         guard next >= 0, next < all.count else { return }
-        devSwitchForward = direction > 0
-        devSection = all[next]
+        agentPageForward = direction > 0
+        agentPage = all[next]
     }
 
-    /// Jump to a Dev sub-section (rail tap); infers the slide direction.
-    public func selectDev(_ s: DevSection) {
-        let all = DevSection.allCases
-        let from = all.firstIndex(of: devSection) ?? 0
+    /// 跳到某张智能体子页(sdot 点击);推断滑动方向。
+    public func selectAgentPage(_ s: AgentPage) {
+        let all = AgentPage.allCases
+        let from = all.firstIndex(of: agentPage) ?? 0
         let to = all.firstIndex(of: s) ?? from
-        devSwitchForward = to >= from
-        devSection = s
+        agentPageForward = to >= from
+        agentPage = s
     }
 
     // MARK: NOMI theme (深默认+浅色,helm-notch-nomi.html)
