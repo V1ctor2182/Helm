@@ -48,3 +48,7 @@
 - 门: build ✓ / check 0/0 / test 205 全绿
 - 视觉: shots/r10-cockpit.png(浅 chrome+胶囊 tab+黑终端,真终端在跑)
 - 剩余: FileBrowser/PreviewPane 内部细节(按钮/列表行)P2 精修
+## R11 · 2026-07-07 01:10 · 壳 chrome NOMI 化(P2)
+- 对齐: titlebar(HELM wordmark/假遥测 meta 删,细白拖拽条+右缘真后端状态点)/ORAGE fiducial+坐标 chip 装饰整体退场/statusbar 假遥测段(tok/RAG/NEXT/◇chrome)删,保留真功能四钮(上下文/终端/⌘K/⌘N),sans 淡字胶囊化。孤儿样式清零。
+- 门: build ✓ / check 0/0 / test 205 全绿
+- 视觉: shots/r11-shell.png——全站再无 mono 骨架残留
