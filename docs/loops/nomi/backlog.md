@@ -6,7 +6,7 @@
 - [ ] [R05][P1][gap] 记录页三视图重构:四 tab(速记/日记/任务/日历)→稿的 Timeline/Canvas/Calendar+侧栏分类过滤;Canvas 视图(拖拽+连线)全新未建。
 - [x] [R05][P1][gap](R09 清) Calendar.svelte(月历+agenda)仍 ORAGE 皮,且稿是周视图+时刻线。
 - [ ] [R06][P2][polish] CompareView/ProviderSettings 子面板仍 ORAGE 皮。
-- [ ] [R07][P1][gap] 驾驶舱家族(CockpitView/Sidebar/DockHost/FileBrowser/PreviewPane,3187 行)未换皮——按稿 agent 卡+黑终端块语言,单独轮。
+- [x] [R07][P1][gap](R10 清·chrome 层) 驾驶舱家族(CockpitView/Sidebar/DockHost/FileBrowser/PreviewPane,3187 行)未换皮——按稿 agent 卡+黑终端块语言,单独轮。
 - [ ] [R07][P2][polish] Research 历史列表/状态 badge、Settings 主题色点排精修。
 - [x] [R05][P1][gap](R08 清) 记录页三视图重构+Canvas 视图。
 - [ ] [R08][P2][question] Canvas 连线/cluster:稿有橙紫连线(思路关联),后端无关系模型——要不要建 note_links 表?待用户拍板。

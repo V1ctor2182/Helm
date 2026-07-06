@@ -43,3 +43,8 @@
 - 对齐: Calendar.svelte 新增周视图并设为默认(周/列表/月三档,月·列表功能原样保留=功能不减):7 列虚线格(8-22 × 44px)/白浮卡(日程紫左沿·任务绿左沿,按分钟定位)/今天列高亮/当前时刻线(橙点+线)/周导航+今天+GMT 标签——对齐稿 Calendar。
 - 门: build ✓ / check 0/0 / test 205 全绿(agenda 两条断言改为先切列表;新增周视图落格测试)
 - 视觉: shots/r09-week.png
+## R10 · 2026-07-07 01:02 · 驾驶舱 chrome 换皮(P1 清)
+- 对齐: Sidebar(搜索胶囊/项目行圆角胶囊激活)+DockHost(zone tab mono 下划线→sans 胶囊)。终端本体保黑(稿同款黑终端块);dock 拖拽/吸附/布局持久化功能零动。
+- 门: build ✓ / check 0/0 / test 205 全绿
+- 视觉: shots/r10-cockpit.png(浅 chrome+胶囊 tab+黑终端,真终端在跑)
+- 剩余: FileBrowser/PreviewPane 内部细节(按钮/列表行)P2 精修

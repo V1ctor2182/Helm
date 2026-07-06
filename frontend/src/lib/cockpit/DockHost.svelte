@@ -234,14 +234,13 @@
     flex: none;
   }
   .ztab {
-    font-family: var(--mono);
-    font-size: 9px;
-    letter-spacing: 1px;
+    font: 500 11px/1 var(--sans);
     color: var(--t4);
     background: transparent;
     border: 0;
-    border-bottom: 2px solid transparent;
-    padding: 6px 8px 5px;
+    border-radius: var(--radius-pill);
+    padding: 5px 11px;
+    margin: 3px 0;
     cursor: grab;
     white-space: nowrap;
   }
@@ -250,7 +249,8 @@
   }
   .ztab.on {
     color: var(--t1);
-    border-bottom-color: var(--acc);
+    background: var(--pill);
+    font-weight: 600;
   }
   .ztab.ghost {
     opacity: .35;
