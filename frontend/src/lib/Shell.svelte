@@ -150,7 +150,7 @@
   .shell {
     height: 100vh;
     display: grid;
-    grid-template-columns: var(--rail-w) auto 1fr;
+    grid-template-columns: var(--side-w) auto 1fr; /* NOMI 白侧栏(R02) */
     grid-template-rows: var(--titlebar-h) 1fr var(--statusbar-h);
     grid-template-areas:
       'title title title'
