@@ -319,7 +319,7 @@
 
 <script>
 const $=s=>document.querySelector(s);
-let open=true, tab='dash', kind='note', who='me', playing=true, asked=false;
+let open=true, tab='dash', kind='note', who='me', playing=true, asked=false, recentOpen=false;
 let pos=112, dur=245; // 秒
 let focusLeft=25*60, focusRun=false, focusTotal=25*60;
 
@@ -410,16 +410,19 @@ function renderBody(){
         速记里的链接会自动解析:YouTube 走 oEmbed,论文走 arXiv,网页抓 OpenGraph,AI 再补摘要和标签。
       </div>
       <div class="recent">
-        <div class="rlab">最近</div>
+        <button class="rlab" id="rToggle" style="display:flex;align-items:center;gap:5px;background:none;border:none;cursor:pointer;padding:2px;color:var(--ink3);font-size:10px;letter-spacing:.4px">
+          <span style="display:inline-block;transition:transform .2s;transform:rotate(${recentOpen?90:0}deg)">▸</span>最近 · 3 条</button>
+        ${recentOpen?`
         <div class="ritem"><span class="ic" style="background:#ff2d2d">YT</span>
           <span class="tx"><b>PSY - GANGNAM STYLE M/V</b> · 已解析:封面+摘要+标签</span><span class="tm">10:08</span></div>
         <div class="ritem"><span class="ic" style="background:#8b5a2b">AX</span>
           <span class="tx"><b>Attention Is All You Need</b> · arXiv 摘要已抓</span><span class="tm">11:58</span></div>
         <div class="ritem"><span class="ic" style="background:#111114">N</span>
-          <span class="tx">驾驶舱 e2e 三个坑——写进 backlog 复盘。</span><span class="tm">14:31</span></div>
+          <span class="tx">驾驶舱 e2e 三个坑——写进 backlog 复盘。</span><span class="tm">14:31</span></div>`:''}
       </div>`;
     b.querySelectorAll('.kind').forEach(k=>k.onclick=()=>{kind=k.dataset.k;asked=false;renderBody()});
     b.querySelectorAll('.who').forEach(w=>w.onclick=()=>{who=w.dataset.w;renderBody()});
+    $('#rToggle').onclick=()=>{recentOpen=!recentOpen;renderBody()};
     if(kind==='focus'){bindFocus();}
     else $('#capSend').onclick=()=>{
       const c=$('#cap'); if(!c.value.trim())return;
