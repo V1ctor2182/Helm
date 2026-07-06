@@ -126,14 +126,19 @@
   .mprog{height:6px;border-radius:99px;background:var(--pill);margin-top:10px;overflow:hidden;cursor:pointer}
   .mprog i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--g1),var(--g2));transition:width .2s linear}
   .mtimes{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9.5px;color:var(--ink3);margin-top:4px}
-  .mctl{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:10px}
+  .mctl{display:flex;align-items:center;justify-content:flex-start;gap:12px;margin-top:12px}
   .mbtn{width:36px;height:36px;border-radius:50%;border:none;background:var(--pill);color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center}
   .mbtn:hover{background:#e8e8ec}
   .mbtn.play{width:44px;height:44px;background:var(--ink);color:#fff}
   .mbtn svg{width:15px;height:15px}
-  .lyrics{margin-top:10px;height:58px;overflow:hidden;text-align:center}
-  .lyr{font-size:11.5px;color:var(--ink3);line-height:1.7;transition:all .3s var(--ease)}
-  .lyr.on{color:var(--ink);font-weight:700;font-size:12.5px}
+  .media2{display:flex;gap:18px;align-items:stretch}
+  .mleft{width:196px;flex:none}
+  .mlyr{flex:1;height:196px;overflow:hidden;position:relative;
+    -webkit-mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent);
+    mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent)}
+  .mlyr .roll{display:flex;flex-direction:column;gap:12px;transition:transform .55s var(--ease)}
+  .lyr{font-size:14.5px;font-weight:600;color:var(--ink3);line-height:1.45;transition:color .4s,font-size .4s}
+  .lyr.on{color:var(--ink);font-size:16.5px;font-weight:800}
 
   /* 3 速记 */
   .kindrow{display:flex;gap:5px;margin-bottom:9px}
@@ -329,8 +334,11 @@ const IMG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-wid
 
 const KINDS=[['note','速记'],['journal','日记'],['task','任务'],['focus','专注'],['ask','问大脑']];
 const PH={note:'随手记一笔 — 链接会自动解析…',journal:'今天怎么样?写两句…',task:'要做什么?(时间地点 AI 来读)',focus:'这段时间专注做什么…',ask:'问 Helm 大脑一个问题…'};
-const LYRICS=['and I will wait for the day','keep me where the light is','oh keep me where the light is','gravity is working against me'];
-let lyrIdx=1;
+const LYRICS=['gravity is working against me','and gravity wants to bring me down',
+ 'oh I will fight it, I will fight it','oh twice as much ain\'t twice as good',
+ 'and can\'t sustain like one half could','it wants my soul, it wants my whole life',
+ 'just keep me where the light is','oh keep me where the light is'];
+let lyrIdx=2;
 
 const FILES=[]; // shelf
 const fmt=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
@@ -364,22 +372,22 @@ function renderBody(){
     b.innerHTML=`
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:9px">
         <button class="pbtn" id="backDash">‹ 总览</button>
-        <span style="font-size:10px;color:var(--ink3)">媒体 · 点总览封面进入</span></div>
-      <div class="media">
-        <div class="cover">${NOTE}</div>
-        <div class="minfo">
-          <div class="t">Gravity</div>
-          <div class="a">John Mayer — Continuum</div>
+        <span style="font-size:10px;color:var(--ink3)">媒体</span></div>
+      <div class="media2">
+        <div class="mleft">
+          <div class="cover" style="width:88px;height:88px">${NOTE}</div>
+          <div class="t" style="font-size:14.5px;font-weight:700;margin-top:10px">Gravity</div>
+          <div class="a" style="font-size:11px;color:var(--ink3);margin-top:2px">John Mayer — Continuum</div>
           <div class="mprog" id="prog"><i id="pg" style="width:${pos/dur*100}%"></i></div>
           <div class="mtimes"><span id="tA">${fmt(pos)}</span><span>${fmt(dur)}</span></div>
+          <div class="mctl">
+            <button class="mbtn">${PREV}</button>
+            <button class="mbtn play" id="pp">${playing?PAUSE:PLAY}</button>
+            <button class="mbtn">${NEXT}</button>
+          </div>
         </div>
-      </div>
-      <div class="mctl">
-        <button class="mbtn">${PREV}</button>
-        <button class="mbtn play" id="pp">${playing?PAUSE:PLAY}</button>
-        <button class="mbtn">${NEXT}</button>
-      </div>
-      <div class="lyrics" id="lyrics">${LYRICS.map((l,i)=>`<div class="lyr${i===lyrIdx?' on':''}">${l}</div>`).join('')}</div>`;
+        <div class="mlyr"><div class="roll" id="roll">${LYRICS.map((l,i)=>`<div class="lyr${i===lyrIdx?' on':''}">${l}</div>`).join('')}</div></div>
+      </div>`;
     $('#pp').onclick=()=>{playing=!playing;renderBody()};
     $('#backDash').onclick=()=>switchTab('dash');
     $('#prog').onclick=e=>{const r=e.currentTarget.getBoundingClientRect();pos=Math.round((e.clientX-r.left)/r.width*dur);renderBody()};
@@ -549,11 +557,14 @@ setInterval(()=>{
   if(focusRun&&focusLeft>0){focusLeft--;
     if(tab==='capture'&&kind==='focus')renderBody()}
 },1000);
-function scrollLyr(){/* 歌词轮换 */}
+function scrollLyr(){
+  const roll=document.getElementById('roll'); if(!roll)return;
+  const box=roll.parentElement, cur=roll.children[lyrIdx];
+  roll.querySelectorAll('.lyr').forEach((el,i)=>el.classList.toggle('on',i===lyrIdx));
+  if(cur)roll.style.transform=`translateY(${box.clientHeight/2 - cur.offsetTop - cur.offsetHeight/2}px)`;
+}
 setInterval(()=>{
-  if(playing&&tab==='media'){lyrIdx=(lyrIdx+1)%LYRICS.length;
-    const ly=document.getElementById('lyrics');
-    if(ly)ly.innerHTML=LYRICS.map((l,i)=>`<div class="lyr${i===lyrIdx?' on':''}">${l}</div>`).join('');}
+  if(playing&&tab==='media'){lyrIdx=(lyrIdx+1)%LYRICS.length;scrollLyr();}
 },3200);
 
 renderTabs(); renderBody(); openPanel('dash');
