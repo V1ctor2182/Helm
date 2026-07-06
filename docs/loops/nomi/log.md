@@ -39,3 +39,7 @@
 - 门: build ✓ / check 0/0(修 line-clamp 双写) / test 204 全绿(旧测试语义靠 chips role=tab 无缝通过)
 - 视觉: shots/r08-timeline.png + r08-canvas.png(Canvas 真收藏卡+拖拽 ✓)
 - 缺口: Canvas 连线/cluster 需关系数据(后端无此概念) → backlog P2 add_question;分类 chips 未迁全局侧栏 → P2;收藏细分(视频/论文/灵感)未做 → P2
+## R09 · 2026-07-07 00:55 · Calendar 周视图(P1 清)
+- 对齐: Calendar.svelte 新增周视图并设为默认(周/列表/月三档,月·列表功能原样保留=功能不减):7 列虚线格(8-22 × 44px)/白浮卡(日程紫左沿·任务绿左沿,按分钟定位)/今天列高亮/当前时刻线(橙点+线)/周导航+今天+GMT 标签——对齐稿 Calendar。
+- 门: build ✓ / check 0/0 / test 205 全绿(agenda 两条断言改为先切列表;新增周视图落格测试)
+- 视觉: shots/r09-week.png
