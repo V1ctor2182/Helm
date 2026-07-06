@@ -245,7 +245,14 @@ public final class NotchModel {
         devSection = s
     }
 
-    // MARK: Theme (daily-rotating accent)
+    // MARK: NOMI theme (深默认+浅色,helm-notch-nomi.html)
+
+    /// 深/浅面板。NOMI 重塑后这是唯一的模式开关;渐变 accent 不随它变。
+    public var nomiDark = true
+    /// 当前成套色板 — 视图只从这里取色,禁止单点混用两套。
+    public var nomi: NomiPalette { nomiDark ? .dark : .light }
+
+    // MARK: Theme (daily-rotating accent — 旧 ORAGE 皮,NOMI 转正后退役备用)
 
     /// Notch background material (HTML MATS). Default black keeps the current look.
     public var backgroundMaterial: NotchMaterial = .black { didSet { refreshTheme() } }
