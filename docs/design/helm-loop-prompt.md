@@ -92,17 +92,17 @@
 
 **4A · 主工作台(日间档)**:
 ```
-读 docs/design/helm-loop-procedure.md + DESIGN.md 的 NOMI 段,把只读设计稿 docs/design/helm-journal-pro.html 从头读懂(六板块+交互 JS),对照现状 frontend/ 逐块重塑成 NOMI 皮(功能不减、契约不破):挑一块→精读稿→进 Svelte(新 token/禁 emoji)→npm build+check+test 绿(动后端加 pytest)→browse 截稿与实现对比→重启 Helm.app→record+写 log;每块停下让我 review,不自动 commit(分支 feat/nomi-*)。
+读 docs/design/helm-loop-procedure.md + DESIGN.md 的 NOMI 段,把只读设计稿 docs/design/helm-journal-pro.html 从头读懂(六板块+交互 JS),对照现状 frontend/ 逐块重塑成 NOMI 皮(功能不减、契约不破):挑一块→精读稿→进 Svelte(新 token/禁 emoji)→npm build+check+test 绿(动后端加 pytest)→browse 截稿与实现对比→重启 Helm.app→record;log/report/截图/backlog 全记进你的专属工作区 docs/loops/nomi/(README 有最小结构,想加什么自建);每块停下让我 review,不自动 commit(分支 feat/nomi-*)。
 ```
 
 **4A · 夜间模式**:
 ```
-/loop 1m 读 docs/design/helm-loop-procedure.md,以【夜间模式】把 docs/design/helm-journal-pro.html(只读)逐块重塑进 frontend/ 到一模一样,功能不减、notch 契约不破,整夜自主:每块 精读稿→进 Svelte(NOMI token/禁 emoji)→npm build+check+test 绿(动后端加 pytest;3 轮不绿 skip+add_question)→browse 视觉对比→复查(diff code-review+完整性)记 helm-review-backlog.md→record+log+report→自 commit 到 feat/nomi-* 并 push→下一块(P0/P1 优先)。硬底线:设计稿/DESIGN.md 只读;非绿不 commit;不合 main;不改坏 notch;不可逆操作不猜。全部块对齐或全卡住才停。
+/loop 1m 读 docs/design/helm-loop-procedure.md,以【夜间模式】把 docs/design/helm-journal-pro.html(只读)逐块重塑进 frontend/ 到一模一样,功能不减、notch 契约不破,整夜自主:每块 精读稿→进 Svelte(NOMI token/禁 emoji)→npm build+check+test 绿(动后端加 pytest;3 轮不绿 skip+add_question)→browse 视觉对比→复查(diff code-review+完整性)→record;log(log.md)/每轮 report(reports/round-NN.md)/截图/复查发现(backlog.md)全记进你的专属工作区 docs/loops/nomi/(结构见其 README,需要别的自建)→自 commit 到 feat/nomi-* 并 push→下一块(P0/P1 优先)。硬底线:设计稿/DESIGN.md 只读;非绿不 commit;不合 main;不改坏 notch;不可逆操作不猜。全部块对齐或全卡住才停。
 ```
 
 **4B · notch(Swift,建议 4A 皮肤基建落地后再开)**:
 ```
-/loop 1m 读 notch 现状(Sources/HelmNotch*)与只读设计稿 docs/design/helm-notch-nomi.html,以【夜间模式】把 notch 原生 UI 重塑成该稿:单体生长/折叠态(左组—摄像头空档—右组)/顶行(左 logo+Helm 右天气+设置)/底部圆钮 dock 5 模块/智能体上下滑子页(会话/端口/PR)/横扫切模块/banner 单体化/深默认+浅色。每块 swift build && swift test 绿才 commit(feat/notch-nomi-*,不合 main;macOS CI 过了留我合),快照视觉对比,record+log+report。后端契约不动;拿不准的产品行为 add_question 别猜。全部块对齐或全卡住才停。
+/loop 1m 读 notch 现状(Sources/HelmNotch*)与只读设计稿 docs/design/helm-notch-nomi.html,以【夜间模式】把 notch 原生 UI 重塑成该稿:单体生长/折叠态(左组—摄像头空档—右组)/顶行(左 logo+Helm 右天气+设置)/底部圆钮 dock 5 模块/智能体上下滑子页(会话/端口/PR)/横扫切模块/banner 单体化/深默认+浅色。每块 swift build && swift test 绿才 commit(feat/notch-nomi-*,不合 main;macOS CI 过了留我合),快照视觉对比,record;log/report/截图/backlog 全记进专属工作区 docs/loops/nomi-notch/(结构见其 README)。后端契约不动;拿不准的产品行为 add_question 别猜。全部块对齐或全卡住才停。
 ```
 
 ## 调参
