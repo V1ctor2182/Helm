@@ -24,3 +24,8 @@
 - 门: build ✓ / check 0/0 / test 204 全绿
 - 视觉: shots/r05-journal.png——速记流已是 NOMI 脸(白卡天组+圆角收藏卡)
 - 缺口: 三视图信息架构(Timeline/Canvas/Calendar 黑胶囊)未动——现仍是 速记/日记/任务/日历 四 tab;Canvas 视图不存在 → backlog P1;Calendar.svelte 仍 ORAGE 皮 → backlog P1
+## R06 · 2026-07-07 00:29 · 对话板块换皮
+- 对齐: Chat.svelte——消息流从账本(YOU/MODEL 左标)改 NOMI 气泡(用户黑胶囊右对齐/AI 白卡+spark「Helm 大脑」);会话列表白卡化(激活=描边环);composer 灰胶囊+黑发送;新会话表单胶囊输入;act 钮系胶囊化。流式/停止/删除/对比/Provider 功能零动。
+- 门: build ✓ / check 0/0 / test 204 全绿
+- 视觉: shots/r06-chat.png(会话列表真数据白卡 ✓)
+- 缺口: CompareView/ProviderSettings 两个子面板未换皮 → backlog P2

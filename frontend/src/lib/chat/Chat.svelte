@@ -142,17 +142,15 @@
       </header>
       <div class="msgs" bind:this={msgsEl}>
         {#each chat.messages as m, i (i)}
-          <div class="msg">
-            <span class="who" class:you={m.role === 'user'}>{m.role === 'user' ? 'YOU' : 'MODEL'}</span>
-            <div class="body">
-              {#if m.role === 'assistant'}
-                <div class="md">{@html renderMd(m.content)}</div>
-                {#if chat.streaming && i === chat.messages.length - 1}<span class="car" aria-hidden="true"></span>{/if}
-              {:else}
-                <div class="ut">{m.content}</div>
-              {/if}
+          {#if m.role === 'assistant'}
+            <div class="msg ai">
+              <div class="who2"><span class="spark" aria-hidden="true"></span>Helm 大脑</div>
+              <div class="md">{@html renderMd(m.content)}</div>
+              {#if chat.streaming && i === chat.messages.length - 1}<span class="car" aria-hidden="true"></span>{/if}
             </div>
-          </div>
+          {:else}
+            <div class="msg user"><div class="ut">{m.content}</div></div>
+          {/if}
         {/each}
       </div>
       <form class="composer" onsubmit={submit}>
@@ -210,18 +208,17 @@
   }
   .new select,
   .new input {
-    background: transparent;
+    background: var(--pill);
     border: 0;
-    border-bottom: 1px solid var(--hair);
+    border-radius: var(--radius-sm);
     color: var(--t1);
-    font-family: var(--mono);
-    font-size: 11px;
-    padding: 3px 0 5px;
+    font-family: var(--sans);
+    font-size: 12px;
+    padding: 8px 10px;
   }
   .new select:focus,
   .new input:focus {
     outline: none;
-    border-bottom-color: var(--acc-ink);
   }
   .new select option {
     background: var(--panel);
@@ -231,30 +228,31 @@
     color: var(--t4);
   }
   .act {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--t4);
-    background: transparent;
-    border: 1px solid var(--line);
-    padding: 4px 10px;
+    font: 500 11.5px/1 var(--sans);
+    color: var(--t3);
+    background: var(--pill);
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 7px 13px;
     cursor: pointer;
-    transition: color .12s var(--ease);
+    transition: all .12s var(--ease);
   }
   .act:hover:not(:disabled) {
     color: var(--t1);
   }
   .act.pri {
-    color: var(--acc-ink);
-    border-color: var(--acc-ink);
+    color: var(--onink);
+    background: var(--t1);
+    font-weight: 600;
   }
   .act.pri:disabled {
+    background: var(--pill);
     color: var(--t4);
-    border-color: var(--line);
     cursor: default;
   }
   .act.stop {
-    color: var(--red);
-    border-color: var(--red);
+    color: #fff;
+    background: var(--red);
   }
   .sessions {
     list-style: none;
@@ -292,13 +290,19 @@
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 1px;
+    gap: 2px;
     text-align: left;
-    background: transparent;
+    background: var(--card);
     border: 0;
-    border-left: 2px solid transparent;
-    padding: 5px 8px;
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow);
+    padding: 10px 12px;
+    margin-bottom: 8px;
     cursor: pointer;
+    transition: box-shadow .15s var(--ease);
+  }
+  .sess:hover {
+    box-shadow: var(--shadow-lg);
   }
   .strow {
     display: flex;
@@ -332,7 +336,7 @@
     color: var(--t1);
   }
   .sess.active {
-    border-left-color: var(--acc);
+    box-shadow: 0 0 0 2px var(--card), 0 0 0 3.5px var(--t1), var(--shadow);
   }
   .sess.active .st {
     color: var(--t1);
@@ -378,33 +382,45 @@
     padding: 12px 18px;
     max-width: 860px;
   }
+  .msgs {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
   .msg {
-    display: grid;
-    grid-template-columns: 52px 1fr;
-    gap: 10px;
-    border-top: 1px solid var(--hair);
-    padding: 9px 0;
-  }
-  .msg:first-child {
-    border-top: none;
-  }
-  .who {
-    font-family: var(--mono);
-    font-size: 9px;
-    letter-spacing: 1px;
-    color: var(--t4);
-    padding-top: 3px;
-  }
-  .who.you {
-    color: var(--acc-ink);
-  }
-  .body {
-    min-width: 0;
-    font-size: 13px;
+    max-width: 72%;
+    font-size: 13.5px;
     line-height: 1.55;
   }
+  .msg.user {
+    align-self: flex-end;
+    background: var(--t1);
+    color: var(--onink);
+    border-radius: 18px 18px 4px 18px;
+    padding: 10px 16px;
+  }
+  .msg.ai {
+    align-self: flex-start;
+    background: var(--card);
+    border-radius: 18px 18px 18px 4px;
+    padding: 12px 16px;
+    box-shadow: var(--shadow);
+  }
+  .who2 {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font: 400 11px/1 var(--sans);
+    color: var(--t4);
+    margin-bottom: 6px;
+  }
+  .spark {
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: conic-gradient(from 210deg, var(--g1), var(--g2), var(--g1));
+  }
   .ut {
-    color: var(--t1);
     white-space: pre-wrap;
     word-break: break-word;
   }
@@ -462,23 +478,23 @@
     display: flex;
     align-items: center;
     gap: 9px;
-    padding: 10px 18px 14px;
-    border-top: 1px solid var(--hair);
+    margin: 10px 18px 16px;
+    background: var(--card);
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow);
+    padding: 6px 6px 6px 20px;
   }
   .composer .car.big {
-    height: 14px;
-    margin: 0;
-    flex: none;
+    display: none;
   }
   .composer input {
     flex: 1;
     background: transparent;
     border: 0;
-    border-bottom: 1px solid var(--hair);
     color: var(--t1);
     font-family: var(--sans);
-    font-size: 13px;
-    padding: 4px 0 7px;
+    font-size: 14px;
+    padding: 8px 0;
     min-width: 0;
   }
   .composer input::placeholder {
@@ -486,7 +502,6 @@
   }
   .composer input:focus {
     outline: none;
-    border-bottom-color: var(--acc-ink);
   }
   .blank {
     flex: 1;
