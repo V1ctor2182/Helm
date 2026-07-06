@@ -34,3 +34,8 @@
 - 门: build ✓ / check 0/0 / test 204 全绿
 - 视觉: shots/r07-research.png + r07-settings.png
 - 缺口: 驾驶舱家族(3187 行)未换皮 → backlog P1(单独轮);Research 历史列表/badge 细节待精修 P2
+## R08 · 2026-07-07 00:45 · 记录三视图重构(P1 清)
+- 对齐: JournalView 信息架构 → 稿的三视图:黑胶囊 Timeline/Canvas/Calendar + 分类 chips(全部/速记/日记/任务,role=tab)。Timeline=原四 tab 功能全量收编(速记流·日记天组+AI 小结·任务派发/待办/定时,由 filter 切换,compose 智能路由);Canvas=新组件 CanvasView(白卡/收藏卡自由拖拽,位置 localStorage,真数据);Calendar=原样待周视图轮。深链 journalIntent 旧值兼容映射;noteToTask 跳 timeline+task。
+- 门: build ✓ / check 0/0(修 line-clamp 双写) / test 204 全绿(旧测试语义靠 chips role=tab 无缝通过)
+- 视觉: shots/r08-timeline.png + r08-canvas.png(Canvas 真收藏卡+拖拽 ✓)
+- 缺口: Canvas 连线/cluster 需关系数据(后端无此概念) → backlog P2 add_question;分类 chips 未迁全局侧栏 → P2;收藏细分(视频/论文/灵感)未做 → P2

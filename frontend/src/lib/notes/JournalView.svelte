@@ -9,13 +9,21 @@
   import { localHHMM, localDate, localDateTime } from '../time'
   import { ConfirmGate } from '../confirm.svelte'
   import Calendar from './Calendar.svelte'
+  import CanvasView from './CanvasView.svelte'
 
-  let view = $state<'notes' | 'journal' | 'tasks' | 'calendar'>('notes')
+  // 三视图(阶段 4 R08,source: helm-journal-pro.html 记录板块)+kind 过滤。
+  let view = $state<'timeline' | 'canvas' | 'calendar'>('timeline')
+  let filter = $state<'all' | 'note' | 'journal' | 'task'>('all')
 
-  // 深链:侧栏「任务」等入口带着 tab 意图跳进来
+  // 深链兼容:旧四 tab 意图 → 三视图+过滤
   $effect(() => {
     if (layout.journalIntent) {
-      view = layout.journalIntent
+      const i = layout.journalIntent as string
+      if (i === 'calendar') view = 'calendar'
+      else {
+        view = 'timeline'
+        filter = i === 'tasks' ? 'task' : i === 'journal' ? 'journal' : 'all'
+      }
       layout.journalIntent = null
     }
   })
@@ -44,7 +52,7 @@
   let providersLoaded = false
   let calendarLoaded = false
   $effect(() => {
-    if (view === 'journal' && !providersLoaded) {
+    if (filter === 'journal' && !providersLoaded) {
       providersLoaded = true
       void notes.loadProviders()
     }
@@ -114,7 +122,8 @@
 
   function noteToTask(n: Note) {
     fromNote = n
-    view = 'tasks'
+    view = 'timeline'
+    filter = 'task'
   }
 
   // One load, three derived views (kind split) — captures/journal/todos share the table.
@@ -164,9 +173,9 @@
   async function add() {
     if (!draft.trim()) return
     const ok =
-      view === 'notes'
-        ? await notes.create(draft, 'note')
-        : await notes.create(draft, 'journal', today())
+      filter === 'journal'
+        ? await notes.create(draft, 'journal', today())
+        : await notes.create(draft, 'note')
     if (ok) draft = ''
   }
 </script>
@@ -178,18 +187,27 @@
     <span class="pg">{pad3(noteItems.length)} NOTES · {pad3(journalItems.length)} ENTRIES · {pad3(tasks.tasks.length)} TASKS</span>
   </header>
 
-  <div class="seg" role="tablist" aria-label="速记 / 日记">
-    <button role="tab" aria-selected={view === 'notes'} class:active={view === 'notes'} onclick={() => (view = 'notes')}>速记</button>
-    <button role="tab" aria-selected={view === 'journal'} class:active={view === 'journal'} onclick={() => (view = 'journal')}>日记</button>
-    <button role="tab" aria-selected={view === 'tasks'} class:active={view === 'tasks'} onclick={() => (view = 'tasks')}>任务</button>
-    <button role="tab" aria-selected={view === 'calendar'} class:active={view === 'calendar'} onclick={() => (view = 'calendar')}>日历</button>
+  <div class="viewrow">
+    <div class="seg" aria-label="视图">
+      <button class:active={view === 'timeline'} onclick={() => (view = 'timeline')}>Timeline</button>
+      <button class:active={view === 'canvas'} onclick={() => (view = 'canvas')}>Canvas</button>
+      <button class:active={view === 'calendar'} onclick={() => (view = 'calendar')}>Calendar</button>
+    </div>
+    {#if view !== 'calendar'}
+      <div class="chips2" role="tablist" aria-label="分类">
+        <button role="tab" aria-selected={filter === 'all'} class:on={filter === 'all'} onclick={() => (filter = 'all')}>全部</button>
+        <button role="tab" aria-selected={filter === 'note'} class:on={filter === 'note'} onclick={() => (filter = 'note')}>速记</button>
+        <button role="tab" aria-selected={filter === 'journal'} class:on={filter === 'journal'} onclick={() => (filter = 'journal')}>日记</button>
+        <button role="tab" aria-selected={filter === 'task'} class:on={filter === 'task'} onclick={() => (filter = 'task')}>任务</button>
+      </div>
+    {/if}
   </div>
 
   {#if notes.error}<p class="err" role="alert">{notes.error}</p>{/if}
 
-  {#if view === 'notes' || view === 'journal'}
+  {#if view === 'timeline' && filter !== 'task'}
     <div class="row">
-      <div class="gut"><span class="tm">{view === 'notes' ? '随手' : today().slice(5)}</span></div>
+      <div class="gut"><span class="tm">{filter !== 'journal' ? '随手' : today().slice(5)}</span></div>
       <form
         class="compose"
         onsubmit={(e) => {
@@ -199,18 +217,19 @@
       >
         <span class="car" aria-hidden="true"></span>
         <textarea
-          placeholder={view === 'notes' ? '随手记一笔…' : '今天发生了什么?(支持 Markdown)'}
+          placeholder={filter !== 'journal' ? '随手记一笔…' : '今天发生了什么?(支持 Markdown)'}
           bind:value={draft}
-          aria-label={view === 'notes' ? '速记内容' : '日记内容'}
-          rows={view === 'notes' ? 1 : 3}
+          aria-label={filter !== 'journal' ? '速记内容' : '日记内容'}
+          rows={filter !== 'journal' ? 1 : 3}
           onkeydown={cmdEnter}
         ></textarea>
-        <button class="act pri" type="submit" disabled={!draft.trim()}>{view === 'notes' ? '记一笔' : '写入今天'}</button>
+        <button class="act pri" type="submit" disabled={!draft.trim()}>{filter !== 'journal' ? '记一笔' : '写入今天'}</button>
       </form>
     </div>
   {/if}
 
-  {#if view === 'notes'}
+  {#if view === 'timeline'}
+  {#if filter === 'all' || filter === 'note'}
     <div class="row">
       <div class="gut"><span class="tm">收集</span><br />{noteItems.length} 条</div>
       <div>
@@ -276,7 +295,7 @@
         {/if}
       </div>
     </div>
-  {:else if view === 'journal'}
+  {:else if filter === 'journal'}
     <div class="row">
       <div class="gut"><span class="tm">AI</span></div>
       <div>
@@ -329,7 +348,7 @@
         {/if}
       </div>
     </div>
-  {:else if view === 'tasks'}
+  {:else if filter === 'task'}
     <div class="row">
       <div class="gut"><span class="tm">派发</span></div>
       <form
@@ -460,8 +479,11 @@
         {/if}
       </div>
     </div>
+  {/if}
+  {:else if view === 'canvas'}
+    <CanvasView notes={notes.notes.filter((n) => n.kind !== 'journal')} />
   {:else}
-    <!-- TODO(F7 日历轮): Calendar.svelte 仍是旧线框样式,该模块轮重设计 -->
+    <!-- TODO(F7 日历轮): Calendar.svelte 仍旧样式,周视图轮重设计 -->
     <div class="calwrap">
       <Calendar />
     </div>
@@ -504,6 +526,30 @@
     font-variant-numeric: tabular-nums;
   }
   /* 分段 = mono 大写 tag + accent 底线(无胶囊无圆角) */
+  .viewrow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .chips2 {
+    display: flex;
+    gap: 5px;
+  }
+  .chips2 button {
+    font: 500 11.5px/1 var(--sans);
+    color: var(--t3);
+    background: var(--pill);
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 6px 12px;
+    cursor: pointer;
+  }
+  .chips2 button.on {
+    background: var(--t1);
+    color: var(--onink);
+    font-weight: 600;
+  }
   .seg {
     display: inline-flex;
     gap: 4px;
