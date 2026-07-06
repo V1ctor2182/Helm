@@ -3,84 +3,81 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Helm · 记录 JOURNAL 设计定稿 · NOMI 风(Timeline / Canvas / Calendar)</title>
+<title>Helm · NOMI 风全站设计定稿(今日/记录/对话/研究/驾驶舱/设置)</title>
 <!--
-  HELM · JOURNAL — SOURCE OF TRUTH(记录模块)
-  2026-07-06 用户拍板:完全参考 nomi-reference/ 两图的风格——
-  纯白底 · 大圆角白卡 · 多层柔和阴影 · 无边框线(留白分层) · 黑胶囊视图切换 ·
-  橙→紫渐变连线与 cluster 胶囊 · 极淡虚线日历网格 · 圆角事件卡浮格。
-  (记录模块专属皮肤,经用户批准偏离 ORAGE 座舱系统;禁 emoji 仍守。)
-  全交互:三视图 / Canvas 拖拽+渐变连线 / 周历+时刻线 / 分类过滤。
+  HELM — SOURCE OF TRUTH(全站 NOMI 风 redesign,2026-07-06 用户拍板)
+  参考 nomi-reference/ 两图 + 用户提供的方框娃娃脸 logo(全局启用,#271C11)。
+  风格:纯白近白底 · 大圆角白卡 · 多层柔和阴影 · 无边框线(留白分层) ·
+  黑胶囊切换 · 橙→紫渐变(连线/cluster/FAB/进度) · 禁 emoji(SVG/色块字母)。
+  板块:今日 TODAY / 记录 JOURNAL(Timeline·Canvas·Calendar) / 对话 CHAT /
+  研究 RESEARCH / 驾驶舱 COCKPIT / 设置 SETTINGS —— 全部可交互。
+  进 Svelte 时以本文件 + DESIGN.md 为准:不改本文件、改代码。
 -->
 <style>
   :root{
     --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Helvetica Neue",sans-serif;
-    --bg:#f6f6f7;          /* 画布 */
-    --side:#ffffff;        /* 侧栏 */
-    --card:#ffffff;
-    --ink:#111114;         /* 主字 */
-    --ink2:#5c5c66;        /* 次字 */
-    --ink3:#a2a2ab;        /* 弱字/时间 */
-    --hair:#ececef;        /* 分隔 */
-    --pill:#f1f1f3;        /* 浅灰胶囊 */
-    --g1:#ff8a3d;          /* 渐变橙 */
-    --g2:#a855f7;          /* 渐变紫 */
+    --mono:ui-monospace,"SF Mono",Menlo,monospace;
+    --bg:#f6f6f7; --side:#ffffff; --card:#ffffff;
+    --ink:#111114; --ink2:#5c5c66; --ink3:#a2a2ab;
+    --logo:#271C11;
+    --hair:#ececef; --pill:#f1f1f3;
+    --g1:#ff8a3d; --g2:#a855f7;
+    --ok:#28a745;
     --shadow:0 1px 2px rgba(17,17,20,.05),0 6px 18px rgba(17,17,20,.07);
     --shadow-lg:0 2px 6px rgba(17,17,20,.06),0 16px 40px rgba(17,17,20,.12);
     --ease:cubic-bezier(.32,.72,0,1);
   }
   *{box-sizing:border-box}
   html,body{height:100%;margin:0}
-  body{font-family:var(--sans);background:var(--bg);color:var(--ink);overflow:hidden;
-    -webkit-font-smoothing:antialiased}
-
+  body{font-family:var(--sans);background:var(--bg);color:var(--ink);overflow:hidden;-webkit-font-smoothing:antialiased}
   .app{height:100vh;display:grid;grid-template-columns:250px 1fr}
 
-  /* ── 侧栏(纯白) ─────────────── */
+  /* ── 侧栏:全局导航 ─────────────── */
   .side{background:var(--side);border-right:1px solid var(--hair);display:flex;flex-direction:column;padding:22px 18px}
-  .brand{display:flex;align-items:center;gap:10px;margin-bottom:22px}
-  .brand .mark{width:30px;height:30px;border-radius:9px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;letter-spacing:.5px}
-  .brand .nm{font-weight:700;font-size:15px;letter-spacing:.2px}
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:24px}
+  .brand svg{flex:none}
+  .brand .nm{font-weight:700;font-size:15px}
   .brand .collapse{margin-left:auto;width:26px;height:26px;border:1px solid var(--hair);border-radius:8px;background:#fff;color:var(--ink3);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px}
-  .toptabs{display:flex;gap:18px;border-bottom:1px solid var(--hair);margin-bottom:16px}
-  .toptab{font-size:13px;color:var(--ink3);padding:0 2px 10px;cursor:pointer;border-bottom:2px solid transparent}
-  .toptab.on{color:var(--ink);border-bottom-color:var(--ink);font-weight:600}
-  .cats{display:flex;flex-direction:column;gap:2px}
-  .cat{font-size:13.5px;color:var(--ink2);padding:9px 14px;border-radius:12px;cursor:pointer;display:flex;align-items:center}
+  .navs{display:flex;flex-direction:column;gap:2px}
+  .nav{display:flex;align-items:center;gap:11px;font-size:13.5px;color:var(--ink2);padding:9px 14px;border-radius:12px;cursor:pointer}
+  .nav:hover{background:var(--pill)}
+  .nav.on{background:var(--pill);color:var(--ink);font-weight:600}
+  .nav svg{width:17px;height:17px;flex:none}
+  .nav .k{margin-left:auto;font-size:11px;color:var(--ink3);font-variant-numeric:tabular-nums}
+  .subhead{font-size:11px;color:var(--ink3);letter-spacing:.4px;margin:18px 14px 6px;text-transform:uppercase}
+  .cats{display:none;flex-direction:column;gap:2px}
+  .cats.show{display:flex}
+  .cat{font-size:13px;color:var(--ink2);padding:7px 14px;border-radius:10px;cursor:pointer;display:flex}
   .cat:hover{background:var(--pill)}
   .cat.on{background:var(--pill);color:var(--ink);font-weight:600}
-  .cat .k{margin-left:auto;font-size:11px;color:var(--ink3);font-variant-numeric:tabular-nums}
+  .cat .k{margin-left:auto;font-size:11px;color:var(--ink3)}
   .sidefoot{margin-top:auto;display:flex;gap:10px}
   .roundbtn{width:44px;height:44px;border-radius:50%;border:1px solid var(--hair);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink2)}
   .roundbtn:hover{border-color:var(--ink3)}
   .roundbtn svg{width:18px;height:18px}
 
-  /* ── 主区 ─────────────── */
+  /* ── 主区通用 ─────────────── */
   .main{position:relative;display:flex;flex-direction:column;min-width:0}
-  .topbar{display:flex;align-items:center;gap:16px;padding:16px 24px 8px;z-index:8}
-  .views{display:flex;background:#fff;border-radius:999px;padding:4px;box-shadow:var(--shadow)}
-  .vtab{font-size:13px;color:var(--ink2);background:transparent;border:none;border-radius:999px;padding:8px 18px;cursor:pointer;transition:all .18s var(--ease)}
-  .vtab.on{background:var(--ink);color:#fff;font-weight:600}
-  .topbar .range{font-size:14.5px;color:var(--ink3);display:none;align-items:center;gap:10px}
-  .topbar .range.show{display:flex}
+  .topbar{display:flex;align-items:center;gap:16px;padding:16px 24px 8px;z-index:8;min-height:56px}
+  .pilltabs{display:flex;background:#fff;border-radius:999px;padding:4px;box-shadow:var(--shadow)}
+  .ptab{font-size:13px;color:var(--ink2);background:transparent;border:none;border-radius:999px;padding:8px 18px;cursor:pointer;transition:all .18s var(--ease)}
+  .ptab.on{background:var(--ink);color:#fff;font-weight:600}
+  .topbar .right{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink3)}
   .navbtn{width:32px;height:32px;border-radius:50%;background:var(--pill);border:none;color:var(--ink2);cursor:pointer;font-size:13px}
   .navbtn:hover{background:#e8e8ec}
-  .topbar .right{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink3)}
   .stage{flex:1;min-height:0;position:relative;overflow:hidden}
+  .htitle{font-size:22px;font-weight:800;letter-spacing:-.2px}
+  .hsub{font-size:13px;color:var(--ink3)}
+  .blackbtn{background:var(--ink);color:#fff;border:none;border-radius:999px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer}
 
-  /* ── 卡片(NOMI 白卡) ─────────────── */
-  .card{background:var(--card);border-radius:16px;box-shadow:var(--shadow);position:relative;
-    transition:box-shadow .18s var(--ease),transform .18s var(--ease)}
+  /* ── 卡片 ─────────────── */
+  .card{background:var(--card);border-radius:16px;box-shadow:var(--shadow);position:relative;transition:box-shadow .18s var(--ease)}
   .card:hover{box-shadow:var(--shadow-lg)}
   .card .pad{padding:14px 16px 10px}
   .appic{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:800;margin-bottom:9px}
-  .ic-yt{background:#ff2d2d}
-  .ic-ax{background:#8b5a2b}
-  .ic-aw{background:linear-gradient(135deg,#34d6c0,#0a84ff)}
-  .ic-tx{background:#111114}
-  .ic-tk{background:#28a745}
-  .ic-ev{background:linear-gradient(135deg,var(--g1),var(--g2))}
-  .card .ti{font-size:14px;font-weight:600;line-height:1.35;color:var(--ink)}
+  .ic-yt{background:#ff2d2d}.ic-ax{background:#8b5a2b}.ic-aw{background:linear-gradient(135deg,#34d6c0,#0a84ff)}
+  .ic-tx{background:#111114}.ic-tk{background:var(--ok)}.ic-ev{background:linear-gradient(135deg,var(--g1),var(--g2))}
+  .card .ti{font-size:14px;font-weight:600;line-height:1.35}
   .card .sum{font-size:12px;color:var(--ink2);line-height:1.5;margin-top:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .card .foot{display:flex;align-items:center;padding:6px 16px 12px;color:var(--ink3)}
   .card .foot svg{width:13px;height:13px}
@@ -90,59 +87,128 @@
   .card.imgcard .cover{border-radius:16px;aspect-ratio:16/9}
   .card.imgcard .tmpill{position:absolute;right:10px;bottom:10px;background:rgba(17,17,20,.72);color:#fff;font-size:10px;padding:4px 10px;border-radius:999px}
   .card.sel{box-shadow:0 0 0 2px #fff,0 0 0 3.5px var(--g2),var(--shadow-lg)}
-  .tagchip{display:inline-block;font-size:10.5px;color:var(--ink2);background:var(--pill);border-radius:999px;padding:3px 9px;margin-right:5px}
 
-  /* ── TIMELINE ─────────────── */
-  .v-timeline{height:100%;overflow-y:auto;padding:14px 26px 30px}
+  /* ── TODAY ─────────────── */
+  .v-today{height:100%;overflow-y:auto;padding:10px 28px 30px}
+  .greet{margin:8px 4px 18px}
+  .greet .hi{font-size:26px;font-weight:800;letter-spacing:-.3px}
+  .greet .sub{font-size:13.5px;color:var(--ink3);margin-top:4px}
+  .capbar{display:flex;align-items:center;gap:10px;background:#fff;border-radius:999px;box-shadow:var(--shadow);padding:6px 6px 6px 20px;margin-bottom:22px}
+  .capbar input{flex:1;border:none;outline:none;font-size:14px;font-family:var(--sans);color:var(--ink);background:transparent}
+  .capbar input::placeholder{color:var(--ink3)}
+  .capbar .kinds{display:flex;gap:4px}
+  .kindchip{font-size:11.5px;color:var(--ink2);background:var(--pill);border:none;border-radius:999px;padding:6px 12px;cursor:pointer}
+  .kindchip.on{background:var(--ink);color:#fff}
+  .capbar .send{background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff;border:none;border-radius:999px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer}
+  .tgrid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+  .stat{display:flex;align-items:baseline;gap:6px}
+  .stat .big{font-size:30px;font-weight:800;letter-spacing:-.5px}
+  .stat .u{font-size:12px;color:var(--ink3)}
+  .rowline{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--ink2);padding:7px 0;border-top:1px solid var(--hair)}
+  .rowline:first-of-type{border-top:none}
+  .rowline .dotc{width:8px;height:8px;border-radius:3px;flex:none}
+  .rowline .r{margin-left:auto;font-size:11px;color:var(--ink3)}
+  .ghost{font-size:12px;color:var(--ink3);padding:8px 0}
+  .minipill{display:inline-block;font-size:11.5px;background:var(--pill);border-radius:999px;padding:5px 12px;color:var(--ink2);cursor:pointer;margin-right:6px}
+  .minipill:hover{background:#e8e8ec;color:var(--ink)}
+  .aibtn{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--hair);border-radius:999px;padding:7px 14px;font-size:12px;color:var(--ink2);cursor:pointer}
+  .aibtn .spark{width:14px;height:14px;border-radius:50%;background:conic-gradient(from 210deg,var(--g1),var(--g2),var(--g1))}
+
+  /* ── JOURNAL(三视图) ─────────────── */
+  .v-timeline{height:100%;overflow-y:auto;padding:6px 26px 30px}
   .dhead{display:flex;align-items:baseline;gap:10px;margin:18px 4px 12px}
-  .dhead:first-child{margin-top:4px}
-  .dhead .d{font-size:13px;font-weight:700;color:var(--ink)}
+  .dhead .d{font-size:13px;font-weight:700}
   .dhead .n{font-size:11px;color:var(--ink3)}
-  .tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
-  .tgrid .card{cursor:pointer}
-
-  /* ── CANVAS ─────────────── */
+  .jgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
+  .jgrid .card{cursor:pointer}
   .v-canvas{position:absolute;inset:0;overflow:hidden}
   .cnode{position:absolute;width:250px;cursor:grab;user-select:none}
   .cnode:active{cursor:grabbing}
   .cnode.dragging{z-index:30}
   .cnode.dragging .card{box-shadow:var(--shadow-lg);transform:scale(1.01)}
   svg.wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
-  .wiredot-a{fill:var(--g1)} .wiredot-b{fill:var(--g2)}
+  .wiredot-a{fill:var(--g1)}.wiredot-b{fill:var(--g2)}
   .cluster{position:absolute;z-index:5;display:flex;align-items:center;gap:8px}
-  .cluster .pillg{background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff;font-size:12px;font-weight:600;
-    padding:7px 16px;border-radius:999px;box-shadow:var(--shadow)}
-  .cluster .ok{width:30px;height:30px;border-radius:50%;background:#fff;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;color:var(--ink)}
+  .cluster .pillg{background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff;font-size:12px;font-weight:600;padding:7px 16px;border-radius:999px;box-shadow:var(--shadow)}
+  .cluster .ok{width:30px;height:30px;border-radius:50%;background:#fff;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center}
   .cluster .ok svg{width:13px;height:13px}
-  .fab{position:absolute;right:22px;bottom:20px;width:44px;height:44px;border-radius:50%;
-    background:conic-gradient(from 210deg,var(--g1),var(--g2),var(--g1));box-shadow:var(--shadow-lg);z-index:6;cursor:pointer;border:none}
-
-  /* ── CALENDAR ─────────────── */
-  .v-cal{height:100%;display:flex;flex-direction:column;padding:4px 24px 0}
+  .fab{position:absolute;right:22px;bottom:20px;width:44px;height:44px;border-radius:50%;background:conic-gradient(from 210deg,var(--g1),var(--g2),var(--g1));box-shadow:var(--shadow-lg);z-index:6;cursor:pointer;border:none}
+  .v-cal{height:100%;display:flex;flex-direction:column;padding:0 24px}
   .calwrap{flex:1;overflow-y:auto;min-height:0}
   .calgrid{display:grid;grid-template-columns:52px repeat(7,1fr);position:relative}
   .caldayh{position:sticky;top:0;z-index:6;background:var(--bg);padding:10px 8px 12px;text-align:center}
   .caldayh .dw{font-size:12px;color:var(--ink3)}
   .caldayh .dn{font-size:14px;color:var(--ink2);margin-top:2px;font-variant-numeric:tabular-nums}
-  .caldayh.istoday .dn{color:var(--ink);font-weight:700}
-  .caldayh.istoday .dw{color:var(--ink)}
+  .caldayh.istoday .dn,.caldayh.istoday .dw{color:var(--ink);font-weight:700}
   .calh0{position:sticky;top:0;z-index:6;background:var(--bg)}
   .hcell{height:54px;border-left:1px dashed #e6e6ea;position:relative}
-  .hcell.dim{background:rgba(17,17,20,.015)}
   .hlabel{height:54px;font-size:11px;color:var(--ink3);text-align:right;padding-right:10px;transform:translateY(-7px);font-variant-numeric:tabular-nums}
-  .calcard{position:absolute;left:5px;right:5px;z-index:3;padding:10px 12px;background:#fff;border-radius:14px;
-    box-shadow:var(--shadow);cursor:pointer;overflow:hidden;transition:box-shadow .18s var(--ease)}
+  .calcard{position:absolute;left:5px;right:5px;z-index:3;padding:10px 12px;background:#fff;border-radius:14px;box-shadow:var(--shadow);cursor:pointer;overflow:hidden}
   .calcard:hover{box-shadow:var(--shadow-lg);z-index:4}
   .calcard .when{font-size:10.5px;color:var(--ink3)}
-  .calcard .t{font-size:13px;font-weight:600;color:var(--ink);line-height:1.3;margin-top:2px}
+  .calcard .t{font-size:13px;font-weight:600;line-height:1.3;margin-top:2px}
   .calcard .badge{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--ink2);background:var(--pill);border-radius:999px;padding:3px 9px;margin-top:6px}
   .calcard .badge .dot{width:7px;height:7px;border-radius:2px}
-  .calcard .cimg{width:100%;border-radius:8px;margin-top:6px;display:block}
-  .calcard .foot{display:flex;margin-top:6px;color:var(--ink3)}
-  .calcard .foot svg{width:12px;height:12px}
-  .calcard .foot .tm{margin-left:auto;font-size:9.5px}
   .nowline{position:absolute;left:52px;right:0;height:0;border-top:1.5px solid var(--g1);z-index:5}
   .nowline::before{content:"";position:absolute;left:-4.5px;top:-4px;width:8px;height:8px;border-radius:50%;background:var(--g1)}
+
+  /* ── CHAT ─────────────── */
+  .v-chat{height:100%;display:grid;grid-template-columns:270px 1fr;min-height:0}
+  .convs{overflow-y:auto;padding:4px 14px 20px 24px}
+  .conv{background:#fff;border-radius:14px;box-shadow:var(--shadow);padding:12px 14px;margin-bottom:10px;cursor:pointer}
+  .conv:hover{box-shadow:var(--shadow-lg)}
+  .conv.on{box-shadow:0 0 0 2px #fff,0 0 0 3px var(--ink),var(--shadow)}
+  .conv .t{font-size:13px;font-weight:600}
+  .conv .p{font-size:11.5px;color:var(--ink3);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chatpane{display:flex;flex-direction:column;min-height:0;padding:0 24px 18px 10px}
+  .msgs{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:6px 6px 14px}
+  .msg{max-width:72%;font-size:13.5px;line-height:1.55}
+  .msg.user{align-self:flex-end;background:var(--ink);color:#fff;border-radius:18px 18px 4px 18px;padding:10px 16px}
+  .msg.ai{align-self:flex-start;background:#fff;border-radius:18px 18px 18px 4px;padding:12px 16px;box-shadow:var(--shadow)}
+  .msg.ai .who{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--ink3);margin-bottom:6px}
+  .msg.ai .who .spark{width:13px;height:13px;border-radius:50%;background:conic-gradient(from 210deg,var(--g1),var(--g2),var(--g1))}
+  .chatinput{display:flex;gap:10px;background:#fff;border-radius:999px;box-shadow:var(--shadow);padding:6px 6px 6px 20px}
+  .chatinput input{flex:1;border:none;outline:none;font-size:14px;background:transparent;color:var(--ink);font-family:var(--sans)}
+
+  /* ── RESEARCH ─────────────── */
+  .v-research{height:100%;overflow-y:auto;padding:6px 28px 30px}
+  .rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-top:14px}
+  .prog{height:6px;border-radius:99px;background:var(--pill);overflow:hidden;margin-top:12px}
+  .prog i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--g1),var(--g2));transition:width .6s var(--ease)}
+  .statuschip{display:inline-flex;align-items:center;gap:6px;font-size:11px;border-radius:999px;padding:4px 11px;font-weight:600}
+  .st-run{background:#fff4e8;color:#c05e00}
+  .st-done{background:#e9f8ee;color:#177a36}
+  .srcrow{display:flex;gap:7px;margin-top:10px;flex-wrap:wrap}
+  .src{font-size:10.5px;color:var(--ink2);background:var(--pill);border-radius:999px;padding:4px 10px}
+
+  /* ── COCKPIT ─────────────── */
+  .v-cockpit{height:100%;overflow-y:auto;padding:6px 28px 30px}
+  .cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;margin-top:14px}
+  .agentcard .hd{display:flex;align-items:center;gap:10px;padding:14px 16px 0}
+  .agentcard .st{width:9px;height:9px;border-radius:50%;flex:none}
+  .st-live{background:var(--ok);box-shadow:0 0 0 4px #e9f8ee}
+  .st-idle{background:var(--ink3);box-shadow:0 0 0 4px var(--pill)}
+  .agentcard .nm{font-size:14px;font-weight:600}
+  .agentcard .proj{margin-left:auto;font-size:11px;color:var(--ink3)}
+  .term{margin:12px 16px 14px;background:#0d0d10;border-radius:12px;padding:12px 14px;font-family:var(--mono);font-size:11px;line-height:1.7;color:#c8c8d0;max-height:110px;overflow:hidden}
+  .term .okt{color:#5ad07a}.term .dim{color:#71717c}
+  .runrow{display:flex;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid var(--hair);font-size:12.5px;color:var(--ink2)}
+  .runrow .r{margin-left:auto;font-size:11px;color:var(--ink3)}
+
+  /* ── SETTINGS ─────────────── */
+  .v-settings{height:100%;overflow-y:auto;padding:6px 28px 30px}
+  .sgrid{max-width:640px;display:flex;flex-direction:column;gap:16px;margin-top:14px}
+  .setrow{display:flex;align-items:center;gap:14px;padding:14px 18px}
+  .setrow+.setrow{border-top:1px solid var(--hair)}
+  .setrow .lb{font-size:13.5px;font-weight:600}
+  .setrow .ds{font-size:11.5px;color:var(--ink3);margin-top:2px}
+  .setrow .ctl{margin-left:auto;flex:none}
+  .sel{font-family:var(--sans);font-size:12.5px;color:var(--ink);background:var(--pill);border:none;border-radius:999px;padding:8px 14px;outline:none;cursor:pointer}
+  .switch{width:44px;height:26px;border-radius:99px;background:var(--pill);position:relative;cursor:pointer;border:none;flex:none}
+  .switch::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:var(--shadow);transition:left .18s var(--ease)}
+  .switch.on{background:linear-gradient(90deg,var(--g1),var(--g2))}
+  .switch.on::after{left:21px}
+  .okdot{width:9px;height:9px;border-radius:50%;background:var(--ok);display:inline-block;margin-right:7px}
 
   ::-webkit-scrollbar{width:10px}
   ::-webkit-scrollbar-thumb{background:#dcdce0;border-radius:99px;border:3px solid var(--bg)}
@@ -150,17 +216,53 @@
 </style>
 </head>
 <body>
+<!-- 用户提供的 Helm logo(方框娃娃脸,全局启用) -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="helm-logo" viewBox="0 0 24 18" fill="none">
+    <path d="M22.222 0.888916H0.888672V16.9254H22.222V0.888916Z" stroke="currentColor" stroke-width="1.77778"/>
+    <path d="M4.02295 10.074H5.82473C7.83554 10.074 9.46562 11.7041 9.46562 13.7149V14.0588H4.02295V10.074Z" fill="currentColor"/>
+    <path d="M12.7217 10.074H14.5235C16.5343 10.074 18.1644 11.7041 18.1644 13.7149V14.0588H12.7217V10.074Z" fill="currentColor"/>
+    <path d="M3.24561 8.89044C4.3147 8.09671 7.05548 6.9855 9.4658 8.89044" stroke="currentColor" stroke-width="1.77778" stroke-linecap="round"/>
+    <path d="M12.333 8.89044C13.4021 8.09671 16.1429 6.9855 18.5532 8.89044" stroke="currentColor" stroke-width="1.77778" stroke-linecap="round"/>
+  </symbol>
+</svg>
+
 <div class="app">
-  <!-- 侧栏 -->
+  <!-- 全局侧栏 -->
   <aside class="side">
     <div class="brand">
-      <span class="mark">H</span><span class="nm">Helm · 记录</span>
+      <svg width="26" height="20" style="color:var(--logo)"><use href="#helm-logo"/></svg>
+      <span class="nm">Helm</span>
       <span class="collapse">⇥</span>
     </div>
-    <div class="toptabs">
-      <span class="toptab on">Notes</span><span class="toptab">Pinned</span><span class="toptab">Archive</span>
+    <div class="navs" id="navs">
+      <div class="nav on" data-m="today">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z"/></svg>
+        今日
+      </div>
+      <div class="nav" data-m="journal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>
+        记录<span class="k">10</span>
+      </div>
+      <div class="nav" data-m="chat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 12a8 8 0 01-8 8H4l2.4-2.4A8 8 0 1121 12z"/></svg>
+        对话<span class="k">3</span>
+      </div>
+      <div class="nav" data-m="research">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        研究<span class="k">2</span>
+      </div>
+      <div class="nav" data-m="cockpit">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg>
+        驾驶舱<span class="k">1</span>
+      </div>
+      <div class="nav" data-m="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1 1.55V21a2 2 0 11-4 0v-.09a1.7 1.7 0 00-1-1.55 1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.7 1.7 0 00.34-1.87 1.7 1.7 0 00-1.55-1H3a2 2 0 110-4h.09a1.7 1.7 0 001.55-1 1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06a1.7 1.7 0 001.87.34h0a1.7 1.7 0 001-1.55V3a2 2 0 114 0v.09a1.7 1.7 0 001 1.55h0a1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06a1.7 1.7 0 00-.34 1.87v0a1.7 1.7 0 001.55 1H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.55 1z"/></svg>
+        设置
+      </div>
     </div>
-    <div class="cats">
+    <div class="subhead" id="catHead" style="display:none">收藏</div>
+    <div class="cats" id="cats">
       <div class="cat on" data-f="all">全部<span class="k" id="kAll">0</span></div>
       <div class="cat" data-f="youtube">视频<span class="k" id="kYt">0</span></div>
       <div class="cat" data-f="paper">论文<span class="k" id="kPp">0</span></div>
@@ -170,59 +272,42 @@
       <div class="cat" data-f="event">日程<span class="k" id="kEv">0</span></div>
     </div>
     <div class="sidefoot">
-      <button class="roundbtn" title="新建">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 4h8a2 2 0 012 2v12a2 2 0 01-2 2H8a2 2 0 01-2-2V6a2 2 0 012-2z"/><path d="M12 9v6M9 12h6"/></svg>
-      </button>
-      <button class="roundbtn" title="导入">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 4h8a2 2 0 012 2v12a2 2 0 01-2 2H8a2 2 0 01-2-2V6a2 2 0 012-2z"/><path d="M9 12h6"/></svg>
-      </button>
+      <button class="roundbtn" title="新建"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 4h8a2 2 0 012 2v12a2 2 0 01-2 2H8a2 2 0 01-2-2V6a2 2 0 012-2z"/><path d="M12 9v6M9 12h6"/></svg></button>
+      <button class="roundbtn" title="归档"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 4h8a2 2 0 012 2v12a2 2 0 01-2 2H8a2 2 0 01-2-2V6a2 2 0 012-2z"/><path d="M9 12h6"/></svg></button>
     </div>
   </aside>
 
   <!-- 主区 -->
   <div class="main">
-    <div class="topbar">
-      <div class="views">
-        <button class="vtab" data-v="timeline">Timeline</button>
-        <button class="vtab on" data-v="canvas">Canvas</button>
-        <button class="vtab" data-v="calendar">Calendar</button>
-      </div>
-      <div class="range" id="calRange">
-        <span id="wRng">07-06 — 07-12 · 七月</span>
-        <button class="navbtn" id="wPrev">‹</button>
-        <button class="navbtn" id="wNext">›</button>
-      </div>
-      <div class="right" id="calTz" style="display:none">(GMT+8) 本地时间 <span style="font-size:10px">⌄</span></div>
-    </div>
+    <div class="topbar" id="topbar"></div>
     <div class="stage" id="stage"></div>
   </div>
 </div>
 
 <script>
-/* ── mock 数据(封面用内联 SVG,禁 emoji) ── */
+/* ═══ 公共 ═══ */
+const $=s=>document.querySelector(s), stage=$('#stage'), topbar=$('#topbar');
+const GLOBE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.6 3.9 5.6 3.9 9S14.6 18.4 12 21M12 3c-2.6 2.6-3.9 5.6-3.9 9s1.3 6.4 3.9 9"/></svg>';
+const CLIP='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="5" width="12" height="15" rx="2"/><path d="M9 5V4a2 2 0 012-2h2a2 2 0 012 2v1"/></svg>';
 const YT_IMG='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="225"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1c1c22"/><stop offset="1" stop-color="#3a2f18"/></linearGradient></defs><rect width="500" height="225" fill="url(#g)"/><circle cx="250" cy="112" r="34" fill="rgba(255,255,255,.14)"/><polygon points="238,94 238,130 272,112" fill="#fff"/></svg>');
 const INSPO_IMG='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="225"><rect width="500" height="225" fill="#eef0f4"/><rect x="36" y="40" width="130" height="145" rx="14" fill="#34d6c0"/><rect x="190" y="70" width="120" height="115" rx="14" fill="#ffb03d"/><rect x="334" y="30" width="130" height="155" rx="14" fill="#7c9cff"/></svg>');
 const PHONE_IMG='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="281"><rect width="500" height="281" fill="#0d0d10"/><rect x="190" y="26" width="120" height="230" rx="22" fill="#1d1d22" stroke="#3a3a42" stroke-width="2"/><rect x="202" y="46" width="96" height="150" rx="8" fill="#fbfbfd"/><circle cx="250" cy="121" r="26" fill="#ffd23d"/><rect x="216" y="206" width="68" height="8" rx="4" fill="#4a4a52"/></svg>');
 
 const ICON={youtube:['YT','ic-yt'],paper:['AX','ic-ax'],inspo:['AW','ic-aw'],text:['N','ic-tx'],task:['T','ic-tk'],event:['E','ic-ev']};
 const ITEMS=[
- {id:1,type:'youtube',title:'PSY - GANGNAM STYLE M/V',sum:'史上最具标志性的病毒式传播 MV,魔性舞蹈+现象级全球流行文化影响力。',cover:YT_IMG,t:'10:08',day:0,hh:10,cx:480,cy:80},
- {id:2,type:'paper',title:'Attention Is All You Need',sum:'提出 Transformer:完全基于注意力,弃用循环与卷积——现代大模型的地基。',t:'11:58',day:0,hh:12,cx:300,cy:300},
- {id:3,type:'inspo',title:'Awwwards 年度作品集',sum:'交互/视觉标杆合集,做 Helm 的视觉参考库。',cover:INSPO_IMG,t:'16:51',day:0,hh:16,cx:765,cy:90},
- {id:4,type:'text',title:'速记',body:'驾驶舱 e2e 三个坑:中间件吞后台任务 / 事务时序 / 僵尸进程——写进 backlog 复盘。',t:'14:31',day:0,hh:14,cx:170,cy:96},
- {id:5,type:'text',title:'速记',body:'给 notch 加「速记 → AI 整理」入场动效,像仪表暖机。',t:'23:44',day:-1,hh:21,cx:560,cy:430},
- {id:6,type:'task',title:'汇总未读邮件',sub:'交给 agent · 每天 09:00',day:1,hh:9,cx:768,cy:430},
+ {id:1,type:'youtube',title:'PSY - GANGNAM STYLE M/V',sum:'史上最具标志性的病毒式传播 MV,魔性舞蹈+现象级全球流行文化影响力。',cover:YT_IMG,t:'10:08',day:0,hh:10,cx:480,cy:60},
+ {id:2,type:'paper',title:'Attention Is All You Need',sum:'提出 Transformer:完全基于注意力,弃用循环与卷积——现代大模型的地基。',t:'11:58',day:0,hh:12,cx:300,cy:290},
+ {id:3,type:'inspo',title:'Awwwards 年度作品集',sum:'交互/视觉标杆合集,做 Helm 的视觉参考库。',cover:INSPO_IMG,t:'16:51',day:0,hh:16,cx:765,cy:80},
+ {id:4,type:'text',title:'速记',body:'驾驶舱 e2e 三个坑:中间件吞后台任务 / 事务时序 / 僵尸进程——写进 backlog 复盘。',t:'14:31',day:0,hh:14,cx:170,cy:76},
+ {id:5,type:'text',title:'速记',body:'给 notch 加「速记 → AI 整理」入场动效,像仪表暖机。',t:'21:44',day:-1,hh:21,cx:620,cy:360},
+ {id:6,type:'task',title:'汇总未读邮件',sub:'交给 agent · 每天 09:00',day:1,hh:9,cx:768,cy:420},
  {id:7,type:'event',title:'站会',sub:'10:00 · 30 分钟',day:1,hh:10},
  {id:8,type:'event',title:'1:1 · design review',sub:'15:00 · 45 分钟',day:3,hh:15},
  {id:9,type:'task',title:'跑 swift test 夜巡',sub:'交给 agent · 每 6 小时',day:2,hh:18},
- {id:10,type:'youtube',title:'SwiftUI Layout 深讲',sum:'proposal/response 模型,frame 与 fixedSize 的真实语义。',cover:PHONE_IMG,imgOnly:true,t:'19:12',day:-1,hh:19,cx:236,cy:452}
+ {id:10,type:'youtube',title:'SwiftUI Layout 深讲',sum:'proposal/response 模型。',cover:PHONE_IMG,imgOnly:true,t:'19:12',day:-1,hh:19,cx:236,cy:430}
 ];
-const WIRES=[[2,4,'a'],[2,10,'b'],[1,3,'b']];
-
-let view='canvas', filter='all', selId=null, weekOff=0;
-const $=s=>document.querySelector(s), stage=$('#stage');
-const GLOBE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.6 3.9 5.6 3.9 9S14.6 18.4 12 21M12 3c-2.6 2.6-3.9 5.6-3.9 9s1.3 6.4 3.9 9"/></svg>';
-const CLIP='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="5" width="12" height="15" rx="2"/><path d="M9 5V4a2 2 0 012-2h2a2 2 0 012 2v1"/></svg>';
+const WIRES=[[2,4],[2,10],[1,3]];
+let mode='today', view='canvas', filter='all', selId=null, weekOff=0;
 
 function cardHTML(it){
   const [lt,cls]=ICON[it.type];
@@ -235,23 +320,97 @@ function cardHTML(it){
 }
 const fitems=()=>ITEMS.filter(i=>filter==='all'||i.type===filter);
 
-/* TIMELINE */
+/* ═══ TODAY ═══ */
+function renderToday(){
+  topbar.innerHTML=`<div><div class="htitle">今日</div></div>
+    <div class="right"><span class="okdot"></span>后端 ok · 本地</div>`;
+  stage.innerHTML=`<div class="v-today">
+    <div class="greet"><div class="hi">下午好,Victor</div>
+      <div class="sub">7月6日 周一 · 第 28 周 · 今天有 1 个日程、2 个定时任务在跑</div></div>
+    <div class="capbar">
+      <input id="capIn" placeholder="随手记一笔 — 链接会自动解析成卡片…">
+      <span class="kinds">
+        <button class="kindchip on">速记</button><button class="kindchip">日记</button>
+        <button class="kindchip">任务</button><button class="kindchip">问大脑</button>
+      </span>
+      <button class="send" onclick="capSend()">发送</button>
+    </div>
+    <div class="tgrid2">
+      <div class="card"><div class="pad">
+        <span class="appic ic-tk">T</span><div class="ti">任务 · 今日</div>
+        <div style="margin-top:10px">
+          <div class="rowline"><span class="dotc" style="background:var(--ok)"></span>汇总未读邮件<span class="r">09:00 · agent</span></div>
+          <div class="rowline"><span class="dotc" style="background:var(--ok)"></span>跑 swift test 夜巡<span class="r">每 6h · agent</span></div>
+        </div></div>
+        <div class="foot">${CLIP}<span class="tm">2 项启用</span></div></div>
+      <div class="card"><div class="pad">
+        <span class="appic ic-ev">E</span><div class="ti">日程 · 下一项</div>
+        <div class="stat" style="margin-top:10px"><span class="big">10:00</span><span class="u">站会 · 还有 42 分钟</span></div>
+        <div class="ghost">之后:15:00 1:1 · design review</div></div>
+        <div class="foot">${GLOBE}<span class="tm">今天 1 项</span></div></div>
+      <div class="card"><div class="pad">
+        <span class="appic ic-tx">N</span><div class="ti">日记 · 今天</div>
+        <div class="stat" style="margin-top:10px"><span class="big">8</span><span class="u">字 · 连续 1 天</span></div>
+        <div style="margin-top:8px"><span class="aibtn"><span class="spark"></span>AI 今日小结</span></div></div>
+        <div class="foot">${CLIP}<span class="tm">01:10</span></div></div>
+      <div class="card"><div class="pad">
+        <span class="appic" style="background:linear-gradient(135deg,#34d6c0,#0a84ff)">A</span><div class="ti">智能体 · 驾驶舱</div>
+        <div class="rowline" style="margin-top:10px"><span class="dotc" style="background:var(--ok)"></span>helm · claude<span class="r">LIVE · 14.2k tok</span></div>
+        <div class="ghost">最近:swift build 通过,正在跑快照测试</div></div>
+        <div class="foot">${GLOBE}<span class="tm">1 live</span></div></div>
+      <div class="card"><div class="pad">
+        <span class="appic ic-aw">P</span><div class="ti">最近项目</div>
+        <div style="margin-top:12px"><span class="minipill">helm</span><span class="minipill">helm-notch</span></div></div>
+        <div class="foot">${CLIP}<span class="tm">2 个</span></div></div>
+      <div class="card"><div class="pad">
+        <span class="appic ic-yt">R</span><div class="ti">今日收藏</div>
+        <div class="rowline" style="margin-top:10px"><span class="dotc" style="background:#ff2d2d"></span>GANGNAM STYLE M/V<span class="r">视频</span></div>
+        <div class="rowline"><span class="dotc" style="background:#8b5a2b"></span>Attention Is All You Need<span class="r">论文</span></div>
+        <div class="rowline"><span class="dotc" style="background:#0a84ff"></span>Awwwards 年度作品集<span class="r">灵感</span></div></div>
+        <div class="foot">${GLOBE}<span class="tm">4 条 · 记录 →</span></div></div>
+    </div></div>`;
+  document.querySelectorAll('.kindchip').forEach(k=>k.onclick=()=>{
+    document.querySelectorAll('.kindchip').forEach(x=>x.classList.remove('on'));k.classList.add('on');});
+}
+function capSend(){
+  const i=$('#capIn'); if(!i.value.trim())return;
+  i.value=''; i.placeholder='已发送 — AI 解析中…';
+  setTimeout(()=>i.placeholder='随手记一笔 — 链接会自动解析成卡片…',1600);
+}
+
+/* ═══ JOURNAL ═══ */
+function journalTopbar(){
+  topbar.innerHTML=`<div class="pilltabs">
+      <button class="ptab${view==='timeline'?' on':''}" data-v="timeline">Timeline</button>
+      <button class="ptab${view==='canvas'?' on':''}" data-v="canvas">Canvas</button>
+      <button class="ptab${view==='calendar'?' on':''}" data-v="calendar">Calendar</button>
+    </div>
+    ${view==='calendar'?`<div style="display:flex;align-items:center;gap:10px;font-size:14.5px;color:var(--ink3)">
+      <span>07-${String(6+weekOff*7).padStart(2,'0')} — 07-${String(12+weekOff*7).padStart(2,'0')} · 七月</span>
+      <button class="navbtn" id="wPrev">‹</button><button class="navbtn" id="wNext">›</button></div>
+      <div class="right">(GMT+8) 本地时间 <span style="font-size:10px">⌄</span></div>`:''}`;
+  topbar.querySelectorAll('.ptab').forEach(b=>b.onclick=()=>{view=b.dataset.v;renderJournal()});
+  const p=$('#wPrev'),n=$('#wNext');
+  if(p)p.onclick=()=>{weekOff--;renderJournal()};
+  if(n)n.onclick=()=>{weekOff++;renderJournal()};
+}
+function renderJournal(){
+  journalTopbar();
+  ({timeline:renderTimeline,canvas:renderCanvas,calendar:renderCalendar})[view]();
+}
 function renderTimeline(){
   const g={}; fitems().forEach(i=>{(g[i.day]??=[]).push(i)});
   const lb=d=>d==0?'今天 · 7月6日':d==-1?'昨天 · 7月5日':`7月${6+ +d}日 · 计划`;
   stage.innerHTML=`<div class="v-timeline">${Object.keys(g).sort((a,b)=>b-a).map(d=>`
     <div class="dhead"><span class="d">${lb(d)}</span><span class="n">${g[d].length} 项</span></div>
-    <div class="tgrid">${g[d].map(cardHTML).join('')}</div>`).join('')}</div>`;
+    <div class="jgrid">${g[d].map(cardHTML).join('')}</div>`).join('')}</div>`;
 }
-
-/* CANVAS */
 function renderCanvas(){
   stage.innerHTML=`<div class="v-canvas" id="cv">
-    <svg class="wires" id="wires">
-      <defs><linearGradient id="wg" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0" stop-color="var(--g1)"/><stop offset="1" stop-color="var(--g2)"/>
-      </linearGradient></defs><g id="wg-paths"></g></svg>
-    <div class="cluster" style="left:300px;top:252px">
+    <svg class="wires"><defs><linearGradient id="wg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff8a3d"/><stop offset="1" stop-color="#a855f7"/></linearGradient></defs>
+      <g id="wg-paths"></g></svg>
+    <div class="cluster" style="left:300px;top:242px">
       <span class="pillg">Transformer 思路串</span>
       <span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 13l4 4 10-10"/></svg></span>
     </div>
@@ -281,8 +440,6 @@ function drawWires(){
       <circle class="wiredot-a" cx="${p[0]}" cy="${p[1]}" r="5"/><circle class="wiredot-b" cx="${q[0]}" cy="${q[1]}" r="5"/>`;
   }).join('');
 }
-
-/* CALENDAR */
 function renderCalendar(){
   const H0=8,H1=22;
   const days=['Mon','Tues','Wed','Thu','Fri','Sat','Sun'];
@@ -290,27 +447,23 @@ function renderCalendar(){
   let cells='';
   for(let h=H0;h<H1;h++){
     cells+=`<div class="hlabel">${String(h).padStart(2,'0')}:00</div>`;
-    for(let d=0;d<7;d++)cells+=`<div class="hcell${h>=19&&h<20?' dim':''}" data-d="${d}" data-h="${h}"></div>`;
+    for(let d=0;d<7;d++)cells+=`<div class="hcell" data-d="${d}" data-h="${h}"></div>`;
   }
   stage.innerHTML=`<div class="v-cal"><div class="calwrap"><div class="calgrid" id="cg">
     <div class="calh0"></div>
     ${days.map((w,i)=>`<div class="caldayh${i===0&&weekOff===0?' istoday':''}"><div class="dw">${w}</div><div class="dn">${String(dates[i]).padStart(2,'0')}</div></div>`).join('')}
-    ${cells}
-  </div></div></div>`;
+    ${cells}</div></div></div>`;
   const cg=$('#cg');
   fitems().forEach(i=>{
     if(i.day==null||i.hh==null)return;
-    const d=i.day-weekOff*7; if(d<0||d>6)return;
-    if(i.hh<H0||i.hh>=H1)return;
+    const d=i.day-weekOff*7; if(d<0||d>6||i.hh<H0||i.hh>=H1)return;
     const cell=cg.querySelector(`.hcell[data-d="${d}"][data-h="${i.hh}"]`); if(!cell)return;
     const el=document.createElement('div');
     el.className='calcard'; el.style.top='3px'; el.dataset.id=i.id;
     const kind=i.type==='event'?['#a855f7','日程']:i.type==='task'?['#28a745','任务']:['#0a84ff','速记'];
-    const body=i.type==='text'?(i.body||'').slice(0,20)+'…':i.title;
-    const img=i.cover&&i.type==='youtube'?`<img class="cimg" src="${i.cover}">`:'';
-    el.innerHTML=`<div class="when">${i.t?i.t:(String(i.hh).padStart(2,'0')+':00')}</div><div class="t">${body}</div>
-      ${i.sub?`<span class="badge"><span class="dot" style="background:${kind[0]}"></span>${kind[1]}</span>`:''}${img}
-      <div class="foot">${CLIP}<span class="tm">${i.t??''}</span></div>`;
+    el.innerHTML=`<div class="when">${i.t??String(i.hh).padStart(2,'0')+':00'}</div>
+      <div class="t">${i.type==='text'?(i.body||'').slice(0,20)+'…':i.title}</div>
+      ${i.sub||i.type==='event'?`<span class="badge"><span class="dot" style="background:${kind[0]}"></span>${kind[1]}</span>`:''}`;
     cell.appendChild(el);
   });
   if(weekOff===0){
@@ -322,42 +475,154 @@ function renderCalendar(){
   }
 }
 
-/* 切换/选中/过滤 */
+/* ═══ CHAT ═══ */
+const CONVS=[
+ {id:1,t:'Helm 架构讨论',p:'中间件吞后台任务的坑…',msgs:[
+   ['user','为什么我的 BackgroundTasks 在生产环境不执行?'],
+   ['ai','三个常见原因:①BaseHTTPMiddleware 会在响应结束时取消未完成的后台任务;②任务读不到未提交的事务;③老进程占着端口,请求根本没打到新代码。你的情况是三个全中。'],
+   ['user','怎么根治?'],
+   ['ai','用 asyncio.create_task 与响应生命周期解耦,路由里显式 commit,再把任务引用挂到 app.state 防 GC——顺手加个 done_callback 上报异常,别让它静默失败。']]},
+ {id:2,t:'论文速读:Transformer',p:'Attention Is All You Need…',msgs:[
+   ['user','用三句话讲清这篇论文。'],
+   ['ai','①放弃循环和卷积,只用注意力机制建模序列;②多头注意力同时看不同位置的关系;③训练并行度大幅提升,成为后来所有大模型的地基。']]},
+ {id:3,t:'速记整理规则',p:'链接自动解析成卡…',msgs:[
+   ['user','速记里的链接希望自动变成卡片。'],
+   ['ai','已经接好:YouTube 走 oEmbed,论文走 arXiv API,普通网页抓 OpenGraph;AI 再补分类、中文摘要和标签,记录页直接出预览卡。']]}
+];
+let convId=1;
+function renderChat(){
+  topbar.innerHTML=`<div><div class="htitle">对话</div></div>
+    <div class="right"><span class="okdot"></span>claude-cli · 全局 provider</div>`;
+  const c=CONVS.find(x=>x.id===convId);
+  stage.innerHTML=`<div class="v-chat">
+    <div class="convs">${CONVS.map(x=>`<div class="conv${x.id===convId?' on':''}" data-c="${x.id}">
+      <div class="t">${x.t}</div><div class="p">${x.p}</div></div>`).join('')}</div>
+    <div class="chatpane">
+      <div class="msgs" id="msgs">${c.msgs.map(([w,tx])=>w==='user'
+        ?`<div class="msg user">${tx}</div>`
+        :`<div class="msg ai"><div class="who"><span class="spark"></span>Helm 大脑</div>${tx}</div>`).join('')}</div>
+      <div class="chatinput"><input id="chatIn" placeholder="问点什么…(回车发送)">
+        <button class="blackbtn" onclick="chatSend()">发送</button></div>
+    </div></div>`;
+  document.querySelectorAll('.conv').forEach(el=>el.onclick=()=>{convId=+el.dataset.c;renderChat()});
+  const m=$('#msgs'); m.scrollTop=m.scrollHeight;
+  $('#chatIn').addEventListener('keydown',e=>{if(e.key==='Enter')chatSend()});
+}
+function chatSend(){
+  const i=$('#chatIn'); const t=i.value.trim(); if(!t)return;
+  const c=CONVS.find(x=>x.id===convId);
+  c.msgs.push(['user',t]); i.value='';
+  renderChat();
+  setTimeout(()=>{c.msgs.push(['ai','(设计稿演示回复)收到——真实实现里这里走全局 AI provider 流式回答。']);renderChat();},650);
+}
+
+/* ═══ RESEARCH ═══ */
+function renderResearch(){
+  topbar.innerHTML=`<div><div class="htitle">研究</div><div class="hsub">丢一个问题,agent 出一份带来源的报告</div></div>
+    <div class="right"><button class="blackbtn" id="newRs">发起研究</button></div>`;
+  stage.innerHTML=`<div class="v-research"><div class="rgrid">
+    <div class="card"><div class="pad">
+      <span class="statuschip st-run">进行中 · 62%</span>
+      <div class="ti" style="margin-top:10px">本地优先笔记应用的 AI 管线怎么设计最好</div>
+      <div class="sum">正在读 12 个来源:oEmbed / OpenGraph 标准、arXiv API、Readability、几家竞品的实现拆解…</div>
+      <div class="prog"><i style="width:62%"></i></div>
+      <div class="srcrow"><span class="src">oembed.com</span><span class="src">ogp.me</span><span class="src">arxiv.org</span><span class="src">+9</span></div>
+    </div><div class="foot">${GLOBE}<span class="tm">已跑 4 分钟</span></div></div>
+    <div class="card"><div class="pad">
+      <span class="statuschip st-done">已完成</span>
+      <div class="ti" style="margin-top:10px">macOS 刘海区交互的最佳实践</div>
+      <div class="sum">结论:TimelineView 重建会吃掉 onHover,退出判定要用 NSEvent.mouseLocation 复核;媒体背景铺满用 background+overlay 而不是 ZStack 子视图。</div>
+      <div class="srcrow"><span class="src">报告 · 9 来源</span><span class="src">引用 23 处</span></div>
+    </div><div class="foot">${CLIP}<span class="tm">昨天 22:40</span></div></div>
+  </div></div>`;
+  $('#newRs').onclick=()=>{$('#newRs').textContent='已创建(演示)';setTimeout(()=>$('#newRs').textContent='发起研究',1500)};
+}
+
+/* ═══ COCKPIT ═══ */
+function renderCockpit(){
+  topbar.innerHTML=`<div><div class="htitle">驾驶舱</div><div class="hsub">终端 agent 的运行监视 · 本机</div></div>
+    <div class="right"><span class="okdot"></span>1 live / 5 idle</div>`;
+  stage.innerHTML=`<div class="v-cockpit"><div class="cgrid">
+    <div class="card agentcard"><div class="hd"><span class="st st-live"></span>
+      <span class="nm">claude · 主会话</span><span class="proj">~/helm</span></div>
+      <div class="term"><span class="okt">✓</span> swift build 12.4s<br>
+        <span class="okt">✓</span> 214 tests passed<br>
+        <span class="dim">→</span> running snapshot suite…<br>
+        <span class="dim">tok 14.2k · ctx 1.0M</span></div>
+      <div class="runrow">最近决策:enrich 两段式落库<span class="r">2 分钟前</span></div></div>
+    <div class="card agentcard"><div class="hd"><span class="st st-idle"></span>
+      <span class="nm">夜巡 · swift test</span><span class="proj">~/helm/notch</span></div>
+      <div class="term"><span class="dim">idle — 下次 18:00</span><br>
+        <span class="okt">✓</span> 上轮 47/47 通过<br><span class="dim">平均时长 3 分 12 秒</span></div>
+      <div class="runrow">定时 · 每 6 小时<span class="r">今天已跑 2 次</span></div></div>
+    <div class="card agentcard"><div class="hd"><span class="st st-idle"></span>
+      <span class="nm">邮件汇总</span><span class="proj">agent 任务</span></div>
+      <div class="term"><span class="dim">idle — 明天 09:00</span><br>
+        <span class="okt">✓</span> 上轮:12 封未读 → 3 条要点<br><span class="dim">来自 记录 → 任务 派发</span></div>
+      <div class="runrow">cron 0 9 * * *<span class="r">启用中</span></div></div>
+  </div></div>`;
+}
+
+/* ═══ SETTINGS ═══ */
+function renderSettings(){
+  topbar.innerHTML=`<div><div class="htitle">设置</div><div class="hsub">全本地 · 无云依赖</div></div>`;
+  stage.innerHTML=`<div class="v-settings"><div class="sgrid">
+    <div class="card">
+      <div class="setrow"><div><div class="lb">AI 系统 provider</div>
+        <div class="ds">速记整理 · 问大脑 · 今日小结 · 研究,统一走这一个</div></div>
+        <div class="ctl"><select class="sel">
+          <option selected>claude-cli · 本机订阅</option>
+          <option>OpenAI · API key</option>
+          <option>本地 Ollama</option></select></div></div>
+      <div class="setrow"><div><div class="lb">链接自动解析</div>
+        <div class="ds">YouTube / 论文 / 网页 → 预览卡(oEmbed·arXiv·OpenGraph + AI 摘要)</div></div>
+        <div class="ctl"><button class="switch on" onclick="this.classList.toggle('on')"></button></div></div>
+      <div class="setrow"><div><div class="lb">通知</div>
+        <div class="ds">agent 完成 / 定时任务结果推到 notch</div></div>
+        <div class="ctl"><button class="switch on" onclick="this.classList.toggle('on')"></button></div></div>
+    </div>
+    <div class="card">
+      <div class="setrow"><div><div class="lb">后端</div>
+        <div class="ds">127.0.0.1:8769 · v0.0.1</div></div>
+        <div class="ctl" style="font-size:12.5px;color:var(--ink2)"><span class="okdot"></span>运行中</div></div>
+      <div class="setrow"><div><div class="lb">终端 agent 接入(MCP)</div>
+        <div class="ds">把 helm 工具注入 Claude Code(.mcp.json 合并+备份)</div></div>
+        <div class="ctl"><button class="sel" onclick="this.textContent='已注入'">注入</button></div></div>
+      <div class="setrow"><div><div class="lb">Notch 伴侣</div>
+        <div class="ds">刘海捕获 / 媒体 / 会话监听,与本工作台同一数据</div></div>
+        <div class="ctl" style="font-size:12.5px;color:var(--ink2)"><span class="okdot"></span>已连接</div></div>
+    </div>
+  </div></div>`;
+}
+
+/* ═══ 路由 ═══ */
 function render(){
-  ({timeline:renderTimeline,canvas:renderCanvas,calendar:renderCalendar})[view]();
-  $('#calRange').classList.toggle('show',view==='calendar');
-  $('#calTz').style.display=view==='calendar'?'flex':'none';
+  ({today:renderToday,journal:renderJournal,chat:renderChat,
+    research:renderResearch,cockpit:renderCockpit,settings:renderSettings})[mode]();
+  $('#catHead').style.display=mode==='journal'?'block':'none';
+  $('#cats').classList.toggle('show',mode==='journal');
 }
 function select(id){
   selId=id;
-  document.querySelectorAll('.card').forEach(c=>c.classList.toggle('sel',+c.closest('[data-id]')?.dataset.id===id||+c.dataset.id===id));
+  document.querySelectorAll('.card').forEach(c=>c.classList.toggle('sel',+c.dataset.id===id));
 }
 document.addEventListener('click',e=>{
-  const c=e.target.closest('.card,.calcard'); if(c&&c.dataset.id)select(+c.dataset.id);
+  const c=e.target.closest('.card[data-id],.calcard'); if(c&&c.dataset.id)select(+c.dataset.id);
 });
-document.querySelectorAll('.vtab').forEach(b=>b.onclick=()=>{
-  document.querySelectorAll('.vtab').forEach(x=>x.classList.remove('on'));
-  b.classList.add('on'); view=b.dataset.v; render();
+document.querySelectorAll('.nav').forEach(n=>n.onclick=()=>{
+  document.querySelectorAll('.nav').forEach(x=>x.classList.remove('on'));
+  n.classList.add('on'); mode=n.dataset.m; render();
 });
 document.querySelectorAll('.cat').forEach(r=>r.onclick=()=>{
   document.querySelectorAll('.cat').forEach(x=>x.classList.remove('on'));
-  r.classList.add('on'); filter=r.dataset.f; render();
+  r.classList.add('on'); filter=r.dataset.f; if(mode==='journal')renderJournal();
 });
-$('#wPrev')?.addEventListener('click',()=>{}); // 绑定在 render 后覆盖
-document.addEventListener('click',e=>{
-  if(e.target.id==='wPrev'){weekOff--;updRng();render()}
-  if(e.target.id==='wNext'){weekOff++;updRng();render()}
-});
-function updRng(){
-  const a=6+weekOff*7,b=12+weekOff*7;
-  $('#wRng').textContent=`07-${String(a).padStart(2,'0')} — 07-${String(b).padStart(2,'0')} · 七月`;
-}
-function counts(){
+(function counts(){
   const n=t=>ITEMS.filter(i=>i.type===t).length;
   kAll.textContent=ITEMS.length;kYt.textContent=n('youtube');kPp.textContent=n('paper');
   kIn.textContent=n('inspo');kTx.textContent=n('text');kTk.textContent=n('task');kEv.textContent=n('event');
-}
-counts(); render();
+})();
+render();
 </script>
 </body>
 </html>
