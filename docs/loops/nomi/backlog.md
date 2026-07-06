@@ -2,4 +2,4 @@
 - [ ] [R01][P2][gap] 深色主站无设计稿(NOMI 稿仅浅色):深 token 从 notch 稿推导,待浅色全站对齐后让用户目视深色版。
 - [ ] [R02][P2][gap] 侧栏导航计数(记录/对话条数)设计稿有,未接真数据(notes/chats count)。
 - [ ] [R02][P2][polish] titlebar/statusbar 仍是 ORAGE mono 语言,待壳收尾块统一 NOMI 化(或按设计稿删)。
-- [ ] [R03][P1][gap] CaptureDock 仍是 ORAGE 皮(方角/发丝/mono chips),需 NOMI 化:圆角胶囊 kind chips+灰盒输入+渐变发送(对照稿今日板块 capbar 与 notch 稿捕获页)。
+- [x] [R03][P1][gap](R04 清) CaptureDock 仍是 ORAGE 皮(方角/发丝/mono chips),需 NOMI 化:圆角胶囊 kind chips+灰盒输入+渐变发送(对照稿今日板块 capbar 与 notch 稿捕获页)。

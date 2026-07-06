@@ -149,86 +149,87 @@
   {/if}
 
   {#if askAnswer !== null}
-    <div class="answer"><span class="alab">大脑</span>{askAnswer === '' ? '（空回答）' : askAnswer}</div>
+    <div class="answer"><span class="spark" aria-hidden="true"></span><span class="alab">大脑</span>{askAnswer === '' ? '（空回答）' : askAnswer}</div>
   {/if}
 </div>
 
 <style>
+  /* NOMI 皮(阶段 4 R04):白卡+胶囊+渐变发送;逻辑层未动。 */
   .dock {
-    border: 1px solid var(--line);
-    padding: 10px 12px;
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 12px 14px;
     margin-bottom: 14px;
-    position: relative;
   }
-  /* 框选视口 L 角(捕获=活的输入) */
-  .dock::before,
-  .dock::after {
-    content: '';
-    position: absolute;
-    width: 9px;
-    height: 9px;
-    border: 1.4px solid var(--acc-ink);
-  }
-  .dock::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
-  .dock::after { bottom: -1px; right: -1px; border-left: none; border-top: none; }
 
-  .chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .chips { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
   .chip {
-    font-family: var(--mono);
-    font-size: 11px;
+    font: 500 11.5px/1 var(--sans);
     color: var(--t3);
-    background: transparent;
-    border: 1px solid var(--hair);
-    padding: 4px 10px;
+    background: var(--pill);
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 6px 12px;
     cursor: pointer;
-    transition: color var(--dur-micro) var(--ease), border-color var(--dur-micro) var(--ease);
+    transition: background var(--dur-micro) var(--ease), color var(--dur-micro) var(--ease);
   }
   .chip:hover { color: var(--t1); }
-  .chip.on { color: var(--acc-ink); border-color: var(--acc-ink); }
-  .chip.sub { font-size: 10px; padding: 3px 8px; }
-  .tsep { width: 1px; height: 14px; background: var(--hair); margin: 0 2px; }
+  .chip.on { background: var(--t1); color: var(--onink); font-weight: 600; }
+  .chip.sub { font-size: 11px; padding: 5px 11px; background: transparent; border: 1px solid var(--hair); }
+  .chip.sub.on {
+    border-color: transparent;
+    background: var(--grad);
+    color: #fff;
+  }
+  .tsep { width: 1px; height: 14px; background: var(--hair); margin: 0 3px; }
 
-  .row { display: flex; gap: 8px; margin-top: 9px; }
+  .row {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    background: var(--pill);
+    border-radius: var(--radius-pill);
+    padding: 4px 4px 4px 15px;
+    align-items: center;
+  }
   .cin {
     flex: 1;
     background: transparent;
     border: none;
-    border-bottom: 1px solid var(--hair);
     color: var(--t1);
-    caret-color: var(--acc);
+    caret-color: var(--g2);
     font-family: var(--sans);
     font-size: 13.5px;
-    padding: 5px 1px 6px;
+    padding: 7px 0;
     outline: none;
   }
   .cin::placeholder { color: var(--t4); }
-  .cin:focus { border-bottom-color: var(--acc-ink); }
 
   .send {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--acc-ink);
-    background: transparent;
-    border: 1px solid var(--acc-ink);
-    padding: 5px 12px;
+    font: 600 12px/1 var(--sans);
+    color: #fff;
+    background: var(--grad);
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 9px 18px;
     cursor: pointer;
     white-space: nowrap;
   }
-  .send:disabled { color: var(--t4); border-color: var(--hair); cursor: default; }
+  .send:disabled { background: var(--pill); color: var(--t4); cursor: default; }
 
   .hintrow {
-    margin-top: 6px;
-    font-family: var(--mono);
-    font-size: 10px;
+    margin-top: 7px;
+    font: 400 10.5px/1 var(--sans);
     color: var(--t4);
-    letter-spacing: 0.3px;
+    padding-left: 4px;
   }
 
   .focusrun { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
   .ft {
     font-family: var(--mono);
     font-size: 26px;
-    font-weight: 800;
+    font-weight: 700;
     font-variant-numeric: tabular-nums;
     color: var(--t1);
   }
@@ -236,19 +237,29 @@
   .send.stop { margin-left: auto; }
 
   .answer {
-    margin-top: 9px;
-    padding: 8px 10px;
-    border-left: 2px solid var(--acc-ink);
+    margin-top: 10px;
+    padding: 11px 13px;
+    background: var(--card);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow);
     font-size: 12.5px;
     color: var(--t2);
     white-space: pre-wrap;
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+  }
+  .spark {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex: none;
+    align-self: center;
+    background: conic-gradient(from 210deg, var(--g1), var(--g2), var(--g1));
   }
   .alab {
-    font-family: var(--mono);
-    font-size: 9px;
-    letter-spacing: 1px;
-    color: var(--acc-ink);
-    margin-right: 8px;
-    text-transform: uppercase;
+    font: 600 10px/1 var(--sans);
+    color: var(--t3);
+    margin-right: 4px;
   }
 </style>

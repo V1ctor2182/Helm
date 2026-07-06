@@ -15,3 +15,7 @@
 - 门: build ✓ / check 0/0 / test 204 全绿(Today.test 断言随新结构更新,语义保留)
 - 视觉: shots/r03-today.png——问候/卡网格/空态/HN 简报真数据 ✓
 - 缺口: CaptureDock 仍 ORAGE 皮(独立块) → backlog P1
+## R04 · 2026-07-07 00:20 · CaptureDock NOMI 化(backlog P1 清)
+- 对齐: 逻辑层零改动,纯换皮——白卡容器(圆角+阴影,L 角/边框退场)/kind 胶囊(黑激活)/任务双轨渐变胶囊/灰胶囊输入行/渐变发送钮(disabled=灰胶囊)/问大脑答案卡(白卡+spark)。
+- 门: build ✓ / check 0/0 / test 204 全绿
+- 视觉: shots/r04-capture.png——今日板块(问候+坞+七卡)整体成型
