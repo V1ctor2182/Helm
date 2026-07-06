@@ -289,24 +289,23 @@
     <span class="nm">Helm</span>
     <span class="st"><span class="okdot"></span>后端 ok · 1 agent live</span>
   </div>
+  <!-- dock 收敛成 5(2026-07-06 用户:category 太多):媒体=总览点封面放大,
+       专注=速记的 kind,剪贴板并入暂存 -->
   <div class="mtabs" id="mtabs">
     <button class="mtab on" data-t="dash">总览</button>
-    <button class="mtab" data-t="media">媒体</button>
     <button class="mtab" data-t="capture">速记</button>
     <button class="mtab" data-t="cal">日历</button>
-    <button class="mtab" data-t="files">文件</button>
     <button class="mtab" data-t="agents">智能体</button>
-    <button class="mtab" data-t="clip">剪贴板</button>
-    <button class="mtab" data-t="focus">专注</button>
+    <button class="mtab" data-t="files">暂存</button>
   </div>
   <div class="pbody" id="pbody"></div>
   <div class="pfoot">
-    <span class="k">⌥Space 呼出 · ⏎ 发送 · Esc 收起 · 拖文件到刘海=暂存</span>
+    <span class="k">悬停刘海展开 · ⏎ 发送 · Esc 收起 · 拖文件到刘海=暂存</span>
     <button class="open-helm"><svg width="15" height="12"><use href="#helm-logo"/></svg>打开 Helm</button>
   </div>
 </div>
 
-<div class="deskhint">点刘海展开/收起 · 全部可点
+<div class="deskhint">悬停刘海展开 · 全部可点 · 总览点封面=放大媒体
   <button onclick="showBanner()">模拟权限请求</button>
   <button onclick="document.getElementById('notch').classList.add('dragover');setTimeout(()=>{document.getElementById('notch').classList.remove('dragover');openPanel('files');addFile('设计稿-v3.fig','Figma · 4.2 MB','#a855f7','FG')},900)">模拟拖文件</button>
 </div>
@@ -361,6 +360,9 @@ function renderBody(){
   }
   else if(tab==='media'){
     b.innerHTML=`
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:9px">
+        <button class="pbtn" id="backDash">‹ 总览</button>
+        <span style="font-size:10px;color:var(--ink3)">媒体 · 点总览封面进入</span></div>
       <div class="media">
         <div class="cover">${NOTE}</div>
         <div class="minfo">
@@ -377,6 +379,7 @@ function renderBody(){
       </div>
       <div class="lyrics" id="lyrics">${LYRICS.map((l,i)=>`<div class="lyr${i===lyrIdx?' on':''}">${l}</div>`).join('')}</div>`;
     $('#pp').onclick=()=>{playing=!playing;renderBody()};
+    $('#backDash').onclick=()=>switchTab('dash');
     $('#prog').onclick=e=>{const r=e.currentTarget.getBoundingClientRect();pos=Math.round((e.clientX-r.left)/r.width*dur);renderBody()};
     scrollLyr();
   }
@@ -387,11 +390,11 @@ function renderBody(){
         <button class="who${who==='me'?' on':''}" data-w="me">给自己 · 待办</button>
         <button class="who${who==='agent'?' on':''}" data-w="agent">交给 agent · 定时</button>
       </div>
-      <div class="capbox">
+      ${kind==='focus'?focusHTML():`<div class="capbox">
         <textarea id="cap" placeholder="${PH[kind]}"></textarea>
         <div class="caprow"><span class="hint">${kind==='ask'?'⏎ 提问 · 走全局 provider':'⏎ 发送 · AI 自动整理'}</span>
           <button class="gbtn send" id="capSend">${kind==='ask'?'提问':'发送'}</button></div>
-      </div>
+      </div>`}
       <div class="askout${asked?' show':''}">
         <div class="who2"><span class="spark"></span>Helm 大脑</div>
         速记里的链接会自动解析:YouTube 走 oEmbed,论文走 arXiv,网页抓 OpenGraph,AI 再补摘要和标签。
@@ -407,7 +410,8 @@ function renderBody(){
       </div>`;
     b.querySelectorAll('.kind').forEach(k=>k.onclick=()=>{kind=k.dataset.k;asked=false;renderBody()});
     b.querySelectorAll('.who').forEach(w=>w.onclick=()=>{who=w.dataset.w;renderBody()});
-    $('#capSend').onclick=()=>{
+    if(kind==='focus'){bindFocus();}
+    else $('#capSend').onclick=()=>{
       const c=$('#cap'); if(!c.value.trim())return;
       if(kind==='ask'){asked=true;renderBody();}
       else{c.value='';c.placeholder='已发送 — AI 解析中…';setTimeout(()=>{c.placeholder=PH[kind]},1500);}
@@ -428,7 +432,15 @@ function renderBody(){
   else if(tab==='files'){
     b.innerHTML=`
       <div class="dropzone" id="dz"><b>拖文件到这里(或刘海)</b><br>暂存到 Shelf → 上传到记录 / 关联驾驶舱</div>
-      <div class="shelf" id="shelf">${FILES.map((f,i)=>fileHTML(f,i)).join('')||''}</div>`;
+      <div class="shelf" id="shelf">${FILES.map((f,i)=>fileHTML(f,i)).join('')||''}</div>
+      <div class="rlab" style="margin-top:12px">剪贴板</div>
+      <div class="wcard clip"><span class="cic">${LINK}</span>
+        <span class="tx"><b>https://arxiv.org/abs/1706.03762</b> · 2 分钟前</span>
+        <button class="pbtn">复制</button><button class="pbtn">存速记</button></div>
+      <div class="wcard clip"><span class="cic">${TXT}</span>
+        <span class="tx">asyncio.create_task 与响应生命周期解耦…</span>
+        <button class="pbtn">复制</button><button class="pbtn">存速记</button></div>`;
+    b.querySelectorAll('.clip .pbtn').forEach(x=>x.onclick=e=>{const t=e.target.textContent;e.target.textContent='✓';setTimeout(()=>e.target.textContent=t,900)});
     const dz=$('#dz');
     dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('hot')});
     dz.addEventListener('dragleave',()=>dz.classList.remove('hot'));
@@ -456,40 +468,29 @@ function renderBody(){
         <div class="ln">上轮 47/47 通过 · 平均 3 分 12 秒</div></div>`;
     b.querySelectorAll('.qb').forEach(q=>q.onclick=e=>{e.target.textContent='已选';});
   }
-  else if(tab==='clip'){
-    b.innerHTML=`
-      <div class="wcard clip"><span class="cic">${LINK}</span>
-        <span class="tx"><b>https://arxiv.org/abs/1706.03762</b> · 2 分钟前</span>
-        <button class="pbtn">复制</button><button class="pbtn">存速记</button></div>
-      <div class="wcard clip"><span class="cic">${TXT}</span>
-        <span class="tx">asyncio.create_task 与响应生命周期解耦…</span>
-        <button class="pbtn">复制</button><button class="pbtn">存速记</button></div>
-      <div class="wcard clip"><span class="cic">${IMG}</span>
-        <span class="tx"><b>截屏 2026-07-06 14.18.32.png</b> · 14:18</span>
-        <button class="pbtn">复制</button><button class="pbtn">存速记</button></div>`;
-    b.querySelectorAll('.pbtn').forEach(p=>p.onclick=e=>{const t=e.target.textContent;e.target.textContent='✓';setTimeout(()=>e.target.textContent=t,900)});
-  }
-  else{ // focus
-    const pct=(1-focusLeft/focusTotal)*360;
-    b.innerHTML=`
-      <div class="focus">
-        <div class="ring" style="background:conic-gradient(var(--g1) 0deg,var(--g2) ${pct}deg,var(--pill) ${pct}deg)">
-          <div class="inner"><span class="tt" id="ft">${fmt(focusLeft)}</span><span class="ss">${focusRun?'专注中':'已暂停'}</span></div>
-        </div>
-        <div class="fright">
-          <div class="lb">关联任务</div>
-          <div class="task">把 NOMI 稿逐块进 Svelte</div>
-          <div class="facts">
-            <button class="${focusRun?'pbtn':'kbtn'}" id="fGo">${focusRun?'暂停':'开始'}</button>
-            <button class="pbtn" id="fRe">重置</button>
-            <button class="pbtn">换任务</button>
-          </div>
-        </div>
-      </div>`;
-    $('#fGo').onclick=()=>{focusRun=!focusRun;renderBody()};
-    $('#fRe').onclick=()=>{focusRun=false;focusLeft=focusTotal;renderBody()};
-  }
 }
+function focusHTML(){
+  const pct=(1-focusLeft/focusTotal)*360;
+  return `<div class="focus">
+      <div class="ring" style="background:conic-gradient(var(--g1) 0deg,var(--g2) ${pct}deg,var(--pill) ${pct}deg)">
+        <div class="inner"><span class="tt">${fmt(focusLeft)}</span><span class="ss">${focusRun?'专注中':'已暂停'}</span></div>
+      </div>
+      <div class="fright">
+        <div class="lb">关联任务</div>
+        <div class="task">把 NOMI 稿逐块进 Svelte</div>
+        <div class="facts">
+          <button class="${focusRun?'pbtn':'kbtn'}" id="fGo">${focusRun?'暂停':'开始'}</button>
+          <button class="pbtn" id="fRe">重置</button>
+          <button class="pbtn">换任务</button>
+        </div>
+      </div>
+    </div>`;
+}
+function bindFocus(){
+  $('#fGo').onclick=()=>{focusRun=!focusRun;renderBody()};
+  $('#fRe').onclick=()=>{focusRun=false;focusLeft=focusTotal;renderBody()};
+}
+
 function fileHTML(f,i){
   return `<div class="wcard file" data-i="${i}">
     <span class="fic" style="background:${f.c}">${f.k}</span>
@@ -515,6 +516,13 @@ function renderTabs(){
 }
 function openPanel(t){open=true;$('#panel').classList.add('open');if(t)switchTab(t)}
 $('#notch').onclick=()=>{open=!open;$('#panel').classList.toggle('open',open)};
+/* hover 展开(对齐现行稿 helm-notch-pro):悬停刘海→开,移出刘海+面板→220ms 后收 */
+let hoverT;
+for(const el of [document.getElementById('notch'),document.getElementById('panel')]){
+  el.addEventListener('mouseenter',()=>{clearTimeout(hoverT);if(!open)openPanel()});
+  el.addEventListener('mouseleave',()=>{clearTimeout(hoverT);
+    hoverT=setTimeout(()=>{open=false;document.getElementById('panel').classList.remove('open')},220)});
+}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){open=false;$('#panel').classList.remove('open');hideBanner()}});
 
 /* banner */
@@ -534,7 +542,7 @@ setInterval(()=>{
     const pg=document.getElementById('pg'),tA=document.getElementById('tA');
     if(pg){pg.style.width=(pos/dur*100)+'%';tA.textContent=fmt(pos)}}
   if(focusRun&&focusLeft>0){focusLeft--;
-    if(tab==='focus')renderBody()}
+    if(tab==='capture'&&kind==='focus')renderBody()}
 },1000);
 function scrollLyr(){/* 歌词轮换 */}
 setInterval(()=>{
