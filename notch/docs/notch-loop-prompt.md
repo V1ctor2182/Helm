@@ -53,3 +53,17 @@
 
 - **对齐粒度 N**:命令里 `每对齐 1 块` 的块数。原生块大,默认 1 最稳。
 - **保真度**:默认「一模一样」。某些地方你想用更原生的做法(而非死磕 HTML 像素),在命令里说,或让 loop 用 add_question 提给你定。
+
+---
+
+## 🎨 阶段 · NOMI 重塑(2026-07-06 用户拍板换皮,当前阶段)
+
+设计基线切换:**`docs/design/helm-notch-nomi.html`(仓库根,只读)取代 `helm-notch-pro.html`**(旧稿存档;实现切换完成前,现网行为仍以旧稿为准)。新稿要点:单体生长 morph(黑条本身长成面板)/折叠态(左组 logo·封面·波形 — 摄像头空档 — 右组 live)/展开顶行(左 logo+Helm,右天气+设置,折叠内容淡出)/底部圆钮 dock 5 模块(渐变描边激活)/智能体上下滑子页(会话/端口/PR·commit)/横扫切模块/banner 单体化(整个 notch 变横幅)/深色默认+浅色切换/NOMI 白卡语言(圆角/柔和阴影/橙紫渐变)/禁 emoji。
+
+**专属工作区:`docs/loops/nomi-notch/`**(仓库根)——log.md/reports/shots/backlog.md,结构见其 README,loop 自管自记。老流程(每一轮/硬门 swift build+test/快照/report)照 `notch-loop-procedure.md`,只换基线与工作区。
+
+直接粘这一段跑整夜:
+```
+/loop 1m 读 notch/docs/notch-loop-procedure.md 与 notch 现状(Sources/HelmNotch*),把只读新设计稿 docs/design/helm-notch-nomi.html(仓库根)从头读懂,以【夜间模式】把 notch 原生 UI 逐块重塑成该稿:单体生长/折叠态(左组—摄像头空档—右组)/顶行(左 logo+Helm 右天气+设置)/底部圆钮 dock 5 模块/智能体上下滑子页(会话/端口/PR)/横扫切模块/banner 单体化/深默认+浅色。每块 精读稿→进 Swift→swift build && swift test 绿才 commit(feat/notch-nomi-*,不合 main;macOS CI 过了留我合)→快照视觉对比→record;log/report/截图/backlog 全记进专属工作区 docs/loops/nomi-notch/(结构见其 README)。后端契约不动;数据用稿内同款 mock,要后端的留 TODO;拿不准的产品行为 add_question 别猜。全部块对齐或全卡住才报告并停。
+```
+日间档:去掉 `/loop 1m` 与【夜间模式】,每块停下 review、不自动 commit。
