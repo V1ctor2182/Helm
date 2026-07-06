@@ -77,6 +77,10 @@
     padding:7px 0;cursor:pointer;font-weight:500;transition:all .18s var(--ease);white-space:nowrap}
   .mtab.on{background:var(--ink);color:var(--onink,#fff);font-weight:600}
   .pbody{padding:0 18px 16px}
+  .pbody.slide-l{animation:sl .3s var(--ease)}
+  .pbody.slide-r{animation:sr .3s var(--ease)}
+  @keyframes sl{from{opacity:.2;transform:translateX(26px)}to{opacity:1;transform:none}}
+  @keyframes sr{from{opacity:.2;transform:translateX(-26px)}to{opacity:1;transform:none}}
   .open-helm{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;flex:none;
     background:var(--pill);border:none;border-radius:50%;cursor:pointer;color:var(--ink)}
   .open-helm:hover{background:#e8e8ec;color:var(--ink)}
@@ -195,7 +199,30 @@
   .file .fnm .s{font-size:10px;color:var(--ink3)}
   .file .acts{display:flex;gap:5px}
 
-  /* 6 智能体 */
+  /* 6 智能体(三子页横滑:会话/端口/PR) */
+  .swipe{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:14px;
+    scrollbar-width:none;margin:0 -2px;padding:0 2px}
+  .swipe::-webkit-scrollbar{display:none}
+  .spage{min-width:100%;scroll-snap-align:start}
+  .sdots{display:flex;justify-content:center;gap:5px;margin-top:9px}
+  .sdot{width:5px;height:5px;border-radius:50%;background:var(--hair);transition:all .2s;cursor:pointer}
+  .sdot.on{background:linear-gradient(90deg,var(--g1),var(--g2));width:14px;border-radius:99px}
+  .subh{display:flex;align-items:baseline;gap:7px;font-size:10px;color:var(--ink3);letter-spacing:.4px;margin:0 2px 7px}
+  .subh b{color:var(--ink2);font-weight:600;font-size:11px}
+  .portrow{display:flex;align-items:center;gap:10px;padding:9px 12px;margin-bottom:7px}
+  .portrow .pd{width:7px;height:7px;border-radius:50%;flex:none;background:var(--ok)}
+  .portrow .pnum{font-family:var(--mono);font-size:11.5px;font-weight:700;min-width:44px}
+  .portrow .pname{flex:1;font-size:11.5px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .prrow{padding:10px 12px;margin-bottom:7px}
+  .prrow .h{display:flex;align-items:center;gap:8px}
+  .prrow .src{width:20px;height:20px;border-radius:6px;background:var(--ink);color:var(--onink,#fff);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex:none}
+  .prrow .t{font-size:12px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .prrow .chip{font-size:9.5px;border-radius:999px;padding:3px 8px;flex:none}
+  .chip.ok{background:#e9f8ee;color:#177a36}
+  .chip.warn{background:#fff4e8;color:#c05e00}
+  .shell.dark .chip.ok{background:#1e3a26;color:#7fe0a0}
+  .shell.dark .chip.warn{background:#3a2c1e;color:#ffc58a}
+  .prrow .sub{font-size:10.5px;color:var(--ink3);margin-top:4px}
   .sess{padding:10px 13px;margin-bottom:8px;cursor:pointer}
   .sess .hd{display:flex;align-items:center;gap:8px}
   .sess .dot{width:8px;height:8px;border-radius:50%;flex:none}
@@ -246,7 +273,8 @@
 
   /* 深色面板版本(用户拍板要黑色背景版):变量整体反转,shell.dark 作用域 */
   .shell.dark{--ink:#f2f2f4;--ink2:#c2c2ca;--ink3:#84848e;--pill:#232327;--hair:#2a2a2e;
-    --cardbg:#1d1d21;--onink:#111114;background:#141416}
+    --cardbg:#1d1d21;--onink:#111114;background:#0f0f11}
+  .shell.dark.open .hw{background:transparent}
   .shell.dark .dropzone{border-color:#3a3a40}
   .shell.dark .dropzone.hot{background:#241c14}
   .shell.dark .diff .rm{background:#3a1e1e;color:#ff9e9e}
@@ -277,7 +305,7 @@
 </div>
 
 <!-- 单体刘海壳:折叠=黑条;hover=同一元素生长成面板(黑条留作摄像头凹槽) -->
-<div class="shell" id="shell">
+<div class="shell dark" id="shell">
   <div class="hw" id="notch" title="悬停展开 Helm">
     <svg class="logo" width="19" height="14"><use href="#helm-logo"/></svg>
     <span class="minicover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg></span>
@@ -316,7 +344,7 @@
 
 <div class="deskhint">悬停刘海展开 · 全部可点 · 总览点封面=放大媒体
   <button onclick="showBanner()">模拟权限请求</button>
-  <button onclick="document.getElementById('shell').classList.toggle('dark')">深色面板</button>
+  <button onclick="document.getElementById('shell').classList.toggle('dark')">浅色/深色</button>
   <button onclick="document.getElementById('notch').classList.add('dragover');setTimeout(()=>{document.getElementById('notch').classList.remove('dragover');openPanel('files');addFile('设计稿-v3.fig','Figma · 4.2 MB','#a855f7','FG')},900)">模拟拖文件</button>
 </div>
 
@@ -475,6 +503,76 @@ function renderBody(){
         <div class="permacts"><button class="kbtn" onclick="this.closest('.permcard').remove()">Allow</button>
           <button class="pbtn" onclick="this.closest('.permcard').remove()">Deny</button></div>
       </div>
+      <div class="swipe" id="agSwipe">
+        <div class="spage">
+          <div class="subh"><b>会话</b>本机 Claude Code · 左右滑看端口/PR</div>
+          <div class="wcard sess"><div class="hd"><span class="dot d-live"></span><span class="nm">claude · ~/helm</span><span class="r">tok 14.2k</span></div>
+            <div class="ln">✓ 214 tests passed — running snapshot suite…</div></div>
+          <div class="wcard sess"><div class="hd"><span class="dot d-wait"></span><span class="nm">claude · ~/helm/notch</span><span class="r">等你回答</span></div>
+            <div class="ln">选择题:媒体页波形要不要跟随专辑主色?</div>
+            <div class="qbtns"><button class="qb pri">A · 跟随主色</button><button class="qb">B · 固定渐变</button><button class="qb">打开会话</button></div></div>
+          <div class="wcard sess"><div class="hd"><span class="dot d-idle"></span><span class="nm">夜巡 · swift test</span><span class="r">下次 18:00</span></div>
+            <div class="ln">上轮 47/47 通过 · 平均 3 分 12 秒</div></div>
+        </div>
+        <div class="spage">
+          <div class="subh"><b>本地端口</b>LISTENING · lsof</div>
+          <div class="wcard portrow"><span class="pd"></span><span class="pnum">:5174</span><span class="pname">Vite · helm frontend</span><button class="pbtn">打开</button></div>
+          <div class="wcard portrow"><span class="pd"></span><span class="pnum">:8769</span><span class="pname">helm 后端 · FastAPI</span><button class="pbtn">打开</button></div>
+          <div class="wcard portrow"><span class="pd" style="background:var(--g1)"></span><span class="pnum">:3000</span><span class="pname">next dev · portfolio</span><button class="pbtn">打开</button></div>
+        </div>
+        <div class="spage">
+          <div class="subh"><b>PR · COMMIT 监听</b>本机 dev 中枢</div>
+          <div class="wcard prrow"><div class="h"><span class="src">GH</span><span class="t">#52 design: 主工作台外壳+Today</span><span class="chip ok">checks ✓</span></div>
+            <div class="sub">可合并 · 2 approvals · main ← feat/shell</div></div>
+          <div class="wcard prrow"><div class="h"><span class="src">GH</span><span class="t">#54 loop docs 复审</span><span class="chip warn">CI 跑着</span></div>
+            <div class="sub">macOS job 还剩 ~2 分钟</div></div>
+          <div class="wcard prrow"><div class="h"><span class="src">GT</span><span class="t">feat/cockpit-fanbox</span><span class="chip warn">3 commits 未推</span></div>
+            <div class="sub">最近:notch banner 单体化 + 深色面板 · 2 分钟前</div></div>
+        </div>
+      </div>
+      <div class="sdots" id="agDots"><span class="sdot on"></span><span class="sdot"></span><span class="sdot"></span></div>`;
+    b.querySelectorAll('.qb').forEach(q=>q.onclick=e=>{e.target.textContent='已选';});
+    const sw=$('#agSwipe'), dots=[...$('#agDots').children];
+    sw.addEventListener('scroll',()=>{
+      const i=Math.round(sw.scrollLeft/sw.clientWidth);
+      dots.forEach((d,j)=>d.classList.toggle('on',j===i));
+    },{passive:true});
+    dots.forEach((d,i)=>d.onclick=()=>sw.scrollTo({left:i*sw.clientWidth,behavior:'smooth'}));
+    let dn=false,sx=0,sl=0;
+    sw.addEventListener('pointerdown',e=>{dn=true;sx=e.clientX;sl=sw.scrollLeft});
+    sw.addEventListener('pointermove',e=>{if(dn)sw.scrollLeft=sl-(e.clientX-sx)});
+    ['pointerup','pointerleave'].forEach(ev=>sw.addEventListener(ev,()=>dn=false));
+  }
+  else if(tab==='files'){
+    b.innerHTML=`
+      <div class="dropzone" id="dz"><b>拖文件到这里(或刘海)</b><br>暂存到 Shelf → 上传到记录 / 关联驾驶舱</div>
+      <div class="shelf" id="shelf">${FILES.map((f,i)=>fileHTML(f,i)).join('')||''}</div>
+      <div class="rlab" style="margin-top:12px">剪贴板</div>
+      <div class="wcard clip"><span class="cic">${LINK}</span>
+        <span class="tx"><b>https://arxiv.org/abs/1706.03762</b> · 2 分钟前</span>
+        <button class="pbtn">复制</button><button class="pbtn">存速记</button></div>
+      <div class="wcard clip"><span class="cic">${TXT}</span>
+        <span class="tx">asyncio.create_task 与响应生命周期解耦…</span>
+        <button class="pbtn">复制</button><button class="pbtn">存速记</button></div>`;
+    b.querySelectorAll('.clip .pbtn').forEach(x=>x.onclick=e=>{const t=e.target.textContent;e.target.textContent='✓';setTimeout(()=>e.target.textContent=t,900)});
+    const dz=$('#dz');
+    dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('hot')});
+    dz.addEventListener('dragleave',()=>dz.classList.remove('hot'));
+    dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('hot');
+      addFile('拖入的文件.pdf','PDF · 1.8 MB','#e5484d','PD');});
+    bindFileActs();
+  }
+  else if(tab==='agents'){
+    b.innerHTML=`
+      <div class="permcard">
+        <div class="ph"><span class="spark"></span><b>claude · ~/helm</b>&nbsp;请求编辑&nbsp;<b>enrich.py</b></div>
+        <div class="diff">
+          <div class="dl rm">- meta.pop("abstract")</div>
+          <div class="dl ad">+ meta["summary"] = meta["abstract"][:300]</div>
+        </div>
+        <div class="permacts"><button class="kbtn" onclick="this.closest('.permcard').remove()">Allow</button>
+          <button class="pbtn" onclick="this.closest('.permcard').remove()">Deny</button></div>
+      </div>
       <div class="wcard sess"><div class="hd"><span class="dot d-live"></span><span class="nm">claude · ~/helm</span><span class="r">tok 14.2k</span></div>
         <div class="ln">✓ 214 tests passed — running snapshot suite…</div></div>
       <div class="wcard sess"><div class="hd"><span class="dot d-wait"></span><span class="nm">claude · ~/helm/notch</span><span class="r">等你回答</span></div>
@@ -523,7 +621,23 @@ function addEv(){const i=$('#evIn');if(!i.value.trim())return;i.value='';i.place
 function qcSend(){const i=$('#qc');if(!i.value.trim())return;i.value='';i.placeholder='已发送 — AI 解析中…';setTimeout(()=>i.placeholder='速记一笔 — ⏎ 发送,链接自动解析…',1500)}
 
 /* tab/panel 控制 */
-function switchTab(t){tab=t;renderTabs();renderBody()}
+const TABS=['dash','capture','cal','agents','files'];
+function switchTab(t,dir){tab=t;renderTabs();renderBody();
+  const b=$('#pbody'); if(dir){b.classList.remove('slide-l','slide-r');void b.offsetWidth;
+    b.classList.add(dir>0?'slide-l':'slide-r');}}
+let wxAcc=0,wxLock=0;
+document.addEventListener('wheel',e=>{
+  if(!open)return;
+  if(e.target.closest('.swipe'))return;
+  if(Math.abs(e.deltaX)<=Math.abs(e.deltaY))return;
+  const now=performance.now(); if(now<wxLock)return;
+  wxAcc+=e.deltaX;
+  if(Math.abs(wxAcc)>90){
+    const i=TABS.indexOf(tab), d=wxAcc>0?1:-1, ni=Math.min(TABS.length-1,Math.max(0,i+d));
+    if(ni!==i)switchTab(TABS[ni],d);
+    wxAcc=0;wxLock=now+450;
+  }
+},{passive:true});
 function renderTabs(){
   document.querySelectorAll('.mtab').forEach(x=>{
     x.classList.toggle('on',x.dataset.t===tab);
