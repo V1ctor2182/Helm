@@ -317,10 +317,11 @@ final class NotchModuleTests: XCTestCase {
     func testViewHeightFollowsCalAndCaptureState() {
         let model = NotchModel(backend: FakeBackend())
         model.module = .calendar
+        // NOMI:日历单一预算(月视图随稿退役,calMonthView 不再影响高度)
         model.calMonthView = true
-        XCTAssertEqual(model.viewHeight(), 312)
+        XCTAssertEqual(model.viewHeight(), 260)
         model.calMonthView = false
-        XCTAssertEqual(model.viewHeight(), 240)
+        XCTAssertEqual(model.viewHeight(), 260)
         model.module = .capture
         model.captureKind = .task
         XCTAssertEqual(model.viewHeight(), 232)

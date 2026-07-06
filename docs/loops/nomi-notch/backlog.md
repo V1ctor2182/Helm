@@ -12,7 +12,7 @@
 - [x] **B4 总览 bento** — 1.35fr:1fr 网格:大媒体卡(渐变底+meta 压底+eq 3 柱,点→媒体页)、日历卡(spark+下一项)、智能体卡(okdot+会话名+一行状态)、速记胶囊输入条(⏎ 发送)。
 - [x] **B5 媒体页** — ‹总览 返回条;左列 88px 封面+标题+可点 seek 进度渐变条+times+控制钮(play 44px 黑底);右列歌词 roll(mask 上下渐隐、当前句 16.5px/800 高亮、.55s 滚动)。
 - [x] **B6 速记页** — kind 胶囊 5 个(on=黑底);任务 kind 显示 who 双轨(给自己/交给 agent,on=渐变);capbox 灰底圆角 16;问大脑 askout 卡;最近 N 条可折叠(▸ 旋转);专注 kind=番茄钟页(conic 渐变圆环+开始/暂停/重置+关联任务)。
-- [ ] **B7 日历页** — weekbar 7 天(今天=渐变胶囊);事件行(mono 时间+渐变竖条+标题/副行,hair 分隔);底部加事件胶囊输入(AI 解析时间,走现有 capture 通道)。
+- [x] **B7 日历页** — weekbar 7 天(今天=渐变胶囊);事件行(mono 时间+渐变竖条+标题/副行,hair 分隔);底部加事件胶囊输入(AI 解析时间,走现有 capture 通道)。
 - [ ] **B8 暂存页(files)** — 虚线 dropzone(hot 态橙);shelf 文件卡(色块图标+名字/大小+上传到记录/关联驾驶舱/移除);下方剪贴板段(复制/存速记);拖文件到刘海→dragover 描边+跳暂存页。
 - [ ] **B9 智能体页** — permcard(左橙边+diff 红绿行+Allow/Deny);会话卡(d-live/d-wait/d-idle 光环点+nm+右 mono 状态+一行 ln);选择题会话卡内嵌 qbtns(pri=渐变);三子页上下滑(会话/端口/PR)snap+右侧 sdots(on=渐变长条);PR 页数据源待定(先 seed,契约不动)——保留 vibeisland 详情页/回答/回复能力,重皮不减功能。
 - [ ] **B10 banner 单体化** — 权限/选择题横幅=shell 内容切换(bannermode 460px),permcard 风(spark+粗体路径+diff+Allow/Deny/打开会话);打开会话→agents 页;与 B9 共用组件。

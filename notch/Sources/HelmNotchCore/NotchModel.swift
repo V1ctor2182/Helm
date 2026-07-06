@@ -108,6 +108,19 @@ public final class NotchModel {
     public private(set) var askQuestion = ""
     public private(set) var recentNotes: [RecentNote] = []
 
+    /// 日历 addev:无建事件 API(契约不动)→ 建 agent 任务让 AI 解析时间加事件。
+    public func addEventViaAgent(_ text: String) async {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return }
+        captureStatus = .sending
+        do {
+            try await backend.createTask(prompt: "加日历事件:\(t)")
+            captureStatus = .sent
+        } catch {
+            captureStatus = .failed
+        }
+    }
+
     /// 总览 quickcap:一条速记直发后端,不动速记页的 kind/文本状态。
     public func quickNote(_ text: String) async {
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -183,7 +196,7 @@ public final class NotchModel {
         switch module {
         case .dashboard: 252  // bento(媒体大卡+右两卡)+quickcap+dock
         case .media: 330
-        case .calendar: calMonthView ? 312 : 240
+        case .calendar: 260  // NOMI 周条+事件+addev(月视图随稿退役)
         case .files: 232
         case .agents:
             switch agentPage {

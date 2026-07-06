@@ -44,3 +44,9 @@
 - kind 胶囊(on=ink 底/onInk 字)、任务 who 双轨(on=渐变胶囊,off=cardbg+hair 边)、capbox(pill 底 r16)、发送 gbtn 渐变(空文案=pill 灰)、askout 卡(wcard+spark+「Helm 大脑」头)、最近条 ▸ 旋转折叠。
 - 专注:NOMI 渐变环 104(中心 mono 计时+「专注中」)+右列关联任务/停止并记录(kbtn)。语义保持现行正计时记录;设计稿是 25min 番茄倒计时 → 行为差异记 Q4 待拍板,不猜。
 - 全测试绿;快照 b6-capture.png。
+
+## 2026-07-07 迭代 8 — B7 日历页 ✅
+- NOMI 周条(周一起头 7 天,今天=渐变胶囊)+事件行(mono 时间 40px+渐变竖条 3px+标题,hair 分隔,诚实空态)+addev 胶囊。
+- 加事件通道:后端无建事件 API(契约不动)→ `addEventViaAgent` 走 createTask("加日历事件:…"),真 agent 任务解析时间,非假灯。
+- 月视图/月偏移/双栏 agenda 随稿退役(设计稿功能清单明确"周条+今日事件+加事件");calMonthView 属性保留但不再影响高度;日历预算 312/240→260。
+- 全测试绿(高度断言已更新);快照 b7-cal.png(事件区空态在 ScrollView 内,快照工具不渲染,真机正常)。
