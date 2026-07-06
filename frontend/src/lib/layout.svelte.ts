@@ -70,6 +70,10 @@ export class LayoutStore {
 
   /** 深链意图:切到记录页时直接落某个 tab(ContextPanel「任务」用)。 */
   journalIntent = $state<'notes' | 'journal' | 'tasks' | 'calendar' | null>(null)
+  // 记录页分类过滤(阶段 4 R13,稿:分类在全局侧栏;Rail 与 JournalView 共享)
+  journalFilter = $state<
+    'all' | 'note' | 'journal' | 'task' | 'collect' | 'youtube' | 'paper' | 'inspiration'
+  >('all')
 
   setMode(id: ModeId): void {
     this.mode = id

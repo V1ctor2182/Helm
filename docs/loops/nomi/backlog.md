@@ -10,4 +10,4 @@
 - [ ] [R07][P2][polish] Research 历史列表/状态 badge、Settings 主题色点排精修。
 - [x] [R05][P1][gap](R08 清) 记录页三视图重构+Canvas 视图。
 - [ ] [R08][P2][question] Canvas 连线/cluster:稿有橙紫连线(思路关联),后端无关系模型——要不要建 note_links 表?待用户拍板。
-- [ ] [R08][P2][gap] 分类过滤未迁全局侧栏(稿在侧栏);收藏细分(视频/论文/灵感)chips 未做。
+- [x] [R08][P2][gap](R13 清) 分类过滤迁全局侧栏+收藏细分。

@@ -3,6 +3,7 @@ import { fireEvent } from '@testing-library/dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import JournalView from './JournalView.svelte'
 import { notes } from './notesStore.svelte'
+import { layout } from '../layout.svelte'
 
 const N = (over: Record<string, unknown> = {}) => ({
   id: 1,
@@ -21,6 +22,7 @@ const N = (over: Record<string, unknown> = {}) => ({
 
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ notes: [] }) }))
+  layout.journalFilter = 'all' // 共享 store,测试间重置
 })
 afterEach(() => {
   vi.restoreAllMocks()

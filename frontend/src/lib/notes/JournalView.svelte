@@ -13,7 +13,9 @@
 
   // 三视图(阶段 4 R08,source: helm-journal-pro.html 记录板块)+kind 过滤。
   let view = $state<'timeline' | 'canvas' | 'calendar'>('timeline')
-  let filter = $state<'all' | 'note' | 'journal' | 'task'>('all')
+  // filter 共享自 layout(侧栏分类与页内 chips 同源)
+  const filterOf = () => layout.journalFilter
+
 
   // 深链兼容:旧四 tab 意图 → 三视图+过滤
   $effect(() => {
@@ -22,7 +24,7 @@
       if (i === 'calendar') view = 'calendar'
       else {
         view = 'timeline'
-        filter = i === 'tasks' ? 'task' : i === 'journal' ? 'journal' : 'all'
+        layout.journalFilter = i === 'tasks' ? 'task' : i === 'journal' ? 'journal' : 'all'
       }
       layout.journalIntent = null
     }
@@ -52,7 +54,7 @@
   let providersLoaded = false
   let calendarLoaded = false
   $effect(() => {
-    if (filter === 'journal' && !providersLoaded) {
+    if (layout.journalFilter === 'journal' && !providersLoaded) {
       providersLoaded = true
       void notes.loadProviders()
     }
@@ -123,11 +125,19 @@
   function noteToTask(n: Note) {
     fromNote = n
     view = 'timeline'
-    filter = 'task'
+    layout.journalFilter = 'task'
   }
 
   // One load, three derived views (kind split) — captures/journal/todos share the table.
-  const noteItems = $derived(notes.notes.filter((n) => n.kind === 'note'))
+  const noteItems = $derived(
+    notes.notes.filter((n) => {
+      if (n.kind !== 'note') return false
+      const f = layout.journalFilter
+      if (f === 'collect') return !!n.meta?.url
+      if (f === 'youtube' || f === 'paper' || f === 'inspiration') return n.meta?.type === f
+      return true
+    }),
+  )
   const journalItems = $derived(notes.notes.filter((n) => n.kind === 'journal' || n.kind === 'focus'))
   // 「给自己」的任务(notch/捕获坞分流后落 notes kind:task)——任务 tab 顶部待办段。
   const todoItems = $derived(notes.notes.filter((n) => n.kind === 'task'))
@@ -173,7 +183,7 @@
   async function add() {
     if (!draft.trim()) return
     const ok =
-      filter === 'journal'
+      layout.journalFilter === 'journal'
         ? await notes.create(draft, 'journal', today())
         : await notes.create(draft, 'note')
     if (ok) draft = ''
@@ -195,19 +205,19 @@
     </div>
     {#if view !== 'calendar'}
       <div class="chips2" role="tablist" aria-label="分类">
-        <button role="tab" aria-selected={filter === 'all'} class:on={filter === 'all'} onclick={() => (filter = 'all')}>全部</button>
-        <button role="tab" aria-selected={filter === 'note'} class:on={filter === 'note'} onclick={() => (filter = 'note')}>速记</button>
-        <button role="tab" aria-selected={filter === 'journal'} class:on={filter === 'journal'} onclick={() => (filter = 'journal')}>日记</button>
-        <button role="tab" aria-selected={filter === 'task'} class:on={filter === 'task'} onclick={() => (filter = 'task')}>任务</button>
+        <button role="tab" aria-selected={layout.journalFilter === 'all'} class:on={layout.journalFilter === 'all'} onclick={() => (layout.journalFilter = 'all')}>全部</button>
+        <button role="tab" aria-selected={layout.journalFilter === 'note'} class:on={layout.journalFilter === 'note'} onclick={() => (layout.journalFilter = 'note')}>速记</button>
+        <button role="tab" aria-selected={layout.journalFilter === 'journal'} class:on={layout.journalFilter === 'journal'} onclick={() => (layout.journalFilter = 'journal')}>日记</button>
+        <button role="tab" aria-selected={layout.journalFilter === 'task'} class:on={layout.journalFilter === 'task'} onclick={() => (layout.journalFilter = 'task')}>任务</button>
       </div>
     {/if}
   </div>
 
   {#if notes.error}<p class="err" role="alert">{notes.error}</p>{/if}
 
-  {#if view === 'timeline' && filter !== 'task'}
+  {#if view === 'timeline' && layout.journalFilter !== 'task'}
     <div class="row">
-      <div class="gut"><span class="tm">{filter !== 'journal' ? '随手' : today().slice(5)}</span></div>
+      <div class="gut"><span class="tm">{layout.journalFilter !== 'journal' ? '随手' : today().slice(5)}</span></div>
       <form
         class="compose"
         onsubmit={(e) => {
@@ -217,19 +227,19 @@
       >
         <span class="car" aria-hidden="true"></span>
         <textarea
-          placeholder={filter !== 'journal' ? '随手记一笔…' : '今天发生了什么?(支持 Markdown)'}
+          placeholder={layout.journalFilter !== 'journal' ? '随手记一笔…' : '今天发生了什么?(支持 Markdown)'}
           bind:value={draft}
-          aria-label={filter !== 'journal' ? '速记内容' : '日记内容'}
-          rows={filter !== 'journal' ? 1 : 3}
+          aria-label={layout.journalFilter !== 'journal' ? '速记内容' : '日记内容'}
+          rows={layout.journalFilter !== 'journal' ? 1 : 3}
           onkeydown={cmdEnter}
         ></textarea>
-        <button class="act pri" type="submit" disabled={!draft.trim()}>{filter !== 'journal' ? '记一笔' : '写入今天'}</button>
+        <button class="act pri" type="submit" disabled={!draft.trim()}>{layout.journalFilter !== 'journal' ? '记一笔' : '写入今天'}</button>
       </form>
     </div>
   {/if}
 
   {#if view === 'timeline'}
-  {#if filter === 'all' || filter === 'note'}
+  {#if ['all', 'note', 'collect', 'youtube', 'paper', 'inspiration'].includes(layout.journalFilter)}
     <div class="row">
       <div class="gut"><span class="tm">收集</span><br />{noteItems.length} 条</div>
       <div>
@@ -295,7 +305,7 @@
         {/if}
       </div>
     </div>
-  {:else if filter === 'journal'}
+  {:else if layout.journalFilter === 'journal'}
     <div class="row">
       <div class="gut"><span class="tm">AI</span></div>
       <div>
@@ -348,7 +358,7 @@
         {/if}
       </div>
     </div>
-  {:else if filter === 'task'}
+  {:else if layout.journalFilter === 'task'}
     <div class="row">
       <div class="gut"><span class="tm">派发</span></div>
       <form

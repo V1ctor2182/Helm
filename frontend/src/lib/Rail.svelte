@@ -49,6 +49,19 @@
     {/each}
   </div>
 
+  {#if layout.mode === 'journal'}
+    <div class="cats" aria-label="记录分类">
+      <div class="subhead">记录</div>
+      {#each [['all', '全部'], ['note', '速记'], ['journal', '日记'], ['task', '任务']] as [f, label] (f)}
+        <button class="cat" class:on={layout.journalFilter === f} onclick={() => (layout.journalFilter = f as typeof layout.journalFilter)}>{label}</button>
+      {/each}
+      <div class="subhead">收藏</div>
+      {#each [['collect', '全部收藏'], ['youtube', '视频'], ['paper', '论文'], ['inspiration', '灵感']] as [f, label] (f)}
+        <button class="cat" class:on={layout.journalFilter === f} onclick={() => (layout.journalFilter = f as typeof layout.journalFilter)}>{label}</button>
+      {/each}
+    </div>
+  {/if}
+
   <div class="foot">
     <button class="roundbtn" title="记一条 · ⌘N" aria-label="记一条" onclick={() => layout.openCapture()}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 4h8a2 2 0 012 2v12a2 2 0 01-2 2H8a2 2 0 01-2-2V6a2 2 0 012-2z"/><path d="M12 9v6M9 12h6"/></svg>
@@ -129,6 +142,39 @@
     font: 400 11px/1 var(--sans);
     color: var(--t4);
     font-variant-numeric: tabular-nums;
+  }
+  .cats {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 14px;
+    overflow-y: auto;
+    min-height: 0;
+  }
+  .subhead {
+    font: 400 11px/1 var(--sans);
+    color: var(--t4);
+    letter-spacing: 0.4px;
+    margin: 12px 14px 6px;
+  }
+  .cat {
+    font: 400 13px/1 var(--sans);
+    color: var(--t3);
+    background: transparent;
+    border: 0;
+    border-radius: 10px;
+    padding: 7px 14px;
+    cursor: pointer;
+    text-align: left;
+  }
+  .cat:hover {
+    background: var(--pill);
+    color: var(--t1);
+  }
+  .cat.on {
+    background: var(--pill);
+    color: var(--t1);
+    font-weight: 600;
   }
   .foot {
     margin-top: auto;

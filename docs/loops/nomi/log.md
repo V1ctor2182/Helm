@@ -55,3 +55,7 @@
 ## R12 · 2026-07-07 01:17 · P2 批扫:Provider/Compare 面板 + 导航真计数
 - 对齐: ProviderSettings+CompareView 的 act 家族/输入定点胶囊化(7 处 patch);Rail 导航计数接真 store(记录=notes.length/对话=sessions.length,>0 才显示)——对齐稿侧栏计数。
 - 门: build ✓ / check 0/0 / test 205 全绿
+## R13 · 2026-07-07 01:25 · 分类过滤迁全局侧栏 + 收藏细分(P2 清)
+- 对齐: journalFilter 提升为 layout 共享状态;Rail 在记录模式渲染稿的两段分类(记录:全部/速记/日记/任务 · 收藏:全部收藏/视频/论文/灵感,胶囊激活),与页内 chips 同源双入口;noteItems 支持 collect(meta.url)/youtube/paper/inspiration 细分过滤。
+- 门: build ✓ / check 0/0 / test 205 全绿(共享 store 测试间重置)
+- 视觉: shots/r13-sidecats.png——「全部收藏」过滤流只剩链接收藏,与稿侧栏结构一比一
