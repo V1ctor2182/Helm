@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Helm Notch · NOMI 风 redesign 设计稿</title>
+<!--
+  HELM NOTCH — NOMI 风 redesign(2026-07-06 用户拍板:用娃娃脸 logo + NOMI 风格)
+  与主工作台 helm-journal-pro.html 同一语言:白卡 · 大圆角 · 柔和阴影 ·
+  黑胶囊切换 · 橙→紫渐变 · 禁 emoji(SVG/色块字母)。
+  刘海本体保持黑(硬件遮挡),展开面板 = 白色大圆角卡从刘海垂下。
+  交互:点刘海展开/收起 · 模块胶囊切换(捕获/媒体/会话/日历) ·
+  捕获 kind 切换+任务双轨(给自己/交给 agent) · 媒体播放切换 · 全部可点。
+  注意:notch 现行实现的真相源仍是 notch/docs/helm-notch-pro.html(ORAGE);
+  本稿是下一代方向,定稿后按 notch loop 老规矩逐块进 Swift。
+-->
+<style>
+  :root{
+    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Helvetica Neue",sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,monospace;
+    --ink:#111114; --ink2:#5c5c66; --ink3:#a2a2ab;
+    --logo:#271C11;
+    --hair:#ececef; --pill:#f1f1f3;
+    --g1:#ff8a3d; --g2:#a855f7;
+    --ok:#28a745;
+    --shadow:0 1px 2px rgba(17,17,20,.05),0 6px 18px rgba(17,17,20,.07);
+    --shadow-xl:0 8px 24px rgba(17,17,20,.14),0 32px 80px rgba(17,17,20,.22);
+    --ease:cubic-bezier(.32,.72,0,1);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{font-family:var(--sans);color:var(--ink);overflow:hidden;-webkit-font-smoothing:antialiased;
+    background:linear-gradient(160deg,#e8e6f2 0%,#f3ece2 45%,#e4eef0 100%)}/* 桌面壁纸感 */
+
+  /* ── mac 菜单栏 + 刘海 ─────────────── */
+  .menubar{position:relative;height:34px;background:#0a0a0c;display:flex;align-items:center;
+    padding:0 16px;color:rgba(255,255,255,.85);font-size:12.5px;gap:18px;user-select:none}
+  .menubar .apple{font-weight:700}
+  .menubar .r{margin-left:auto;display:flex;gap:14px;color:rgba(255,255,255,.6);font-size:11.5px}
+  .notch{position:absolute;left:50%;transform:translateX(-50%);top:0;height:34px;width:220px;
+    background:#000;border-radius:0 0 14px 14px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 14px;cursor:pointer;z-index:50;transition:width .28s var(--ease)}
+  .notch:hover{width:236px}
+  .notch .nl{display:flex;align-items:center;gap:7px}
+  .notch svg.logo{color:#fff;opacity:.92}
+  .notch .wave{display:flex;align-items:flex-end;gap:2px;height:12px}
+  .notch .wave i{width:2.5px;border-radius:2px;background:linear-gradient(180deg,var(--g1),var(--g2));animation:wv 1s var(--ease) infinite alternate}
+  .notch .wave i:nth-child(1){height:5px;animation-delay:0s}
+  .notch .wave i:nth-child(2){height:10px;animation-delay:.15s}
+  .notch .wave i:nth-child(3){height:7px;animation-delay:.3s}
+  .notch .wave i:nth-child(4){height:11px;animation-delay:.45s}
+  @keyframes wv{to{transform:scaleY(.45)}}
+  .notch .tm{font-family:var(--mono);font-size:10.5px;color:rgba(255,255,255,.75)}
+
+  /* ── 展开面板(NOMI 白卡从刘海垂下) ─────────────── */
+  .panel{position:absolute;left:50%;transform:translateX(-50%) translateY(-14px);top:30px;width:400px;
+    background:#fff;border-radius:0 0 26px 26px;box-shadow:var(--shadow-xl);z-index:40;
+    opacity:0;pointer-events:none;transition:all .32s var(--ease);overflow:hidden}
+  .panel.open{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+  .phead{display:flex;align-items:center;gap:9px;padding:16px 18px 10px}
+  .phead svg{color:var(--logo)}
+  .phead .nm{font-size:13.5px;font-weight:700}
+  .phead .st{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink3)}
+  .okdot{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block}
+  .mtabs{display:flex;gap:4px;background:var(--pill);border-radius:999px;padding:4px;margin:2px 18px 12px}
+  .mtab{flex:1;font-size:12px;color:var(--ink2);background:transparent;border:none;border-radius:999px;
+    padding:7px 0;cursor:pointer;font-weight:500;transition:all .18s var(--ease)}
+  .mtab.on{background:var(--ink);color:#fff;font-weight:600}
+  .pbody{padding:0 18px 18px}
+
+  /* 捕获 */
+  .kindrow{display:flex;gap:5px;margin-bottom:10px}
+  .kind{font-size:11.5px;color:var(--ink2);background:var(--pill);border:none;border-radius:999px;padding:6px 12px;cursor:pointer}
+  .kind.on{background:var(--ink);color:#fff;font-weight:600}
+  .whobar{display:none;gap:5px;margin-bottom:10px}
+  .whobar.show{display:flex}
+  .who{font-size:11px;color:var(--ink2);background:#fff;border:1px solid var(--hair);border-radius:999px;padding:5px 12px;cursor:pointer}
+  .who.on{border-color:transparent;background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff;font-weight:600}
+  .capbox{background:var(--pill);border-radius:16px;padding:12px 14px}
+  .capbox textarea{width:100%;border:none;outline:none;background:transparent;resize:none;
+    font-family:var(--sans);font-size:13px;color:var(--ink);min-height:44px;line-height:1.5}
+  .capbox textarea::placeholder{color:var(--ink3)}
+  .caprow{display:flex;align-items:center;margin-top:8px}
+  .caprow .hint{font-size:10.5px;color:var(--ink3)}
+  .caprow .send{margin-left:auto;background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff;border:none;
+    border-radius:999px;padding:8px 18px;font-size:12px;font-weight:600;cursor:pointer}
+  .askout{display:none;margin-top:10px;background:#fff;border-radius:14px;box-shadow:var(--shadow);padding:12px 14px;font-size:12.5px;line-height:1.55;color:var(--ink2)}
+  .askout.show{display:block}
+  .askout .who2{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--ink3);margin-bottom:5px}
+  .spark{width:12px;height:12px;border-radius:50%;background:conic-gradient(from 210deg,var(--g1),var(--g2),var(--g1));display:inline-block}
+
+  /* 媒体 */
+  .media{display:flex;gap:13px;align-items:center}
+  .cover{width:84px;height:84px;border-radius:16px;flex:none;background:linear-gradient(135deg,#1c1c22,#3a2f18);
+    display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
+  .cover svg{width:26px;height:26px;color:rgba(255,255,255,.85)}
+  .minfo{min-width:0;flex:1}
+  .minfo .t{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .minfo .a{font-size:11.5px;color:var(--ink3);margin-top:2px}
+  .mprog{height:5px;border-radius:99px;background:var(--pill);margin-top:10px;overflow:hidden}
+  .mprog i{display:block;height:100%;width:38%;border-radius:99px;background:linear-gradient(90deg,var(--g1),var(--g2));transition:width .4s linear}
+  .mtimes{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9.5px;color:var(--ink3);margin-top:4px}
+  .mctl{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:12px}
+  .mbtn{width:38px;height:38px;border-radius:50%;border:none;background:var(--pill);color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .mbtn:hover{background:#e8e8ec}
+  .mbtn.play{width:46px;height:46px;background:var(--ink);color:#fff}
+  .mbtn svg{width:16px;height:16px}
+  .lyric{text-align:center;font-size:11.5px;color:var(--ink3);margin-top:10px;height:16px;overflow:hidden}
+  .lyric b{color:var(--ink);font-weight:600}
+
+  /* 会话 */
+  .sess{background:#fff;border-radius:14px;box-shadow:var(--shadow);padding:11px 13px;margin-bottom:8px;cursor:pointer}
+  .sess:hover{box-shadow:0 2px 6px rgba(17,17,20,.06),0 12px 28px rgba(17,17,20,.12)}
+  .sess .hd{display:flex;align-items:center;gap:8px}
+  .sess .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .d-live{background:var(--ok);box-shadow:0 0 0 3px #e9f8ee}
+  .d-wait{background:var(--g1);box-shadow:0 0 0 3px #fff2e6}
+  .d-idle{background:var(--ink3);box-shadow:0 0 0 3px var(--pill)}
+  .sess .nm{font-size:12.5px;font-weight:600}
+  .sess .r{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--ink3)}
+  .sess .ln{font-size:11px;color:var(--ink2);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .qbtns{display:flex;gap:5px;margin-top:8px}
+  .qb{font-size:10.5px;background:var(--pill);border:none;border-radius:999px;padding:5px 11px;color:var(--ink2);cursor:pointer}
+  .qb:hover{background:#e8e8ec;color:var(--ink)}
+  .qb.pri{background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff;font-weight:600}
+
+  /* 日历 */
+  .evrow{display:flex;gap:11px;padding:9px 2px;align-items:flex-start}
+  .evrow+.evrow{border-top:1px solid var(--hair)}
+  .evrow .when{font-family:var(--mono);font-size:10.5px;color:var(--ink3);width:40px;flex:none;padding-top:2px}
+  .evrow .bar{width:3px;border-radius:2px;align-self:stretch;flex:none}
+  .evrow .t{font-size:12.5px;font-weight:600}
+  .evrow .s{font-size:10.5px;color:var(--ink3);margin-top:1px}
+
+  /* 底部快捷 */
+  .pfoot{display:flex;align-items:center;padding:10px 18px 14px;border-top:1px solid var(--hair)}
+  .pfoot .k{font-family:var(--mono);font-size:9.5px;color:var(--ink3)}
+  .pfoot .open-helm{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--ink2);
+    background:var(--pill);border:none;border-radius:999px;padding:7px 13px;cursor:pointer}
+  .pfoot .open-helm:hover{background:#e8e8ec;color:var(--ink)}
+  .pfoot .open-helm svg{color:var(--logo)}
+
+  /* 桌面提示 */
+  .deskhint{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);
+    font-size:12px;color:rgba(17,17,20,.45);background:rgba(255,255,255,.6);backdrop-filter:blur(8px);
+    border-radius:999px;padding:9px 18px;box-shadow:var(--shadow)}
+</style>
+</head>
+<body>
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="helm-logo" viewBox="0 0 24 18" fill="none">
+    <path d="M22.222 0.888916H0.888672V16.9254H22.222V0.888916Z" stroke="currentColor" stroke-width="1.77778"/>
+    <path d="M4.02295 10.074H5.82473C7.83554 10.074 9.46562 11.7041 9.46562 13.7149V14.0588H4.02295V10.074Z" fill="currentColor"/>
+    <path d="M12.7217 10.074H14.5235C16.5343 10.074 18.1644 11.7041 18.1644 13.7149V14.0588H12.7217V10.074Z" fill="currentColor"/>
+    <path d="M3.24561 8.89044C4.3147 8.09671 7.05548 6.9855 9.4658 8.89044" stroke="currentColor" stroke-width="1.77778" stroke-linecap="round"/>
+    <path d="M12.333 8.89044C13.4021 8.09671 16.1429 6.9855 18.5532 8.89044" stroke="currentColor" stroke-width="1.77778" stroke-linecap="round"/>
+  </symbol>
+</svg>
+
+<div class="menubar">
+  <span class="apple">◆</span><span>Finder</span><span>文件</span><span>编辑</span><span>显示</span>
+  <span class="r"><span>批 100%</span><span>周一 7月6日</span><span>14:20</span></span>
+  <!-- 刘海(点击展开) -->
+  <div class="notch" id="notch" title="点击展开 Helm">
+    <span class="nl">
+      <svg class="logo" width="20" height="15"><use href="#helm-logo"/></svg>
+    </span>
+    <span class="wave" id="wave"><i></i><i></i><i></i><i></i></span>
+    <span class="tm" id="ntm">14:20</span>
+  </div>
+</div>
+
+<!-- 展开面板 -->
+<div class="panel" id="panel">
+  <div class="phead">
+    <svg width="22" height="17"><use href="#helm-logo"/></svg>
+    <span class="nm">Helm</span>
+    <span class="st"><span class="okdot"></span>后端 ok · 1 agent live</span>
+  </div>
+  <div class="mtabs">
+    <button class="mtab on" data-t="capture">捕获</button>
+    <button class="mtab" data-t="media">媒体</button>
+    <button class="mtab" data-t="sessions">会话</button>
+    <button class="mtab" data-t="cal">日历</button>
+  </div>
+  <div class="pbody" id="pbody"></div>
+  <div class="pfoot">
+    <span class="k">⌥Space 呼出 · ⏎ 发送 · Esc 收起</span>
+    <button class="open-helm"><svg width="15" height="12"><use href="#helm-logo"/></svg>打开 Helm</button>
+  </div>
+</div>
+
+<div class="deskhint">点击刘海展开 / 收起 · 面板里所有胶囊都可点</div>
+
+<script>
+const $=s=>document.querySelector(s);
+let open=true, tab='capture', kind='note', who='me', playing=true, asked=false;
+
+const PLAY='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+const PAUSE='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';
+const PREV='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zM20 6l-10 6 10 6z"/></svg>';
+const NEXT='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM4 6l10 6-10 6z"/></svg>';
+const NOTE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>';
+
+const KINDS=[['note','速记'],['journal','日记'],['task','任务'],['focus','专注'],['ask','问大脑']];
+const PH={note:'随手记一笔 — 链接会自动解析…',journal:'今天怎么样?写两句…',task:'要做什么?(时间地点 AI 来读)',focus:'这段时间专注做什么…',ask:'问 Helm 大脑一个问题…'};
+
+function renderBody(){
+  const b=$('#pbody');
+  if(tab==='capture'){
+    b.innerHTML=`
+      <div class="kindrow">${KINDS.map(([k,n])=>`<button class="kind${k===kind?' on':''}" data-k="${k}">${n}</button>`).join('')}</div>
+      <div class="whobar${kind==='task'?' show':''}">
+        <button class="who${who==='me'?' on':''}" data-w="me">给自己 · 待办</button>
+        <button class="who${who==='agent'?' on':''}" data-w="agent">交给 agent · 定时</button>
+      </div>
+      <div class="capbox">
+        <textarea id="cap" placeholder="${PH[kind]}"></textarea>
+        <div class="caprow"><span class="hint">${kind==='ask'?'⏎ 提问 · 走全局 provider':'⏎ 发送 · AI 自动整理'}</span>
+          <button class="send" id="capSend">${kind==='ask'?'提问':'发送'}</button></div>
+      </div>
+      <div class="askout${asked?' show':''}" id="askout">
+        <div class="who2"><span class="spark"></span>Helm 大脑</div>
+        速记里的链接会自动解析:YouTube 走 oEmbed,论文走 arXiv,网页抓 OpenGraph,AI 再补摘要和标签。
+      </div>`;
+    b.querySelectorAll('.kind').forEach(k=>k.onclick=()=>{kind=k.dataset.k;asked=false;renderBody()});
+    b.querySelectorAll('.who').forEach(w=>w.onclick=()=>{who=w.dataset.w;renderBody()});
+    $('#capSend').onclick=()=>{
+      const c=$('#cap'); if(!c.value.trim())return;
+      if(kind==='ask'){asked=true;renderBody();}
+      else{c.value='';c.placeholder='已发送 ✓ — AI 解析中…';setTimeout(()=>{c.placeholder=PH[kind]},1500);}
+    };
+  }
+  else if(tab==='media'){
+    b.innerHTML=`
+      <div class="media">
+        <div class="cover">${NOTE}</div>
+        <div class="minfo">
+          <div class="t">Gravity</div>
+          <div class="a">John Mayer — Continuum</div>
+          <div class="mprog"><i id="pg" style="width:${playing?38:38}%"></i></div>
+          <div class="mtimes"><span>1:52</span><span>4:05</span></div>
+        </div>
+      </div>
+      <div class="mctl">
+        <button class="mbtn">${PREV}</button>
+        <button class="mbtn play" id="pp">${playing?PAUSE:PLAY}</button>
+        <button class="mbtn">${NEXT}</button>
+      </div>
+      <div class="lyric">…keep me where the light is <b>keep me where the light is</b>…</div>`;
+    $('#pp').onclick=()=>{playing=!playing;renderBody()};
+  }
+  else if(tab==='sessions'){
+    b.innerHTML=`
+      <div class="sess"><div class="hd"><span class="dot d-live"></span><span class="nm">claude · ~/helm</span><span class="r">tok 14.2k</span></div>
+        <div class="ln">✓ 214 tests passed — running snapshot suite…</div></div>
+      <div class="sess"><div class="hd"><span class="dot d-wait"></span><span class="nm">claude · ~/helm/notch</span><span class="r">等你回答</span></div>
+        <div class="ln">选择题:媒体页波形要不要跟随专辑主色?</div>
+        <div class="qbtns"><button class="qb pri">A · 跟随主色</button><button class="qb">B · 固定渐变</button><button class="qb">打开会话</button></div></div>
+      <div class="sess"><div class="hd"><span class="dot d-idle"></span><span class="nm">夜巡 · swift test</span><span class="r">下次 18:00</span></div>
+        <div class="ln">上轮 47/47 通过 · 平均 3 分 12 秒</div></div>`;
+    b.querySelectorAll('.qb').forEach(q=>q.onclick=e=>{e.target.textContent='已选 ✓';});
+  }
+  else{
+    b.innerHTML=`
+      <div class="evrow"><span class="when">10:00</span><span class="bar" style="background:linear-gradient(180deg,var(--g1),var(--g2))"></span>
+        <div><div class="t">站会</div><div class="s">30 分钟 · 还有 42 分钟</div></div></div>
+      <div class="evrow"><span class="when">15:00</span><span class="bar" style="background:linear-gradient(180deg,var(--g1),var(--g2))"></span>
+        <div><div class="t">1:1 · design review</div><div class="s">45 分钟</div></div></div>
+      <div class="evrow"><span class="when">18:00</span><span class="bar" style="background:var(--ok)"></span>
+        <div><div class="t">夜巡 · swift test</div><div class="s">agent 定时任务</div></div></div>`;
+  }
+}
+function renderTabs(){
+  document.querySelectorAll('.mtab').forEach(t=>{
+    t.classList.toggle('on',t.dataset.t===tab);
+    t.onclick=()=>{tab=t.dataset.t;renderTabs();renderBody()};
+  });
+}
+$('#notch').onclick=()=>{open=!open;$('#panel').classList.toggle('open',open)};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){open=false;$('#panel').classList.remove('open')}});
+$('#panel').classList.add('open');
+renderTabs(); renderBody();
+</script>
+</body>
+</html>

@@ -22,7 +22,8 @@
 - **禁 emoji**：图标一律单色 SVG 或等宽字形。
 - **设计稿**：
   - `docs/design/helm-journal-pro.html` — **⭐ SOURCE OF TRUTH（全站定稿，2026-07-06 用户拍板：完全参考 `nomi-reference/` 两图 + 用户提供的方框娃娃脸 logo `#271C11` 全局启用）**：**整站 NOMI 风**——纯白/近白底 `#f6f6f7`、大圆角白卡(16px)+多层柔和阴影、无边框线靠留白分层、黑胶囊切换、橙→紫渐变(`#ff8a3d→#a855f7`)做关系元素(连线/cluster/FAB/进度/开关)、白侧栏全局导航。六板块全交互：今日(问候+捕获条+六卡仪表)、记录(Timeline/Canvas 拖拽连线/Calendar 周历时刻线+分类过滤)、对话(黑胶囊用户/白卡 AI)、研究(进度卡/报告卡)、驾驶舱(agent 卡+黑终端块)、设置(白卡分组+渐变开关)。禁 emoji 仍守(色块字母/内联 SVG)。进 Svelte 以此为准：**不改本文件、改代码**。
-  - `docs/design/helm-pro.html` — 旧 ORAGE 座舱定稿（外壳+Today，2026-07-06 被 NOMI 全站稿取代，存档；ORAGE 语言保留给 notch 伴侣 app）。
+  - `docs/design/helm-notch-nomi.html` — **⭐ SOURCE OF TRUTH（notch 下一代定稿，2026-07-06 用户拍板：logo + NOMI 风）**：黑刘海（白 logo + 橙紫渐变波形 + 时钟）点击垂下白色大圆角面板（26px 圆角 + 深阴影）；四模块黑胶囊 tab——捕获（5 kind 胶囊 + 任务给自己/交给 agent 渐变切换 + 灰盒输入 + 渐变发送 + 问大脑答案卡）、媒体（封面 + 渐变进度条 + 黑圆播放钮 + 歌词行）、会话（live/等回答/idle 状态点卡 + vibeisland 选择题渐变按钮）、日历（渐变时间条事件行）；底部快捷键行 + 「打开 Helm」。定稿后按 notch loop 老规矩逐块进 Swift；现行 Swift 实现的真相源在切换前仍是 `notch/docs/helm-notch-pro.html`。
+  - `docs/design/helm-pro.html` — 旧 ORAGE 座舱定稿（外壳+Today，2026-07-06 被 NOMI 全站稿取代，存档）。
   - `docs/design/helm-cockpit-orage-themes.html` — 双主题上下对照版（helm-pro 的前身，存档）。
   - `docs/design/helm-shell-all-variants.html` — A–G 七变体合并对比页（判断用，存档）。
   - `docs/design/helm-shell-today-variants.html` — 探索期 A/B/C 三变体，存档。
