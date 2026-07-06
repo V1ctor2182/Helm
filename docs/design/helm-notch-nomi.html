@@ -38,7 +38,7 @@
     background:linear-gradient(160deg,#e8e6f2 0%,#f3ece2 45%,#e4eef0 100%)}
 
   /* ── 菜单栏 + 刘海 ─────────────── */
-  .menubar{position:relative;height:34px;background:#0a0a0c;display:flex;align-items:center;
+  .menubar{position:relative;z-index:60;height:34px;background:#0a0a0c;display:flex;align-items:center;
     padding:0 16px;color:rgba(255,255,255,.85);font-size:12.5px;gap:18px;user-select:none}
   .menubar .r{margin-left:auto;display:flex;gap:14px;color:rgba(255,255,255,.6);font-size:11.5px}
   .notch{position:absolute;left:50%;transform:translateX(-50%);top:0;height:34px;width:236px;
@@ -62,10 +62,12 @@
   .notch.dragover{outline:2px dashed var(--g1);outline-offset:-5px}
 
   /* ── 主面板 ─────────────── */
-  .panel{position:absolute;left:50%;transform:translateX(-50%) translateY(-14px);top:30px;width:480px;
-    background:#fff;border-radius:0 0 28px 28px;box-shadow:var(--shadow-xl);z-index:40;
-    opacity:0;pointer-events:none;transition:all .32s var(--ease)}
-  .panel.open{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+  /* 展开=刘海生长(参考 notch-pro):宽 236→480、高 0→内容高,同一节奏 .46s */
+  .panel{position:absolute;left:50%;transform:translateX(-50%);top:33px;width:236px;height:0;
+    background:#fff;border-radius:0 0 20px 20px;box-shadow:var(--shadow-xl);z-index:40;overflow:hidden;
+    pointer-events:none;opacity:0;
+    transition:width .46s var(--ease),height .46s var(--ease),border-radius .4s var(--ease),opacity .2s linear}
+  .panel.open{width:480px;border-radius:0 0 28px 28px;pointer-events:auto;opacity:1}
   .phead{display:flex;align-items:center;gap:9px;padding:15px 20px 8px}
   .phead svg{color:var(--logo)}
   .phead .nm{font-size:13.5px;font-weight:700}
@@ -75,13 +77,11 @@
   .mtab{flex:1;font-size:11px;color:var(--ink2);background:transparent;border:none;border-radius:999px;
     padding:7px 0;cursor:pointer;font-weight:500;transition:all .18s var(--ease);white-space:nowrap}
   .mtab.on{background:var(--ink);color:#fff;font-weight:600}
-  .pbody{padding:0 20px 16px;min-height:220px}
-  .pfoot{display:flex;align-items:center;padding:10px 20px 14px;border-top:1px solid var(--hair)}
-  .pfoot .k{font-family:var(--mono);font-size:9.5px;color:var(--ink3)}
-  .pfoot .open-helm{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--ink2);
-    background:var(--pill);border:none;border-radius:999px;padding:7px 13px;cursor:pointer}
-  .pfoot .open-helm:hover{background:#e8e8ec;color:var(--ink)}
-  .pfoot .open-helm svg{color:var(--logo)}
+  .pbody{padding:0 20px 18px;min-height:180px}
+  .open-helm{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;color:var(--ink2);
+    background:var(--pill);border:none;border-radius:999px;padding:5px 11px;cursor:pointer}
+  .open-helm:hover{background:#e8e8ec;color:var(--ink)}
+  .open-helm svg{color:var(--logo)}
 
   /* 通用 */
   .wcard{background:#fff;border-radius:14px;box-shadow:var(--shadow);transition:box-shadow .18s var(--ease)}
@@ -284,10 +284,13 @@
 
 <!-- 主面板 -->
 <div class="panel" id="panel">
+ <div id="pwrap">
   <div class="phead">
     <svg width="22" height="17"><use href="#helm-logo"/></svg>
     <span class="nm">Helm</span>
-    <span class="st"><span class="okdot"></span>后端 ok · 1 agent live</span>
+    <span class="st"><span class="okdot"></span>后端 ok · 1 live
+      <button class="open-helm" style="margin-left:8px"><svg width="14" height="11"><use href="#helm-logo"/></svg>打开 Helm</button>
+    </span>
   </div>
   <!-- dock 收敛成 5(2026-07-06 用户:category 太多):媒体=总览点封面放大,
        专注=速记的 kind,剪贴板并入暂存 -->
@@ -299,10 +302,7 @@
     <button class="mtab" data-t="files">暂存</button>
   </div>
   <div class="pbody" id="pbody"></div>
-  <div class="pfoot">
-    <span class="k">悬停刘海展开 · ⏎ 发送 · Esc 收起 · 拖文件到刘海=暂存</span>
-    <button class="open-helm"><svg width="15" height="12"><use href="#helm-logo"/></svg>打开 Helm</button>
-  </div>
+ </div>
 </div>
 
 <div class="deskhint">悬停刘海展开 · 全部可点 · 总览点封面=放大媒体
@@ -491,6 +491,7 @@ function bindFocus(){
   $('#fRe').onclick=()=>{focusRun=false;focusLeft=focusTotal;renderBody()};
 }
 
+const _rb=renderBody; renderBody=function(){_rb();if(typeof relayout==='function')relayout()};
 function fileHTML(f,i){
   return `<div class="wcard file" data-i="${i}">
     <span class="fic" style="background:${f.c}">${f.k}</span>
@@ -507,26 +508,34 @@ function addEv(){const i=$('#evIn');if(!i.value.trim())return;i.value='';i.place
 function qcSend(){const i=$('#qc');if(!i.value.trim())return;i.value='';i.placeholder='已发送 — AI 解析中…';setTimeout(()=>i.placeholder='速记一笔 — ⏎ 发送,链接自动解析…',1500)}
 
 /* tab/panel 控制 */
-function switchTab(t){tab=t;renderTabs();renderBody()}
+function switchTab(t){tab=t;renderTabs();renderBody();relayout()}
 function renderTabs(){
   document.querySelectorAll('.mtab').forEach(x=>{
     x.classList.toggle('on',x.dataset.t===tab);
     x.onclick=()=>switchTab(x.dataset.t);
   });
 }
-function openPanel(t){open=true;$('#panel').classList.add('open');if(t)switchTab(t)}
-$('#notch').onclick=()=>{open=!open;$('#panel').classList.toggle('open',open)};
+function relayout(){
+  const p=$('#panel');
+  if(open){
+    p.style.width='480px'; // 先钉终宽再测高,否则窄布局折行测出虚高
+    p.style.height=document.getElementById('pwrap').offsetHeight+'px';
+  }else{p.style.height='0px';p.style.width='';}
+}
+function openPanel(t){open=true;$('#panel').classList.add('open');if(t)switchTab(t);relayout()}
+function closePanel(){open=false;$('#panel').classList.remove('open');relayout()}
+$('#notch').onclick=()=>{open?closePanel():openPanel()};
 /* hover 展开(对齐现行稿 helm-notch-pro):悬停刘海→开,移出刘海+面板→220ms 后收 */
 let hoverT;
 for(const el of [document.getElementById('notch'),document.getElementById('panel')]){
   el.addEventListener('mouseenter',()=>{clearTimeout(hoverT);if(!open)openPanel()});
   el.addEventListener('mouseleave',()=>{clearTimeout(hoverT);
-    hoverT=setTimeout(()=>{open=false;document.getElementById('panel').classList.remove('open')},220)});
+    hoverT=setTimeout(closePanel,220)});
 }
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){open=false;$('#panel').classList.remove('open');hideBanner()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closePanel();hideBanner()}});
 
 /* banner */
-function showBanner(){open=false;$('#panel').classList.remove('open');$('#banner').classList.add('show')}
+function showBanner(){closePanel();$('#banner').classList.add('show')}
 function hideBanner(){$('#banner').classList.remove('show')}
 
 /* 刘海拖文件 */
@@ -551,8 +560,7 @@ setInterval(()=>{
     if(ly)ly.innerHTML=LYRICS.map((l,i)=>`<div class="lyr${i===lyrIdx?' on':''}">${l}</div>`).join('');}
 },3200);
 
-openPanel('dash');
-renderTabs(); renderBody();
+renderTabs(); renderBody(); openPanel('dash');
 </script>
 </body>
 </html>
