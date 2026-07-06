@@ -32,3 +32,10 @@
 - dashboardModule 重写为 NOMI bento:大媒体卡(渐变底/封面填充+meta 压底渐晕+eq 3 柱,点→媒体)、日历卡(spark+下一项,无日程诚实空态)、智能体卡(okdot/warn 点+首会话+状态行)、quickcap 胶囊(⏎/发送→model.quickNote 直发后端 note,不动速记页状态)。
 - 旧三栏 widget(donut/任务行/迷你控制条)退役;dashboard 预算 172→252(含 dock)。
 - 全测试绿;快照 b4-dash-bento.png 与设计稿 dash 段对齐(输入框黄条=ImageRenderer 已知 artifact)。
+
+## 2026-07-07 迭代 6 — B5 媒体页 ✅
+- mediaModule 重写:‹总览 pill 返回条+源切换 pill;左列 196(封面 88 r16/标题 14.5/渐变 6px 进度+mono 时间/圆钮控制 36+play 44 ink 底);右列歌词 roll(当前句 16.5/800 ink,邻句 14.5 递减透明,mask 渐隐保留)。
+- 背景糊封面+波形层退役(NOMI 面板干净底);dock 在媒体页常驻(对齐 mtabs,预算 330 内)。
+- seek:MediaController 无 seek API → 进度条只展示不做假点击,TODO(align-seek) 待协议扩展。
+- 歌词三态(同步/纯文本/无词)与换曲重建逻辑保留,颜色切 palette。
+- 全测试绿;快照 b5-media.png。

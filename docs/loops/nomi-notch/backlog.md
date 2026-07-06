@@ -10,7 +10,7 @@
 - [x] **B2 单体壳+折叠态** — 折叠 310×34 黑条:左组(logo+minicover+渐变波形 4 柱)—摄像头空档(.cam 点)—右组(● N live);展开 440px、圆角 26、shadow-xl;banner 态 460px;同一元素生长(width/radius 过渡 .46s cubic-bezier(.32,.72,0,1))。
 - [x] **B3 顶行+dock+模块重组** — 展开顶行:左 logo+Helm(点开 Helm 主 app)、中黑条常驻摄像头凹槽(310px)、右天气+齿轮;底部 5 圆钮 dock(总览/速记/日历/智能体/暂存),激活=渐变描边环;NotchModule 重组:media=总览封面 zoom 目标,clipboard 并入 files,dev→agents;横扫切模块保留(阈值 90/锁 450ms 对齐 HTML)。
 - [x] **B4 总览 bento** — 1.35fr:1fr 网格:大媒体卡(渐变底+meta 压底+eq 3 柱,点→媒体页)、日历卡(spark+下一项)、智能体卡(okdot+会话名+一行状态)、速记胶囊输入条(⏎ 发送)。
-- [ ] **B5 媒体页** — ‹总览 返回条;左列 88px 封面+标题+可点 seek 进度渐变条+times+控制钮(play 44px 黑底);右列歌词 roll(mask 上下渐隐、当前句 16.5px/800 高亮、.55s 滚动)。
+- [x] **B5 媒体页** — ‹总览 返回条;左列 88px 封面+标题+可点 seek 进度渐变条+times+控制钮(play 44px 黑底);右列歌词 roll(mask 上下渐隐、当前句 16.5px/800 高亮、.55s 滚动)。
 - [ ] **B6 速记页** — kind 胶囊 5 个(on=黑底);任务 kind 显示 who 双轨(给自己/交给 agent,on=渐变);capbox 灰底圆角 16;问大脑 askout 卡;最近 N 条可折叠(▸ 旋转);专注 kind=番茄钟页(conic 渐变圆环+开始/暂停/重置+关联任务)。
 - [ ] **B7 日历页** — weekbar 7 天(今天=渐变胶囊);事件行(mono 时间+渐变竖条+标题/副行,hair 分隔);底部加事件胶囊输入(AI 解析时间,走现有 capture 通道)。
 - [ ] **B8 暂存页(files)** — 虚线 dropzone(hot 态橙);shelf 文件卡(色块图标+名字/大小+上传到记录/关联驾驶舱/移除);下方剪贴板段(复制/存速记);拖文件到刘海→dragover 描边+跳暂存页。

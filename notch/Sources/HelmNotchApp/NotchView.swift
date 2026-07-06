@@ -276,9 +276,8 @@ struct NotchView: View {
                 .transition(moduleTransition)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .animation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.36), value: model.module)
-            // HTML .mfull:媒体是全屏视图,用 ‹返回 导航、不显 dock——之前 dock 被
-            // 媒体的 maxHeight 挤出面板底缘,露半截圆钮被裁(2026-07-04 用户截图)。
-            if model.module != .media { dockBar }
+            // NOMI 稿:mtabs 常驻,媒体页也显示 dock(预算 330 已含)。
+            dockBar
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         // Extra breathing room from the rounded panel edges (device feedback).
@@ -951,95 +950,71 @@ struct NotchView: View {
     // TODO(align-media-height): HTML `VH.media`=330 — per-view auto-height isn't
     // ported yet; this renders within the current resizable panel height.
 
+    // NOMI 媒体页(.media2):‹总览 返回条;左列 196(封面 88+标题+渐变进度+控制钮);
+    // 右列歌词 roll(上下渐隐 mask,当前句加大高亮)。背景=面板底色,不再糊封面。
     private var mediaModule: some View {
         let np = model.nowPlaying
+        let pal = model.nomi
         let title = np?.title ?? "未在播放"
         let artist = np.map { $0.artist.isEmpty ? "—" : $0.artist } ?? "打开任意播放器开始"
-        return ZStack {
-            mediaBgCover
-            VStack(spacing: 0) {
-                HStack {
-                    Button { model.selectModule(.dashboard) } label: {
-                        Text("‹ 返回").font(.system(size: 12, weight: .semibold)).foregroundStyle(.white.opacity(0.56))
-                    }
-                    .buttonStyle(.plain)
-                    Spacer()
-                    Button { model.cycleMediaSource() } label: {
-                        HStack(spacing: 6) {
-                            Circle().fill(accent).frame(width: 7, height: 7)
-                            Text(model.mediaSource.label).font(.system(size: 11, weight: .semibold)).foregroundStyle(.white.opacity(0.56))
-                            Text("⌄").font(.system(size: 9)).foregroundStyle(.white.opacity(0.34))
-                        }
-                        .padding(.horizontal, 10).padding(.vertical, 4)
-                        .background(Capsule().fill(.white.opacity(0.08)))
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.bottom, 3)
-
-                let noLyrics = model.lyrics == Lyrics.none
-                HStack(alignment: .top, spacing: 22) {
-                    VStack(alignment: noLyrics ? .center : .leading, spacing: 0) {
-                        coverArt(np, size: noLyrics ? 110 : 84, radius: 14)
-                            .shadow(color: .black.opacity(0.5), radius: 10, y: 6)
-                        Text(title).font(.system(size: 14, weight: .heavy)).foregroundStyle(.white).lineLimit(1).padding(.top, 8)
-                        Text(artist).font(.system(size: 11)).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
-                        mediaProgress(np).padding(.top, 9)
-                        HStack(spacing: 22) {
-                            Button { model.previousTrack() } label: { Text("◀◀").font(.system(size: 15)) }
-                            Button { model.playPause() } label: { Text((np?.isPlaying ?? true) ? "❚❚" : "▶").font(.system(size: 21)) }
-                            Button { model.nextTrack() } label: { Text("▶▶").font(.system(size: 15)) }
-                        }
-                        .buttonStyle(.plain).foregroundStyle(.white).padding(.top, 8)
-                    }
-                    .frame(maxWidth: noLyrics ? .infinity : 190)
-                    if !noLyrics {
-                        // id 绑曲目:换曲把旧词整棵拆掉,不留跨曲残影;clipped 防越界压波形
-                        lyricsColumn
-                            .id(model.nowPlaying.map { "\($0.title)|\($0.artist)" } ?? "none")
-                            .clipped()
+        let noLyrics = model.lyrics == Lyrics.none
+        return VStack(spacing: 0) {
+            HStack(spacing: 6) {
+                Button("‹ 总览") { model.selectModule(.dashboard) }
+                    .buttonStyle(PillButtonStyle(palette: pal))
+                Text("媒体").font(.system(size: 10)).foregroundStyle(Color(pal.ink3))
+                Spacer()
+                Button { model.cycleMediaSource() } label: {
+                    HStack(spacing: 6) {
+                        SparkDot(size: 7)
+                        Text(model.mediaSource.label).font(.system(size: 10.5, weight: .semibold)).foregroundStyle(Color(pal.ink2))
                     }
                 }
-                .frame(maxHeight: .infinity, alignment: noLyrics ? .center : .top)
+                .buttonStyle(PillButtonStyle(palette: pal))
             }
-            .padding(EdgeInsets(top: 9, leading: 16, bottom: 9, trailing: 16))
+            .padding(.bottom, 9)
+
+            HStack(alignment: .top, spacing: 18) {
+                VStack(alignment: noLyrics ? .center : .leading, spacing: 0) {
+                    coverArt(np, size: 88, radius: 16)
+                        .shadow(color: .black.opacity(model.nomiDark ? 0 : 0.18), radius: 8, y: 4)
+                    Text(title).font(.system(size: 14.5, weight: .bold)).foregroundStyle(Color(pal.ink))
+                        .lineLimit(1).padding(.top, 10)
+                    Text(artist).font(.system(size: 11)).foregroundStyle(Color(pal.ink3)).lineLimit(1).padding(.top, 2)
+                    mediaProgress(np).padding(.top, 10)
+                    HStack(spacing: 12) {
+                        mediaButton("backward.fill", size: 36, pal: pal) { model.previousTrack() }
+                        Button { model.playPause() } label: {
+                            Image(systemName: (np?.isPlaying ?? true) ? "pause.fill" : "play.fill")
+                                .font(.system(size: 16, weight: .semibold)).foregroundStyle(Color(pal.onInk))
+                                .frame(width: 44, height: 44)
+                                .background(Circle().fill(Color(pal.ink)))
+                        }.buttonStyle(.plain)
+                        mediaButton("forward.fill", size: 36, pal: pal) { model.nextTrack() }
+                    }
+                    .padding(.top, 12)
+                }
+                .frame(maxWidth: noLyrics ? .infinity : 196)
+                if !noLyrics {
+                    // id 绑曲目:换曲把旧词整棵拆掉,不留跨曲残影;clipped 防越界
+                    lyricsColumn
+                        .id(model.nowPlaying.map { "\($0.title)|\($0.artist)" } ?? "none")
+                        .clipped()
+                }
+            }
+            .frame(maxHeight: .infinity, alignment: noLyrics ? .center : .top)
         }
+        .padding(EdgeInsets(top: 10, leading: 18, bottom: 6, trailing: 18))
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        // 波形贴在背景底部,不占布局行——内容/歌词区拿回这块空间
-        // (2026-07-05 用户:动态放背景,别额外开下面的空间)。
-        .overlay(alignment: .bottom) {
-            Waveform(playing: np?.isPlaying ?? true, color: accent)
-                .frame(height: 24)
-                .padding(.horizontal, 16)
-                .padding(.bottom, 4)
-                .opacity(0.55)
-                .allowsHitTesting(false)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
-    /// `.bgcov` — the cover blurred + scaled behind everything, with a dark scrim.
-    private var mediaBgCover: some View {
-        // Color floor SIZES this view; the blurred cover rides in an overlay so its
-        // `.fill` aspect ratio can never inflate the layout. (Bug: as a ZStack child,
-        // a square cover answered a 582-wide proposal with 582×582 → the whole media
-        // module laid out at ~582pt tall inside the 360pt shell → centered content
-        // sank below the clip and controls/waveform were cut off.)
-        Color.black
-            .overlay {
-                Group {
-                    if let np = model.nowPlaying, let art = nsArtwork(np) {
-                        Image(nsImage: art).resizable().aspectRatio(contentMode: .fill)
-                    } else {
-                        LinearGradient(
-                            colors: [Color(red: 0.91, green: 0.63, blue: 0.48), Color(red: 0.71, green: 0.42, blue: 0.56), Color(red: 0.42, green: 0.31, blue: 0.56)],
-                            startPoint: .topLeading, endPoint: .bottomTrailing)
-                    }
-                }
-                .blur(radius: 34).scaleEffect(1.3).opacity(0.6)
-            }
-            .overlay(Color.black.opacity(0.58))
-            .clipped()
+    private func mediaButton(_ symbol: String, size: CGFloat, pal: NomiPalette, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 13, weight: .semibold)).foregroundStyle(Color(pal.ink))
+                .frame(width: size, height: size)
+                .background(Circle().fill(Color(pal.pill)))
+        }.buttonStyle(.plain)
     }
 
     private func coverArt(_ np: NowPlaying?, size: CGFloat, radius: CGFloat) -> some View {
@@ -1055,27 +1030,25 @@ struct NotchView: View {
         .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
     }
 
-    /// `.mbar2` — real progress when known; otherwise the HTML's static 42% demo.
+    /// `.mprog`:6px 渐变进度条(展示;MediaController 无 seek API — 不做假点击,TODO(align-seek))。
     @ViewBuilder private func mediaProgress(_ np: NowPlaying?) -> some View {
+        let pal = model.nomi
         TimelineView(.periodic(from: .now, by: 0.5)) { context in
             let total = np?.duration ?? 0
             let pos = model.livePosition(at: context.date)
             let frac = total > 0 ? min(1, pos / total) : 0
-            VStack(spacing: 3) {
+            VStack(spacing: 4) {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
-                        Capsule().fill(.white.opacity(0.22))
-                        Capsule().fill(.white).frame(width: max(2, geo.size.width * frac))
-                        Circle().fill(.white).frame(width: 10, height: 10)
-                            .shadow(color: .black.opacity(0.4), radius: 2, y: 1)
-                            .offset(x: max(0, geo.size.width * frac - 5))
+                        Capsule().fill(Color(pal.pill))
+                        Capsule().fill(Nomi.gradientH).frame(width: max(3, geo.size.width * frac))
                     }
                 }
-                .frame(height: 10)
+                .frame(height: 6)
                 HStack {
                     Text(total > 0 ? timeString(pos) : "-:--"); Spacer(); Text(total > 0 ? timeString(total) : "-:--")
                 }
-                .font(.system(size: 9)).foregroundStyle(.white.opacity(0.55)).monospacedDigit()
+                .font(.system(size: 9.5, design: .monospaced)).foregroundStyle(Color(pal.ink3))
             }
         }
     }
@@ -1095,7 +1068,7 @@ struct NotchView: View {
                         VStack(alignment: .leading, spacing: 9) {
                             ForEach(lines.indices, id: \.self) { i in
                                 Text(lines[i].text).font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(.white.opacity(0.78)).lineLimit(2)
+                                    .foregroundStyle(Color(model.nomi.ink2)).lineLimit(2)
                             }
                         }
                     }
@@ -1116,8 +1089,8 @@ struct NotchView: View {
                 VStack(alignment: .leading, spacing: 13) {
                     ForEach(lo..<hi, id: \.self) { i in
                         Text(lines[i].text)
-                            .font(.system(size: i == cur ? 18 : 15, weight: i == cur ? .heavy : .semibold))
-                            .foregroundStyle(.white.opacity(
+                            .font(.system(size: i == cur ? 16.5 : 14.5, weight: i == cur ? .heavy : .semibold))
+                            .foregroundStyle(Color(model.nomi.ink).opacity(
                                 i == cur ? 1 : max(0.16, 0.38 - 0.09 * Double(abs(i - cur)))))
                             .lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
@@ -1134,7 +1107,7 @@ struct NotchView: View {
                 VStack(alignment: .leading, spacing: 7) {
                     ForEach(lines.indices, id: \.self) { i in
                         Text(lines[i]).font(.system(size: 13))
-                            .foregroundStyle(.white.opacity(0.7)).lineLimit(2)
+                            .foregroundStyle(Color(model.nomi.ink2)).lineLimit(2)
                     }
                 }
             }
