@@ -300,7 +300,7 @@ final class NotchModuleTests: XCTestCase {
         model.module = .media
         XCTAssertEqual(model.viewHeight(), 330)
         model.module = .files
-        XCTAssertEqual(model.viewHeight(), 232)
+        XCTAssertEqual(model.viewHeight(), 280)
     }
 
     @MainActor
@@ -466,7 +466,7 @@ final class NotchModuleTests: XCTestCase {
     }
 
     @MainActor
-    func testAddFilesStagesAndSwitchesToCapture() {
+    func testAddFilesStagesAndSwitchesToFiles() {
         let model = NotchModel(backend: FakeBackend())
         model.module = .dashboard
         model.captureKind = .focus
@@ -474,8 +474,7 @@ final class NotchModuleTests: XCTestCase {
         XCTAssertEqual(model.captureFiles.count, 2)
         XCTAssertEqual(model.captureFiles[0].ext, "PDF")
         XCTAssertEqual(model.captureFiles[1].ext, "PNG")
-        XCTAssertEqual(model.module, .capture)
-        XCTAssertEqual(model.captureKind, .note)  // focus → note when files dropped
+        XCTAssertEqual(model.module, .files)  // NOMI:拖拽进 shelf
         XCTAssertTrue(model.expanded)
     }
 
@@ -707,4 +706,16 @@ final class HealthDecodingTests: XCTestCase {
         let health = try JSONDecoder().decode(Health.self, from: json)
         XCTAssertEqual(health, Health(status: "ok", version: "0.0.1"))
     }
+    @MainActor
+    func testClipboardHistoryDedupesAndCaps() {
+        let model = NotchModel(backend: FakeBackend())
+        model.recordClipboard("aaa")
+        model.recordClipboard("aaa")  // 连续重复不重记
+        XCTAssertEqual(model.clipboardHistory.count, 1)
+        for i in 0..<6 { model.recordClipboard("item\(i)") }
+        XCTAssertEqual(model.clipboardHistory.count, 5)  // 上限 5
+        XCTAssertEqual(model.clipboardHistory.first?.text, "item5")  // 新的在前
+        XCTAssertTrue(ClipItem(id: "x", text: "https://a.b", at: Date()).isLink)
+    }
+
 }

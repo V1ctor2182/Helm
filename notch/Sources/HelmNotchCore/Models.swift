@@ -126,3 +126,19 @@ public enum CaptureStatus: Sendable, Equatable {
 public enum HelmError: Error, Equatable {
     case badStatus(Int)
 }
+
+/// 剪贴板历史条目(App 侧 NSPasteboard watcher 喂入;NOMI 暂存页剪贴板段)。
+public struct ClipItem: Sendable, Equatable, Identifiable {
+    public let id: String
+    public let text: String
+    public let at: Date
+
+    public init(id: String, text: String, at: Date) {
+        self.id = id
+        self.text = text
+        self.at = at
+    }
+
+    /// 链接还是纯文本(决定行图标)。
+    public var isLink: Bool { text.hasPrefix("http://") || text.hasPrefix("https://") }
+}

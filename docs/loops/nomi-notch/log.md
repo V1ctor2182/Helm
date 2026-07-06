@@ -50,3 +50,10 @@
 - 加事件通道:后端无建事件 API(契约不动)→ `addEventViaAgent` 走 createTask("加日历事件:…"),真 agent 任务解析时间,非假灯。
 - 月视图/月偏移/双栏 agenda 随稿退役(设计稿功能清单明确"周条+今日事件+加事件");calMonthView 属性保留但不再影响高度;日历预算 312/240→260。
 - 全测试绿(高度断言已更新);快照 b7-cal.png(事件区空态在 ScrollView 内,快照工具不渲染,真机正常)。
+
+## 2026-07-07 迭代 9 — B8 暂存页 ✅
+- filesModule:虚线 dropzone(dragOver 橙热态)+shelf 文件卡(渐变块 ext+上传到记录/移除)+剪贴板段。
+- 剪贴板换真数据:ClipboardWatcher(2s 轮询 NSPasteboard.changeCount)喂 model.clipboardHistory(去重/上限 5);行内 复制(回写剪贴板)/存速记(createNote)。旧 clipSeed 假数据删除。
+- 「上传到记录」=文件名折进 note(同速记页附件做法,真文件上传等附件 schema);「关联驾驶舱」无后端通道,本版不放按钮(不做假动作),记 backlog。
+- 拖文件路由改 NOMI 语义:落 shelf(files 页),不再跳速记页;addFiles 不再动 captureKind。
+- files 预算 232→280;测试 3 处断言更新+新增剪贴板去重/上限测试;全绿。快照 b8-files.png。

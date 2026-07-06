@@ -44,8 +44,7 @@ public final class NotchModel {
             let ext = String((name as NSString).pathExtension.uppercased().prefix(4))
             captureFiles.append(CaptureFile(id: "\(fileSeq)", name: name, ext: ext.isEmpty ? "FILE" : ext))
         }
-        module = .capture
-        if captureKind == .focus { captureKind = .note }
+        module = .files  // NOMI:拖拽暂存进 shelf(旧行为进速记页)
         expanded = true
     }
 
@@ -107,6 +106,40 @@ public final class NotchModel {
     public private(set) var askAnswer: String?
     public private(set) var askQuestion = ""
     public private(set) var recentNotes: [RecentNote] = []
+
+    // MARK: 剪贴板历史(App watcher 喂入)与暂存 shelf 动作
+
+    public private(set) var clipboardHistory: [ClipItem] = []
+    private var clipSeq = 0
+
+    /// 记入剪贴板历史:连续重复不重记,新的在前,只留 5 条。
+    public func recordClipboard(_ text: String, at now: Date = Date()) {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty, clipboardHistory.first?.text != t else { return }
+        clipSeq += 1
+        clipboardHistory.insert(ClipItem(id: "c\(clipSeq)", text: t, at: now), at: 0)
+        if clipboardHistory.count > 5 { clipboardHistory = Array(clipboardHistory.prefix(5)) }
+    }
+
+    /// 剪贴板条目存速记(真通道:createNote)。
+    public func saveClipToNote(_ item: ClipItem) async {
+        captureStatus = .sending
+        do {
+            try await backend.createNote(content: item.text, kind: "note", journalDate: nil)
+            captureStatus = .sent
+        } catch { captureStatus = .failed }
+    }
+
+    /// shelf 文件「上传到记录」:文件名折进 note(真文件上传等附件 schema,同速记页做法),成功后移出 shelf。
+    public func uploadShelfFile(_ id: String) async {
+        guard let f = captureFiles.first(where: { $0.id == id }) else { return }
+        captureStatus = .sending
+        do {
+            try await backend.createNote(content: "附件: \(f.name)", kind: "note", journalDate: nil)
+            removeFile(id)
+            captureStatus = .sent
+        } catch { captureStatus = .failed }
+    }
 
     /// 日历 addev:无建事件 API(契约不动)→ 建 agent 任务让 AI 解析时间加事件。
     public func addEventViaAgent(_ text: String) async {
@@ -197,7 +230,7 @@ public final class NotchModel {
         case .dashboard: 252  // bento(媒体大卡+右两卡)+quickcap+dock
         case .media: 330
         case .calendar: 260  // NOMI 周条+事件+addev(月视图随稿退役)
-        case .files: 232
+        case .files: 280  // dropzone+shelf+剪贴板段
         case .agents:
             switch agentPage {
             // 详情页(prompt+最后回复+回复框)比列表高;B9 上下滑落地后统一预算。

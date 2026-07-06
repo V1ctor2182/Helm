@@ -412,8 +412,7 @@ struct NotchView: View {
         case .agents:
             agentsModule
         case .files:
-            // B8 落地完整暂存页;先挂剪贴板列表(设计稿 files 页含剪贴板段)。
-            moduleScroll { clipboardBody }
+            filesModule
         case .media:
             mediaModule
         }
@@ -959,40 +958,88 @@ struct NotchView: View {
             startPoint: .top, endPoint: .bottom)
     }
 
-    // MARK: Clipboard module (V.clip) — seed data; real history is a later block.
+    // MARK: 暂存页(NOMI files):dropzone + shelf 文件卡 + 真剪贴板段
 
-    /// HTML `CLIP` seed. TODO(align-clipboard): replace with a Core clipboard
-    /// model fed by an NSPasteboard watcher.
-    private var clipboardBody: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            cellHeader("⧉ CLIPBOARD 历史", trailing: "点→复制 / 存速记")
-            // HTML .clip is overflow-y:auto — scroll so rows never sit under the dock.
+    private var filesModule: some View {
+        let pal = model.nomi
+        return VStack(alignment: .leading, spacing: 0) {
+            // dropzone:虚线框,shell 级 onDrop 已收文件 → 这里是视觉靶
+            VStack(spacing: 3) {
+                Text("拖文件到这里(或刘海)").font(.system(size: 11.5, weight: .semibold)).foregroundStyle(Color(pal.ink2))
+                Text("暂存到 Shelf → 上传到记录").font(.system(size: 11)).foregroundStyle(Color(pal.ink3))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(dragOver ? Color(NomiTheme.g1) : Color(model.nomiDark ? RGB(hex: "3a3a40") : RGB(hex: "d8d8de")),
+                            style: StrokeStyle(lineWidth: 1.6, dash: [5, 4])))
+
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(clipSeed.indices, id: \.self) { i in
-                        let c = clipSeed[i]
-                        HStack(spacing: 9) {
-                            Text(c.0).font(.system(size: 13))
-                                .frame(width: 26, height: 26)
-                                .background(RoundedRectangle(cornerRadius: 7).fill(Color(white: 0.10)))
-                            Text(c.1).font(.system(size: 12)).foregroundStyle(.white.opacity(0.85)).lineLimit(1)
-                            Spacer(minLength: 6)
-                            Text(c.2).font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
-                        }
-                        .padding(.vertical, 8)
-                        .overlay(alignment: .bottom) { Rectangle().fill(.white.opacity(0.09)).frame(height: 0.5) }
+                VStack(alignment: .leading, spacing: 7) {
+                    ForEach(model.captureFiles) { f in shelfRow(f, pal: pal) }
+                    Text("剪贴板").font(.system(size: 10, weight: .bold)).tracking(0.4)
+                        .foregroundStyle(Color(pal.ink3))
+                        .padding(.top, model.captureFiles.isEmpty ? 4 : 10).padding(.horizontal, 2)
+                    if model.clipboardHistory.isEmpty {
+                        Text("复制点什么就会出现在这里")
+                            .font(.system(size: 11)).foregroundStyle(Color(pal.ink3))
+                            .padding(.vertical, 6).padding(.horizontal, 2)
+                    } else {
+                        ForEach(model.clipboardHistory) { c in clipRow(c, pal: pal) }
                     }
                 }
+                .padding(.top, 10)
             }
         }
+        .padding(.top, 12).padding(.horizontal, 18).padding(.bottom, 4)
     }
 
-    private let clipSeed: [(String, String, String)] = [
-        ("↗", "https://github.com/V1ctor2182/Helm/pull/50", "just now"),
-        ("≡", "feat(notch): A×D 2×2 面板重做…", "5m"),
-        ("#", "127.0.0.1:8769", "12m"),
-        ("▣", "Screenshot 2026-06-29.png", "20m"),
-    ]
+    private func shelfRow(_ f: CaptureFile, pal: NomiPalette) -> some View {
+        HStack(spacing: 10) {
+            Text(f.ext).font(.system(size: 9, weight: .heavy)).foregroundStyle(.white)
+                .frame(width: 30, height: 30)
+                .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Nomi.gradient))
+            Text(f.name).font(.system(size: 12, weight: .semibold)).foregroundStyle(Color(pal.ink))
+                .lineLimit(1)
+            Spacer(minLength: 6)
+            Button("上传到记录") { Task { await model.uploadShelfFile(f.id) } }
+                .buttonStyle(PillButtonStyle(palette: pal))
+            Button("移除") { model.removeFile(f.id) }
+                .buttonStyle(PillButtonStyle(palette: pal))
+        }
+        .padding(EdgeInsets(top: 9, leading: 12, bottom: 9, trailing: 9))
+        .wcard(pal, dark: model.nomiDark)
+    }
+
+    private func clipRow(_ c: ClipItem, pal: NomiPalette) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: c.isLink ? "link" : "text.alignleft")
+                .font(.system(size: 11)).foregroundStyle(Color(pal.ink2))
+                .frame(width: 26, height: 26)
+                .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color(pal.pill)))
+            VStack(alignment: .leading, spacing: 1) {
+                Text(c.text).font(.system(size: 11.5, weight: c.isLink ? .semibold : .regular))
+                    .foregroundStyle(Color(c.isLink ? pal.ink : pal.ink2)).lineLimit(1).truncationMode(.tail)
+                Text(clipAge(c.at)).font(.system(size: 9, design: .monospaced)).foregroundStyle(Color(pal.ink3))
+            }
+            Spacer(minLength: 6)
+            Button("复制") {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(c.text, forType: .string)
+            }
+            .buttonStyle(PillButtonStyle(palette: pal))
+            Button("存速记") { Task { await model.saveClipToNote(c) } }
+                .buttonStyle(PillButtonStyle(palette: pal))
+        }
+        .padding(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 9))
+        .wcard(pal, dark: model.nomiDark)
+    }
+
+    private func clipAge(_ d: Date) -> String {
+        let m = max(0, Int(Date().timeIntervalSince(d) / 60))
+        return m == 0 ? "刚刚" : (m < 60 ? "\(m) 分钟前" : "\(m / 60) 小时前")
+    }
 
     private func cellHeader(_ title: String, accentTitle: Bool = false, trailing: String? = nil, trailingColor: Color = .white.opacity(0.35)) -> some View {
         HStack {
