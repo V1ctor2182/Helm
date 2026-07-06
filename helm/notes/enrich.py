@@ -87,8 +87,9 @@ async def fetch_link_meta(url: str, client: httpx.AsyncClient | None = None) -> 
                     "https://export.arxiv.org/api/query",
                     params={"id_list": m.group(1)}, timeout=_TIMEOUT, headers=_UA)
                 r.raise_for_status()
-                xml = r.text
-                title = re.search(r"<title>(?!ArXiv)([^<]+)</title>", xml)
+                # feed 级 <title> 是查询描述("ArXiv Query: …")——只看 <entry> 内。
+                xml = r.text.split("<entry", 1)[-1]
+                title = re.search(r"<title>\s*([^<]+?)\s*</title>", xml)
                 summ = re.search(r"<summary>\s*([\s\S]*?)</summary>", xml)
                 meta.update(
                     type="paper", site="arXiv",
@@ -184,6 +185,9 @@ async def enrich_note(db: Any, box: Any, note_id: int, cwd: Any = None) -> None:
         meta = await fetch_link_meta(url)
         if meta.get("summary_raw") and "summary" not in meta:
             meta["summary"] = meta["summary_raw"]
+        # 论文:LLM 没来得及/没配时,用 arXiv abstract 开头顶摘要位
+        if meta.get("abstract") and "summary" not in meta:
+            meta["summary"] = meta["abstract"][:300]
         _write(meta)
 
     # 第二段:LLM 补分类/摘要/标签(90s 超时,失败保留第一段)。

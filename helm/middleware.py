@@ -27,7 +27,9 @@ _CSP_TEMPLATE = (
     "default-src 'self'; "
     "script-src 'self' 'nonce-{nonce}'; "
     "style-src 'self' 'unsafe-inline'; "
-    "img-src 'self' data: blob:; "
+    # https: 放行外域图片——速记收藏卡的预览图/封面(YouTube/OG image)是外链
+    # (2026-07-06);仍禁 http: 明文与其余外域资源。
+    "img-src 'self' data: blob: https:; "
     "media-src 'self' blob:; "
     "connect-src 'self'; "
     "frame-src 'self'; "

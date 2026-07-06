@@ -36,8 +36,10 @@ async def test_fetch_link_meta_routes_youtube_arxiv_og() -> None:
             return httpx.Response(200, json={
                 "title": "Demo Video", "author_name": "Ch", "thumbnail_url": "https://i.ytimg.com/x.jpg"})
         if "export.arxiv.org" in url:
+            # feed 级 <title>(查询描述)必须被跳过——只取 <entry> 内的(回归守卫)
             return httpx.Response(200, text=(
-                "<feed><entry><title>Paper T</title>"
+                "<feed><title>ArXiv Query: search_query=…</title>"
+                "<entry><title>Paper T</title>"
                 "<summary> Long abstract. </summary></entry></feed>"))
         return httpx.Response(200, text=(
             "<html><head><title>Site T</title>"
