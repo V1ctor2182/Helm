@@ -3,361 +3,334 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Helm · 记录 JOURNAL 设计定稿 (Timeline / Canvas / Calendar)</title>
+<title>Helm · 记录 JOURNAL 设计定稿 · NOMI 风(Timeline / Canvas / Calendar)</title>
 <!--
-  HELM · JOURNAL — SOURCE OF TRUTH(记录模块,2026-07-06 用户拍板 redesign)
-  参考 NOMI 的三视图(Timeline/Canvas/Calendar),翻成 ORAGE 座舱语言:
-  黑/白双主题 · mono/sans 硬切 · 零圆角 · 发丝线 · 每日 accent · 禁 emoji。
-  全交互:三视图切换 / Canvas 卡片拖拽+连线 / 周历 / 分类过滤 / 主题+每日色。
-  进 Svelte 时以本文件 + DESIGN.md 为准——不改本文件、改代码。
+  HELM · JOURNAL — SOURCE OF TRUTH(记录模块)
+  2026-07-06 用户拍板:完全参考 nomi-reference/ 两图的风格——
+  纯白底 · 大圆角白卡 · 多层柔和阴影 · 无边框线(留白分层) · 黑胶囊视图切换 ·
+  橙→紫渐变连线与 cluster 胶囊 · 极淡虚线日历网格 · 圆角事件卡浮格。
+  (记录模块专属皮肤,经用户批准偏离 ORAGE 座舱系统;禁 emoji 仍守。)
+  全交互:三视图 / Canvas 拖拽+渐变连线 / 周历+时刻线 / 分类过滤。
 -->
 <style>
   :root{
-    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
-    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Helvetica Neue",sans-serif;
+    --bg:#f6f6f7;          /* 画布 */
+    --side:#ffffff;        /* 侧栏 */
+    --card:#ffffff;
+    --ink:#111114;         /* 主字 */
+    --ink2:#5c5c66;        /* 次字 */
+    --ink3:#a2a2ab;        /* 弱字/时间 */
+    --hair:#ececef;        /* 分隔 */
+    --pill:#f1f1f3;        /* 浅灰胶囊 */
+    --g1:#ff8a3d;          /* 渐变橙 */
+    --g2:#a855f7;          /* 渐变紫 */
+    --shadow:0 1px 2px rgba(17,17,20,.05),0 6px 18px rgba(17,17,20,.07);
+    --shadow-lg:0 2px 6px rgba(17,17,20,.06),0 16px 40px rgba(17,17,20,.12);
     --ease:cubic-bezier(.32,.72,0,1);
-    --acc:#FFC53D; --acc-ink:#FFC53D;
   }
   *{box-sizing:border-box}
   html,body{height:100%;margin:0}
-  body{font-family:var(--sans);background:var(--bg);color:var(--t2);overflow:hidden}
+  body{font-family:var(--sans);background:var(--bg);color:var(--ink);overflow:hidden;
+    -webkit-font-smoothing:antialiased}
 
-  body[data-theme="dark"]{
-    --bg:#000;--chrome:#0a0a0c;--panel:#08080a;--tile:#101012;
-    --t1:#fff;--t2:rgba(255,255,255,.90);--t3:rgba(255,255,255,.66);--t4:rgba(255,255,255,.48);
-    --line:rgba(255,255,255,.16);--hair:rgba(255,255,255,.09);--grid:rgba(255,255,255,.035);
-    --green:#34C759;--orange:#FF9F0A;--red:#FF453A;--cyan:#34D6C0;
-    --cardbg:#0c0c0e;
-  }
-  body[data-theme="light"]{
-    --bg:#efece3;--chrome:#e7e3d8;--panel:#eae6dc;--tile:#e4dfd2;
-    --t1:#17140d;--t2:rgba(23,20,13,.84);--t3:rgba(23,20,13,.64);--t4:rgba(23,20,13,.48);
-    --line:rgba(23,20,13,.24);--hair:rgba(23,20,13,.12);--grid:rgba(23,20,13,.05);
-    --green:#2a8f43;--orange:#b56b00;--red:#c2331f;--cyan:#0e7d70;
-    --cardbg:#f4f1e8;
-  }
+  .app{height:100vh;display:grid;grid-template-columns:250px 1fr}
 
-  /* ── 壳 ─────────────────────────────── */
-  .app{height:100vh;display:grid;grid-template-rows:34px 1fr 26px;background:var(--bg)}
-  .tbar{display:flex;align-items:center;gap:10px;padding:0 14px;background:var(--chrome);border-bottom:1px solid var(--hair);
-    font-family:var(--mono);font-size:11px;color:var(--t4)}
-  .tbar .wm{font-weight:800;letter-spacing:3px;color:var(--t2)}
-  .tbar .crumb{color:var(--t3)}
-  .tbar .right{margin-left:auto;display:flex;gap:8px;align-items:center}
-  .tbtn{font-family:var(--mono);font-size:10px;color:var(--t3);background:transparent;border:1px solid var(--hair);
-    padding:4px 9px;cursor:pointer;letter-spacing:.5px}
-  .tbtn:hover{color:var(--t1);border-color:var(--line)}
-  .tbtn.acc{color:var(--acc-ink);border-color:var(--acc-ink)}
-  .sbar{display:flex;align-items:center;background:var(--chrome);border-top:1px solid var(--hair);
-    font-family:var(--mono);font-size:10.5px;color:var(--t3)}
-  .sbar .seg{padding:0 12px;height:26px;display:flex;align-items:center;gap:6px;border-right:1px solid var(--hair)}
-  .sbar .live{color:var(--acc-ink)}
-  .sbar .grow{flex:1}
+  /* ── 侧栏(纯白) ─────────────── */
+  .side{background:var(--side);border-right:1px solid var(--hair);display:flex;flex-direction:column;padding:22px 18px}
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:22px}
+  .brand .mark{width:30px;height:30px;border-radius:9px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;letter-spacing:.5px}
+  .brand .nm{font-weight:700;font-size:15px;letter-spacing:.2px}
+  .brand .collapse{margin-left:auto;width:26px;height:26px;border:1px solid var(--hair);border-radius:8px;background:#fff;color:var(--ink3);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px}
+  .toptabs{display:flex;gap:18px;border-bottom:1px solid var(--hair);margin-bottom:16px}
+  .toptab{font-size:13px;color:var(--ink3);padding:0 2px 10px;cursor:pointer;border-bottom:2px solid transparent}
+  .toptab.on{color:var(--ink);border-bottom-color:var(--ink);font-weight:600}
+  .cats{display:flex;flex-direction:column;gap:2px}
+  .cat{font-size:13.5px;color:var(--ink2);padding:9px 14px;border-radius:12px;cursor:pointer;display:flex;align-items:center}
+  .cat:hover{background:var(--pill)}
+  .cat.on{background:var(--pill);color:var(--ink);font-weight:600}
+  .cat .k{margin-left:auto;font-size:11px;color:var(--ink3);font-variant-numeric:tabular-nums}
+  .sidefoot{margin-top:auto;display:flex;gap:10px}
+  .roundbtn{width:44px;height:44px;border-radius:50%;border:1px solid var(--hair);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink2)}
+  .roundbtn:hover{border-color:var(--ink3)}
+  .roundbtn svg{width:18px;height:18px}
 
-  /* ── 主区:左分类 + 内容 ───────────────── */
-  .main{display:grid;grid-template-columns:200px 1fr;min-height:0}
-  .side{background:var(--panel);border-right:1px solid var(--hair);padding:14px 12px;display:flex;flex-direction:column;gap:2px;min-height:0;overflow:hidden}
-  .slab{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1px;color:var(--t3);text-transform:uppercase;margin:4px 0 8px}
-  .frow{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--t3);padding:6px 8px;cursor:pointer;border-left:2px solid transparent}
-  .frow:hover{color:var(--t1);background:var(--hair)}
-  .frow.on{color:var(--t1);border-left-color:var(--acc);background:var(--hair)}
-  .frow .k{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--t4);font-variant-numeric:tabular-nums}
-  .side .foot{margin-top:auto;font-family:var(--mono);font-size:9px;line-height:1.8;color:var(--t4);letter-spacing:.3px}
-  .side .foot b{color:var(--t3)}
-
-  .content{position:relative;min-width:0;display:flex;flex-direction:column;
-    background:radial-gradient(var(--grid) 1px,transparent 1px) 0 0/22px 22px,var(--bg)}
-
-  /* 顶部:标题 + 三视图切换(mono 分段) */
-  .head{display:flex;align-items:baseline;gap:14px;padding:16px 22px 0}
-  .head h1{font-family:var(--mono);font-size:22px;font-weight:800;letter-spacing:1px;color:var(--t1);margin:0}
-  .head .zh{font-size:12px;color:var(--acc-ink);font-family:var(--mono);font-weight:700}
-  .head .counts{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--t4);letter-spacing:1px}
-  .views{display:flex;gap:0;padding:10px 22px 0;border-bottom:1px solid var(--hair)}
-  .vtab{font-family:var(--mono);font-size:11px;letter-spacing:1px;color:var(--t3);background:transparent;border:none;
-    padding:8px 14px;cursor:pointer;border-bottom:2px solid transparent;text-transform:uppercase}
-  .vtab:hover{color:var(--t1)}
-  .vtab.on{color:var(--t1);border-bottom-color:var(--acc)}
+  /* ── 主区 ─────────────── */
+  .main{position:relative;display:flex;flex-direction:column;min-width:0}
+  .topbar{display:flex;align-items:center;gap:16px;padding:16px 24px 8px;z-index:8}
+  .views{display:flex;background:#fff;border-radius:999px;padding:4px;box-shadow:var(--shadow)}
+  .vtab{font-size:13px;color:var(--ink2);background:transparent;border:none;border-radius:999px;padding:8px 18px;cursor:pointer;transition:all .18s var(--ease)}
+  .vtab.on{background:var(--ink);color:#fff;font-weight:600}
+  .topbar .range{font-size:14.5px;color:var(--ink3);display:none;align-items:center;gap:10px}
+  .topbar .range.show{display:flex}
+  .navbtn{width:32px;height:32px;border-radius:50%;background:var(--pill);border:none;color:var(--ink2);cursor:pointer;font-size:13px}
+  .navbtn:hover{background:#e8e8ec}
+  .topbar .right{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink3)}
   .stage{flex:1;min-height:0;position:relative;overflow:hidden}
 
-  /* ── 通用卡片(座舱收藏卡) ───────────────── */
-  .card{background:var(--cardbg);border:1px solid var(--line);position:relative;
-    transition:border-color .12s var(--ease),transform .12s var(--ease)}
-  .card:hover{border-color:var(--t4)}
-  .card .ctag{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:1.2px;padding:7px 10px 0;display:flex;gap:8px;align-items:center}
-  .card .ctag .tm{margin-left:auto;color:var(--t4);font-weight:400;font-variant-numeric:tabular-nums}
-  .t-youtube{color:var(--red)} .t-paper{color:var(--cyan)} .t-inspo{color:var(--acc-ink)}
-  .t-text{color:var(--t3)} .t-task{color:var(--green)} .t-event{color:var(--acc-ink)}
-  .card .cbody{padding:6px 10px 9px;font-size:12.5px;color:var(--t2);line-height:1.45}
-  .card .cbody b{color:var(--t1);font-weight:600}
-  .card .cimg{width:100%;height:86px;object-fit:cover;display:block;border-bottom:1px solid var(--hair);
-    background:linear-gradient(135deg,#3a3a44,#1c1c22)}
-  .card .csum{font-size:11px;color:var(--t3);margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-  .card .cfoot{display:flex;gap:8px;padding:0 10px 8px;font-family:var(--mono);font-size:9px;color:var(--t4)}
-  .card .cfoot .tag{color:var(--cyan)}
-  /* 选中 = 框选视口 L 角 */
-  .card.sel{border-color:var(--acc-ink)}
-  .card.sel::before,.card.sel::after{content:"";position:absolute;width:10px;height:10px;border:1.5px solid var(--acc-ink);z-index:2}
-  .card.sel::before{top:-2px;left:-2px;border-right:none;border-bottom:none}
-  .card.sel::after{bottom:-2px;right:-2px;border-left:none;border-top:none}
+  /* ── 卡片(NOMI 白卡) ─────────────── */
+  .card{background:var(--card);border-radius:16px;box-shadow:var(--shadow);position:relative;
+    transition:box-shadow .18s var(--ease),transform .18s var(--ease)}
+  .card:hover{box-shadow:var(--shadow-lg)}
+  .card .pad{padding:14px 16px 10px}
+  .appic{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:800;margin-bottom:9px}
+  .ic-yt{background:#ff2d2d}
+  .ic-ax{background:#8b5a2b}
+  .ic-aw{background:linear-gradient(135deg,#34d6c0,#0a84ff)}
+  .ic-tx{background:#111114}
+  .ic-tk{background:#28a745}
+  .ic-ev{background:linear-gradient(135deg,var(--g1),var(--g2))}
+  .card .ti{font-size:14px;font-weight:600;line-height:1.35;color:var(--ink)}
+  .card .sum{font-size:12px;color:var(--ink2);line-height:1.5;margin-top:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .card .foot{display:flex;align-items:center;padding:6px 16px 12px;color:var(--ink3)}
+  .card .foot svg{width:13px;height:13px}
+  .card .foot .tm{margin-left:auto;font-size:10.5px}
+  .card .cover{width:100%;aspect-ratio:16/7.2;object-fit:cover;border-radius:16px 16px 0 0;display:block}
+  .card.imgcard{background:#0d0d10;overflow:hidden}
+  .card.imgcard .cover{border-radius:16px;aspect-ratio:16/9}
+  .card.imgcard .tmpill{position:absolute;right:10px;bottom:10px;background:rgba(17,17,20,.72);color:#fff;font-size:10px;padding:4px 10px;border-radius:999px}
+  .card.sel{box-shadow:0 0 0 2px #fff,0 0 0 3.5px var(--g2),var(--shadow-lg)}
+  .tagchip{display:inline-block;font-size:10.5px;color:var(--ink2);background:var(--pill);border-radius:999px;padding:3px 9px;margin-right:5px}
 
-  /* ── TIMELINE ───────────────── */
-  .v-timeline{height:100%;overflow-y:auto;padding:18px 26px}
-  .dhead{display:flex;align-items:baseline;gap:10px;font-family:var(--mono);margin:14px 0 10px}
-  .dhead:first-child{margin-top:0}
-  .dhead .d{font-size:12px;font-weight:700;color:var(--acc-ink);letter-spacing:.6px}
-  .dhead .n{font-size:9.5px;color:var(--t4)}
-  .dhead .rule{flex:1;height:1px;background:var(--hair);align-self:center}
-  .tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+  /* ── TIMELINE ─────────────── */
+  .v-timeline{height:100%;overflow-y:auto;padding:14px 26px 30px}
+  .dhead{display:flex;align-items:baseline;gap:10px;margin:18px 4px 12px}
+  .dhead:first-child{margin-top:4px}
+  .dhead .d{font-size:13px;font-weight:700;color:var(--ink)}
+  .dhead .n{font-size:11px;color:var(--ink3)}
+  .tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
   .tgrid .card{cursor:pointer}
 
-  /* ── CANVAS ───────────────── */
-  .v-canvas{position:absolute;inset:0;overflow:hidden;cursor:default}
-  .cnode{position:absolute;width:240px;cursor:grab;user-select:none}
+  /* ── CANVAS ─────────────── */
+  .v-canvas{position:absolute;inset:0;overflow:hidden}
+  .cnode{position:absolute;width:250px;cursor:grab;user-select:none}
   .cnode:active{cursor:grabbing}
   .cnode.dragging{z-index:30}
-  .cnode.dragging .card{border-color:var(--acc-ink);transform:scale(1.012)}
+  .cnode.dragging .card{box-shadow:var(--shadow-lg);transform:scale(1.01)}
   svg.wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
-  .wire{fill:none;stroke:var(--acc);stroke-width:1.5;opacity:.7}
-  .wiredot{fill:var(--acc)}
-  .canvas-hint{position:absolute;left:22px;bottom:14px;font-family:var(--mono);font-size:9.5px;color:var(--t4);letter-spacing:.5px;z-index:5}
-  .cluster{position:absolute;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1.2px;color:var(--acc-ink);
-    border:1px solid var(--acc-ink);padding:3px 8px;background:var(--bg);z-index:4}
+  .wiredot-a{fill:var(--g1)} .wiredot-b{fill:var(--g2)}
+  .cluster{position:absolute;z-index:5;display:flex;align-items:center;gap:8px}
+  .cluster .pillg{background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff;font-size:12px;font-weight:600;
+    padding:7px 16px;border-radius:999px;box-shadow:var(--shadow)}
+  .cluster .ok{width:30px;height:30px;border-radius:50%;background:#fff;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;color:var(--ink)}
+  .cluster .ok svg{width:13px;height:13px}
+  .fab{position:absolute;right:22px;bottom:20px;width:44px;height:44px;border-radius:50%;
+    background:conic-gradient(from 210deg,var(--g1),var(--g2),var(--g1));box-shadow:var(--shadow-lg);z-index:6;cursor:pointer;border:none}
 
-  /* ── CALENDAR(周) ───────────────── */
-  .v-cal{height:100%;display:flex;flex-direction:column;padding:12px 22px 0}
-  .calnav{display:flex;align-items:center;gap:10px;font-family:var(--mono);margin-bottom:8px}
-  .calnav .rng{font-size:12px;font-weight:700;color:var(--t1);letter-spacing:.5px}
-  .calnav .nbtn{font-family:var(--mono);font-size:12px;color:var(--t3);background:transparent;border:1px solid var(--hair);
-    width:24px;height:22px;cursor:pointer}
-  .calnav .nbtn:hover{color:var(--t1);border-color:var(--line)}
-  .calnav .today{font-size:9.5px;color:var(--acc-ink);border:1px solid var(--acc-ink);padding:3px 8px;background:transparent;cursor:pointer;letter-spacing:.6px}
-  .calnav .tz{margin-left:auto;font-size:9.5px;color:var(--t4)}
-  .calwrap{flex:1;overflow-y:auto;border-top:1px solid var(--hair);min-height:0}
-  .calgrid{display:grid;grid-template-columns:46px repeat(7,1fr);position:relative}
-  .caldayh{position:sticky;top:0;z-index:6;background:var(--bg);border-bottom:1px solid var(--hair);border-left:1px solid var(--hair);
-    padding:6px 8px;font-family:var(--mono)}
-  .caldayh .dw{font-size:9px;color:var(--t4);letter-spacing:1px}
-  .caldayh .dn{font-size:15px;font-weight:800;color:var(--t2);font-variant-numeric:tabular-nums}
-  .caldayh.istoday .dn{color:var(--acc-ink)}
-  .calh0{position:sticky;top:0;z-index:6;background:var(--bg);border-bottom:1px solid var(--hair)}
-  .hcell{height:44px;border-bottom:1px solid var(--hair);border-left:1px solid var(--hair);position:relative}
-  .hlabel{height:44px;font-family:var(--mono);font-size:9px;color:var(--t4);text-align:right;padding:2px 6px 0 0;
-    border-bottom:1px solid transparent;transform:translateY(-6px)}
-  .calcard{position:absolute;left:3px;right:3px;z-index:3;padding:4px 6px;font-size:10.5px;line-height:1.3;
-    background:var(--cardbg);border:1px solid var(--line);border-left:2px solid var(--t4);overflow:hidden;cursor:pointer}
-  .calcard:hover{border-color:var(--t4)}
-  .calcard .ct{font-family:var(--mono);font-size:8px;letter-spacing:.8px;color:var(--t4)}
-  .calcard.k-event{border-left-color:var(--acc)}
-  .calcard.k-task{border-left-color:var(--green)}
-  .calcard.k-note{border-left-color:var(--cyan)}
-  .nowline{position:absolute;left:46px;right:0;height:0;border-top:1px solid var(--acc);z-index:5;opacity:.85}
-  .nowline::before{content:"";position:absolute;left:-4px;top:-3.5px;width:7px;height:7px;border-radius:50%;background:var(--acc)}
+  /* ── CALENDAR ─────────────── */
+  .v-cal{height:100%;display:flex;flex-direction:column;padding:4px 24px 0}
+  .calwrap{flex:1;overflow-y:auto;min-height:0}
+  .calgrid{display:grid;grid-template-columns:52px repeat(7,1fr);position:relative}
+  .caldayh{position:sticky;top:0;z-index:6;background:var(--bg);padding:10px 8px 12px;text-align:center}
+  .caldayh .dw{font-size:12px;color:var(--ink3)}
+  .caldayh .dn{font-size:14px;color:var(--ink2);margin-top:2px;font-variant-numeric:tabular-nums}
+  .caldayh.istoday .dn{color:var(--ink);font-weight:700}
+  .caldayh.istoday .dw{color:var(--ink)}
+  .calh0{position:sticky;top:0;z-index:6;background:var(--bg)}
+  .hcell{height:54px;border-left:1px dashed #e6e6ea;position:relative}
+  .hcell.dim{background:rgba(17,17,20,.015)}
+  .hlabel{height:54px;font-size:11px;color:var(--ink3);text-align:right;padding-right:10px;transform:translateY(-7px);font-variant-numeric:tabular-nums}
+  .calcard{position:absolute;left:5px;right:5px;z-index:3;padding:10px 12px;background:#fff;border-radius:14px;
+    box-shadow:var(--shadow);cursor:pointer;overflow:hidden;transition:box-shadow .18s var(--ease)}
+  .calcard:hover{box-shadow:var(--shadow-lg);z-index:4}
+  .calcard .when{font-size:10.5px;color:var(--ink3)}
+  .calcard .t{font-size:13px;font-weight:600;color:var(--ink);line-height:1.3;margin-top:2px}
+  .calcard .badge{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--ink2);background:var(--pill);border-radius:999px;padding:3px 9px;margin-top:6px}
+  .calcard .badge .dot{width:7px;height:7px;border-radius:2px}
+  .calcard .cimg{width:100%;border-radius:8px;margin-top:6px;display:block}
+  .calcard .foot{display:flex;margin-top:6px;color:var(--ink3)}
+  .calcard .foot svg{width:12px;height:12px}
+  .calcard .foot .tm{margin-left:auto;font-size:9.5px}
+  .nowline{position:absolute;left:52px;right:0;height:0;border-top:1.5px solid var(--g1);z-index:5}
+  .nowline::before{content:"";position:absolute;left:-4.5px;top:-4px;width:8px;height:8px;border-radius:50%;background:var(--g1)}
 
-  ::-webkit-scrollbar{width:9px;height:9px}
-  ::-webkit-scrollbar-thumb{background:var(--line)}
+  ::-webkit-scrollbar{width:10px}
+  ::-webkit-scrollbar-thumb{background:#dcdce0;border-radius:99px;border:3px solid var(--bg)}
   ::-webkit-scrollbar-track{background:transparent}
 </style>
 </head>
-<body data-theme="dark">
+<body>
 <div class="app">
-  <div class="tbar">
-    <span class="wm">HELM</span><span class="crumb">~/helm · 记录 JOURNAL</span>
-    <span class="right">
-      <button class="tbtn" id="themeBtn">◐ 主题</button>
-      <button class="tbtn acc" id="accBtn">◈ 今日色</button>
-      <span style="letter-spacing:.5px">SOURCE OF TRUTH · v1</span>
-    </span>
-  </div>
+  <!-- 侧栏 -->
+  <aside class="side">
+    <div class="brand">
+      <span class="mark">H</span><span class="nm">Helm · 记录</span>
+      <span class="collapse">⇥</span>
+    </div>
+    <div class="toptabs">
+      <span class="toptab on">Notes</span><span class="toptab">Pinned</span><span class="toptab">Archive</span>
+    </div>
+    <div class="cats">
+      <div class="cat on" data-f="all">全部<span class="k" id="kAll">0</span></div>
+      <div class="cat" data-f="youtube">视频<span class="k" id="kYt">0</span></div>
+      <div class="cat" data-f="paper">论文<span class="k" id="kPp">0</span></div>
+      <div class="cat" data-f="inspo">灵感<span class="k" id="kIn">0</span></div>
+      <div class="cat" data-f="text">速记<span class="k" id="kTx">0</span></div>
+      <div class="cat" data-f="task">任务<span class="k" id="kTk">0</span></div>
+      <div class="cat" data-f="event">日程<span class="k" id="kEv">0</span></div>
+    </div>
+    <div class="sidefoot">
+      <button class="roundbtn" title="新建">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 4h8a2 2 0 012 2v12a2 2 0 01-2 2H8a2 2 0 01-2-2V6a2 2 0 012-2z"/><path d="M12 9v6M9 12h6"/></svg>
+      </button>
+      <button class="roundbtn" title="导入">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 4h8a2 2 0 012 2v12a2 2 0 01-2 2H8a2 2 0 01-2-2V6a2 2 0 012-2z"/><path d="M9 12h6"/></svg>
+      </button>
+    </div>
+  </aside>
 
+  <!-- 主区 -->
   <div class="main">
-    <aside class="side">
-      <div class="slab">收藏 / COLLECT</div>
-      <div class="frow on" data-f="all">全部<span class="k" id="kAll">0</span></div>
-      <div class="frow" data-f="youtube">视频<span class="k" id="kYt">0</span></div>
-      <div class="frow" data-f="paper">论文<span class="k" id="kPp">0</span></div>
-      <div class="frow" data-f="inspo">灵感<span class="k" id="kIn">0</span></div>
-      <div class="frow" data-f="text">速记<span class="k" id="kTx">0</span></div>
-      <div class="slab" style="margin-top:14px">安排 / PLAN</div>
-      <div class="frow" data-f="task">任务<span class="k" id="kTk">0</span></div>
-      <div class="frow" data-f="event">日程<span class="k" id="kEv">0</span></div>
-      <div class="foot">
-        <div><b>AI 管线</b> 链接→parse→卡</div>
-        <div><b>PROVIDER</b> 设置里选</div>
-        <div><b>⌘N</b> 随手记</div>
-      </div>
-    </aside>
-
-    <div class="content">
-      <div class="head">
-        <h1>JOURNAL</h1><span class="zh">记录</span>
-        <span class="counts" id="counts">— NOTES · — TASKS · — EVENTS</span>
-      </div>
+    <div class="topbar">
       <div class="views">
         <button class="vtab" data-v="timeline">Timeline</button>
         <button class="vtab on" data-v="canvas">Canvas</button>
         <button class="vtab" data-v="calendar">Calendar</button>
       </div>
-      <div class="stage" id="stage"></div>
+      <div class="range" id="calRange">
+        <span id="wRng">07-06 — 07-12 · 七月</span>
+        <button class="navbtn" id="wPrev">‹</button>
+        <button class="navbtn" id="wNext">›</button>
+      </div>
+      <div class="right" id="calTz" style="display:none">(GMT+8) 本地时间 <span style="font-size:10px">⌄</span></div>
     </div>
-  </div>
-
-  <div class="sbar">
-    <span class="seg"><span class="live">●</span> ~/helm</span>
-    <span class="seg" id="sview">CANVAS</span>
-    <span class="seg" id="ssel">未选中</span>
-    <span class="grow"></span>
-    <span class="seg">AI · enrich idle</span>
-    <span class="seg">⌘K 命令面板</span>
+    <div class="stage" id="stage"></div>
   </div>
 </div>
 
 <script>
-/* ───────── mock 数据(用户真实场景) ───────── */
-const YT_IMG='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="86"><rect width="240" height="86" fill="#22222a"/><polygon points="108,28 108,58 136,43" fill="#FFC53D"/></svg>');
-const INSPO_IMG='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="86"><rect width="240" height="86" fill="#1a2430"/><rect x="18" y="18" width="60" height="50" fill="#34D6C0" opacity=".8"/><rect x="94" y="30" width="52" height="38" fill="#FFC53D" opacity=".85"/><rect x="160" y="14" width="62" height="54" fill="#7C9CFF" opacity=".8"/></svg>');
+/* ── mock 数据(封面用内联 SVG,禁 emoji) ── */
+const YT_IMG='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="225"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1c1c22"/><stop offset="1" stop-color="#3a2f18"/></linearGradient></defs><rect width="500" height="225" fill="url(#g)"/><circle cx="250" cy="112" r="34" fill="rgba(255,255,255,.14)"/><polygon points="238,94 238,130 272,112" fill="#fff"/></svg>');
+const INSPO_IMG='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="225"><rect width="500" height="225" fill="#eef0f4"/><rect x="36" y="40" width="130" height="145" rx="14" fill="#34d6c0"/><rect x="190" y="70" width="120" height="115" rx="14" fill="#ffb03d"/><rect x="334" y="30" width="130" height="155" rx="14" fill="#7c9cff"/></svg>');
+const PHONE_IMG='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="281"><rect width="500" height="281" fill="#0d0d10"/><rect x="190" y="26" width="120" height="230" rx="22" fill="#1d1d22" stroke="#3a3a42" stroke-width="2"/><rect x="202" y="46" width="96" height="150" rx="8" fill="#fbfbfd"/><circle cx="250" cy="121" r="26" fill="#ffd23d"/><rect x="216" y="206" width="68" height="8" rx="4" fill="#4a4a52"/></svg>');
 
+const ICON={youtube:['YT','ic-yt'],paper:['AX','ic-ax'],inspo:['AW','ic-aw'],text:['N','ic-tx'],task:['T','ic-tk'],event:['E','ic-ev']};
 const ITEMS=[
- {id:1,type:'youtube',title:'PSY - GANGNAM STYLE M/V',site:'officialpsy',sum:'史上最具标志性的病毒式传播 MV,魔性舞蹈+现象级全球流行文化影响力。',tags:['音乐','流行文化'],img:YT_IMG,day:0,hh:2,t:'02:08',cx:600,cy:60},
- {id:2,type:'paper',title:'Attention Is All You Need',site:'arXiv',sum:'提出 Transformer:完全基于注意力机制,弃用循环与卷积,成为现代大模型的地基。',tags:['transformer','必读'],day:0,hh:1,t:'01:58',cx:330,cy:210},
- {id:3,type:'inspo',title:'Awwwards — 年度作品集合集',site:'awwwards.com',sum:'交互/视觉标杆站点合集,收藏做 Helm 视觉参考。',tags:['UI','灵感'],img:INSPO_IMG,day:0,hh:1,t:'01:51',cx:855,cy:300},
- {id:4,type:'text',title:'速记',body:'驾驶舱 e2e 的三个坑:中间件吞后台任务/事务时序/僵尸进程——写进 backlog 复盘。',t:'02:31',day:0,hh:2,cx:150,cy:420},
- {id:5,type:'text',title:'速记',body:'给 notch 加「速记→AI 整理」的入场动效,像仪表暖机。',t:'23:44',day:-1,hh:23,cx:560,cy:470},
- {id:6,type:'task',title:'汇总未读邮件',sub:'交给 agent · cron 0 9 * * *',day:1,hh:9,cx:830,cy:520},
- {id:7,type:'event',title:'站会',sub:'10:00 · 30min',day:1,hh:10},
- {id:8,type:'event',title:'1:1 · design review',sub:'15:00 · 45min',day:3,hh:15},
- {id:9,type:'task',title:'跑 swift test 夜巡',sub:'交给 agent · every 6h',day:2,hh:18},
- {id:10,type:'youtube',title:'SwiftUI Layout 深讲',site:'Sean Allen',sum:'布局系统:proposal/response 模型,frame 与 fixedSize 的真实语义。',tags:['SwiftUI'],img:YT_IMG,day:-1,hh:21,t:'21:12',cx:360,cy:560}
+ {id:1,type:'youtube',title:'PSY - GANGNAM STYLE M/V',sum:'史上最具标志性的病毒式传播 MV,魔性舞蹈+现象级全球流行文化影响力。',cover:YT_IMG,t:'10:08',day:0,hh:10,cx:480,cy:80},
+ {id:2,type:'paper',title:'Attention Is All You Need',sum:'提出 Transformer:完全基于注意力,弃用循环与卷积——现代大模型的地基。',t:'11:58',day:0,hh:12,cx:300,cy:300},
+ {id:3,type:'inspo',title:'Awwwards 年度作品集',sum:'交互/视觉标杆合集,做 Helm 的视觉参考库。',cover:INSPO_IMG,t:'16:51',day:0,hh:16,cx:765,cy:90},
+ {id:4,type:'text',title:'速记',body:'驾驶舱 e2e 三个坑:中间件吞后台任务 / 事务时序 / 僵尸进程——写进 backlog 复盘。',t:'14:31',day:0,hh:14,cx:170,cy:96},
+ {id:5,type:'text',title:'速记',body:'给 notch 加「速记 → AI 整理」入场动效,像仪表暖机。',t:'23:44',day:-1,hh:21,cx:560,cy:430},
+ {id:6,type:'task',title:'汇总未读邮件',sub:'交给 agent · 每天 09:00',day:1,hh:9,cx:768,cy:430},
+ {id:7,type:'event',title:'站会',sub:'10:00 · 30 分钟',day:1,hh:10},
+ {id:8,type:'event',title:'1:1 · design review',sub:'15:00 · 45 分钟',day:3,hh:15},
+ {id:9,type:'task',title:'跑 swift test 夜巡',sub:'交给 agent · 每 6 小时',day:2,hh:18},
+ {id:10,type:'youtube',title:'SwiftUI Layout 深讲',sum:'proposal/response 模型,frame 与 fixedSize 的真实语义。',cover:PHONE_IMG,imgOnly:true,t:'19:12',day:-1,hh:19,cx:236,cy:452}
 ];
-const WIRES=[[2,3],[2,10],[1,3]]; // 论文→灵感/视频 的思路连线(id 对)
+const WIRES=[[2,4,'a'],[2,10,'b'],[1,3,'b']];
 
-/* ───────── 状态 ───────── */
-let view='canvas', filter='all', selId=null;
-const PAL=['#FB9E66','#FF6F61','#FFC53D','#B6E84F','#34D6C0','#4FD6E8','#5EA0FF','#7C9CFF','#B98CFF','#FF6FA5'];
-let accIdx=2;
+let view='canvas', filter='all', selId=null, weekOff=0;
 const $=s=>document.querySelector(s), stage=$('#stage');
+const GLOBE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.6 3.9 5.6 3.9 9S14.6 18.4 12 21M12 3c-2.6 2.6-3.9 5.6-3.9 9s1.3 6.4 3.9 9"/></svg>';
+const CLIP='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="5" width="12" height="15" rx="2"/><path d="M9 5V4a2 2 0 012-2h2a2 2 0 012 2v1"/></svg>';
 
-/* ───────── 通用卡 ───────── */
-const TAGNAME={youtube:'YOUTUBE',paper:'PAPER',inspo:'INSPO',text:'速记',task:'任务',event:'日程'};
-function cardHTML(it,compact=false){
-  const tag=`<div class="ctag t-${it.type}">${TAGNAME[it.type]}${it.t?`<span class="tm">${it.t}</span>`:''}</div>`;
-  const img=it.img&&!compact?`<img class="cimg" src="${it.img}" alt="">`:'';
-  const body=it.type==='text'
-    ?`<div class="cbody">${it.body}</div>`
-    :`<div class="cbody"><b>${it.title}</b>${it.sum?`<div class="csum">${it.sum}</div>`:''}${it.sub?`<div class="csum">${it.sub}</div>`:''}</div>`;
-  const foot=(it.site||it.tags)?`<div class="cfoot">${it.site?`<span>${it.site}</span>`:''}${(it.tags||[]).map(t=>`<span class="tag">#${t}</span>`).join('')}</div>`:'';
-  return `<div class="card${selId===it.id?' sel':''}" data-id="${it.id}">${img}${tag}${body}${foot}</div>`;
+function cardHTML(it){
+  const [lt,cls]=ICON[it.type];
+  if(it.imgOnly)return `<div class="card imgcard" data-id="${it.id}"><img class="cover" src="${it.cover}" alt=""><span class="tmpill">${it.t}</span></div>`;
+  const cover=it.cover?`<img class="cover" src="${it.cover}" alt="">`:'';
+  const body=it.type==='text'?`<div class="ti" style="font-weight:500">${it.body}</div>`
+    :`<div class="ti">${it.title}</div>${it.sum?`<div class="sum">${it.sum}</div>`:''}${it.sub?`<div class="sum">${it.sub}</div>`:''}`;
+  return `<div class="card" data-id="${it.id}">${cover}<div class="pad"><span class="appic ${cls}">${lt}</span>${body}</div>
+    <div class="foot">${it.type==='text'?CLIP:GLOBE}<span class="tm">${it.t??''}</span></div></div>`;
 }
 const fitems=()=>ITEMS.filter(i=>filter==='all'||i.type===filter);
 
-/* ───────── TIMELINE ───────── */
+/* TIMELINE */
 function renderTimeline(){
-  const groups={};
-  fitems().forEach(i=>{(groups[i.day]??=[]).push(i)});
-  const label=d=>d===0?'今天 · 07-06':d===-1?'昨天 · 07-05':d>0?`07-0${6+d}(计划)`:`07-0${6+d}`;
-  stage.innerHTML=`<div class="v-timeline">${Object.keys(groups).sort((a,b)=>b-a).map(d=>`
-    <div class="dhead"><span class="d">${label(+d)}</span><span class="n">${groups[d].length} 项</span><span class="rule"></span></div>
-    <div class="tgrid">${groups[d].map(i=>cardHTML(i)).join('')}</div>`).join('')}</div>`;
+  const g={}; fitems().forEach(i=>{(g[i.day]??=[]).push(i)});
+  const lb=d=>d==0?'今天 · 7月6日':d==-1?'昨天 · 7月5日':`7月${6+ +d}日 · 计划`;
+  stage.innerHTML=`<div class="v-timeline">${Object.keys(g).sort((a,b)=>b-a).map(d=>`
+    <div class="dhead"><span class="d">${lb(d)}</span><span class="n">${g[d].length} 项</span></div>
+    <div class="tgrid">${g[d].map(cardHTML).join('')}</div>`).join('')}</div>`;
 }
 
-/* ───────── CANVAS ───────── */
+/* CANVAS */
 function renderCanvas(){
   stage.innerHTML=`<div class="v-canvas" id="cv">
-    <svg class="wires" id="wires"></svg>
-    <span class="cluster" style="left:330px;top:168px">◈ TRANSFORMER 思路串</span>
+    <svg class="wires" id="wires">
+      <defs><linearGradient id="wg" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="var(--g1)"/><stop offset="1" stop-color="var(--g2)"/>
+      </linearGradient></defs><g id="wg-paths"></g></svg>
+    <div class="cluster" style="left:300px;top:252px">
+      <span class="pillg">Transformer 思路串</span>
+      <span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 13l4 4 10-10"/></svg></span>
+    </div>
     ${fitems().filter(i=>i.cx!=null).map(i=>`<div class="cnode" data-id="${i.id}" style="left:${i.cx}px;top:${i.cy}px">${cardHTML(i)}</div>`).join('')}
-    <span class="canvas-hint">拖动卡片自由摆放 · 连线 = 思路关联(accent) · 点击选中(L 角)</span>
-  </div>`;
+    <button class="fab" title="AI"></button>`;
   drawWires();
-  // 拖拽
   document.querySelectorAll('.cnode').forEach(node=>{
     node.addEventListener('pointerdown',e=>{
       const id=+node.dataset.id; select(id);
       const it=ITEMS.find(x=>x.id===id);
       const sx=e.clientX-it.cx, sy=e.clientY-it.cy;
       node.classList.add('dragging'); node.setPointerCapture(e.pointerId);
-      const move=ev=>{it.cx=Math.max(0,ev.clientX-sx);it.cy=Math.max(0,ev.clientY-sy);
+      const mv=ev=>{it.cx=Math.max(0,ev.clientX-sx);it.cy=Math.max(0,ev.clientY-sy);
         node.style.left=it.cx+'px';node.style.top=it.cy+'px';drawWires();};
-      const up=()=>{node.classList.remove('dragging');node.removeEventListener('pointermove',move);node.removeEventListener('pointerup',up);};
-      node.addEventListener('pointermove',move);node.addEventListener('pointerup',up);
+      const up=()=>{node.classList.remove('dragging');node.removeEventListener('pointermove',mv);node.removeEventListener('pointerup',up);};
+      node.addEventListener('pointermove',mv);node.addEventListener('pointerup',up);
     });
   });
 }
 function drawWires(){
-  const svg=$('#wires'); if(!svg)return;
-  const P=id=>{const it=ITEMS.find(x=>x.id===id);return it&&it.cx!=null?[it.cx+120,it.cy+52]:null};
-  svg.innerHTML=WIRES.map(([a,b])=>{
+  const g=document.getElementById('wg-paths'); if(!g)return;
+  const P=id=>{const it=ITEMS.find(x=>x.id===id);return it&&it.cx!=null?[it.cx+125,it.cy+70]:null};
+  g.innerHTML=WIRES.map(([a,b])=>{
     const p=P(a),q=P(b); if(!p||!q)return'';
     const mx=(p[0]+q[0])/2;
-    return `<path class="wire" d="M${p[0]},${p[1]} C${mx},${p[1]} ${mx},${q[1]} ${q[0]},${q[1]}"/>
-      <circle class="wiredot" cx="${p[0]}" cy="${p[1]}" r="3"/><circle class="wiredot" cx="${q[0]}" cy="${q[1]}" r="3"/>`;
+    return `<path d="M${p[0]},${p[1]} C${mx},${p[1]} ${mx},${q[1]} ${q[0]},${q[1]}" fill="none" stroke="url(#wg)" stroke-width="2.5" opacity=".9"/>
+      <circle class="wiredot-a" cx="${p[0]}" cy="${p[1]}" r="5"/><circle class="wiredot-b" cx="${q[0]}" cy="${q[1]}" r="5"/>`;
   }).join('');
 }
 
-/* ───────── CALENDAR ───────── */
-let weekOff=0;
+/* CALENDAR */
 function renderCalendar(){
-  const H0=8,H1=22,rows=H1-H0;
-  const days=['一','二','三','四','五','六','日'];
+  const H0=8,H1=22;
+  const days=['Mon','Tues','Wed','Thu','Fri','Sat','Sun'];
   const dates=[6,7,8,9,10,11,12].map(d=>d+weekOff*7);
-  const cells=[];
+  let cells='';
   for(let h=H0;h<H1;h++){
-    cells.push(`<div class="hlabel">${String(h).padStart(2,'0')}:00</div>`);
-    for(let d=0;d<7;d++){
-      const todays=fitems().filter(i=>i.hh===h&&(i.day??null)!==null&&i.day===d-0+weekOff*7-0&&['task','event','note','text'].includes(i.type)===false?false:(i.hh===h&&i.day===(d)+weekOff*7-0));
-      cells.push(`<div class="hcell" data-d="${d}" data-h="${h}"></div>`);
-    }
+    cells+=`<div class="hlabel">${String(h).padStart(2,'0')}:00</div>`;
+    for(let d=0;d<7;d++)cells+=`<div class="hcell${h>=19&&h<20?' dim':''}" data-d="${d}" data-h="${h}"></div>`;
   }
-  stage.innerHTML=`<div class="v-cal">
-    <div class="calnav">
-      <button class="nbtn" id="wPrev">‹</button>
-      <span class="rng" id="wRng">07-06 — 07-12 · W28${weekOff?`(${weekOff>0?'+':''}${weekOff}周)`:''}</span>
-      <button class="nbtn" id="wNext">›</button>
-      <button class="today" id="wToday">今天</button>
-      <span class="tz">GMT+8 · 本地</span>
-    </div>
-    <div class="calwrap"><div class="calgrid" id="cg">
-      <div class="calh0"></div>
-      ${days.map((w,i)=>`<div class="caldayh${i===0&&weekOff===0?' istoday':''}"><div class="dw">周${w}</div><div class="dn">${String(dates[i]).padStart(2,'0')}</div></div>`).join('')}
-      ${cells.join('')}
-    </div></div>
-  </div>`;
-  // 落卡:day 0=周一(今天) … 相对本周
+  stage.innerHTML=`<div class="v-cal"><div class="calwrap"><div class="calgrid" id="cg">
+    <div class="calh0"></div>
+    ${days.map((w,i)=>`<div class="caldayh${i===0&&weekOff===0?' istoday':''}"><div class="dw">${w}</div><div class="dn">${String(dates[i]).padStart(2,'0')}</div></div>`).join('')}
+    ${cells}
+  </div></div></div>`;
   const cg=$('#cg');
   fitems().forEach(i=>{
     if(i.day==null||i.hh==null)return;
     const d=i.day-weekOff*7; if(d<0||d>6)return;
-    const h=i.hh; if(h<H0||h>=H1)return;
-    const cell=cg.querySelector(`.hcell[data-d="${d}"][data-h="${h}"]`); if(!cell)return;
-    const k=i.type==='event'?'k-event':i.type==='task'?'k-task':'k-note';
+    if(i.hh<H0||i.hh>=H1)return;
+    const cell=cg.querySelector(`.hcell[data-d="${d}"][data-h="${i.hh}"]`); if(!cell)return;
     const el=document.createElement('div');
-    el.className=`calcard ${k}`; el.style.top='2px'; el.dataset.id=i.id;
-    el.innerHTML=`<div class="ct">${TAGNAME[i.type]}${i.t?' · '+i.t:''}</div>${i.title==='速记'?(i.body||'').slice(0,26)+'…':i.title}`;
+    el.className='calcard'; el.style.top='3px'; el.dataset.id=i.id;
+    const kind=i.type==='event'?['#a855f7','日程']:i.type==='task'?['#28a745','任务']:['#0a84ff','速记'];
+    const body=i.type==='text'?(i.body||'').slice(0,20)+'…':i.title;
+    const img=i.cover&&i.type==='youtube'?`<img class="cimg" src="${i.cover}">`:'';
+    el.innerHTML=`<div class="when">${i.t?i.t:(String(i.hh).padStart(2,'0')+':00')}</div><div class="t">${body}</div>
+      ${i.sub?`<span class="badge"><span class="dot" style="background:${kind[0]}"></span>${kind[1]}</span>`:''}${img}
+      <div class="foot">${CLIP}<span class="tm">${i.t??''}</span></div>`;
     cell.appendChild(el);
   });
-  // 当前时刻线(demo 定在 14:20)
   if(weekOff===0){
-    const headH=cg.querySelector('.caldayh')?.offsetHeight ?? 41;
-    const y=(14-H0)*44+Math.round(44*20/60)+headH; // demo 当前时刻 14:20
+    const headH=cg.querySelector('.caldayh')?.offsetHeight??54;
     const line=document.createElement('div');
-    line.className='nowline'; line.style.top=y+'px';
+    line.className='nowline';
+    line.style.top=((14-H0)*54+Math.round(54*20/60)+headH)+'px';
     cg.appendChild(line);
   }
-  $('#wPrev').onclick=()=>{weekOff--;renderCalendar()};
-  $('#wNext').onclick=()=>{weekOff++;renderCalendar()};
-  $('#wToday').onclick=()=>{weekOff=0;renderCalendar()};
 }
 
-/* ───────── 切换/选中/计数 ───────── */
+/* 切换/选中/过滤 */
 function render(){
   ({timeline:renderTimeline,canvas:renderCanvas,calendar:renderCalendar})[view]();
-  $('#sview').textContent=view.toUpperCase();
+  $('#calRange').classList.toggle('show',view==='calendar');
+  $('#calTz').style.display=view==='calendar'?'flex':'none';
 }
 function select(id){
   selId=id;
-  document.querySelectorAll('.card').forEach(c=>c.classList.toggle('sel',+c.dataset.id===id));
-  const it=ITEMS.find(x=>x.id===id);
-  $('#ssel').textContent=it?`#${id} ${TAGNAME[it.type]} · ${it.title}`.slice(0,40):'未选中';
+  document.querySelectorAll('.card').forEach(c=>c.classList.toggle('sel',+c.closest('[data-id]')?.dataset.id===id||+c.dataset.id===id));
 }
 document.addEventListener('click',e=>{
   const c=e.target.closest('.card,.calcard'); if(c&&c.dataset.id)select(+c.dataset.id);
@@ -366,23 +339,24 @@ document.querySelectorAll('.vtab').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.vtab').forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); view=b.dataset.v; render();
 });
-document.querySelectorAll('.frow').forEach(r=>r.onclick=()=>{
-  document.querySelectorAll('.frow').forEach(x=>x.classList.remove('on'));
+document.querySelectorAll('.cat').forEach(r=>r.onclick=()=>{
+  document.querySelectorAll('.cat').forEach(x=>x.classList.remove('on'));
   r.classList.add('on'); filter=r.dataset.f; render();
 });
+$('#wPrev')?.addEventListener('click',()=>{}); // 绑定在 render 后覆盖
+document.addEventListener('click',e=>{
+  if(e.target.id==='wPrev'){weekOff--;updRng();render()}
+  if(e.target.id==='wNext'){weekOff++;updRng();render()}
+});
+function updRng(){
+  const a=6+weekOff*7,b=12+weekOff*7;
+  $('#wRng').textContent=`07-${String(a).padStart(2,'0')} — 07-${String(b).padStart(2,'0')} · 七月`;
+}
 function counts(){
   const n=t=>ITEMS.filter(i=>i.type===t).length;
-  kAll.textContent=ITEMS.length; kYt.textContent=n('youtube'); kPp.textContent=n('paper');
-  kIn.textContent=n('inspo'); kTx.textContent=n('text'); kTk.textContent=n('task'); kEv.textContent=n('event');
-  $('#counts').textContent=`${String(n('youtube')+n('paper')+n('inspo')+n('text')).padStart(3,'0')} NOTES · ${String(n('task')).padStart(3,'0')} TASKS · ${String(n('event')).padStart(3,'0')} EVENTS`;
+  kAll.textContent=ITEMS.length;kYt.textContent=n('youtube');kPp.textContent=n('paper');
+  kIn.textContent=n('inspo');kTx.textContent=n('text');kTk.textContent=n('task');kEv.textContent=n('event');
 }
-/* 主题/每日色 */
-$('#themeBtn').onclick=()=>{document.body.dataset.theme=document.body.dataset.theme==='dark'?'light':'dark'};
-$('#accBtn').onclick=()=>{accIdx=(accIdx+1)%PAL.length;
-  const c=PAL[accIdx];document.documentElement.style.setProperty('--acc',c);
-  const dark=document.body.dataset.theme==='dark';
-  document.documentElement.style.setProperty('--acc-ink',dark?c:'#8a6410');};
-
 counts(); render();
 </script>
 </body>

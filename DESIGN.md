@@ -22,7 +22,7 @@
 - **禁 emoji**：图标一律单色 SVG 或等宽字形。
 - **设计稿**：
   - `docs/design/helm-pro.html` — **⭐ SOURCE OF TRUTH（外壳+Today 定稿）**：A + ORAGE，黑/白主题实时切 + 每日色 + chrome 强弱 + 内嵌设计 token 参考。进 Svelte 以此 + 本 DESIGN.md 为准，**不改本文件、改代码**（同 notch loop）。
-  - `docs/design/helm-journal-pro.html` — **⭐ SOURCE OF TRUTH（记录模块定稿，2026-07-06 用户拍板 redesign）**：Timeline / Canvas / Calendar 三视图（参考 NOMI 翻成 ORAGE 语言）。全交互：视图切换、Canvas 卡片拖拽+accent 连线+cluster 标签、周历(时刻线/周导航/任务·日程·速记落格)、左列类型过滤(视频/论文/灵感/速记/任务/日程)、收藏卡(type 徽章+封面+摘要+标签)、双主题+每日色。同规矩：只读、改代码。
+  - `docs/design/helm-journal-pro.html` — **⭐ SOURCE OF TRUTH（记录模块定稿，2026-07-06 用户拍板：完全参考 `nomi-reference/` 两图）**：Timeline / Canvas / Calendar 三视图，**NOMI 风专属皮肤**（经用户批准偏离 ORAGE 座舱系统，仅限记录模块）：纯白/近白底 `#f6f6f7`、大圆角白卡(16px)+多层柔和阴影、无边框线靠留白分层、黑胶囊视图切换、橙→紫渐变(`#ff8a3d→#a855f7`)连线与 cluster 胶囊、极淡竖虚线周历+白圆角事件卡浮格+橙时刻线、白侧栏胶囊分类。禁 emoji 仍守(app 图标=色块字母/内联 SVG)。全交互：三视图、Canvas 拖拽+连线重绘、周导航、类型过滤。同规矩：只读、改代码。
   - `docs/design/helm-cockpit-orage-themes.html` — 双主题上下对照版（helm-pro 的前身，存档）。
   - `docs/design/helm-shell-all-variants.html` — A–G 七变体合并对比页（判断用，存档）。
   - `docs/design/helm-shell-today-variants.html` — 探索期 A/B/C 三变体，存档。
