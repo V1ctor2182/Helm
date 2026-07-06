@@ -43,13 +43,15 @@
   .menubar .r{margin-left:auto;display:flex;gap:14px;color:rgba(255,255,255,.6);font-size:11.5px}
   /* shell=单体生长(参考 notch-pro):折叠=黑条本身;展开=同一元素变宽+向下长,
      黑条变成常驻摄像头凹槽,内容从凹槽下方开始(避开摄像头) */
-  .shell{position:absolute;top:0;left:50%;transform:translateX(-50%);width:236px;z-index:70;
+  .shell{position:absolute;top:0;left:50%;transform:translateX(-50%);width:310px;z-index:70;
     background:#fff;border-radius:0 0 14px 14px;overflow:hidden;cursor:pointer;color:var(--ink);
     transition:width .46s var(--ease),border-radius .4s var(--ease),box-shadow .4s var(--ease)}
   .shell.open{width:440px;border-radius:0 0 26px 26px;box-shadow:var(--shadow-xl);cursor:default}
   .toprow{display:flex;align-items:stretch;height:34px}
   .tl,.tr{flex:1;display:flex;align-items:center;gap:8px;padding:0 14px;opacity:0;
     pointer-events:none;transition:opacity .25s .16s linear;white-space:nowrap}
+  /* 折叠时左右翼零占位,免得把 310px 条挤溢出 */
+  .shell:not(.open) .tl,.shell:not(.open) .tr{flex:0 0 0;padding:0;overflow:hidden}
   .tr{justify-content:flex-end}
   .shell.open .tl,.shell.open .tr{opacity:1;pointer-events:auto}
   .tl .lg{display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12.5px;font-weight:700;color:var(--ink)}
@@ -60,14 +62,14 @@
   .tr .gear{width:26px;height:26px;border-radius:50%;background:transparent;border:none;color:var(--ink3);cursor:pointer;display:flex;align-items:center;justify-content:center}
   .tr .gear:hover{color:var(--ink);background:var(--pill)}
   .tr .gear svg{width:14px;height:14px}
-  .hw{width:236px;height:34px;flex:none;background:#000;border-radius:0 0 14px 14px;
-    display:flex;align-items:center;padding:0 12px;gap:9px;position:relative}
+  .hw{width:310px;height:34px;flex:none;background:#000;border-radius:0 0 14px 14px;
+    display:flex;align-items:center;padding:0 14px;gap:9px;position:relative}
+  /* 折叠布局(参考 pro):左组(logo/封面/波形) — 中央空档(摄像头) — 右组(live) */
+  .hw .fold .sp{min-width:84px}
   .hw .fold{display:flex;align-items:center;gap:9px;flex:1;transition:opacity .2s linear}
   .shell.open .hw .fold{opacity:0}
   .hw .cam{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:8px;height:8px;
-    border-radius:50%;background:#1a1a1e;box-shadow:inset 0 0 2px #000,0 0 0 2.5px #0a0a0c;
-    opacity:0;transition:opacity .2s .1s}
-  .shell.open .hw .cam{opacity:1}
+    border-radius:50%;background:#17171b;box-shadow:inset 0 0 2px #000,0 0 0 2.5px #0a0a0c}
   .hw svg.logo{color:#fff;opacity:.92;flex:none}
   .hw .minicover{width:18px;height:18px;border-radius:5px;flex:none;
     background:linear-gradient(135deg,#3a2f18,#1c1c22);display:flex;align-items:center;justify-content:center}
