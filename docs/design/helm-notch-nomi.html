@@ -62,22 +62,24 @@
   .notch.dragover{outline:2px dashed var(--g1);outline-offset:-5px}
 
   /* ── 主面板 ─────────────── */
-  /* 展开=刘海生长(参考 notch-pro):宽 236→480、高 0→内容高,同一节奏 .46s */
-  .panel{position:absolute;left:50%;transform:translateX(-50%);top:33px;width:236px;height:0;
-    background:#fff;border-radius:0 0 20px 20px;box-shadow:var(--shadow-xl);z-index:40;overflow:hidden;
+  /* 展开=刘海生长(参考 notch-pro):宽 236→440 + grid-rows 0fr→1fr(纯 CSS 贴内容高) */
+  .panel{position:absolute;left:50%;transform:translateX(-50%);top:33px;width:236px;
+    display:grid;grid-template-rows:0fr;
+    background:#fff;border-radius:0 0 20px 20px;box-shadow:var(--shadow-xl);z-index:40;
     pointer-events:none;opacity:0;
-    transition:width .46s var(--ease),height .46s var(--ease),border-radius .4s var(--ease),opacity .2s linear}
-  .panel.open{width:480px;border-radius:0 0 28px 28px;pointer-events:auto;opacity:1}
-  .phead{display:flex;align-items:center;gap:9px;padding:15px 20px 8px}
+    transition:width .46s var(--ease),grid-template-rows .46s var(--ease),border-radius .4s var(--ease),opacity .2s linear}
+  .panel.open{width:440px;grid-template-rows:1fr;border-radius:0 0 26px 26px;pointer-events:auto;opacity:1}
+  #pwrap{overflow:hidden;min-height:0}
+  .phead{display:flex;align-items:center;gap:9px;padding:13px 18px 7px}
   .phead svg{color:var(--logo)}
   .phead .nm{font-size:13.5px;font-weight:700}
   .phead .st{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink3)}
   .okdot{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block}
-  .mtabs{display:flex;gap:3px;background:var(--pill);border-radius:999px;padding:4px;margin:2px 20px 12px}
+  .mtabs{display:flex;gap:3px;background:var(--pill);border-radius:999px;padding:3px;margin:2px 18px 10px}
   .mtab{flex:1;font-size:11px;color:var(--ink2);background:transparent;border:none;border-radius:999px;
     padding:7px 0;cursor:pointer;font-weight:500;transition:all .18s var(--ease);white-space:nowrap}
   .mtab.on{background:var(--ink);color:#fff;font-weight:600}
-  .pbody{padding:0 20px 18px;min-height:180px}
+  .pbody{padding:0 18px 16px}
   .open-helm{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;color:var(--ink2);
     background:var(--pill);border:none;border-radius:999px;padding:5px 11px;cursor:pointer}
   .open-helm:hover{background:#e8e8ec;color:var(--ink)}
@@ -95,7 +97,7 @@
 
   /* 1 总览 bento */
   .bento{display:grid;grid-template-columns:1.35fr 1fr;grid-template-rows:auto auto;gap:10px}
-  .b-media{grid-row:1/3;display:flex;flex-direction:column;justify-content:flex-end;min-height:150px;cursor:pointer;
+  .b-media{grid-row:1/3;display:flex;flex-direction:column;justify-content:flex-end;min-height:128px;cursor:pointer;
     border-radius:16px;overflow:hidden;position:relative;background:linear-gradient(135deg,#26202c,#191a20)}
   .b-media .art{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
   .b-media .art svg{width:34px;height:34px;color:rgba(255,255,255,.35)}
@@ -515,13 +517,7 @@ function renderTabs(){
     x.onclick=()=>switchTab(x.dataset.t);
   });
 }
-function relayout(){
-  const p=$('#panel');
-  if(open){
-    p.style.width='480px'; // 先钉终宽再测高,否则窄布局折行测出虚高
-    p.style.height=document.getElementById('pwrap').offsetHeight+'px';
-  }else{p.style.height='0px';p.style.width='';}
-}
+function relayout(){/* 高度由 CSS grid-rows 0fr→1fr 贴内容,无需 JS 测量 */}
 function openPanel(t){open=true;$('#panel').classList.add('open');if(t)switchTab(t);relayout()}
 function closePanel(){open=false;$('#panel').classList.remove('open');relayout()}
 $('#notch').onclick=()=>{open?closePanel():openPanel()};
