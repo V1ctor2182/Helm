@@ -21,7 +21,8 @@
 - **Mood**：坐进一台已经预热、待命的高端机器。冷静、精密、可信；克制读作自信，不是空。
 - **禁 emoji**：图标一律单色 SVG 或等宽字形。
 - **设计稿**：
-  - `docs/design/helm-pro.html` — **⭐ SOURCE OF TRUTH（唯一定稿）**：A + ORAGE，黑/白主题实时切 + 每日色 + chrome 强弱 + 内嵌设计 token 参考。进 Svelte 以此 + 本 DESIGN.md 为准，**不改本文件、改代码**（同 notch loop）。
+  - `docs/design/helm-pro.html` — **⭐ SOURCE OF TRUTH（外壳+Today 定稿）**：A + ORAGE，黑/白主题实时切 + 每日色 + chrome 强弱 + 内嵌设计 token 参考。进 Svelte 以此 + 本 DESIGN.md 为准，**不改本文件、改代码**（同 notch loop）。
+  - `docs/design/helm-journal-pro.html` — **⭐ SOURCE OF TRUTH（记录模块定稿，2026-07-06 用户拍板 redesign）**：Timeline / Canvas / Calendar 三视图（参考 NOMI 翻成 ORAGE 语言）。全交互：视图切换、Canvas 卡片拖拽+accent 连线+cluster 标签、周历(时刻线/周导航/任务·日程·速记落格)、左列类型过滤(视频/论文/灵感/速记/任务/日程)、收藏卡(type 徽章+封面+摘要+标签)、双主题+每日色。同规矩：只读、改代码。
   - `docs/design/helm-cockpit-orage-themes.html` — 双主题上下对照版（helm-pro 的前身，存档）。
   - `docs/design/helm-shell-all-variants.html` — A–G 七变体合并对比页（判断用，存档）。
   - `docs/design/helm-shell-today-variants.html` — 探索期 A/B/C 三变体，存档。
