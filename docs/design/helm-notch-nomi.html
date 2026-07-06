@@ -44,7 +44,7 @@
   /* shell=单体生长(参考 notch-pro):折叠=黑条本身;展开=同一元素变宽+向下长,
      黑条变成常驻摄像头凹槽,内容从凹槽下方开始(避开摄像头) */
   .shell{position:absolute;top:0;left:50%;transform:translateX(-50%);width:236px;z-index:70;
-    background:#fff;border-radius:0 0 14px 14px;overflow:hidden;cursor:pointer;
+    background:#fff;border-radius:0 0 14px 14px;overflow:hidden;cursor:pointer;color:var(--ink);
     transition:width .46s var(--ease),border-radius .4s var(--ease),box-shadow .4s var(--ease)}
   .shell.open{width:440px;border-radius:0 0 26px 26px;box-shadow:var(--shadow-xl);cursor:default}
   .hw{width:236px;height:34px;margin:0 auto;background:#000;border-radius:0 0 14px 14px;
@@ -75,19 +75,19 @@
   .mtabs{flex:1;display:flex;gap:3px;background:var(--pill);border-radius:999px;padding:3px}
   .mtab{flex:1;font-size:11px;color:var(--ink2);background:transparent;border:none;border-radius:999px;
     padding:7px 0;cursor:pointer;font-weight:500;transition:all .18s var(--ease);white-space:nowrap}
-  .mtab.on{background:var(--ink);color:#fff;font-weight:600}
+  .mtab.on{background:var(--ink);color:var(--onink,#fff);font-weight:600}
   .pbody{padding:0 18px 16px}
   .open-helm{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;flex:none;
-    background:var(--pill);border:none;border-radius:50%;cursor:pointer}
+    background:var(--pill);border:none;border-radius:50%;cursor:pointer;color:var(--ink)}
   .open-helm:hover{background:#e8e8ec;color:var(--ink)}
   .open-helm svg{color:var(--logo)}
 
   /* 通用 */
-  .wcard{background:#fff;border-radius:14px;box-shadow:var(--shadow);transition:box-shadow .18s var(--ease)}
+  .wcard{background:var(--cardbg,#fff);border-radius:14px;box-shadow:var(--shadow);transition:box-shadow .18s var(--ease)}
   .wcard:hover{box-shadow:0 2px 6px rgba(17,17,20,.06),0 12px 28px rgba(17,17,20,.12)}
   .gbtn{background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff;border:none;border-radius:999px;
     padding:8px 18px;font-size:12px;font-weight:600;cursor:pointer}
-  .kbtn{background:var(--ink);color:#fff;border:none;border-radius:999px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer}
+  .kbtn{background:var(--ink);color:var(--onink,#fff);border:none;border-radius:999px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer}
   .pbtn{font-size:10.5px;background:var(--pill);border:none;border-radius:999px;padding:5px 11px;color:var(--ink2);cursor:pointer}
   .pbtn:hover{background:#e8e8ec;color:var(--ink)}
   .spark{width:12px;height:12px;border-radius:50%;background:conic-gradient(from 210deg,var(--g1),var(--g2),var(--g1));display:inline-block;flex:none}
@@ -126,7 +126,7 @@
   .mctl{display:flex;align-items:center;justify-content:flex-start;gap:12px;margin-top:12px}
   .mbtn{width:36px;height:36px;border-radius:50%;border:none;background:var(--pill);color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center}
   .mbtn:hover{background:#e8e8ec}
-  .mbtn.play{width:44px;height:44px;background:var(--ink);color:#fff}
+  .mbtn.play{width:44px;height:44px;background:var(--ink);color:var(--onink,#fff)}
   .mbtn svg{width:15px;height:15px}
   .media2{display:flex;gap:18px;align-items:stretch}
   .mleft{width:196px;flex:none}
@@ -140,7 +140,7 @@
   /* 3 速记 */
   .kindrow{display:flex;gap:5px;margin-bottom:9px}
   .kind{font-size:11.5px;color:var(--ink2);background:var(--pill);border:none;border-radius:999px;padding:6px 12px;cursor:pointer}
-  .kind.on{background:var(--ink);color:#fff;font-weight:600}
+  .kind.on{background:var(--ink);color:var(--onink,#fff);font-weight:600}
   .whobar{display:none;gap:5px;margin-bottom:9px}
   .whobar.show{display:flex}
   .who{font-size:11px;color:var(--ink2);background:#fff;border:1px solid var(--hair);border-radius:999px;padding:5px 12px;cursor:pointer}
@@ -162,6 +162,7 @@
   .ritem .tm{font-family:var(--mono);font-size:9px;color:var(--ink3)}
   .askout{display:none;margin-top:9px;border-radius:14px;padding:11px 13px;font-size:12px;line-height:1.55;color:var(--ink2);background:#fff;box-shadow:var(--shadow)}
   .askout.show{display:block}
+  .askout{background:var(--cardbg,#fff)}
   .askout .who2{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--ink3);margin-bottom:4px}
 
   /* 4 日历 */
@@ -207,6 +208,7 @@
   .permcard{border-radius:14px;padding:11px 13px;margin-bottom:8px;background:#fff;box-shadow:var(--shadow);border-left:3px solid var(--warn)}
   .permcard .ph{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--ink2)}
   .permcard .ph b{color:var(--ink)}
+  .permcard{background:var(--cardbg,#fff)}
   .diff{margin:8px 0;border-radius:10px;overflow:hidden;font-family:var(--mono);font-size:10px;line-height:1.7}
   .diff .dl{padding:2px 10px}
   .diff .rm{background:#fdecec;color:#b3261e}
@@ -235,11 +237,22 @@
   .fright .task{font-size:12.5px;font-weight:600;margin:4px 0 10px}
   .facts{display:flex;gap:6px}
 
-  /* banner 态(权限请求缩影) */
-  .banner{position:absolute;left:50%;transform:translateX(-50%) translateY(-12px);top:30px;width:430px;
-    background:#fff;border-radius:0 0 22px 22px;box-shadow:var(--shadow-xl);z-index:45;padding:13px 16px;
-    opacity:0;pointer-events:none;transition:all .3s var(--ease)}
-  .banner.show{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+  /* banner 态(单体):整个 notch 变成横幅——shell 复用生长,只是内容换成 #bwrap */
+  #bwrap{overflow:hidden;min-height:0;opacity:0;transition:opacity .3s .12s linear;display:none;padding:12px 16px 14px}
+  .shell.bannermode #bwrap{display:block}
+  .shell.bannermode #pwrap{display:none}
+  .shell.open #bwrap{opacity:1}
+  .shell.bannermode.open{width:460px}
+
+  /* 深色面板版本(用户拍板要黑色背景版):变量整体反转,shell.dark 作用域 */
+  .shell.dark{--ink:#f2f2f4;--ink2:#c2c2ca;--ink3:#84848e;--pill:#232327;--hair:#2a2a2e;
+    --cardbg:#1d1d21;--onink:#111114;background:#141416}
+  .shell.dark .dropzone{border-color:#3a3a40}
+  .shell.dark .dropzone.hot{background:#241c14}
+  .shell.dark .diff .rm{background:#3a1e1e;color:#ff9e9e}
+  .shell.dark .diff .ad{background:#1e3a26;color:#7fe0a0}
+  .shell.dark .askout,.shell.dark .permcard{box-shadow:none;border:1px solid var(--hair)}
+  .shell.dark .term{border:1px solid #2a2a2e}
 
   .deskhint{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);white-space:nowrap;
     font-size:12px;color:rgba(17,17,20,.45);background:rgba(255,255,255,.6);backdrop-filter:blur(8px);
@@ -261,22 +274,6 @@
 <div class="menubar">
   <span style="font-weight:700">◆</span><span>Finder</span><span>文件</span><span>编辑</span><span>显示</span>
   <span class="r"><span>电池 100%</span><span>周一 7月6日</span><span id="clk">14:20</span></span>
-</div>
-
-<!-- 权限 banner 态 -->
-<div class="banner" id="banner">
-  <div class="permcard" style="box-shadow:none;margin:0;padding:0;border-left:none">
-    <div class="ph"><span class="spark"></span><b>claude · ~/helm</b>&nbsp;请求编辑&nbsp;<b>enrich.py</b></div>
-    <div class="diff">
-      <div class="dl rm">- meta.pop("abstract")</div>
-      <div class="dl ad">+ meta["summary"] = meta["abstract"][:300]</div>
-    </div>
-    <div class="permacts">
-      <button class="kbtn" onclick="hideBanner()">Allow</button>
-      <button class="pbtn" onclick="hideBanner()">Deny</button>
-      <button class="pbtn" onclick="hideBanner(); openPanel('agents')">打开会话</button>
-    </div>
-  </div>
 </div>
 
 <!-- 单体刘海壳:折叠=黑条;hover=同一元素生长成面板(黑条留作摄像头凹槽) -->
@@ -301,11 +298,25 @@
   <button class="open-helm" title="打开 Helm"><svg width="15" height="12"><use href="#helm-logo"/></svg></button>
   </div>
   <div class="pbody" id="pbody"></div>
-  </div></div>
+  </div>
+  <div id="bwrap">
+    <div class="ph" style="display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--ink2)"><span class="spark"></span><b style="color:var(--ink)">claude · ~/helm</b>&nbsp;请求编辑&nbsp;<b style="color:var(--ink)">enrich.py</b></div>
+    <div class="diff">
+      <div class="dl rm">- meta.pop("abstract")</div>
+      <div class="dl ad">+ meta["summary"] = meta["abstract"][:300]</div>
+    </div>
+    <div class="permacts">
+      <button class="kbtn" onclick="hideBanner()">Allow</button>
+      <button class="pbtn" onclick="hideBanner()">Deny</button>
+      <button class="pbtn" onclick="hideBanner();openPanel('agents')">打开会话</button>
+    </div>
+  </div>
+  </div>
 </div>
 
 <div class="deskhint">悬停刘海展开 · 全部可点 · 总览点封面=放大媒体
   <button onclick="showBanner()">模拟权限请求</button>
+  <button onclick="document.getElementById('shell').classList.toggle('dark')">深色面板</button>
   <button onclick="document.getElementById('notch').classList.add('dragover');setTimeout(()=>{document.getElementById('notch').classList.remove('dragover');openPanel('files');addFile('设计稿-v3.fig','Figma · 4.2 MB','#a855f7','FG')},900)">模拟拖文件</button>
 </div>
 
@@ -519,7 +530,7 @@ function renderTabs(){
     x.onclick=()=>switchTab(x.dataset.t);
   });
 }
-function openPanel(t){open=true;$('#shell').classList.add('open');if(t)switchTab(t)}
+function openPanel(t){const sh=$('#shell');sh.classList.remove('bannermode');open=true;sh.classList.add('open');if(t)switchTab(t)}
 function closePanel(){open=false;$('#shell').classList.remove('open')}
 $('#notch').onclick=e=>{if(!open)openPanel()};
 /* hover 展开(对齐现行稿 helm-notch-pro):悬停刘海→开,移出刘海+面板→220ms 后收 */
@@ -527,13 +538,13 @@ let hoverT;
 for(const el of [document.getElementById('shell')]){
   el.addEventListener('mouseenter',()=>{clearTimeout(hoverT);if(!open)openPanel()});
   el.addEventListener('mouseleave',()=>{clearTimeout(hoverT);
-    hoverT=setTimeout(closePanel,220)});
+    hoverT=setTimeout(()=>{if(!$('#shell').classList.contains('bannermode'))closePanel()},220)});
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closePanel();hideBanner()}});
 
 /* banner */
-function showBanner(){closePanel();$('#banner').classList.add('show')}
-function hideBanner(){$('#banner').classList.remove('show')}
+function showBanner(){const sh=$('#shell');sh.classList.add('bannermode','open');open=true}
+function hideBanner(){const sh=$('#shell');sh.classList.remove('bannermode');closePanel()}
 
 /* 刘海拖文件 */
 const notchEl=$('#shell');
