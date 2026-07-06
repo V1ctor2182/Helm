@@ -225,13 +225,15 @@
   .file .acts{display:flex;gap:5px}
 
   /* 6 智能体(三子页横滑:会话/端口/PR) */
-  .swipe{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:14px;
+  .swiperow{position:relative}
+  .swipe{height:296px;overflow-y:auto;scroll-snap-type:y mandatory;
     scrollbar-width:none;margin:0 -2px;padding:0 2px}
   .swipe::-webkit-scrollbar{display:none}
-  .spage{min-width:100%;scroll-snap-align:start}
-  .sdots{display:flex;justify-content:center;gap:5px;margin-top:9px}
+  .spage{height:100%;scroll-snap-align:start;overflow:hidden}
+  .sdots{position:absolute;right:3px;top:50%;transform:translateY(-50%);
+    display:flex;flex-direction:column;gap:5px}
   .sdot{width:5px;height:5px;border-radius:50%;background:var(--hair);transition:all .2s;cursor:pointer}
-  .sdot.on{background:linear-gradient(90deg,var(--g1),var(--g2));width:14px;border-radius:99px}
+  .sdot.on{background:linear-gradient(180deg,var(--g1),var(--g2));height:14px;border-radius:99px}
   .subh{display:flex;align-items:baseline;gap:7px;font-size:10px;color:var(--ink3);letter-spacing:.4px;margin:0 2px 7px}
   .subh b{color:var(--ink2);font-weight:600;font-size:11px}
   .portrow{display:flex;align-items:center;gap:10px;padding:9px 12px;margin-bottom:7px}
@@ -536,9 +538,9 @@ function renderBody(){
         <div class="permacts"><button class="kbtn" onclick="this.closest('.permcard').remove()">Allow</button>
           <button class="pbtn" onclick="this.closest('.permcard').remove()">Deny</button></div>
       </div>
-      <div class="swipe" id="agSwipe">
+      <div class="swiperow"><div class="swipe" id="agSwipe">
         <div class="spage">
-          <div class="subh"><b>会话</b>本机 Claude Code · 左右滑看端口/PR</div>
+          <div class="subh"><b>会话</b>本机 Claude Code · 上下滑看端口/PR</div>
           <div class="wcard sess"><div class="hd"><span class="dot d-live"></span><span class="nm">claude · ~/helm</span><span class="r">tok 14.2k</span></div>
             <div class="ln">✓ 214 tests passed — running snapshot suite…</div></div>
           <div class="wcard sess"><div class="hd"><span class="dot d-wait"></span><span class="nm">claude · ~/helm/notch</span><span class="r">等你回答</span></div>
@@ -563,17 +565,17 @@ function renderBody(){
             <div class="sub">最近:notch banner 单体化 + 深色面板 · 2 分钟前</div></div>
         </div>
       </div>
-      <div class="sdots" id="agDots"><span class="sdot on"></span><span class="sdot"></span><span class="sdot"></span></div>`;
+      <div class="sdots" id="agDots"><span class="sdot on"></span><span class="sdot"></span><span class="sdot"></span></div></div>`;
     b.querySelectorAll('.qb').forEach(q=>q.onclick=e=>{e.target.textContent='已选';});
     const sw=$('#agSwipe'), dots=[...$('#agDots').children];
     sw.addEventListener('scroll',()=>{
-      const i=Math.round(sw.scrollLeft/sw.clientWidth);
+      const i=Math.round(sw.scrollTop/sw.clientHeight);
       dots.forEach((d,j)=>d.classList.toggle('on',j===i));
     },{passive:true});
-    dots.forEach((d,i)=>d.onclick=()=>sw.scrollTo({left:i*sw.clientWidth,behavior:'smooth'}));
-    let dn=false,sx=0,sl=0;
-    sw.addEventListener('pointerdown',e=>{dn=true;sx=e.clientX;sl=sw.scrollLeft});
-    sw.addEventListener('pointermove',e=>{if(dn)sw.scrollLeft=sl-(e.clientX-sx)});
+    dots.forEach((d,i)=>d.onclick=()=>sw.scrollTo({top:i*sw.clientHeight,behavior:'smooth'}));
+    let dn=false,sy=0,st=0;
+    sw.addEventListener('pointerdown',e=>{dn=true;sy=e.clientY;st=sw.scrollTop});
+    sw.addEventListener('pointermove',e=>{if(dn)sw.scrollTop=st-(e.clientY-sy)});
     ['pointerup','pointerleave'].forEach(ev=>sw.addEventListener(ev,()=>dn=false));
   }
   else if(tab==='files'){
