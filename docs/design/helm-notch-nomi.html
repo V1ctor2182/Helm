@@ -70,18 +70,15 @@
   .shell.open .grow{grid-template-rows:1fr}
   #pwrap{overflow:hidden;min-height:0;opacity:0;transition:opacity .3s .12s linear}
   .shell.open #pwrap{opacity:1}
-  .phead{display:flex;align-items:center;gap:9px;padding:13px 18px 7px}
-  .phead svg{color:var(--logo)}
-  .phead .nm{font-size:13.5px;font-weight:700}
-  .phead .st{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink3)}
   .okdot{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block}
-  .mtabs{display:flex;gap:3px;background:var(--pill);border-radius:999px;padding:3px;margin:2px 18px 10px}
+  .tabrow{display:flex;align-items:center;gap:8px;margin:12px 18px 10px}
+  .mtabs{flex:1;display:flex;gap:3px;background:var(--pill);border-radius:999px;padding:3px}
   .mtab{flex:1;font-size:11px;color:var(--ink2);background:transparent;border:none;border-radius:999px;
     padding:7px 0;cursor:pointer;font-weight:500;transition:all .18s var(--ease);white-space:nowrap}
   .mtab.on{background:var(--ink);color:#fff;font-weight:600}
   .pbody{padding:0 18px 16px}
-  .open-helm{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;color:var(--ink2);
-    background:var(--pill);border:none;border-radius:999px;padding:5px 11px;cursor:pointer}
+  .open-helm{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;flex:none;
+    background:var(--pill);border:none;border-radius:50%;cursor:pointer}
   .open-helm:hover{background:#e8e8ec;color:var(--ink)}
   .open-helm svg{color:var(--logo)}
 
@@ -292,21 +289,16 @@
     <span class="stat"><span class="dot"></span><span>1 live</span></span>
   </div>
   <div class="grow"><div id="pwrap">
-  <div class="phead">
-    <svg width="22" height="17"><use href="#helm-logo"/></svg>
-    <span class="nm">Helm</span>
-    <span class="st"><span class="okdot"></span>后端 ok · 1 live
-      <button class="open-helm" style="margin-left:8px"><svg width="14" height="11"><use href="#helm-logo"/></svg>打开 Helm</button>
-    </span>
-  </div>
-  <!-- dock 收敛成 5(2026-07-06 用户:category 太多):媒体=总览点封面放大,
-       专注=速记的 kind,剪贴板并入暂存 -->
+  <!-- 凹槽即头部(logo/live 已在黑条里,不重复)——折叠态直接生长出 dock -->
+  <div class="tabrow">
   <div class="mtabs" id="mtabs">
     <button class="mtab on" data-t="dash">总览</button>
     <button class="mtab" data-t="capture">速记</button>
     <button class="mtab" data-t="cal">日历</button>
     <button class="mtab" data-t="agents">智能体</button>
     <button class="mtab" data-t="files">暂存</button>
+  </div>
+  <button class="open-helm" title="打开 Helm"><svg width="15" height="12"><use href="#helm-logo"/></svg></button>
   </div>
   <div class="pbody" id="pbody"></div>
   </div></div>
