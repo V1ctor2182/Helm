@@ -52,3 +52,6 @@
 - 对齐: titlebar(HELM wordmark/假遥测 meta 删,细白拖拽条+右缘真后端状态点)/ORAGE fiducial+坐标 chip 装饰整体退场/statusbar 假遥测段(tok/RAG/NEXT/◇chrome)删,保留真功能四钮(上下文/终端/⌘K/⌘N),sans 淡字胶囊化。孤儿样式清零。
 - 门: build ✓ / check 0/0 / test 205 全绿
 - 视觉: shots/r11-shell.png——全站再无 mono 骨架残留
+## R12 · 2026-07-07 01:17 · P2 批扫:Provider/Compare 面板 + 导航真计数
+- 对齐: ProviderSettings+CompareView 的 act 家族/输入定点胶囊化(7 处 patch);Rail 导航计数接真 store(记录=notes.length/对话=sessions.length,>0 才显示)——对齐稿侧栏计数。
+- 门: build ✓ / check 0/0 / test 205 全绿

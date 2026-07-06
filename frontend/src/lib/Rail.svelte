@@ -2,6 +2,8 @@
   // NOMI 白侧栏（阶段 4 R02，source: helm-journal-pro.html 侧栏块）。
   // 旧 ORAGE 细丝 Rail 退场;导航=图标+中文标签胶囊,底部圆形动作钮。
   import { MODES, type LayoutStore, type ModeId } from './layout.svelte'
+  import { notes } from './notes/notesStore.svelte'
+  import { chat } from './chat/chatStore.svelte'
 
   let { layout }: { layout: LayoutStore } = $props()
 
@@ -41,6 +43,8 @@
         onclick={() => layout.setMode(m.id)}
       >
         <span class="ic" aria-hidden="true">{@html ICONS[m.id]}</span>{ZH[m.id]}
+        {#if m.id === 'journal' && notes.notes.length > 0}<span class="k">{notes.notes.length}</span>
+        {:else if m.id === 'chat' && chat.sessions.length > 0}<span class="k">{chat.sessions.length}</span>{/if}
       </button>
     {/each}
   </div>
@@ -119,6 +123,12 @@
   .ic :global(svg) {
     width: 17px;
     height: 17px;
+  }
+  .k {
+    margin-left: auto;
+    font: 400 11px/1 var(--sans);
+    color: var(--t4);
+    font-variant-numeric: tabular-nums;
   }
   .foot {
     margin-top: auto;
