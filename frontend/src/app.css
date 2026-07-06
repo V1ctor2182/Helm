@@ -1,104 +1,128 @@
 /*
-  Helm · 全局设计 token（source of truth: docs/design/helm-pro.html + DESIGN.md）
-  定稿：A · Instrument Readout + ORAGE 监控台皮 + 黑/白双主题（默认跟随系统）。
-  规则：颜色/间距/字体只从这里的 CSS 变量取，组件里别散落 hex（为双主题 + 每日 accent 好切）。
-  主题切换：默认跟随系统（prefers-color-scheme）；theme store 可在 <html> 上写 data-theme="dark|light" 强制。
-  accent（--acc / --acc-ink）默认 #FFC53D，运行时由 theme store 按每日 palette 覆写（浅底自动压暗）。
+  Helm · 全局设计 token（source of truth: docs/design/helm-journal-pro.html + DESIGN.md「NOMI」段）
+  阶段 4 重铸（2026-07-07）：全站 NOMI 风——浅色为主形态、深色为 NOMI 深面板；
+  大圆角白卡 + 多层柔和阴影 + 留白分层（弃边框线）；橙→紫渐变只做「关系」元素
+  （连线/进度/开关/FAB/发送）。禁 emoji（色块字母 / 内联 SVG）。
+  规则不变：颜色/间距/圆角/阴影只从这里的变量取，组件里别散落 hex。
+  兼容说明：沿用旧变量名（--bg/--t1..4/--line/--hair/--tile/--acc…）换值，
+  旧组件不改也能立刻换皮；新组件优先用 NOMI 新族（--card/--pill/--g1/--g2/--shadow/--radius）。
 */
 
 :root {
-  /* ---- 字体（硬切：SF Pro = 人，SF Mono = 机器）---- */
-  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Rounded", "Helvetica Neue", sans-serif;
+  /* ---- 字体（NOMI：干净 sans 为主；mono 只用于代码/端口/时间戳等机器语境）---- */
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Helvetica Neue", sans-serif;
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
 
-  /* ---- 动效（一条招牌缓动 + 时长）---- */
+  /* ---- 动效 ---- */
   --ease: cubic-bezier(.32, .72, 0, 1);
-  --dur-micro: 120ms;   /* hover/focus */
-  --dur-panel: 220ms;   /* 面板 / Tab */
-  --dur-slide: 420ms;   /* 细丝滑移 */
-  --dur-ignite: 600ms;  /* 每日点火 */
-  --dur-pulse: 700ms;   /* agent 脉冲 */
+  --dur-micro: 120ms;
+  --dur-panel: 220ms;
+  --dur-slide: 420ms;
+  --dur-ignite: 600ms;
+  --dur-pulse: 700ms;
 
-  /* ---- 骨架尺寸（固定，不做流体稀汤）---- */
-  --rail-w: 58px;
+  /* ---- 骨架尺寸 ---- */
+  --rail-w: 58px;        /* 旧 Rail 宽（侧栏化后由 --side-w 接管，过渡期保留） */
+  --side-w: 250px;       /* NOMI 白侧栏 */
   --ctx-w: 250px;
   --term-w: 220px;
   --titlebar-h: 32px;
   --statusbar-h: 26px;
-  --gutter-w: 60px;     /* Today 账本左槽 */
+  --gutter-w: 60px;
 
-  /* ---- accent（默认，运行时由 theme store 覆写为每日色）---- */
-  --acc: #FFC53D;
-  --acc-ink: #FFC53D;
+  /* ---- NOMI 圆角 / 阴影（分层靠这两样，不靠边框线）---- */
+  --radius: 16px;
+  --radius-sm: 12px;
+  --radius-pill: 999px;
 
-  /* ---- 语义色（配给制，默认深色版；浅主题下方覆写）---- */
-  --green: #34C759;
-  --orange: #FF9F0A;
-  --red: #FF453A;
-  --blue: #0A84FF;
-  --cyan: #34D6C0;
-  --purple: #7B61FF;
+  /* ---- 渐变（关系元素专用：连线/进度/开关/FAB/发送）---- */
+  --g1: #ff8a3d;
+  --g2: #a855f7;
+  --grad: linear-gradient(90deg, var(--g1), var(--g2));
 
-  color-scheme: dark;
-}
+  /* ---- accent（每日色机制保留；NOMI 默认取渐变紫端。是否固定待用户拍板）---- */
+  --acc: #a855f7;
+  --acc-ink: #8b46d9;
 
-/* ===== 主题 token ===== */
-/* 默认 = 暗（ORAGE-native）。跟随系统：系统浅色且未强制 dark 时切浅；data-theme 可强制。 */
-:root,
-:root[data-theme="dark"] {
-  --bg: #000000;
-  --chrome: #0a0a0c;
-  --panel: #08080a;
-  --t1: #ffffff;
-  --t2: rgba(255, 255, 255, .90);
-  --t3: rgba(255, 255, 255, .66);
-  --t4: rgba(255, 255, 255, .48);
-  --line: rgba(255, 255, 255, .16);
-  --hair: rgba(255, 255, 255, .09);
-  --tile: #101012;
-  --grid: rgba(255, 255, 255, .035);
-  color-scheme: dark;
-}
+  /* ---- 语义色 ---- */
+  --green: #28a745;
+  --orange: #ff9500;
+  --red: #e5484d;
+  --blue: #0a84ff;
+  --cyan: #0e9c8d;
+  --purple: #a855f7;
 
-/* 暖纸白（纸面仪表）：accent-ink 压暗、语义色压暗保对比 */
-:root[data-theme="light"] {
-  --bg: #efece3;
-  --chrome: #e7e3d8;
-  --panel: #eae6dc;
-  --t1: #17140d;
-  --t2: rgba(23, 20, 13, .84);
-  --t3: rgba(23, 20, 13, .64);
-  --t4: rgba(23, 20, 13, .48);
-  --line: rgba(23, 20, 13, .24);
-  --hair: rgba(23, 20, 13, .12);
-  --tile: #e4dfd2;
-  --grid: rgba(23, 20, 13, .05);
-  --acc-ink: #8a6410;
-  --green: #2a8f43;
-  --orange: #b56b00;
-  --red: #c2331f;
   color-scheme: light;
 }
 
-/* 跟随系统浅色（未被 data-theme 强制时）：等同 light token */
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) {
-    --bg: #efece3;
-    --chrome: #e7e3d8;
-    --panel: #eae6dc;
-    --t1: #17140d;
-    --t2: rgba(23, 20, 13, .74);
-    --t3: rgba(23, 20, 13, .52);
-    --t4: rgba(23, 20, 13, .34);
-    --line: rgba(23, 20, 13, .20);
-    --hair: rgba(23, 20, 13, .10);
-    --tile: #e4dfd2;
-    --grid: rgba(23, 20, 13, .05);
-    --acc-ink: #8a6410;
-    --green: #2a8f43;
-    --orange: #b56b00;
-    --red: #c2331f;
-    color-scheme: light;
+/* ===== 主题 token ===== */
+/* 默认 = NOMI 浅色（主形态）。data-theme 可强制；跟随系统深色见下方 media。 */
+:root,
+:root[data-theme="light"] {
+  --bg: #f6f6f7;                       /* 画布 */
+  --chrome: #ffffff;                   /* 侧栏/标题条 */
+  --panel: #ffffff;
+  --card: #ffffff;                     /* 卡面 */
+  --pill: #f1f1f3;                     /* 浅灰胶囊/输入盒 */
+  --t1: #111114;                       /* 主字 ink */
+  --t2: rgba(17, 17, 20, .82);         /* 正文 */
+  --t3: #5c5c66;                       /* 次字 ink2 */
+  --t4: #a2a2ab;                       /* 弱字/时间 ink3 */
+  --line: #e4e4e8;                     /* 仅残留分隔用，弱 */
+  --hair: #ececef;
+  --tile: #f1f1f3;
+  --grid: transparent;                 /* NOMI 无点阵 */
+  --onink: #ffffff;                    /* 放在 ink 底上的前景（黑胶囊白字） */
+  --shadow: 0 1px 2px rgba(17, 17, 20, .05), 0 6px 18px rgba(17, 17, 20, .07);
+  --shadow-lg: 0 2px 6px rgba(17, 17, 20, .06), 0 16px 40px rgba(17, 17, 20, .12);
+  color-scheme: light;
+}
+
+/* NOMI 深面板（对齐 notch 稿深色：近黑底 + 深卡 + 反色胶囊） */
+:root[data-theme="dark"] {
+  --bg: #0f0f11;
+  --chrome: #141416;
+  --panel: #141416;
+  --card: #1d1d21;
+  --pill: #232327;
+  --t1: #f2f2f4;
+  --t2: rgba(242, 242, 244, .86);
+  --t3: #c2c2ca;
+  --t4: #84848e;
+  --line: #2a2a2e;
+  --hair: #232327;
+  --tile: #1d1d21;
+  --grid: transparent;
+  --onink: #111114;                    /* dark 里 ink 是浅色 → 其上前景用深 */
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 18px rgba(0, 0, 0, .35);
+  --shadow-lg: 0 2px 6px rgba(0, 0, 0, .35), 0 16px 40px rgba(0, 0, 0, .5);
+  --acc-ink: #b98cff;
+  --cyan: #34d6c0;
+  color-scheme: dark;
+}
+
+/* 跟随系统深色（未被 data-theme 强制时）＝深面板 token */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f0f11;
+    --chrome: #141416;
+    --panel: #141416;
+    --card: #1d1d21;
+    --pill: #232327;
+    --t1: #f2f2f4;
+    --t2: rgba(242, 242, 244, .86);
+    --t3: #c2c2ca;
+    --t4: #84848e;
+    --line: #2a2a2e;
+    --hair: #232327;
+    --tile: #1d1d21;
+    --grid: transparent;
+    --onink: #111114;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 18px rgba(0, 0, 0, .35);
+    --shadow-lg: 0 2px 6px rgba(0, 0, 0, .35), 0 16px 40px rgba(0, 0, 0, .5);
+    --acc-ink: #b98cff;
+    --cyan: #34d6c0;
+    color-scheme: dark;
   }
 }
 
@@ -122,17 +146,18 @@ body {
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--acc) 32%, transparent);
+  background: color-mix(in srgb, var(--g2) 26%, transparent);
   color: var(--t1);
 }
 
 ::-webkit-scrollbar {
-  width: 9px;
-  height: 9px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--line);
-  border-radius: 0;
+  background: color-mix(in srgb, var(--t4) 55%, transparent);
+  border-radius: 99px;
+  border: 3px solid var(--bg);
 }
 ::-webkit-scrollbar-track {
   background: transparent;

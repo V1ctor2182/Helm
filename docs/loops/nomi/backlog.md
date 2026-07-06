@@ -1,0 +1,2 @@
+- [ ] [R01][P2][question] 每日 accent 轮换 vs NOMI 固定橙紫:NOMI 稿无每日色概念,现暂保留 theme store 每日覆写(--acc)。要不要改成固定 --g1/--g2?待用户拍板。
+- [ ] [R01][P2][gap] 深色主站无设计稿(NOMI 稿仅浅色):深 token 从 notch 稿推导,待浅色全站对齐后让用户目视深色版。
