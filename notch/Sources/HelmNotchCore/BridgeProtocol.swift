@@ -26,15 +26,34 @@ public struct HookMessage: Codable, Sendable, Equatable {
     public var tool: String?       // tool_name (PreToolUse / PermissionRequest)
     public var detail: String?     // short human summary (e.g. the bash command)
     public var reply: Bool         // expects a Decision back
+    // Session-detail payload (all optional so老 hook 二进制的消息照常解码):
+    public var toolInput: String?  // raw tool_input JSON (PermissionRequest — 选择题解析用)
+    public var prompt: String?     // the user's prompt text (UserPromptSubmit)
+    public var assistant: String?  // last assistant message (Stop — read from transcript tail)
+    public var transcriptPath: String?
+    // Terminal identity for idle-reply injection (from the hook's inherited env):
+    public var term: String?       // TERM_PROGRAM (ghostty / iTerm.app / …)
+    public var tmuxPane: String?   // $TMUX_PANE (e.g. "%5") — present inside tmux
+    public var tmuxSocket: String? // socket path, first field of $TMUX
 
     public init(event: String, session: String, cwd: String? = nil,
-                tool: String? = nil, detail: String? = nil, reply: Bool = false) {
+                tool: String? = nil, detail: String? = nil, reply: Bool = false,
+                toolInput: String? = nil, prompt: String? = nil, assistant: String? = nil,
+                transcriptPath: String? = nil, term: String? = nil,
+                tmuxPane: String? = nil, tmuxSocket: String? = nil) {
         self.event = event
         self.session = session
         self.cwd = cwd
         self.tool = tool
         self.detail = detail
         self.reply = reply
+        self.toolInput = toolInput
+        self.prompt = prompt
+        self.assistant = assistant
+        self.transcriptPath = transcriptPath
+        self.term = term
+        self.tmuxPane = tmuxPane
+        self.tmuxSocket = tmuxSocket
     }
 }
 
@@ -43,9 +62,12 @@ public struct HookMessage: Codable, Sendable, Equatable {
 public struct Decision: Codable, Sendable, Equatable {
     public var behavior: String    // "allow" | "deny"
     public var message: String?
+    /// Replacement tool_input JSON — allow-with-answers for AskUserQuestion.
+    public var updatedInput: String?
 
-    public init(behavior: String, message: String? = nil) {
+    public init(behavior: String, message: String? = nil, updatedInput: String? = nil) {
         self.behavior = behavior
         self.message = message
+        self.updatedInput = updatedInput
     }
 }

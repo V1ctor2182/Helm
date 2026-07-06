@@ -46,7 +46,13 @@ struct NotchView: View {
             if let reminder {
                 remindBanner(reminder)
             } else if let banner {
-                permissionBanner(banner)
+                // 选择题解析成功走可作答横幅;其余(含解析失败兜底)走允许/拒绝。
+                if banner.question != nil {
+                    QuestionBannerView(session: banner, accent: accent, model: model)
+                        .frame(width: model.bannerSize.width, height: model.bannerSize.height, alignment: .topLeading)
+                } else {
+                    permissionBanner(banner)
+                }
             } else if model.expanded {
                 // Only the expanded panel exists while open — the collapsed bar's
                 // repeatForever animations aren't left running invisibly (jank).
@@ -1308,9 +1314,18 @@ struct NotchView: View {
     }
 
     @ViewBuilder private var agentCell: some View {
+        if let sel = model.selectedLocalSession {
+            SessionDetailView(session: sel, accent: accent, model: model)
+        } else {
+            agentList
+        }
+    }
+
+    @ViewBuilder private var agentList: some View {
         let sessions = displaySessions
         let waiting = sessions.filter(\.needsAttention)
         let active = sessions.filter(\.isActive).count
+        let clickable = !model.localSessions.isEmpty  // demo 行不可点开详情
         cellHeader(
             "◉ 本机 CLAUDE CODE",
             accentTitle: !waiting.isEmpty,
@@ -1338,6 +1353,8 @@ struct NotchView: View {
                     Spacer(minLength: 4)
                     Text(phaseShort(session.phase)).font(.system(size: 9)).foregroundStyle(.white.opacity(0.35)).fixedSize()
                 }
+                .contentShape(Rectangle())
+                .onTapGesture { if clickable { model.selectedLocalSessionID = session.id } }
             }
         }
         .padding(.top, 6)
@@ -1747,7 +1764,8 @@ struct NotchView: View {
     private func phaseColor(_ phase: LocalSession.Phase) -> Color {
         switch phase {
         case .running: .green
-        case .waitingPermission: .orange
+        case .waitingPermission, .waitingQuestion: .orange
+        case .idle: .white.opacity(0.55)
         case .ended: .white.opacity(0.35)
         }
     }
@@ -1756,7 +1774,9 @@ struct NotchView: View {
         switch phase {
         case .running: "运行中 ›"
         case .waitingPermission: "待批准 ›"
-        case .ended: "完成"
+        case .waitingQuestion: "待作答 ›"
+        case .idle: "空闲 ›"
+        case .ended: "结束"
         }
     }
 
@@ -1837,7 +1857,7 @@ private struct EqualizerBars: View {
 
 /// The HTML `.shine` — text with a bright band sweeping across (a running agent
 /// "thinking" shimmer). Falls back to a static dim label off-screen.
-private struct ShineText: View {
+struct ShineText: View {
     let text: String
     var accent: Color
     var size: CGFloat = 11
@@ -1888,7 +1908,7 @@ private extension AnyTransition {
 }
 
 /// The HTML `.cstar` — a slowly spinning ✻ that marks a running agent.
-private struct SpinningStar: View {
+struct SpinningStar: View {
     var color: Color
     @State private var spin = false
     var body: some View {

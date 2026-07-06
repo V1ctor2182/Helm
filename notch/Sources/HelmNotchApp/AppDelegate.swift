@@ -28,8 +28,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let bridge = BridgeServer(model: model)
         bridge.start()
         self.bridge = bridge
-        model.resolvePermission = { [weak bridge] session, allow in
-            bridge?.resolve(session, allow: allow)
+        model.resolvePermission = { [weak bridge] session, allow, updatedInput in
+            bridge?.resolve(session, allow: allow, updatedInput: updatedInput)
         }
         model.openSettings = { [weak self] in self?.showSettings() }
 

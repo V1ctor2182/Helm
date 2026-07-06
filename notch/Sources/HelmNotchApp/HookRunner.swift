@@ -18,10 +18,31 @@ enum HookRunner {
         let cwd = payload["cwd"] as? String
         let tool = payload["tool_name"] as? String
         let detail = summarize(tool: tool, input: payload["tool_input"])
+        let transcriptPath = payload["transcript_path"] as? String
         let isPermission = (event == "PermissionRequest")
 
+        // 原始 tool_input 只在 PermissionRequest 带上(选择题解析/答案合并要用)。
+        var toolInputJSON: String?
+        if isPermission, let ti = payload["tool_input"],
+           JSONSerialization.isValidJSONObject(ti),
+           let data = try? JSONSerialization.data(withJSONObject: ti) {
+            toolInputJSON = String(data: data, encoding: .utf8)
+        }
+
+        // UserPromptSubmit 的 prompt / Stop 时从 transcript 尾部捞最后一条回复,
+        // 喂给 notch 的会话详情页。
+        let prompt = (event == "UserPromptSubmit") ? clip(payload["prompt"] as? String, 400) : nil
+        let assistant = (event == "Stop") ? clip(lastAssistantMessage(transcriptPath), 1600) : nil
+
+        // 终端身份(hook 继承 CLI 的环境):idle 回复注入的路由信息。
+        let env = ProcessInfo.processInfo.environment
+        let tmuxSocket = env["TMUX"].flatMap { $0.split(separator: ",").first.map(String.init) }
+
         let msg = HookMessage(event: event, session: session, cwd: cwd,
-                              tool: tool, detail: detail, reply: isPermission)
+                              tool: tool, detail: detail, reply: isPermission,
+                              toolInput: toolInputJSON, prompt: prompt, assistant: assistant,
+                              transcriptPath: transcriptPath, term: env["TERM_PROGRAM"],
+                              tmuxPane: env["TMUX_PANE"], tmuxSocket: tmuxSocket)
 
         guard let client = HookClient(path: BridgeSocket.path()) else {
             exit(0)  // app not running → passthrough
@@ -55,6 +76,36 @@ enum HookRunner {
         return tool
     }
 
+    private static func clip(_ s: String?, _ max: Int) -> String? {
+        guard let s, !s.isEmpty else { return nil }
+        return s.count <= max ? s : String(s.prefix(max)) + "…"
+    }
+
+    /// Tail-read the transcript JSONL and return the last assistant text —
+    /// what the Stop-time detail view shows as "Claude 的最后回复".
+    private static func lastAssistantMessage(_ path: String?) -> String? {
+        guard let path, let fh = FileHandle(forReadingAtPath: path) else { return nil }
+        defer { try? fh.close() }
+        let size = (try? fh.seekToEnd()) ?? 0
+        let window: UInt64 = 256 * 1024
+        let start = size > window ? size - window : 0
+        try? fh.seek(toOffset: start)
+        guard let data = try? fh.readToEnd(),
+              let text = String(data: data, encoding: .utf8) else { return nil }
+        for line in text.split(separator: "\n").reversed() {
+            guard let obj = (try? JSONSerialization.jsonObject(with: Data(line.utf8))) as? [String: Any],
+                  obj["type"] as? String == "assistant",
+                  let message = obj["message"] as? [String: Any],
+                  let content = message["content"] as? [[String: Any]] else { continue }
+            let texts = content.compactMap { block -> String? in
+                block["type"] as? String == "text" ? (block["text"] as? String) : nil
+            }
+            let joined = texts.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+            if !joined.isEmpty { return joined }
+        }
+        return nil
+    }
+
     /// Print the verdict in Claude Code's expected stdout schema for the event.
     private static func emitDecision(event: String, decision: Decision) {
         let allow = decision.behavior == "allow"
@@ -62,7 +113,13 @@ enum HookRunner {
         if event == "PermissionRequest" {
             var inner: [String: Any] = ["behavior": decision.behavior]
             if allow {
-                inner["updatedInput"] = NSNull()
+                // 选择题:答案已合并进 updatedInput,工具照常执行但带上用户的选择。
+                if let json = decision.updatedInput,
+                   let obj = try? JSONSerialization.jsonObject(with: Data(json.utf8)) {
+                    inner["updatedInput"] = obj
+                } else {
+                    inner["updatedInput"] = NSNull()
+                }
                 inner["updatedPermissions"] = []
             } else {
                 inner["message"] = decision.message ?? "Denied in Helm Notch."

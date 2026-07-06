@@ -26,7 +26,12 @@ public final class NotchModel {
     /// Extra height of the vertical-axis input beyond one line (App 实测写入,
     /// 面板预算跟着长——多行输入不再被面板底裁掉;clamp 防失控)。
     public var captureInputExtraHeight: Double = 0 {
-        didSet { captureInputExtraHeight = min(max(captureInputExtraHeight, 0), 60) }
+        didSet {
+            // @Observable 把属性改写成计算属性,didSet 里无条件自赋值会
+            // setter→didSet 无限递归(SIGSEGV);只在越界时收敛一次。
+            let clamped = min(max(captureInputExtraHeight, 0), 60)
+            if captureInputExtraHeight != clamped { captureInputExtraHeight = clamped }
+        }
     }
     /// Files dragged onto the notch, staged for the capture (HTML S.files).
     public private(set) var captureFiles: [CaptureFile] = []
@@ -169,7 +174,8 @@ public final class NotchModel {
         case .calendar: calMonthView ? 312 : 240
         case .dev:
             switch devSection {
-            case .agents: 204
+            // 详情页(prompt+最后回复+回复框)比列表高。
+            case .agents: selectedLocalSessionID != nil ? 316 : 204
             case .ports: 248
             case .reviews: 252
             case .stats: 252
@@ -214,7 +220,7 @@ public final class NotchModel {
     private func setModule(_ m: NotchModule, forward: Bool) {
         moduleSwitchForward = forward
         module = m
-        if m == .dev { devSection = .agents }
+        if m == .dev { devSection = .agents } else { selectedLocalSessionID = nil }
         // Leaving 速记 ends the capture lock so hover-away can collapse again.
         if m != .capture { locked = false }
     }
@@ -268,7 +274,14 @@ public final class NotchModel {
     public private(set) var localSessions: [LocalSession] = []
 
     /// Set by the controller — routes a permission verdict back to the bridge.
-    public var resolvePermission: (@MainActor (_ session: String, _ allow: Bool) -> Void)?
+    /// `updatedInput` (tool_input JSON) rides along for question answers.
+    public var resolvePermission: (@MainActor (_ session: String, _ allow: Bool, _ updatedInput: String?) -> Void)?
+
+    /// Session opened in the Dev/Agents detail view (nil = list).
+    public var selectedLocalSessionID: String?
+    public var selectedLocalSession: LocalSession? {
+        selectedLocalSessionID.flatMap { id in localSessions.first { $0.id == id } }
+    }
 
     /// Set by the app — opens the settings window (gear button in the panel).
     public var openSettings: (@MainActor () -> Void)?
@@ -279,6 +292,15 @@ public final class NotchModel {
     public var bannerSize: CGSize {
         guard let s = localSessions.first(where: { $0.needsAttention }) else {
             return CGSize(width: 620, height: 208)
+        }
+        // 选择题横幅:头 40 + 每题(题面 ~22 + 每选项 ~30) + 提交区 56。
+        if let q = s.question {
+            var h = 40.0 + 56.0
+            for item in q.items {
+                h += 24 + Double(item.options.count) * 30
+                if !item.header.isEmpty { h += 16 }
+            }
+            return CGSize(width: 620, height: min(560, max(208, h)))
         }
         let detail = s.pendingDetail ?? s.pendingTool ?? ""
         // 显式换行 + 长行折行估算(monospaced 11pt,620-36-18 宽约容 78 字符)
@@ -564,32 +586,73 @@ public final class NotchModel {
         let now = Date()
         switch m.event {
         case "SessionStart":
-            upsert(m.session, cwd: m.cwd, phase: .running, now: now)
+            upsert(m, phase: .running, now: now)
         case "UserPromptSubmit", "PostToolUse":
-            upsert(m.session, cwd: m.cwd, phase: .running, now: now)
+            upsert(m, phase: .running, now: now)
         case "PreToolUse", "Notification":
-            upsert(m.session, cwd: m.cwd, phase: .running,
-                   activity: activityLabel(m), now: now)
+            // 挂起的权限/选择题不许被活动事件降级——PermissionRequest 静候期间
+            // Claude 会紧跟一条 "needs your permission" 的 Notification,
+            // 不挡住它横幅会闪现即消(2026-07-06 用户实测)。
+            if let i = localSessions.firstIndex(where: { $0.id == m.session }),
+               localSessions[i].needsAttention {
+                localSessions[i].updatedAt = now
+            } else {
+                upsert(m, phase: .running, activity: activityLabel(m), now: now)
+            }
         case "PermissionRequest":
-            upsert(m.session, cwd: m.cwd, phase: .waitingPermission,
-                   activity: activityLabel(m), pendingTool: m.tool, pendingDetail: m.detail, now: now)
-        case "Stop", "SessionEnd", "SubagentStop":
-            upsert(m.session, cwd: m.cwd, phase: .ended, now: now)
+            // 选择题解析成功 → 独立的 waitingQuestion(notch 内可作答);
+            // 解析不了照旧走 waitingPermission 允许/拒绝。
+            let question = (m.tool == "AskUserQuestion" && m.toolInput != nil)
+                ? QuestionPrompt.parse(toolInputJSON: m.toolInput!) : nil
+            upsert(m, phase: question != nil ? .waitingQuestion : .waitingPermission,
+                   activity: activityLabel(m), pendingTool: m.tool, pendingDetail: m.detail,
+                   question: question, now: now)
+        case "Stop":
+            // turn 结束 ≠ 会话结束:CLI 还活着等下一条 prompt,进 idle 可回复。
+            upsert(m, phase: .idle, now: now)
+        case "SessionEnd":
+            upsert(m, phase: .ended, now: now)
+        case "SubagentStop":
+            break  // 子 agent 收尾不改主会话状态
         default:
             break
         }
         prune(now: now)
     }
 
-    /// User tapped 允许 / 拒绝 on a local session's permission card.
+    /// User tapped 允许 / 拒绝 on a local session's permission card. Either way
+    /// the CLI keeps going (deny 也会让 Claude 接着处理拒绝),so back to running.
     public func resolveLocalPermission(_ session: String, allow: Bool) {
-        if let i = localSessions.firstIndex(where: { $0.id == session }) {
-            localSessions[i].phase = .running
-            localSessions[i].pendingTool = nil
-            localSessions[i].pendingDetail = nil
-            localSessions[i].updatedAt = Date()
-        }
-        resolvePermission?(session, allow)
+        clearPending(session, phase: .running)
+        resolvePermission?(session, allow, nil)
+    }
+
+    /// User submitted answers for an AskUserQuestion — allow the tool with the
+    /// answers merged into its input (question text → answer string).
+    public func resolveLocalQuestion(_ session: String, answers: [String: String]) {
+        guard let i = localSessions.firstIndex(where: { $0.id == session }) else { return }
+        let toolInput = localSessions[i].pendingToolInput ?? "{}"
+        let updated = QuestionPrompt.mergeAnswers(answers, intoToolInputJSON: toolInput)
+        clearPending(session, phase: .running)
+        resolvePermission?(session, true, updated)
+    }
+
+    /// The parked hook connection died without a verdict — the user resolved it
+    /// in the terminal (or the hook got killed). Drop the stale banner.
+    public func hookDropped(_ session: String) {
+        guard let i = localSessions.firstIndex(where: { $0.id == session }),
+              localSessions[i].needsAttention else { return }
+        clearPending(session, phase: .running)
+    }
+
+    private func clearPending(_ session: String, phase: LocalSession.Phase) {
+        guard let i = localSessions.firstIndex(where: { $0.id == session }) else { return }
+        localSessions[i].phase = phase
+        localSessions[i].pendingTool = nil
+        localSessions[i].pendingDetail = nil
+        localSessions[i].pendingToolInput = nil
+        localSessions[i].question = nil
+        localSessions[i].updatedAt = Date()
     }
 
     private func activityLabel(_ m: HookMessage) -> String? {
@@ -597,20 +660,33 @@ public final class NotchModel {
         return m.tool
     }
 
-    private func upsert(_ id: String, cwd: String?, phase: LocalSession.Phase,
+    private func upsert(_ m: HookMessage, phase: LocalSession.Phase,
                         activity: String? = nil, pendingTool: String? = nil,
-                        pendingDetail: String? = nil, now: Date) {
-        if let i = localSessions.firstIndex(where: { $0.id == id }) {
-            if let cwd, !cwd.isEmpty { localSessions[i].cwd = cwd }
+                        pendingDetail: String? = nil, question: QuestionPrompt? = nil,
+                        now: Date) {
+        if let i = localSessions.firstIndex(where: { $0.id == m.session }) {
+            if let cwd = m.cwd, !cwd.isEmpty { localSessions[i].cwd = cwd }
             localSessions[i].phase = phase
             if let activity { localSessions[i].activity = activity }
             localSessions[i].pendingTool = pendingTool
             localSessions[i].pendingDetail = pendingDetail
+            localSessions[i].pendingToolInput = pendingTool != nil ? m.toolInput : nil
+            localSessions[i].question = question
+            if let p = m.prompt, !p.isEmpty { localSessions[i].lastPrompt = p }
+            if let a = m.assistant, !a.isEmpty { localSessions[i].lastAssistant = a }
+            if let t = m.transcriptPath { localSessions[i].transcriptPath = t }
+            if let t = m.term { localSessions[i].termProgram = t }
+            if let t = m.tmuxPane { localSessions[i].tmuxPane = t }
+            if let t = m.tmuxSocket { localSessions[i].tmuxSocket = t }
             localSessions[i].updatedAt = now
         } else {
             localSessions.append(LocalSession(
-                id: id, cwd: cwd ?? "", phase: phase, activity: activity,
-                pendingTool: pendingTool, pendingDetail: pendingDetail, updatedAt: now))
+                id: m.session, cwd: m.cwd ?? "", phase: phase, activity: activity,
+                pendingTool: pendingTool, pendingDetail: pendingDetail, updatedAt: now,
+                question: question, lastPrompt: m.prompt, lastAssistant: m.assistant,
+                transcriptPath: m.transcriptPath, termProgram: m.term,
+                tmuxPane: m.tmuxPane, tmuxSocket: m.tmuxSocket))
+            if pendingTool != nil { localSessions[localSessions.count - 1].pendingToolInput = m.toolInput }
         }
         localSessions.sort { a, b in
             if a.isActive != b.isActive { return a.isActive }  // active first
@@ -618,11 +694,17 @@ public final class NotchModel {
         }
     }
 
-    /// Drop ended sessions after a short grace period; cap the list length.
+    /// Drop dead sessions: ended after 90s, idle after 30min silence; cap length.
     private func prune(now: Date) {
-        localSessions.removeAll { $0.phase == .ended && now.timeIntervalSince($0.updatedAt) > 90 }
+        localSessions.removeAll {
+            ($0.phase == .ended && now.timeIntervalSince($0.updatedAt) > 90)
+                || ($0.phase == .idle && now.timeIntervalSince($0.updatedAt) > 1800)
+        }
         if localSessions.count > 6 {
             localSessions = Array(localSessions.prefix(6))
+        }
+        if let sel = selectedLocalSessionID, !localSessions.contains(where: { $0.id == sel }) {
+            selectedLocalSessionID = nil
         }
     }
 

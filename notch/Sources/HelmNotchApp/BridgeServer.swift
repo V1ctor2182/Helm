@@ -90,14 +90,20 @@ final class BridgeServer {
     }
 
     private func connectionClosed(_ fd: Int32) {
+        // Parked connection died without a verdict → the user answered in the
+        // terminal (or the hook was killed). Retract the stale banner.
+        let dropped = pending.filter { $0.value == fd }.map(\.key)
         pending = pending.filter { $0.value != fd }
+        for session in dropped { model.hookDropped(session) }
     }
 
     /// Write the verdict to the parked hook connection (called from the model).
-    func resolve(_ session: String, allow: Bool) {
+    /// `updatedInput` carries AskUserQuestion answers merged into the tool input.
+    func resolve(_ session: String, allow: Bool, updatedInput: String? = nil) {
         guard let fd = pending.removeValue(forKey: session) else { return }
         let decision = Decision(behavior: allow ? "allow" : "deny",
-                                message: allow ? nil : "用户在 Helm Notch 拒绝")
+                                message: allow ? nil : "用户在 Helm Notch 拒绝",
+                                updatedInput: updatedInput)
         guard var data = try? JSONEncoder().encode(decision) else { return }
         data.append(0x0A)
         data.withUnsafeBytes { raw in

@@ -50,11 +50,27 @@ enum NotchSnapshot {
                                          detail: "src/auth/middleware.ts", reply: true))
             }),
             ("banner-ask", {
+                // toolInput 走通选择题解析 → QuestionBannerView(notch 内可作答)。
                 $0.applyHook(HookMessage(
                     event: "PermissionRequest", session: "notch", cwd: "~/kaggle",
                     tool: "AskUserQuestion",
-                    detail: "你本地能跑那两个评分模型吗(GPT-OSS-20B 和 Gemma、4-bit GGUF)?\n① 能,有 GPU / 好机器\n② 只有这台 Mac\n③ 不想本地跑模型\n④ 先不管合规,先确认得分链",
-                    reply: true))
+                    detail: "你本地能跑那两个评分模型吗?",
+                    reply: true,
+                    toolInput: #"""
+                    {"questions":[{"question":"你本地能跑那两个评分模型吗(GPT-OSS-20B 和 Gemma、4-bit GGUF)?","header":"算力","multiSelect":false,"options":[{"label":"能,有 GPU / 好机器","description":"本地全量跑"},{"label":"只有这台 Mac","description":"4-bit 勉强"},{"label":"不想本地跑模型","description":"云上跑"}]}]}
+                    """#))
+            }),
+            ("dev-agent-detail", {
+                $0.module = .dev
+                $0.devSection = .agents
+                $0.applyHook(HookMessage(
+                    event: "UserPromptSubmit", session: "s-detail", cwd: "~/work/helm/notch",
+                    prompt: "优化 notch 的 vibeisland 效果,可以点开会话看详情、回答问题",
+                    term: "ghostty", tmuxPane: "%3"))
+                $0.applyHook(HookMessage(
+                    event: "Stop", session: "s-detail",
+                    assistant: "三块能力已经落地:选择题横幅在 notch 内直接作答(答案经阻塞 hook 的 updatedInput 注回 CLI);Dev/Agents 点行进详情;idle 会话可从 notch 注入回复到 tmux/Ghostty。"))
+                $0.selectedLocalSessionID = "s-detail"
             }),
             ("mat-darkglass", { $0.module = .dashboard; $0.backgroundMaterial = .darkGlass }),
             ("mat-lightglass", { $0.module = .dashboard; $0.backgroundMaterial = .lightGlass }),
