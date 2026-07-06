@@ -296,7 +296,7 @@ final class NotchModuleTests: XCTestCase {
     func testViewHeightVariesPerModule() {
         let model = NotchModel(backend: FakeBackend())
         model.module = .dashboard
-        XCTAssertEqual(model.viewHeight(), 172)
+        XCTAssertEqual(model.viewHeight(), 252)
         model.module = .media
         XCTAssertEqual(model.viewHeight(), 330)
         model.module = .files
@@ -332,7 +332,7 @@ final class NotchModuleTests: XCTestCase {
     func testAutoExpandedHeightAddsTopBar() {
         let model = NotchModel(backend: FakeBackend())
         model.module = .dashboard
-        XCTAssertEqual(model.autoExpandedHeight, 172 + NotchModel.topBarHeight)
+        XCTAssertEqual(model.autoExpandedHeight, 252 + NotchModel.topBarHeight)
     }
 
     @MainActor

@@ -27,3 +27,8 @@
 - dock:5 圆钮 40px SF 符号,激活=渐变描边环(mtab.on);agents 待批橙点徽章保留。
 - 横扫切模块/上下滑子页机制沿用(改指 agents);智能体徽章/详情页防误翻逻辑随迁。
 - 全测试绿(0 失败 0 崩溃);快照 b3-dash/b3-agents(dock+toprow 就位;各页内容仍旧版式,B4-B9 逐页重做)。
+
+## 2026-07-07 迭代 5 — B4 总览 bento ✅
+- dashboardModule 重写为 NOMI bento:大媒体卡(渐变底/封面填充+meta 压底渐晕+eq 3 柱,点→媒体)、日历卡(spark+下一项,无日程诚实空态)、智能体卡(okdot/warn 点+首会话+状态行)、quickcap 胶囊(⏎/发送→model.quickNote 直发后端 note,不动速记页状态)。
+- 旧三栏 widget(donut/任务行/迷你控制条)退役;dashboard 预算 172→252(含 dock)。
+- 全测试绿;快照 b4-dash-bento.png 与设计稿 dash 段对齐(输入框黄条=ImageRenderer 已知 artifact)。

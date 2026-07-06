@@ -55,8 +55,8 @@ struct HelmLogoView: View {
 
 /// 折叠态波形 — 4 根渐变柱,scaleY 交替呼吸(设计稿 .hw .wave,1s ease 无限)。
 struct WaveBars: View {
+    var heights: [CGFloat] = [5, 10, 7, 11]
     @State private var shrunk = false
-    private let heights: [CGFloat] = [5, 10, 7, 11]
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 2) {

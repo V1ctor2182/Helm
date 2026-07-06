@@ -108,6 +108,19 @@ public final class NotchModel {
     public private(set) var askQuestion = ""
     public private(set) var recentNotes: [RecentNote] = []
 
+    /// 总览 quickcap:一条速记直发后端,不动速记页的 kind/文本状态。
+    public func quickNote(_ text: String) async {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return }
+        captureStatus = .sending
+        do {
+            try await backend.createNote(content: t, kind: "note", journalDate: nil)
+            captureStatus = .sent
+        } catch {
+            captureStatus = .failed
+        }
+    }
+
     /// 把上一问答存成速记。
     public func saveAskAsNote() async {
         guard let a = askAnswer, !askQuestion.isEmpty else { return }
@@ -168,7 +181,7 @@ public final class NotchModel {
     /// Each module is as tall as its content needs — no big black void.
     public func viewHeight() -> Double {
         switch module {
-        case .dashboard: 172
+        case .dashboard: 252  // bento(媒体大卡+右两卡)+quickcap+dock
         case .media: 330
         case .calendar: calMonthView ? 312 : 240
         case .files: 232

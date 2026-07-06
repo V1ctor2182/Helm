@@ -12,6 +12,9 @@ struct NotchView: View {
     @Bindable var model: NotchModel
     @FocusState private var captureFocused: Bool
     @State private var dragOver = false
+    // NOMI 总览速记胶囊(quickcap)
+    @State private var quickText = ""
+    @FocusState private var quickCapFocused: Bool
 
     private var accent: Color { Color(model.accent) }
 
@@ -422,164 +425,139 @@ struct NotchView: View {
 
     // MARK: Dashboard module (V.dash — three widgets: NOW PLAYING · TODAY · 本机 CLAUDE CODE)
 
+    // NOMI 总览 bento(HTML .bento):大媒体卡跨两行 + 日历卡 + 智能体卡 + 速记胶囊。
     private var dashboardModule: some View {
-        GeometryReader { geo in
-            let unit = geo.size.width / 3.6  // widget flex 1.6 : 1 : 1
-            HStack(spacing: 0) {
-                dashMediaWidget
-                    .frame(width: unit * 1.6, alignment: .topLeading)
-                    .overlay(alignment: .trailing) { dashColDivider }
-                dashTodayWidget
-                    .frame(width: unit, alignment: .topLeading)
-                    .overlay(alignment: .trailing) { dashColDivider }
-                dashAgentWidget
-                    .frame(width: unit, alignment: .topLeading)
-            }
-            .frame(maxHeight: .infinity, alignment: .top)
-        }
-    }
-
-    private var dashColDivider: some View { Rectangle().fill(.white.opacity(0.09)).frame(width: 1) }
-
-    private func dashHeader(_ title: String) -> some View {
-        Text(title).font(.system(size: 9, weight: .bold)).tracking(0.6)
-            .foregroundStyle(.white.opacity(0.34)).padding(.bottom, 12)
-    }
-
-    private var dashMediaWidget: some View {
-        let np = shownNowPlaying
-        return VStack(alignment: .leading, spacing: 0) {
-            dashHeader("NOW PLAYING")
-            HStack(spacing: 12) {
-                dashCover(model.nowPlaying).frame(width: 64, height: 64)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(np.title).font(.system(size: 12, weight: .bold)).foregroundStyle(.white).lineLimit(1)
-                    Text(np.subtitle.isEmpty ? " " : np.subtitle).font(.system(size: 10)).foregroundStyle(.white.opacity(0.56)).lineLimit(1)
-                    dashMiniBar(np).padding(.top, 6)
-                    HStack(spacing: 16) {
-                        Button { model.previousTrack() } label: { Text("◀◀") }
-                        Button { model.playPause() } label: { Text(np.isPlaying ? "❚❚" : "▶") }
-                        Button { model.nextTrack() } label: { Text("▶▶") }
+        let p = model.nomi
+        return GeometryReader { geo in
+            let gap: CGFloat = 10
+            let rightW = (geo.size.width - gap) / 2.35  // 1.35fr : 1fr
+            VStack(spacing: gap) {
+                HStack(alignment: .top, spacing: gap) {
+                    bentoMedia
+                        .frame(maxWidth: .infinity)
+                    VStack(spacing: gap) {
+                        bentoCal(p)
+                        bentoAgent(p)
                     }
-                    .font(.system(size: 12)).buttonStyle(.plain).foregroundStyle(.white).padding(.top, 8)
+                    .frame(width: rightW)
                 }
+                quickCap(p)
             }
-            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 16).padding(.vertical, 2)
-        .frame(maxHeight: .infinity, alignment: .top)
+        .padding(.horizontal, 18).padding(.top, 8)
+    }
+
+    /// .b-media:渐变底大卡,封面/音符居中,meta 压底,eq 呼吸柱右下;点→媒体。
+    private var bentoMedia: some View {
+        let np = shownNowPlaying
+        return ZStack(alignment: .bottomLeading) {
+            if let art = model.nowPlaying.flatMap(nsArtwork) {
+                GeometryReader { g in
+                    Image(nsImage: art).resizable().aspectRatio(contentMode: .fill)
+                        .frame(width: g.size.width, height: g.size.height).clipped()
+                }
+            } else {
+                LinearGradient(colors: [Color(red: 0.149, green: 0.125, blue: 0.173),
+                                        Color(red: 0.098, green: 0.102, blue: 0.125)],
+                               startPoint: .topLeading, endPoint: .bottomTrailing)
+                Image(systemName: "music.note")
+                    .font(.system(size: 30)).foregroundStyle(.white.opacity(0.35))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            VStack(alignment: .leading, spacing: 1) {
+                Text(np.title).font(.system(size: 13.5, weight: .bold)).foregroundStyle(.white).lineLimit(1)
+                Text(np.subtitle).font(.system(size: 10.5)).foregroundStyle(.white.opacity(0.65)).lineLimit(1)
+            }
+            .padding(EdgeInsets(top: 12, leading: 14, bottom: 12, trailing: 14))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(LinearGradient(colors: [.clear, Color(red: 0.04, green: 0.04, blue: 0.047).opacity(0.82)],
+                                       startPoint: .top, endPoint: .bottom))
+        }
+        .frame(minHeight: 128)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(alignment: .bottomTrailing) {
+            if np.isPlaying { WaveBars(heights: [5, 10, 7]).padding(.trailing, 12).padding(.bottom, 14) }
+        }
         .contentShape(Rectangle())
         .onTapGesture { model.selectModule(.media) }
     }
 
-    private func dashCover(_ np: NowPlaying?) -> some View {
-        Group {
-            if let np, let art = nsArtwork(np) {
-                Image(nsImage: art).resizable().aspectRatio(contentMode: .fill)
+    /// .bcard 日历:spark+「日历 · 下一项」/事件/副行;无日程诚实显示。点→日历。
+    private func bentoCal(_ p: NomiPalette) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 6) {
+                SparkDot()
+                Text("日历 · 下一项").font(.system(size: 10)).foregroundStyle(Color(p.ink3)).tracking(0.3)
+            }
+            if let ev = model.events.first {
+                Text("\(ev.when) \(ev.summary)")
+                    .font(.system(size: 12.5, weight: .semibold)).foregroundStyle(Color(p.ink))
+                    .lineLimit(1).padding(.top, 5)
+                if let next = model.events.dropFirst().first {
+                    Text("之后 \(next.when) \(next.summary)")
+                        .font(.system(size: 10.5)).foregroundStyle(Color(p.ink3)).lineLimit(1).padding(.top, 2)
+                }
             } else {
-                LinearGradient(colors: [Color(red: 0.11, green: 0.72, blue: 0.33), Color(red: 0.04, green: 0.5, blue: 0.23)],
-                               startPoint: .topLeading, endPoint: .bottomTrailing)
+                Text("今日无日程").font(.system(size: 12.5, weight: .semibold))
+                    .foregroundStyle(Color(p.ink2)).padding(.top, 5)
             }
         }
-        .frame(width: 64, height: 64)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        // HTML .coverexp — a small "expand to lyrics" glyph, bottom-right of the cover.
-        .overlay(alignment: .bottomTrailing) {
-            Image(systemName: "arrow.up.left.and.arrow.down.right")
-                .font(.system(size: 8, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.75))
-                .frame(width: 19, height: 19)
-                .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(.black.opacity(0.5)))
-                .padding(4)
-        }
+        .padding(EdgeInsets(top: 11, leading: 13, bottom: 11, trailing: 13))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .wcard(p, dark: model.nomiDark)
+        .contentShape(Rectangle())
+        .onTapGesture { model.selectModule(.calendar) }
     }
 
-    @ViewBuilder private func dashMiniBar(_ np: NowPlaying) -> some View {
-        TimelineView(.periodic(from: .now, by: 0.5)) { context in
-            let frac = mediaFraction(np, at: context.date)
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(.white.opacity(0.2))
-                    Capsule().fill(accent).frame(width: max(2, geo.size.width * frac))
-                }
+    /// .bcard 智能体:okdot+「智能体」/会话名/状态行。点→智能体。
+    private func bentoAgent(_ p: NomiPalette) -> some View {
+        let s = displaySessions.first
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 6) {
+                Circle().fill(s?.needsAttention == true ? Nomi.warn : Nomi.ok).frame(width: 8, height: 8)
+                Text("智能体").font(.system(size: 10)).foregroundStyle(Color(p.ink3)).tracking(0.3)
             }
-            .frame(height: 3)
-        }
-        .frame(height: 3)
-    }
-
-    private var dashTodayWidget: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            dashHeader("TODAY")
-            HStack(spacing: 13) {
-                dashDonut
-                VStack(alignment: .leading, spacing: 6) {
-                    if model.events.isEmpty {
-                        dashTaskRow(.green, "站会 10:00")
-                        dashTaskRow(Color(red: 0.04, green: 0.52, blue: 1), "Review")
-                        dashTaskRow(.orange, "1:1 15:00")
-                    } else {
-                        ForEach(Array(model.events.prefix(3))) { ev in
-                            dashTaskRow(accent, "\(ev.summary) \(ev.when)")
-                        }
-                    }
-                }
+            if let s {
+                Text("claude · \(s.folderName)")
+                    .font(.system(size: 12.5, weight: .semibold)).foregroundStyle(Color(p.ink))
+                    .lineLimit(1).padding(.top, 5)
+                Text(s.activity ?? (s.phase == .idle ? "空闲 — 可回复" : s.phase == .running ? "思考中…" : "—"))
+                    .font(.system(size: 10.5)).foregroundStyle(Color(p.ink3)).lineLimit(1).padding(.top, 2)
+            } else {
+                Text("暂无会话").font(.system(size: 12.5, weight: .semibold))
+                    .foregroundStyle(Color(p.ink2)).padding(.top, 5)
             }
-            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 16).padding(.vertical, 2)
-        .frame(maxHeight: .infinity, alignment: .top)
-    }
-
-    /// Static demo donut (HTML shows "3/11"); real task counts need backend.
-    // TODO(align): wire to task completion once Core surfaces it.
-    private var dashDonut: some View {
-        ZStack {
-            Circle().stroke(.white.opacity(0.12), lineWidth: 7)
-            Circle().trim(from: 0, to: 0.27).stroke(accent, style: StrokeStyle(lineWidth: 7, lineCap: .butt))
-                .rotationEffect(.degrees(-90))
-            Text("3/11").font(.system(size: 11, weight: .bold)).foregroundStyle(.white)
-        }
-        .frame(width: 54, height: 54)
-    }
-
-    private func dashTaskRow(_ dot: Color, _ text: String) -> some View {
-        HStack(spacing: 6) {
-            Circle().fill(dot).frame(width: 6, height: 6)
-            Text(text).font(.system(size: 11)).foregroundStyle(.white.opacity(0.56)).lineLimit(1)
-        }
-    }
-
-    private var dashAgentWidget: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            dashHeader("本机 CLAUDE CODE")
-            VStack(alignment: .leading, spacing: 7) {
-                ForEach(Array(displaySessions.prefix(3))) { s in
-                    HStack(spacing: 7) {
-                        Circle().fill(phaseColor(s.phase)).frame(width: 7, height: 7)
-                        Text(s.folderName).font(.system(size: 11, weight: .medium)).foregroundStyle(.white.opacity(0.85))
-                            .lineLimit(1).layoutPriority(1)
-                        if s.phase == .waitingPermission {
-                            Text("待批准").font(.system(size: 10)).foregroundStyle(.orange)
-                        } else if s.phase == .running {
-                            if let act = s.activity, act != "正在思考…" {
-                                Text(act).font(.system(size: 10)).foregroundStyle(.white.opacity(0.34)).lineLimit(1).truncationMode(.tail)
-                            } else {
-                                ShineText("思考中", accent: accent, size: 10)
-                            }
-                        } else if s.phase == .ended {
-                            Text("完成").font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
-                        }
-                        Spacer(minLength: 0)
-                    }
-                }
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 16).padding(.vertical, 2)
-        .frame(maxHeight: .infinity, alignment: .top)
+        .padding(EdgeInsets(top: 11, leading: 13, bottom: 11, trailing: 13))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .wcard(p, dark: model.nomiDark)
         .contentShape(Rectangle())
         .onTapGesture { model.selectModule(.agents) }
+    }
+
+    /// .quickcap:胶囊速记条(⏎/发送 → 后端 note)。
+    private func quickCap(_ p: NomiPalette) -> some View {
+        HStack(spacing: 8) {
+            TextField("速记一笔 — ⏎ 发送,链接自动解析…", text: $quickText)
+                .textFieldStyle(.plain)
+                .font(.system(size: 12.5)).foregroundStyle(Color(p.ink))
+                .focused($quickCapFocused)
+                .onSubmit(sendQuickCap)
+            Button("发送", action: sendQuickCap)
+                .buttonStyle(GradientButtonStyle())
+        }
+        .padding(EdgeInsets(top: 5, leading: 15, bottom: 5, trailing: 5))
+        .background(Capsule().fill(Color(p.pill)))
+        .onChange(of: quickCapFocused) { _, focused in
+            if focused { model.beginCapture() } else { model.endInteraction() }
+        }
+    }
+
+    private func sendQuickCap() {
+        let text = quickText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        quickText = ""
+        Task { await model.quickNote(text) }
     }
 
     // MARK: Calendar module (V.cal — header · week strip ⇄ month grid · agenda)
