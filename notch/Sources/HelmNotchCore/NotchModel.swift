@@ -107,6 +107,21 @@ public final class NotchModel {
     public private(set) var askQuestion = ""
     public private(set) var recentNotes: [RecentNote] = []
 
+    // MARK: 本地端口(App lsof 探测)
+
+    public private(set) var localPorts: [PortInfo] = []
+    /// App 注入的探测器(纯 Core 不碰 Process);nil = 未接线,页面显示探测不可用。
+    public var portsProvider: (@Sendable () async -> [PortInfo])?
+    public private(set) var portsRefreshing = false
+
+    /// 进入端口子页时刷新一次(探测 ~百毫秒,后台跑)。
+    public func refreshLocalPorts() async {
+        guard let portsProvider, !portsRefreshing else { return }
+        portsRefreshing = true
+        localPorts = await portsProvider().sorted { $0.port < $1.port }
+        portsRefreshing = false
+    }
+
     // MARK: 剪贴板历史(App watcher 喂入)与暂存 shelf 动作
 
     public private(set) var clipboardHistory: [ClipItem] = []
@@ -233,10 +248,10 @@ public final class NotchModel {
         case .files: 280  // dropzone+shelf+剪贴板段
         case .agents:
             switch agentPage {
-            // 详情页(prompt+最后回复+回复框)比列表高;B9 上下滑落地后统一预算。
-            case .sessions: selectedLocalSessionID != nil ? 316 : 204
-            case .ports: 248
-            case .prs: 252
+            // NOMI 卡片比旧行高;详情页(prompt+最后回复+回复框)最高。
+            case .sessions: selectedLocalSessionID != nil ? 316 : 260
+            case .ports: 260
+            case .prs: 300
             }
         // Tightened vs the HTML prototype — the Swift content is more compact, so
         // the taller HTML budgets left too much empty space below (device feedback).

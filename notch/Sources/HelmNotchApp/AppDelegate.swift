@@ -33,6 +33,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             bridge?.resolve(session, allow: allow, updatedInput: updatedInput)
         }
         model.openSettings = { [weak self] in self?.showSettings() }
+        // 端口子页数据源:真 lsof 探测(后台线程跑,~百毫秒)。
+        model.portsProvider = {
+            await Task.detached(priority: .utility) { PortsProbe.listListeningPorts() }.value
+        }
 
         let controller = NotchController(model: model)
         controller.start()

@@ -57,3 +57,12 @@
 - 「上传到记录」=文件名折进 note(同速记页附件做法,真文件上传等附件 schema);「关联驾驶舱」无后端通道,本版不放按钮(不做假动作),记 backlog。
 - 拖文件路由改 NOMI 语义:落 shelf(files 页),不再跳速记页;addFiles 不再动 captureKind。
 - files 预算 232→280;测试 3 处断言更新+新增剪贴板去重/上限测试;全绿。快照 b8-files.png。
+
+## 2026-07-07 迭代 10 — B9 智能体页 ✅
+- sdots:右缘子页圆点(激活=渐变 14px 长条,可点跳页);上下滑翻页机制沿用(model 驱动+snap 式离散页,行为等价 HTML scroll-snap)。
+- 会话页:subh(会话·上下滑看端口/PR+待处理计数)+NOMI 会话卡(光环状态点/claude·目录/右 mono 状态/一行动态,思考态 ✻+shine 保留);空态诚实提示;点卡进详情(vibeisland 详情/回答/idle 回复全保留,SessionDetailView 整体换 palette)。
+- permcard NOMI:左橙边 wcard+spark+pill 命令块+Allow(kbtn)/Deny(pbtn);真 diff 仍待 hook 带 patch(TODO align-diff)。
+- 端口页换真数据:PortsProbe(lsof -nP -iTCP -sTCP:LISTEN -F cn)→model.localPorts(进页 .task 刷新,后台线程);「打开」=NSWorkspace 开 localhost:port;portSeed 假数据删除。
+- PR 页:NOMI prrow 卡+chip;数据源仍 seed → 页头明示「示例数据·接入待定」(TODO align-pr:gh CLI 或后端接口)。
+- 预算:sessions 260/ports 260/prs 300(详情 316);测试同步,全绿。快照 b9-sessions/ports/prs。
+- 决策:会话卡内嵌选择题 qbtns 不做——needsAttention 时 banner 态整体接管 notch,卡上按钮永远不可见;选择题作答留在 B10 banner。

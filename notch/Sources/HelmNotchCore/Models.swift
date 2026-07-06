@@ -142,3 +142,16 @@ public struct ClipItem: Sendable, Equatable, Identifiable {
     /// 链接还是纯文本(决定行图标)。
     public var isLink: Bool { text.hasPrefix("http://") || text.hasPrefix("https://") }
 }
+
+/// 本机监听端口(App 侧 lsof 探测喂入;NOMI 智能体·端口子页)。
+public struct PortInfo: Sendable, Equatable, Identifiable {
+    public let port: Int
+    public let name: String
+
+    public init(port: Int, name: String) {
+        self.port = port
+        self.name = name
+    }
+
+    public var id: Int { port }
+}

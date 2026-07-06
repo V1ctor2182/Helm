@@ -308,9 +308,9 @@ final class NotchModuleTests: XCTestCase {
         let model = NotchModel(backend: FakeBackend())
         model.module = .agents
         model.agentPage = .sessions
-        XCTAssertEqual(model.viewHeight(), 204)
+        XCTAssertEqual(model.viewHeight(), 260)
         model.agentPage = .prs
-        XCTAssertEqual(model.viewHeight(), 252)
+        XCTAssertEqual(model.viewHeight(), 300)
     }
 
     @MainActor

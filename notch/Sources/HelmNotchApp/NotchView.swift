@@ -692,81 +692,102 @@ struct NotchView: View {
         }
     }
 
+    /// NOMI .sdots:右缘子页圆点,激活=渐变 14px 长条。
     private var agentRail: some View {
-        VStack(spacing: 9) {
+        VStack(spacing: 5) {
             ForEach(AgentPage.allCases) { s in
                 let on = model.agentPage == s
-                RoundedRectangle(cornerRadius: 2.5, style: .continuous)
-                    .fill(on ? accent : .white.opacity(0.22))
-                    .frame(width: 5, height: on ? 18 : 5)
-                    .contentShape(Rectangle())
+                RoundedRectangle(cornerRadius: 99, style: .continuous)
+                    .fill(on ? AnyShapeStyle(Nomi.gradientV) : AnyShapeStyle(Color(model.nomi.hair)))
+                    .frame(width: 5, height: on ? 14 : 5)
+                    .contentShape(Rectangle().inset(by: -4))
                     .onTapGesture { model.selectAgentPage(s) }
+                    .animation(.easeOut(duration: 0.2), value: model.agentPage)
             }
         }
-        .frame(width: 20)
+        .frame(width: 14)
         .frame(maxHeight: .infinity)
     }
 
-    // Ports (V.ports). TODO(align-dev-ports): real list needs an lsof probe.
-    private let portSeed: [(port: Int, name: String, color: Color)] = [
-        (3000, "Frontend · next dev", .green),
-        (8769, "Helm backend · python", .green),
-        (5173, "Vite · docs", .green),
-        (11434, "Ollama", .orange),
-        (6006, "Storybook", .green),
-    ]
-
+    /// 端口子页:真 lsof 数据(portsProvider 注入;进入页面刷新)。
     private var portsPage: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            cellHeader("本地端口 · LISTENING", trailing: "lsof -iTCP -sTCP:LISTEN")
-            ForEach(portSeed.indices, id: \.self) { i in
-                let p = portSeed[i]
-                HStack(spacing: 11) {
-                    Circle().fill(p.color).frame(width: 7, height: 7)
-                    Text(verbatim: ":\(p.port)").font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundStyle(.white).frame(minWidth: 56, alignment: .leading)
-                    Text(p.name).font(.system(size: 12)).foregroundStyle(.white.opacity(0.56)).lineLimit(1)
-                    Spacer(minLength: 6)
-                    Text("↗ 打开").font(.system(size: 10)).foregroundStyle(accent)
+        let pal = model.nomi
+        return VStack(alignment: .leading, spacing: 7) {
+            HStack(alignment: .firstTextBaseline, spacing: 7) {
+                Text("本地端口").font(.system(size: 11, weight: .semibold)).foregroundStyle(Color(pal.ink2))
+                Text("LISTENING · lsof").font(.system(size: 10)).foregroundStyle(Color(pal.ink3)).tracking(0.4)
+                Spacer()
+                if model.portsRefreshing {
+                    Text("探测中…").font(.system(size: 9.5)).foregroundStyle(Color(pal.ink3))
                 }
-                .padding(.vertical, 7)
-                .overlay(alignment: .bottom) { Rectangle().fill(.white.opacity(0.09)).frame(height: 0.5) }
             }
-            Spacer(minLength: 0)
+            .padding(.horizontal, 2).padding(.bottom, 2)
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 7) {
+                    if model.localPorts.isEmpty && !model.portsRefreshing {
+                        Text(model.portsProvider == nil ? "端口探测未接线" : "没有监听中的 TCP 端口")
+                            .font(.system(size: 11)).foregroundStyle(Color(pal.ink3))
+                            .frame(maxWidth: .infinity, alignment: .center).padding(.vertical, 20)
+                    }
+                    ForEach(model.localPorts) { info in
+                        HStack(spacing: 10) {
+                            Circle().fill(Nomi.ok).frame(width: 7, height: 7)
+                            Text(verbatim: ":\(info.port)")
+                                .font(.system(size: 11.5, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color(pal.ink)).frame(minWidth: 44, alignment: .leading)
+                            Text(info.name).font(.system(size: 11.5)).foregroundStyle(Color(pal.ink2))
+                                .lineLimit(1).truncationMode(.tail)
+                            Spacer(minLength: 6)
+                            Button("打开") {
+                                if let url = URL(string: "http://localhost:\(info.port)") { NSWorkspace.shared.open(url) }
+                            }
+                            .buttonStyle(PillButtonStyle(palette: pal))
+                        }
+                        .padding(EdgeInsets(top: 9, leading: 12, bottom: 9, trailing: 9))
+                        .wcard(pal, dark: model.nomiDark)
+                    }
+                }
+            }
         }
+        .task { await model.refreshLocalPorts() }
     }
 
-    // Reviews (V.prs). TODO(align-dev-reviews): real list needs a GitHub/GitLab probe.
-    private let prSeed: [(who: String, title: String, repo: String, num: String, src: String)] = [
-        ("VZ", "feat(notch): 日程提醒 banner + 波形", "V1ctor2182/Helm", "#51", "GH"),
-        ("VZ", "fix(notch): AppDelegate @MainActor + @Sendable", "V1ctor2182/Helm", "#50", "GH"),
-        ("BP", "Resolve \"Implement integration test\"", "helm/bridge", "#123", "GL"),
-    ]
-
+    /// PR 子页:NOMI prrow 卡。数据源待定(后端契约不动)→ seed 演示 + 明示「示例」,
+    /// 接真源记 backlog(TODO(align-pr):gh CLI / 后端出接口)。
     private var prsPage: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            cellHeader("◈ 待评审 · PRs / MRs", trailing: "\(prSeed.count) 待处理")
-            ForEach(prSeed.indices, id: \.self) { i in
-                let p = prSeed[i]
-                HStack(spacing: 10) {
-                    Text(p.who).font(.system(size: 10, weight: .bold)).foregroundStyle(.white.opacity(0.56))
-                        .frame(width: 26, height: 26).background(Circle().fill(Color(white: 0.15)))
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(p.title).font(.system(size: 12, weight: .semibold)).foregroundStyle(.white).lineLimit(1)
-                        HStack(spacing: 6) {
-                            Text("\(p.repo) \(p.num)").font(.system(size: 10)).foregroundStyle(.white.opacity(0.56)).lineLimit(1)
-                            Text(p.src).font(.system(size: 8, weight: .bold)).foregroundStyle(.white.opacity(0.34))
-                                .padding(.horizontal, 5).padding(.vertical, 1)
-                                .background(RoundedRectangle(cornerRadius: 4).fill(.white.opacity(0.07)))
-                        }
+        let pal = model.nomi
+        let rows: [(src: String, title: String, chip: String, warn: Bool, sub: String)] = [
+            ("GH", "#52 design: 主工作台外壳+Today", "checks ✓", false, "可合并 · 2 approvals · main ← feat/shell"),
+            ("GH", "#54 loop docs 复审", "CI 跑着", true, "macOS job 还剩 ~2 分钟"),
+            ("GT", "feat/cockpit-fanbox", "3 commits 未推", true, "最近:notch banner 单体化 · 2 分钟前"),
+        ]
+        return VStack(alignment: .leading, spacing: 7) {
+            HStack(alignment: .firstTextBaseline, spacing: 7) {
+                Text("PR · COMMIT 监听").font(.system(size: 11, weight: .semibold)).foregroundStyle(Color(pal.ink2))
+                Text("示例数据 · 接入待定").font(.system(size: 10)).foregroundStyle(Color(pal.ink3)).tracking(0.4)
+                Spacer()
+            }
+            .padding(.horizontal, 2).padding(.bottom, 2)
+            ForEach(rows.indices, id: \.self) { i in
+                let r = rows[i]
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Text(r.src).font(.system(size: 9, weight: .heavy)).foregroundStyle(Color(pal.onInk))
+                            .frame(width: 20, height: 20)
+                            .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color(pal.ink)))
+                        Text(r.title).font(.system(size: 12, weight: .semibold)).foregroundStyle(Color(pal.ink))
+                            .lineLimit(1).truncationMode(.tail)
+                        Spacer(minLength: 6)
+                        Text(r.chip).font(.system(size: 9.5))
+                            .foregroundStyle(r.warn ? Color(RGB(hex: "ffc58a")) : Color(RGB(hex: "7fe0a0")))
+                            .padding(.horizontal, 8).padding(.vertical, 3)
+                            .background(Capsule().fill(r.warn ? Color(RGB(hex: "3a2c1e")) : Color(RGB(hex: "1e3a26"))))
                     }
-                    Spacer(minLength: 4)
-                    Text("↗").font(.system(size: 13)).foregroundStyle(accent)
+                    Text(r.sub).font(.system(size: 10.5)).foregroundStyle(Color(pal.ink3)).lineLimit(1)
                 }
-                .padding(.vertical, 9)
-                .overlay(alignment: .bottom) {
-                    if i < prSeed.count - 1 { Rectangle().fill(.white.opacity(0.09)).frame(height: 0.5) }
-                }
+                .padding(EdgeInsets(top: 10, leading: 12, bottom: 10, trailing: 12))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .wcard(pal, dark: model.nomiDark)
             }
             Spacer(minLength: 0)
         }
@@ -1074,70 +1095,113 @@ struct NotchView: View {
     }
 
     @ViewBuilder private var agentList: some View {
+        let pal = model.nomi
         let sessions = displaySessions
         let waiting = sessions.filter(\.needsAttention)
-        let active = sessions.filter(\.isActive).count
-        let clickable = !model.localSessions.isEmpty  // demo 行不可点开详情
-        cellHeader(
-            "◉ 本机 CLAUDE CODE",
-            accentTitle: !waiting.isEmpty,
-            trailing: waiting.isEmpty ? "\(active) 活跃" : "\(waiting.count) 待批准",
-            trailingColor: waiting.isEmpty ? .white.opacity(0.35) : .orange)
-        if let perm = waiting.first {
-            permissionCard(perm).padding(.top, 6)
-        }
-        VStack(alignment: .leading, spacing: 6) {
-            ForEach(Array(sessions.filter { !$0.needsAttention }.prefix(waiting.isEmpty ? 3 : 0))) { session in
-                HStack(spacing: 7) {
-                    Circle().fill(phaseColor(session.phase)).frame(width: 6, height: 6)
-                    Text(session.folderName).font(.system(size: 11, weight: .medium)).foregroundStyle(.white.opacity(0.85))
-                        .lineLimit(1).layoutPriority(1)
-                    if session.phase == .running {
-                        // HTML: ✻+shimmer only for the "thinking" row; a concrete
-                        // activity (e.g. Bash: …) shows as plain gray.
-                        if let act = session.activity, act != "正在思考…" {
-                            Text(act).font(.system(size: 10)).foregroundStyle(.white.opacity(0.34)).lineLimit(1).truncationMode(.tail)
-                        } else {
-                            SpinningStar(color: accent).scaleEffect(0.78)
-                            ShineText("正在思考…", accent: accent, size: 10)
-                        }
-                    }
-                    Spacer(minLength: 4)
-                    Text(phaseShort(session.phase)).font(.system(size: 9)).foregroundStyle(.white.opacity(0.35)).fixedSize()
-                }
-                .contentShape(Rectangle())
-                .onTapGesture { if clickable { model.selectedLocalSessionID = session.id } }
+        let clickable = !model.localSessions.isEmpty  // demo 卡不可点开详情
+        HStack(alignment: .firstTextBaseline, spacing: 7) {
+            Text("会话").font(.system(size: 11, weight: .semibold)).foregroundStyle(Color(pal.ink2))
+            Text("本机 Claude Code · 上下滑看端口/PR").font(.system(size: 10))
+                .foregroundStyle(Color(pal.ink3)).tracking(0.4)
+            Spacer()
+            if !waiting.isEmpty {
+                Text("\(waiting.count) 待处理").font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Color(NomiTheme.warn))
             }
         }
-        .padding(.top, 6)
+        .padding(.horizontal, 2).padding(.bottom, 7)
+        if let perm = waiting.first {
+            permissionCard(perm).padding(.bottom, 8)
+        }
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 8) {
+                ForEach(Array(sessions.filter { !$0.needsAttention }.prefix(3))) { session in
+                    sessionCard(session, pal: pal)
+                        .contentShape(Rectangle())
+                        .onTapGesture { if clickable { model.selectedLocalSessionID = session.id } }
+                }
+                if sessions.isEmpty {
+                    Text("暂无运行中的 agent — 开一个 Claude Code session 就会出现")
+                        .font(.system(size: 11)).foregroundStyle(Color(pal.ink3))
+                        .frame(maxWidth: .infinity, alignment: .center).padding(.vertical, 20)
+                }
+            }
+        }
         Spacer(minLength: 0)
     }
 
-    private func permissionCard(_ session: LocalSession) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Text("⚠︎ \(session.folderName) · 请求执行")
-                .font(.system(size: 10, weight: .semibold)).foregroundStyle(Color(red: 1, green: 0.85, blue: 0.64))
-            Text(session.pendingDetail ?? session.pendingTool ?? "(请求权限)")
-                .font(.system(size: 10, design: .monospaced)).foregroundStyle(.white.opacity(0.82))
-                .lineLimit(1).padding(5)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 6).fill(.black.opacity(0.35)))
-            HStack(spacing: 7) {
-                Button("允许") { model.resolveLocalPermission(session.id, allow: true) }
-                    .buttonStyle(.plain)
-                    .font(.system(size: 10, weight: .semibold)).foregroundStyle(.black)
-                    .padding(.horizontal, 12).padding(.vertical, 4)
-                    .background(Capsule().fill(accent))
-                Button("拒绝") { model.resolveLocalPermission(session.id, allow: false) }
-                    .buttonStyle(.plain)
-                    .font(.system(size: 10, weight: .semibold)).foregroundStyle(.white)
-                    .padding(.horizontal, 12).padding(.vertical, 4)
-                    .background(Capsule().fill(.white.opacity(0.1)))
+    /// NOMI .sess 卡:光环状态点 + claude·目录 + 右 mono 状态 + 一行动态。
+    private func sessionCard(_ s: LocalSession, pal: NomiPalette) -> some View {
+        let (dot, halo): (Color, Color) = switch s.phase {
+        case .running: (Nomi.ok, Nomi.ok.opacity(0.18))
+        case .waitingPermission, .waitingQuestion: (Color(NomiTheme.g1), Color(NomiTheme.g1).opacity(0.18))
+        case .idle, .ended: (Color(pal.ink3), Color(pal.pill))
+        }
+        let line = s.activity ?? s.lastAssistant ?? s.lastPrompt ?? "—"
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Circle().fill(dot).frame(width: 8, height: 8)
+                    .background(Circle().fill(halo).frame(width: 14, height: 14))
+                Text("claude · \(s.folderName)").font(.system(size: 12.5, weight: .semibold))
+                    .foregroundStyle(Color(pal.ink)).lineLimit(1)
+                Spacer(minLength: 6)
+                Text(sessionShortStatus(s)).font(.system(size: 9.5, design: .monospaced))
+                    .foregroundStyle(Color(pal.ink3))
+            }
+            if s.phase == .running && (s.activity == nil || s.activity == "正在思考…") {
+                HStack(spacing: 5) {
+                    SpinningStar(color: Color(NomiTheme.g1)).scaleEffect(0.78)
+                    ShineText("正在思考…", accent: Color(NomiTheme.g1), size: 11)
+                }
+            } else {
+                Text(line).font(.system(size: 11)).foregroundStyle(Color(pal.ink2))
+                    .lineLimit(1).truncationMode(.tail)
             }
         }
-        .padding(9)
-        .background(RoundedRectangle(cornerRadius: 10).fill(Color.orange.opacity(0.12)))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.orange.opacity(0.35), lineWidth: 1))
+        .padding(EdgeInsets(top: 10, leading: 13, bottom: 10, trailing: 13))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .wcard(pal, dark: model.nomiDark)
+    }
+
+    private func sessionShortStatus(_ s: LocalSession) -> String {
+        switch s.phase {
+        case .running: "运行中"
+        case .waitingPermission: "待批准"
+        case .waitingQuestion: "等你回答"
+        case .idle: "空闲 · 可回复"
+        case .ended: "已结束"
+        }
+    }
+
+    /// NOMI .permcard:左橙边卡,spark+目录+请求;Allow=kbtn/Deny=pbtn。
+    /// (真 diff 等 hook 带 patch 内容,现为 tool/detail — TODO(align-diff))
+    private func permissionCard(_ session: LocalSession) -> some View {
+        let pal = model.nomi
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 7) {
+                SparkDot()
+                Text("claude · \(session.folderName)").font(.system(size: 11, weight: .bold)).foregroundStyle(Color(pal.ink))
+                Text("请求执行").font(.system(size: 11)).foregroundStyle(Color(pal.ink2))
+            }
+            Text(session.pendingDetail ?? session.pendingTool ?? "(请求权限)")
+                .font(.system(size: 10.5, design: .monospaced)).foregroundStyle(Color(pal.ink2))
+                .lineLimit(2).padding(EdgeInsets(top: 6, leading: 9, bottom: 6, trailing: 9))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color(pal.pill)))
+            HStack(spacing: 6) {
+                Button("Allow") { model.resolveLocalPermission(session.id, allow: true) }
+                    .buttonStyle(InkButtonStyle(palette: pal))
+                Button("Deny") { model.resolveLocalPermission(session.id, allow: false) }
+                    .buttonStyle(PillButtonStyle(palette: pal, fontSize: 12))
+            }
+        }
+        .padding(EdgeInsets(top: 11, leading: 13, bottom: 11, trailing: 13))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .wcard(pal, dark: model.nomiDark)
+        .overlay(alignment: .leading) {
+            UnevenRoundedRectangle(topLeadingRadius: 14, bottomLeadingRadius: 14)
+                .fill(Color(NomiTheme.warn)).frame(width: 3)
+        }
     }
 
     // MARK: Permission banner (HTML bannerHTML — pops on waiting_permission)
