@@ -25,8 +25,8 @@
 
 <section class="research" aria-label="Deep Research">
   <header class="head">
-    <h1>RESEARCH</h1>
-    <span class="hd">研究</span>
+    <h1>研究</h1>
+    <span class="hd">丢一个问题,agent 出一份带来源的报告</span>
     <span class="status s-{research.status}">{research.status}</span>
     <span class="pg">{pad3(research.sessions.length)} SESSIONS</span>
   </header>
@@ -160,10 +160,8 @@
     gap: 12px;
   }
   .head h1 {
-    font-family: var(--mono);
-    font-size: 24px;
-    font-weight: 800;
-    letter-spacing: 1px;
+    font: 800 22px/1.2 var(--sans);
+    letter-spacing: -0.2px;
     color: var(--t1);
     margin: 0;
   }
@@ -211,36 +209,27 @@
     align-items: flex-start;
     gap: 9px;
   }
-  .car {
-    width: 2px;
-    height: 14px;
-    background: var(--acc);
-    flex: none;
-    margin-top: 5px;
-    animation: blink 1s steps(1) infinite;
-  }
+  .car { display: none; }
   @keyframes blink {
     50% { opacity: 0; }
   }
   .ask textarea {
     flex: 1;
-    background: transparent;
+    background: var(--pill);
     border: 0;
-    border-bottom: 1px solid var(--hair);
+    border-radius: var(--radius);
     color: var(--t1);
     font-family: var(--sans);
-    font-size: 13px;
-    padding: 3px 0 6px;
+    font-size: 13.5px;
+    padding: 12px 14px;
     resize: vertical;
     min-width: 0;
+    min-height: 44px;
   }
   .ask textarea::placeholder {
     color: var(--t4);
   }
-  .ask textarea:focus {
-    outline: none;
-    border-bottom-color: var(--acc-ink);
-  }
+  .ask textarea:focus { outline: none; }
   .controls {
     display: flex;
     gap: 12px;
@@ -271,26 +260,26 @@
     border-bottom-color: var(--acc-ink);
   }
   .act {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--t4);
-    background: transparent;
-    border: 1px solid var(--line);
-    padding: 4px 10px;
+    font: 500 11.5px/1 var(--sans);
+    color: var(--t3);
+    background: var(--pill);
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 7px 13px;
     cursor: pointer;
-    transition: color .12s var(--ease);
+    transition: all .12s var(--ease);
   }
   .act:hover:not(:disabled) {
     color: var(--t1);
   }
   .act.pri {
-    color: var(--acc-ink);
-    border-color: var(--acc-ink);
-    margin-left: auto;
+    color: #fff;
+    background: var(--grad);
+    font-weight: 600;
   }
   .act.pri:disabled {
+    background: var(--pill);
     color: var(--t4);
-    border-color: var(--line);
     cursor: default;
   }
   .act.stop {
@@ -310,8 +299,10 @@
     overflow: auto;
   }
   .framed {
-    position: relative;
-    border: 1px solid var(--line);
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 12px 16px;
   }
   .framed::before,
   .framed::after {

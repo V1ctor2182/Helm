@@ -29,3 +29,8 @@
 - 门: build ✓ / check 0/0 / test 204 全绿
 - 视觉: shots/r06-chat.png(会话列表真数据白卡 ✓)
 - 缺口: CompareView/ProviderSettings 两个子面板未换皮 → backlog P2
+## R07 · 2026-07-07 00:34 · 研究 + 设置换皮
+- 对齐: Research(标题 sans 中文/问题输入灰圆角盒/act 渐变主钮/report·framed 白卡化)+Settings(标题中文/act·sel 胶囊化;主题段/AI provider 段功能原样)。
+- 门: build ✓ / check 0/0 / test 204 全绿
+- 视觉: shots/r07-research.png + r07-settings.png
+- 缺口: 驾驶舱家族(3187 行)未换皮 → backlog P1(单独轮);Research 历史列表/badge 细节待精修 P2

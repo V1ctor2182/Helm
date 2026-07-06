@@ -60,8 +60,8 @@
 
 <section class="settings" aria-label="设置">
   <header class="head">
-    <h1>SETTINGS</h1>
-    <span class="hd">设置</span>
+    <h1>设置</h1>
+    <span class="hd">全本地 · 无云依赖</span>
     <span class="pg">LOCAL · NO CLOUD</span>
   </header>
 
@@ -181,10 +181,8 @@
     margin-bottom: 6px;
   }
   .head h1 {
-    font-family: var(--mono);
-    font-size: 24px;
-    font-weight: 800;
-    letter-spacing: 1px;
+    font: 800 22px/1.2 var(--sans);
+    letter-spacing: -0.2px;
     color: var(--t1);
     margin: 0;
   }
@@ -233,22 +231,23 @@
     gap: 8px;
   }
   .act {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--t4);
-    background: transparent;
-    border: 1px solid var(--line);
-    padding: 4px 12px;
+    font: 500 11.5px/1 var(--sans);
+    color: var(--t3);
+    background: var(--pill);
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 7px 13px;
     cursor: pointer;
-    transition: color .12s var(--ease);
+    transition: all .12s var(--ease);
   }
   .act:hover {
     color: var(--t1);
   }
   .act.on,
   .act.pri {
-    color: var(--acc-ink);
-    border-color: var(--acc-ink);
+    color: #fff;
+    background: var(--grad);
+    font-weight: 600;
   }
   .swatches {
     display: flex;
@@ -285,13 +284,15 @@
     margin-bottom: 8px;
   }
   .sel {
-    font-family: var(--mono);
-    font-size: 12px;
+    font-family: var(--sans);
+    font-size: 12.5px;
     color: var(--t1);
-    background: var(--panel);
-    border: 1px solid var(--line);
-    padding: 6px 9px;
+    background: var(--pill);
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 8px 14px;
     outline: none;
+    cursor: pointer;
   }
   .sel:focus {
     border-color: var(--acc-ink);

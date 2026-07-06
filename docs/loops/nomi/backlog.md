@@ -6,3 +6,5 @@
 - [ ] [R05][P1][gap] 记录页三视图重构:四 tab(速记/日记/任务/日历)→稿的 Timeline/Canvas/Calendar+侧栏分类过滤;Canvas 视图(拖拽+连线)全新未建。
 - [ ] [R05][P1][gap] Calendar.svelte(月历+agenda)仍 ORAGE 皮,且稿是周视图+时刻线。
 - [ ] [R06][P2][polish] CompareView/ProviderSettings 子面板仍 ORAGE 皮。
+- [ ] [R07][P1][gap] 驾驶舱家族(CockpitView/Sidebar/DockHost/FileBrowser/PreviewPane,3187 行)未换皮——按稿 agent 卡+黑终端块语言,单独轮。
+- [ ] [R07][P2][polish] Research 历史列表/状态 badge、Settings 主题色点排精修。
