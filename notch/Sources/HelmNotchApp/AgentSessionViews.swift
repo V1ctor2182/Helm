@@ -21,12 +21,13 @@ struct QuestionBannerView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 HStack(spacing: 7) {
-                    Circle().fill(accent).frame(width: 7, height: 7)
-                    Text("Claude 提问 · \(session.folderName)")
-                        .font(.system(size: 11, weight: .bold)).foregroundStyle(accent)
+                    SparkDot()
+                    Text("claude · \(session.folderName)").font(.system(size: 11.5, weight: .bold))
+                        .foregroundStyle(Color(model.nomi.ink))
+                    Text("提问").font(.system(size: 11.5)).foregroundStyle(Color(model.nomi.ink2))
                 }
                 Spacer()
-                Text("选择后提交 — 无需回终端").font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
+                Text("选择后提交 — 无需回终端").font(.system(size: 10)).foregroundStyle(Color(model.nomi.ink3))
             }
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 12) {
@@ -35,20 +36,16 @@ struct QuestionBannerView: View {
                 .padding(.top, 10)
             }
             HStack(spacing: 10) {
-                Button {
-                    // 不作答放行:CLI 会在终端弹自己的选择器。
-                    model.resolveLocalPermission(session.id, allow: true)
-                } label: {
-                    Text("终端作答").font(.system(size: 12, weight: .semibold)).foregroundStyle(.white)
-                        .frame(width: 108).padding(.vertical, 9)
-                        .background(RoundedRectangle(cornerRadius: 10).fill(.white.opacity(0.1)))
-                }.buttonStyle(.plain)
+                Button("终端作答") { model.resolveLocalPermission(session.id, allow: true) }
+                    .buttonStyle(PillButtonStyle(palette: model.nomi, fontSize: 12))
+                Button("打开会话") { model.openPendingSession() }
+                    .buttonStyle(PillButtonStyle(palette: model.nomi, fontSize: 12))
                 Button(action: submit) {
                     Text("提交答案").font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(canSubmit ? Color(red: 0.1, green: 0.07, blue: 0.03) : .white.opacity(0.4))
+                        .foregroundStyle(canSubmit ? .white : Color(model.nomi.ink3))
                         .frame(maxWidth: .infinity).padding(.vertical, 9)
-                        .background(RoundedRectangle(cornerRadius: 10)
-                            .fill(canSubmit ? AnyShapeStyle(accent) : AnyShapeStyle(.white.opacity(0.08))))
+                        .background(Capsule()
+                            .fill(canSubmit ? AnyShapeStyle(Nomi.gradientH) : AnyShapeStyle(Color(model.nomi.pill))))
                 }
                 .buttonStyle(.plain)
                 .disabled(!canSubmit)
@@ -64,20 +61,20 @@ struct QuestionBannerView: View {
             if !item.header.isEmpty {
                 Text(item.header.uppercased())
                     .font(.system(size: 9, weight: .bold)).tracking(0.6)
-                    .foregroundStyle(.white.opacity(0.35))
+                    .foregroundStyle(Color(model.nomi.ink3))
             }
             Text(item.question)
-                .font(.system(size: 12, weight: .semibold)).foregroundStyle(.white.opacity(0.92))
+                .font(.system(size: 12, weight: .semibold)).foregroundStyle(Color(model.nomi.ink))
                 .fixedSize(horizontal: false, vertical: true)
             ForEach(item.options.indices, id: \.self) { oi in optionRow(qi, oi) }
             if pickedFreeform(qi) {
                 TextField("输入你的回答…", text: bindingFreeform(qi))
                     .textFieldStyle(.plain)
-                    .font(.system(size: 11)).foregroundStyle(.white)
+                    .font(.system(size: 11)).foregroundStyle(Color(model.nomi.ink))
                     .focused($freeformFocused)
                     .padding(.horizontal, 9).padding(.vertical, 6)
-                    .background(RoundedRectangle(cornerRadius: 7).fill(.black.opacity(0.4)))
-                    .overlay(RoundedRectangle(cornerRadius: 7).stroke(accent.opacity(0.5), lineWidth: 1))
+                    .background(RoundedRectangle(cornerRadius: 7).fill(Color(model.nomi.pill)))
+                    .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color(NomiTheme.g1).opacity(0.5), lineWidth: 1))
                     .onSubmit { if canSubmit { submit() } }
             }
         }
@@ -99,22 +96,22 @@ struct QuestionBannerView: View {
             if opt.allowsFreeform && !on { freeformFocused = true }
         } label: {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(glyph).font(.system(size: 11)).foregroundStyle(on ? accent : .white.opacity(0.45))
+                Text(glyph).font(.system(size: 11)).foregroundStyle(on ? Color(NomiTheme.g1) : Color(model.nomi.ink3))
                     .frame(width: 14, alignment: .center)
                 Text(opt.label)
                     .font(.system(size: 11, weight: on ? .semibold : .regular))
-                    .foregroundStyle(on ? .white : .white.opacity(0.75))
+                    .foregroundStyle(Color(model.nomi.ink).opacity(on ? 1 : 0.8))
                     .lineLimit(2)
                 if !opt.detail.isEmpty {
-                    Text(opt.detail).font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
+                    Text(opt.detail).font(.system(size: 10)).foregroundStyle(Color(model.nomi.ink3))
                         .lineLimit(1).truncationMode(.tail)
                 }
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 8).padding(.vertical, 5)
-            .background(RoundedRectangle(cornerRadius: 7).fill(on ? accent.opacity(0.14) : .white.opacity(0.04)))
+            .background(RoundedRectangle(cornerRadius: 7).fill(Color(model.nomi.pill).opacity(on ? 1 : 0.55)))
             .overlay(RoundedRectangle(cornerRadius: 7)
-                .stroke(on ? accent.opacity(0.55) : .white.opacity(0.08), lineWidth: 1))
+                .strokeBorder(on ? AnyShapeStyle(Nomi.gradient) : AnyShapeStyle(Color(model.nomi.hair)), lineWidth: on ? 1.5 : 1))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

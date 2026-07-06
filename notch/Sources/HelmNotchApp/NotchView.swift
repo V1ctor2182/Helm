@@ -29,7 +29,7 @@ struct NotchView: View {
     var body: some View {
         // Banner states override collapsed/expanded. Reminder (560×152) takes
         // precedence over a permission request (620×208) — matching HTML render().
-        let waiting = model.localSessions.first(where: { $0.needsAttention })
+        let waiting = model.bannerSuppressed ? nil : model.localSessions.first(where: { $0.needsAttention })
         let reminder = model.reminder
         let shellW: CGFloat = reminder != nil ? 560 : (waiting != nil ? model.bannerSize.width : (model.expanded ? model.expandedWidth : collapsedWidth))
         let shellH: CGFloat = reminder != nil ? 152 : (waiting != nil ? model.bannerSize.height : (model.expanded ? model.autoExpandedHeight : collapsedBarHeight))
@@ -73,8 +73,8 @@ struct NotchView: View {
         .frame(width: width, height: height, alignment: .top)
         // NOMI 单体生长:折叠=纯黑条;展开=面板底色(深 #0f0f11/浅 #fff)。
         // 玻璃材质暂退役(B11 设置页收尾时再定去留)。
-        .background(model.expanded ? Color(model.nomi.shellBG) : .black)
-        .clipShape(NotchShape(bottomRadius: model.expanded
+        .background((model.expanded || banner != nil || reminder != nil) ? Color(model.nomi.shellBG) : .black)
+        .clipShape(NotchShape(bottomRadius: (model.expanded || banner != nil || reminder != nil)
             ? CGFloat(NomiTheme.openRadius) : CGFloat(NomiTheme.foldedRadius)))
         // Drag a file onto the notch → stage it in 速记 (HTML notch.drag + drop).
         .overlay {
@@ -115,7 +115,7 @@ struct NotchView: View {
     /// 用来吞掉 SwiftUI onHover 因子树重建(媒体 TimelineView tick)发出的虚假 exited。
     private static func mouseInsideActiveRegion(model: NotchModel) -> Bool {
         guard let screen = NSScreen.main else { return false }
-        let waiting = model.localSessions.first(where: { $0.needsAttention })
+        let waiting = model.bannerSuppressed ? nil : model.localSessions.first(where: { $0.needsAttention })
         let w: CGFloat = waiting != nil
             ? model.bannerSize.width
             : (model.reminder != nil ? 560 : (model.expanded ? model.expandedWidth : model.collapsedWidth))
@@ -1210,40 +1210,35 @@ struct NotchView: View {
     // for now, so the request body shows that instead of a real diff.
 
     private func permissionBanner(_ s: LocalSession) -> some View {
-        let amber = Color(red: 1, green: 0.85, blue: 0.64)
+        let pal = model.nomi
         return VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                HStack(spacing: 7) {
-                    Circle().fill(.orange).frame(width: 7, height: 7)
-                    Text("Permission Request · \(s.folderName)").font(.system(size: 11, weight: .bold)).foregroundStyle(amber)
-                }
+            HStack(spacing: 7) {
+                SparkDot()
+                Text("claude · \(s.folderName)").font(.system(size: 11.5, weight: .bold)).foregroundStyle(Color(pal.ink))
+                Text(s.pendingTool == "AskUserQuestion" ? "选择题 — 允许后在终端作答" : "请求执行")
+                    .font(.system(size: 11.5)).foregroundStyle(Color(pal.ink2))
                 Spacer()
-                Text("⌘Y 允许 · ⌘N 拒绝").font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
+                Text("⌘Y 允许 · ⌘N 拒绝").font(.system(size: 10)).foregroundStyle(Color(pal.ink3))
             }
-            Text("⚠︎ \(s.pendingTool == "AskUserQuestion" ? "选择题 — 允许后在终端作答" : (s.pendingTool ?? "请求执行"))")
-                .font(.system(size: 11, weight: .semibold)).foregroundStyle(amber).padding(.top, 10)
             Text(s.pendingDetail ?? s.pendingTool ?? "(请求权限)")
-                .font(.system(size: 11, design: .monospaced)).foregroundStyle(.white.opacity(0.82))
+                .font(.system(size: 10.5, design: .monospaced)).foregroundStyle(Color(pal.ink2))
                 .lineLimit(8).frame(maxWidth: .infinity, alignment: .leading)
-                .padding(9)
-                .background(RoundedRectangle(cornerRadius: 8).fill(.black.opacity(0.4)))
+                .padding(EdgeInsets(top: 8, leading: 10, bottom: 8, trailing: 10))
+                .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color(pal.pill)))
                 .padding(.top, 9)
-            HStack(spacing: 10) {
-                Button { model.resolveLocalPermission(s.id, allow: false) } label: {
-                    Text("Deny ⌘N").font(.system(size: 12, weight: .semibold)).foregroundStyle(.white)
-                        .frame(maxWidth: .infinity).padding(.vertical, 9)
-                        .background(RoundedRectangle(cornerRadius: 10).fill(.white.opacity(0.1)))
-                }.buttonStyle(.plain)
-                Button { model.resolveLocalPermission(s.id, allow: true) } label: {
-                    Text("Allow ⌘Y").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color(red: 0.1, green: 0.07, blue: 0.03))
-                        .frame(maxWidth: .infinity).padding(.vertical, 9)
-                        .background(RoundedRectangle(cornerRadius: 10).fill(accent))
-                }.buttonStyle(.plain)
+            HStack(spacing: 6) {
+                Button("Allow") { model.resolveLocalPermission(s.id, allow: true) }
+                    .buttonStyle(InkButtonStyle(palette: pal))
+                Button("Deny") { model.resolveLocalPermission(s.id, allow: false) }
+                    .buttonStyle(PillButtonStyle(palette: pal, fontSize: 12))
+                Button("打开会话") { model.openPendingSession() }
+                    .buttonStyle(PillButtonStyle(palette: pal, fontSize: 12))
+                Spacer()
             }
-            .padding(.top, 12)
+            .padding(.top, 11)
             Spacer(minLength: 0)
         }
-        .padding(EdgeInsets(top: 14, leading: 18, bottom: 14, trailing: 18))
+        .padding(EdgeInsets(top: 12, leading: 16, bottom: 14, trailing: 16))
         .frame(width: model.bannerSize.width, height: model.bannerSize.height, alignment: .topLeading)
     }
 

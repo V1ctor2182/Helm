@@ -66,3 +66,10 @@
 - PR 页:NOMI prrow 卡+chip;数据源仍 seed → 页头明示「示例数据·接入待定」(TODO align-pr:gh CLI 或后端接口)。
 - 预算:sessions 260/ports 260/prs 300(详情 316);测试同步,全绿。快照 b9-sessions/ports/prs。
 - 决策:会话卡内嵌选择题 qbtns 不做——needsAttention 时 banner 态整体接管 notch,卡上按钮永远不可见;选择题作答留在 B10 banner。
+
+## 2026-07-07 迭代 11 — B10 banner 单体化 ✅
+- 横幅从 620 ORAGE 橙黑改 NOMI bannermode:460 宽、面板底色(shell 生长复用,banner 态=open 底色+圆角 26)、spark+claude·目录头、pill 命令块、Allow(kbtn)/Deny/打开会话(pbtn)。
+- 「打开会话」逃生口:bannerSuppressed 压横幅→智能体页列表内 permcard 处理;新 PermissionRequest 或解决后自动复位重弹(有测试)。
+- 选择题横幅同套 NOMI:spark 头/选项 pill+渐变描边选中/提交=渐变胶囊/终端作答+打开会话;答案注回 updatedInput 链路不变。
+- ⌘Y/⌘N 文案保留(快捷键接线仍在账上,非本稿新增);reminder 横幅未 NOMI 化(设计稿无此稿面,B11 顺手)。
+- 全测试绿;快照 b10-banner-perm/ask。

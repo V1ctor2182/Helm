@@ -356,6 +356,17 @@ public final class NotchModel {
     /// `updatedInput` (tool_input JSON) rides along for question answers.
     public var resolvePermission: (@MainActor (_ session: String, _ allow: Bool, _ updatedInput: String?) -> Void)?
 
+    /// 「打开会话」按下后压住横幅,改在智能体页里处理(新请求/解决后复位)。
+    public var bannerSuppressed = false
+
+    /// banner 上的「打开会话」:压横幅 → 智能体页会话列表(permcard 在列表里)。
+    public func openPendingSession() {
+        bannerSuppressed = true
+        selectedLocalSessionID = nil
+        selectModule(.agents)
+        expanded = true
+    }
+
     /// Session opened in the Dev/Agents detail view (nil = list).
     public var selectedLocalSessionID: String?
     public var selectedLocalSession: LocalSession? {
@@ -369,8 +380,9 @@ public final class NotchModel {
     /// Permission banner 高度随内容走:头 40 + 标题 25 + 正文行数 + 按钮区 60。
     /// 定高 208 在一行 detail 时底下剩一大块黑(2026-07-03 用户反馈)。
     public var bannerSize: CGSize {
+        let w = NomiTheme.bannerWidth  // NOMI bannermode 460
         guard let s = localSessions.first(where: { $0.needsAttention }) else {
-            return CGSize(width: 620, height: 208)
+            return CGSize(width: w, height: 208)
         }
         // 选择题横幅:头 40 + 每题(题面 ~22 + 每选项 ~30) + 提交区 56。
         if let q = s.question {
@@ -379,15 +391,14 @@ public final class NotchModel {
                 h += 24 + Double(item.options.count) * 30
                 if !item.header.isEmpty { h += 16 }
             }
-            return CGSize(width: 620, height: min(560, max(208, h)))
+            return CGSize(width: w, height: min(560, max(208, h)))
         }
         let detail = s.pendingDetail ?? s.pendingTool ?? ""
-        // 显式换行 + 长行折行估算(monospaced 11pt,620-36-18 宽约容 78 字符)
+        // 显式换行 + 长行折行估算(monospaced 10.5pt,460 宽约容 56 字符)
         let lines = detail.split(separator: "\n", omittingEmptySubsequences: false)
-            .reduce(0) { $0 + max(1, Int(ceil(Double($1.count) / 78.0))) }
+            .reduce(0) { $0 + max(1, Int(ceil(Double($1.count) / 56.0))) }
         let clamped = min(8, max(1, lines))
-        // 实测布局:上下 padding 28 + 头 16 + 题行 25 + 正文框 18 + 按钮区 48 ≈ 144 固定 + 行高 16
-        return CGSize(width: 620, height: CGFloat(144 + clamped * 16))
+        return CGSize(width: w, height: CGFloat(148 + clamped * 16))
     }
 
     /// 折叠态两翼宽度随内容走(2026-07-03 用户:折叠态太宽)。
@@ -680,6 +691,7 @@ public final class NotchModel {
                 upsert(m, phase: .running, activity: activityLabel(m), now: now)
             }
         case "PermissionRequest":
+            bannerSuppressed = false  // 新请求重新弹横幅
             // 选择题解析成功 → 独立的 waitingQuestion(notch 内可作答);
             // 解析不了照旧走 waitingPermission 允许/拒绝。
             let question = (m.tool == "AskUserQuestion" && m.toolInput != nil)
@@ -726,6 +738,7 @@ public final class NotchModel {
     }
 
     private func clearPending(_ session: String, phase: LocalSession.Phase) {
+        bannerSuppressed = false
         guard let i = localSessions.firstIndex(where: { $0.id == session }) else { return }
         localSessions[i].phase = phase
         localSessions[i].pendingTool = nil
