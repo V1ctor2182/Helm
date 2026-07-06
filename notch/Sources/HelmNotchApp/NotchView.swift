@@ -1365,10 +1365,10 @@ struct NotchView: View {
                 let on = model.captureKind == kind
                 Button(kind.label) { model.captureKind = kind }
                     .buttonStyle(.plain)
-                    .font(.system(size: 11, weight: on ? .semibold : .regular))
-                    .foregroundStyle(on ? .black : .white.opacity(0.55))
-                    .padding(.horizontal, 10).padding(.vertical, 3)
-                    .background(Capsule().fill(on ? accent : .white.opacity(0.08)))
+                    .font(.system(size: 11.5, weight: on ? .semibold : .regular))
+                    .foregroundStyle(on ? Color(model.nomi.onInk) : Color(model.nomi.ink2))
+                    .padding(.horizontal, 12).padding(.vertical, 6)
+                    .background(Capsule().fill(on ? Color(model.nomi.ink) : Color(model.nomi.pill)))
             }
         }
         .padding(.top, 6)
@@ -1379,12 +1379,13 @@ struct NotchView: View {
             if model.captureKind == .task { taskTargetToggle.padding(.top, 8) }
             // capin — full-width input on its own row (HTML .capin).
             TextField(placeholder, text: $model.captureText, axis: .vertical)
-                .textFieldStyle(.plain).font(.system(size: 14)).foregroundStyle(.white)
+                .textFieldStyle(.plain).font(.system(size: 13)).foregroundStyle(Color(model.nomi.ink))
                 .lineLimit(1...3).focused($captureFocused)
                 .onSubmit { Task { await model.submit() } }
-                .padding(11)
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(model.locked ? 0.1 : 0.06)))
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(accent.opacity(model.locked ? 0.5 : 0), lineWidth: 1.5))
+                .padding(EdgeInsets(top: 11, leading: 13, bottom: 11, trailing: 13))
+                .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color(model.nomi.pill)))
+                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(model.locked ? Color(NomiTheme.g1).opacity(0.5) : .clear, lineWidth: 1.5))
                 // 实测输入框高度,超出单行(~39pt 含 padding)的部分写回模型,
                 // 面板预算跟着长——多行输入不再被面板底裁掉(2026-07-06 用户)。
                 .background(InputHeightProbe { h in
@@ -1395,7 +1396,7 @@ struct NotchView: View {
             // caprow — hint + 发送(HTML .caprow)。时间/地点手选已删:发送后由
             // Helm 侧 AI 解析内容自动补(2026-07-05 用户)。
             HStack(alignment: .center, spacing: 8) {
-                Text(captureHint).font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
+                Text(captureHint).font(.system(size: 10.5)).foregroundStyle(Color(model.nomi.ink3))
                 Spacer(minLength: 0)
                 sendButton
             }
@@ -1416,9 +1417,10 @@ struct NotchView: View {
                 Image(systemName: "paperplane.fill").font(.system(size: 10))
                 Text(sendLabel).font(.system(size: 12, weight: .semibold))
             }
-            .foregroundStyle(model.captureText.isEmpty ? .white.opacity(0.3) : Color(red: 0.1, green: 0.07, blue: 0.03))
-            .padding(.horizontal, 16).padding(.vertical, 7)
-            .background(Capsule().fill(model.captureText.isEmpty ? .white.opacity(0.08) : accent))
+            .foregroundStyle(model.captureText.isEmpty ? Color(model.nomi.ink3) : .white)
+            .padding(.horizontal, 18).padding(.vertical, 8)
+            .background(Capsule().fill(model.captureText.isEmpty
+                ? AnyShapeStyle(Color(model.nomi.pill)) : AnyShapeStyle(Nomi.gradientH)))
         }
         .buttonStyle(.plain).disabled(model.captureText.isEmpty)
     }
@@ -1444,43 +1446,52 @@ struct NotchView: View {
     /// 专注:未开始 = 输入「在做什么」+ 开始;进行中 = 大计时 + 停止并记录。
     @ViewBuilder private var focusBody: some View {
         if model.focusOn {
-            VStack(spacing: 9) {
-                Text("正在专注").font(.system(size: 10, weight: .bold)).tracking(0.6).foregroundStyle(.white.opacity(0.34))
+            // NOMI .focus:渐变环 104 + 右侧关联任务/操作。计时语义保持现行
+            // 正计时记录(设计稿画的是 25min 番茄倒计时——行为差异记 Q4,不猜)。
+            let pal = model.nomi
+            HStack(spacing: 16) {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
-                    let s = model.focusElapsed(at: context.date)
-                    HStack(spacing: 11) {
-                        Circle().fill(accent).frame(width: 10, height: 10)
-                        Text(String(format: "%02d:%02d", s / 60, s % 60))
-                            .font(.system(size: 42, weight: .heavy)).monospacedDigit().foregroundStyle(.white)
+                    let sec = model.focusElapsed(at: context.date)
+                    ZStack {
+                        Circle().stroke(Nomi.gradient, lineWidth: 9)
+                        Circle().fill(Color(pal.cardBG)).frame(width: 86, height: 86)
+                            .overlay(
+                                VStack(spacing: 1) {
+                                    Text(String(format: "%02d:%02d", sec / 60, sec % 60))
+                                        .font(.system(size: 19, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(Color(pal.ink))
+                                    Text("专注中").font(.system(size: 9)).foregroundStyle(Color(pal.ink3))
+                                })
                     }
+                    .frame(width: 104, height: 104)
                 }
-                Text(model.focusWhat).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white).lineLimit(1)
-                Button { Task { await model.stopFocusAndRecord() } } label: {
-                    Text("停止并记录").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color(red: 0.1, green: 0.07, blue: 0.03))
-                        .padding(.horizontal, 22).padding(.vertical, 8)
-                        .background(Capsule().fill(accent))
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("关联任务").font(.system(size: 10)).foregroundStyle(Color(pal.ink3)).tracking(0.4)
+                    Text(model.focusWhat).font(.system(size: 12.5, weight: .semibold))
+                        .foregroundStyle(Color(pal.ink)).lineLimit(2).padding(.top, 4)
+                    HStack(spacing: 6) {
+                        Button("停止并记录") { Task { await model.stopFocusAndRecord() } }
+                            .buttonStyle(InkButtonStyle(palette: pal))
+                    }
+                    .padding(.top, 10)
+                    Text("停止即记录到 Helm(记录页 · 日记时间线)")
+                        .font(.system(size: 9.5)).foregroundStyle(Color(pal.ink3)).padding(.top, 6)
                 }
-                .buttonStyle(.plain)
-                Text("停止即记录到 Helm(记录页 · 日记时间线)").font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
+                Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity)
+            .padding(.vertical, 4)
         } else {
             VStack(alignment: .leading, spacing: 10) {
                 TextField("我现在在做什么…", text: $model.captureText)
-                    .textFieldStyle(.plain).font(.system(size: 14)).foregroundStyle(.white)
+                    .textFieldStyle(.plain).font(.system(size: 13)).foregroundStyle(Color(model.nomi.ink))
                     .focused($captureFocused)
                     .onSubmit { model.startFocus() }
-                    .padding(11)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.06)))
+                    .padding(EdgeInsets(top: 11, leading: 13, bottom: 11, trailing: 13))
+                    .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color(model.nomi.pill)))
                 HStack {
-                    Text("⏎ 开始 · 关掉时自动记录这段专注到 Helm").font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
+                    Text("⏎ 开始 · 关掉时自动记录这段专注到 Helm").font(.system(size: 10.5)).foregroundStyle(Color(model.nomi.ink3))
                     Spacer()
-                    Button { model.startFocus() } label: {
-                        Text("开始专注").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color(red: 0.1, green: 0.07, blue: 0.03))
-                            .padding(.horizontal, 16).padding(.vertical, 7)
-                            .background(Capsule().fill(accent))
-                    }
-                    .buttonStyle(.plain)
+                    Button("开始专注") { model.startFocus() }.buttonStyle(InkButtonStyle(palette: model.nomi))
                 }
             }
         }
@@ -1488,19 +1499,19 @@ struct NotchView: View {
 
     /// 给自己 / 交给 agent (HTML .ttog). TODO(align-capture): agent path → Cockpit.
     private var taskTargetToggle: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 5) {
             ForEach(TaskTarget.allCases) { target in
                 let on = model.taskTarget == target
                 Button(target.label) { model.taskTarget = target }
                     .buttonStyle(.plain)
                     .font(.system(size: 11, weight: on ? .semibold : .regular))
-                    .foregroundStyle(on ? Color(red: 0.1, green: 0.07, blue: 0.03) : .white.opacity(0.56))
+                    .foregroundStyle(on ? .white : Color(model.nomi.ink2))
                     .padding(.horizontal, 12).padding(.vertical, 5)
-                    .background { if on { accent } }
+                    .background(
+                        Capsule().fill(on ? AnyShapeStyle(Nomi.gradientH) : AnyShapeStyle(Color(model.nomi.cardBG))))
+                    .overlay(Capsule().stroke(on ? .clear : Color(model.nomi.hair), lineWidth: 1))
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(.white.opacity(0.09), lineWidth: 0.5))
     }
 
     /// 拖入文件的附件 chip (HTML .attchip). Upload happens on send — TODO.
@@ -1532,8 +1543,13 @@ struct NotchView: View {
     /// ask 答案卡:大脑的回答 + 存速记。
     private func askAnswerCard(_ answer: String) -> some View {
         VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 6) {
+                SparkDot()
+                Text("Helm 大脑").font(.system(size: 10.5)).foregroundStyle(Color(model.nomi.ink3))
+            }
             ScrollView(.vertical, showsIndicators: false) {
-                Text(answer).font(.system(size: 12)).foregroundStyle(.white.opacity(0.9))
+                Text(answer).font(.system(size: 12)).foregroundStyle(Color(model.nomi.ink2))
+                    .lineSpacing(3)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(maxHeight: 96)
@@ -1550,9 +1566,8 @@ struct NotchView: View {
                 .buttonStyle(.plain)
             }
         }
-        .padding(10)
-        .background(RoundedRectangle(cornerRadius: 11).fill(.white.opacity(0.05)))
-        .overlay(RoundedRectangle(cornerRadius: 11).stroke(.white.opacity(0.09), lineWidth: 0.5))
+        .padding(EdgeInsets(top: 11, leading: 13, bottom: 11, trailing: 13))
+        .wcard(model.nomi, dark: model.nomiDark)
     }
 
     /// 「最近」条:速记/日记走真数据(GET /api/notes);任务/问没有来源,不显示。
@@ -1563,9 +1578,13 @@ struct NotchView: View {
                     model.captureShowRecent.toggle()
                     if model.captureShowRecent { Task { await model.loadRecents() } }
                 } label: {
-                    Text("最近\(model.captureKind.label) \(model.captureShowRecent ? "▴" : "▾")")
-                        .font(.system(size: 10, weight: .bold)).tracking(0.4)
-                        .foregroundStyle(.white.opacity(0.34))
+                    HStack(spacing: 5) {
+                        Text("▸").rotationEffect(.degrees(model.captureShowRecent ? 90 : 0))
+                            .animation(.easeOut(duration: 0.2), value: model.captureShowRecent)
+                        Text("最近\(model.captureKind.label)")
+                    }
+                    .font(.system(size: 10, weight: .bold)).tracking(0.4)
+                    .foregroundStyle(Color(model.nomi.ink3))
                 }
                 .buttonStyle(.plain)
                 if model.captureShowRecent {

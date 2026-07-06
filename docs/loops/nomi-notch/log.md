@@ -39,3 +39,8 @@
 - seek:MediaController 无 seek API → 进度条只展示不做假点击,TODO(align-seek) 待协议扩展。
 - 歌词三态(同步/纯文本/无词)与换曲重建逻辑保留,颜色切 palette。
 - 全测试绿;快照 b5-media.png。
+
+## 2026-07-07 迭代 7 — B6 速记页 ✅
+- kind 胶囊(on=ink 底/onInk 字)、任务 who 双轨(on=渐变胶囊,off=cardbg+hair 边)、capbox(pill 底 r16)、发送 gbtn 渐变(空文案=pill 灰)、askout 卡(wcard+spark+「Helm 大脑」头)、最近条 ▸ 旋转折叠。
+- 专注:NOMI 渐变环 104(中心 mono 计时+「专注中」)+右列关联任务/停止并记录(kbtn)。语义保持现行正计时记录;设计稿是 25min 番茄倒计时 → 行为差异记 Q4 待拍板,不猜。
+- 全测试绿;快照 b6-capture.png。
