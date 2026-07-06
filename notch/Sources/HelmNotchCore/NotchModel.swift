@@ -270,7 +270,7 @@ public final class NotchModel {
 
     /// Detected physical notch width in points (set by the controller).
     public var notchWidth: Double = 200
-    public var expandedWidth: Double = 600
+    public var expandedWidth: Double = NomiTheme.openWidth  // 440,NOMI .shell.open
     public var expandedHeight: Double = 268
 
     /// Agent runs Helm knows about (backend orchestration).
@@ -340,10 +340,11 @@ public final class NotchModel {
     public var collapsedMeasuredWidth: CGFloat?
 
     public var collapsedWidth: CGFloat {
+        let floor = CGFloat(NomiTheme.foldedWidth)  // NOMI 折叠条设计宽 310
         let estimate = CGFloat(notchWidth) + collapsedLeftWing + collapsedRightWing
-        guard let m = collapsedMeasuredWidth else { return estimate }
-        // 实测为准,但不窄于物理刘海+两侧最小呼吸
-        return max(m, CGFloat(notchWidth) + 76)
+        guard let m = collapsedMeasuredWidth else { return max(estimate, floor) }
+        // 实测为准,但不窄于设计宽/物理刘海+两侧最小呼吸
+        return max(m, CGFloat(notchWidth) + 76, floor)
     }
 
     public var localAttentionCount: Int { localSessions.lazy.filter(\.needsAttention).count }

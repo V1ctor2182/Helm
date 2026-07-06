@@ -14,3 +14,9 @@
 - App `NomiStyle.swift`:gradient(135°/90°/180°)、wcard(dark=发丝边,light=柔影)、GradientButton/InkButton/PillButton、SparkDot。
 - Tests `NomiThemeTests` 5 条全绿;全套 suite 无失败无崩溃。
 - 视图尚未接线(B2 起换装)——本块纯地基,无视觉变化。
+
+## 2026-07-07 迭代 3 — B2 单体壳+折叠态 ✅
+- 折叠条 NOMI 化:左组 HelmLogoView(SVG Path 移植:外框+双眼+圆头眉)+MiniCover 18px+WaveBars 渐变 4 柱呼吸;右组 ●"N live"mono(待批=橙"N 待批",Q1 口径);高 34;宽下限 310(实测回填机制保留)。
+- 壳:展开底色走 nomi.shellBG(深 #0f0f11 默认),折叠纯黑;圆角 14/26;expandedWidth 默认 600→440。玻璃材质暂时退役(B11 定去留);焦点态折叠显示保留旧行为(设计稿未覆盖)。
+- build+test 绿(无失败无崩溃);快照 shots/b2-collapsed.png(logo/摄像头点/状态点就位)。
+- 遗留:壳生长动画仍 .36s(设计 .46s,B3 顶行改造时一起调);窗口级 shadow-xl 待查 NSPanel 阴影可行性。

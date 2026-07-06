@@ -15,7 +15,7 @@ struct NotchView: View {
 
     private var accent: Color { Color(model.accent) }
 
-    private let collapsedBarHeight: CGFloat = 32
+    private let collapsedBarHeight = CGFloat(NomiTheme.foldedHeight)  // 34,NOMI .hw
     // ~100px per side around the camera gap (HTML #bar: (360−160)/2), so the
     // media title reads as "Counting My Bless…" instead of truncating hard.
     private var collapsedWidth: CGFloat { model.collapsedWidth }
@@ -65,8 +65,11 @@ struct NotchView: View {
             }
         }
         .frame(width: width, height: height, alignment: .top)
-        .background(materialBackground)
-        .clipShape(NotchShape(bottomRadius: model.expanded ? 24 : 16))
+        // NOMI 单体生长:折叠=纯黑条;展开=面板底色(深 #0f0f11/浅 #fff)。
+        // 玻璃材质暂退役(B11 设置页收尾时再定去留)。
+        .background(model.expanded ? Color(model.nomi.shellBG) : .black)
+        .clipShape(NotchShape(bottomRadius: model.expanded
+            ? CGFloat(NomiTheme.openRadius) : CGFloat(NomiTheme.foldedRadius)))
         // Drag a file onto the notch → stage it in 速记 (HTML notch.drag + drop).
         .overlay {
             if dragOver {
@@ -182,29 +185,25 @@ struct NotchView: View {
         .onTapGesture { model.toggleExpanded() }
     }
 
+    /// NOMI 折叠左组:logo(常驻)+ 迷你封面 + 渐变波形(播放时)。
+    /// 专注态沿用计时显示(设计稿未覆盖,行为保留)。
     @ViewBuilder private var collapsedLeft: some View {
         if model.focusOn {
             HStack(spacing: 6) {
                 Image(systemName: "timer").font(.system(size: 11)).foregroundStyle(accent)
                 Text(model.focusWhat).font(.system(size: 10, weight: .medium)).foregroundStyle(.white).lineLimit(1)
             }
-        } else if let np = model.nowPlaying {
-            // Collapsed bar shows REAL media only (no demo — it's always visible).
-            HStack(spacing: 6) {
-                collapsedArt(np)
-                if np.isPlaying {
-                    EqualizerBars(color: accent)
-                } else {
-                    Image(systemName: "pause.fill").font(.system(size: 9)).foregroundStyle(.white.opacity(0.5))
-                }
-                Text(np.title).font(.system(size: 10)).foregroundStyle(.white.opacity(0.56))
-                    .lineLimit(1).truncationMode(.tail)
-                    .frame(maxWidth: 104, alignment: .leading) // 承 HTML cnp max-width:104px
-            }
         } else {
-            HStack(spacing: 6) {
-                Circle().fill(dotColor).frame(width: 6, height: 6)
-                Text("Helm").font(.system(size: 10, weight: .semibold)).foregroundStyle(.white.opacity(0.7))
+            HStack(spacing: 9) {
+                HelmLogoView(color: .white.opacity(0.92), size: 19)
+                if let np = model.nowPlaying {
+                    MiniCover(artwork: nsArtwork(np))
+                    if np.isPlaying {
+                        WaveBars()
+                    } else {
+                        Image(systemName: "pause.fill").font(.system(size: 9)).foregroundStyle(.white.opacity(0.5))
+                    }
+                }
             }
         }
     }
@@ -238,16 +237,18 @@ struct NotchView: View {
                 }
             }
         } else if waiting > 0 {
-            // HTML: orange ● + count (an actual waiting agent pops the banner anyway).
+            // 待批准:橙点 + 数(backlog Q1 口径;真等待时横幅本来就会弹)。
             HStack(spacing: 5) {
-                Circle().fill(.orange).frame(width: 7, height: 7)
-                Text("\(waiting)").font(.system(size: 11, weight: .bold)).foregroundStyle(.orange).monospacedDigit()
+                Circle().fill(Nomi.warn).frame(width: 6, height: 6)
+                Text("\(waiting) 待批").font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Color(NomiTheme.warn))
             }
         } else if running > 0 {
-            // HTML: spinning ✻ star + count.
+            // NOMI .stat:绿点 + "N live" mono。
             HStack(spacing: 5) {
-                SpinningStar(color: accent)
-                Text("\(running)").font(.system(size: 11, weight: .bold)).foregroundStyle(.white).monospacedDigit()
+                Circle().fill(Nomi.ok).frame(width: 6, height: 6)
+                Text("\(running) live").font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.75))
             }
         } else if let ev = model.events.first {
             // HTML cev: next event "10:00 站会" (accent time + name).
