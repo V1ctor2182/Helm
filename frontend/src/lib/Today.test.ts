@@ -44,8 +44,9 @@ describe('Today · NOMI 六卡仪表(真数据)', () => {
     expect(cardTitles).toContain('日记 · 今天')
     expect(cardTitles).toContain('智能体')
     expect(cardTitles).toContain('简报 · 世界输入')
-    // 捕获坞也在(5 kind chips)
-    expect(screen.getByRole('button', { name: '问大脑' })).toBeInTheDocument()
+    // 捕获坞也在(单入口:输入框+专注钮)
+    expect(screen.getByLabelText('捕获内容')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '开始专注' })).toBeInTheDocument()
     // 空态
     expect(screen.getByText(/没有定时任务/)).toBeInTheDocument()
     expect(screen.getByText(/没有 agent 运行/)).toBeInTheDocument()

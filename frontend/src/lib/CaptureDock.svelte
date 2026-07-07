@@ -11,7 +11,6 @@
     { id: 'note', label: '速记' },
     { id: 'journal', label: '日记' },
     { id: 'task', label: '任务' },
-    { id: 'focus', label: '专注' },
     { id: 'ask', label: '问大脑' },
   ]
 
@@ -34,9 +33,11 @@
   $effect(() => {
     if (autoKind && verdict) kind = verdict.k
   })
-  function pickKind(k: Kind) {
-    kind = k
-    autoKind = false // 手动接管
+  const CYCLE: Kind[] = ['note', 'journal', 'task', 'ask']
+  function cycleKind() {
+    autoKind = false
+    const i = CYCLE.indexOf(kind)
+    kind = CYCLE[(i + 1) % CYCLE.length]
     askAnswer = null
   }
   let text = $state('')
@@ -112,33 +113,16 @@
   function onkeydown(e: KeyboardEvent) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      if (kind === 'focus') {
-        if (!focus.running) startFocus()
-      } else void submit()
+      void submit()
     }
   }
 </script>
 
+<!-- 去重定稿(2026-07-08 用户确认):kind chips 行撤掉——AI 判定徽章分流(点=轮换改判),
+     任务时双轨浮现,专注收成 ⏱ 图标,问大脑由疑问句判定。 -->
 <div class="dock" role="group" aria-label="捕获">
-  <div class="chips">
-    {#each KINDS as k (k.id)}
-      <button class="chip" class:on={kind === k.id} onclick={() => pickKind(k.id)}>{k.label}</button>
-    {/each}
-    {#if verdict && autoKind}
-      <button class="verdict" title="AI 判定(点击改为手动)" onclick={() => (autoKind = false)}>
-        <span class="vspark" aria-hidden="true"></span>AI · {verdict.why}
-      </button>
-    {:else if !autoKind && text.trim()}
-      <button class="verdict manual" title="回到 AI 自动判定" onclick={() => (autoKind = true)}>手动 · 点回 AI</button>
-    {/if}
-    {#if kind === 'task'}
-      <span class="tsep" aria-hidden="true"></span>
-      <button class="chip sub" class:on={target === 'me'} onclick={() => (target = 'me')}>给自己</button>
-      <button class="chip sub" class:on={target === 'agent'} onclick={() => (target = 'agent')}>交给 agent</button>
-    {/if}
-  </div>
 
-  {#if kind === 'focus' && focus.running}
+  {#if focus.running}
     <div class="focusrun">
       <span class="ft" aria-live="polite">{focus.mmss}</span>
       {#if focus.what}<span class="fw">{focus.what}</span>{/if}
@@ -149,17 +133,29 @@
       <input
         class="cin"
         bind:value={text}
-        {placeholder}
+        placeholder="随手丢进来 — AI 自动分流:速记 / 日记 / 任务 / 收藏 / 问大脑…"
         {onkeydown}
         aria-label="捕获内容"
       />
-      {#if kind === 'focus'}
-        <button class="send" disabled={status === 'sending'} onclick={startFocus}>开始</button>
-      {:else}
-        <button class="send" disabled={text.trim() === '' || status === 'sending'} onclick={() => void submit()}>
-          {status === 'sending' ? '发送中' : status === 'sent' ? '已记 ✓' : status === 'failed' ? '重试' : '发送'}
+      {#if verdict && autoKind}
+        <button class="verdict" title="AI 判定,点击轮换改判" onclick={cycleKind}>
+          <span class="vspark" aria-hidden="true"></span>AI · {verdict.why}<span class="vc">▾</span>
         </button>
+      {:else if !autoKind && text.trim()}
+        <button class="verdict manual" title="点回 AI 自动判定" onclick={() => (autoKind = true)}>手动 · {KINDS.find((k) => k.id === kind)?.label}<span class="vc">▾</span></button>
       {/if}
+      {#if kind === 'task' && text.trim()}
+        <span class="whomini">
+          <button class="wm" class:on={target === 'me'} onclick={() => (target = 'me')}>给自己</button>
+          <button class="wm" class:on={target === 'agent'} onclick={() => (target = 'agent')}>交给 agent</button>
+        </span>
+      {/if}
+      <button class="fbtn" title="用这句话开始专注" aria-label="开始专注" onclick={startFocus}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="13" r="7.2"/><path d="M12 9.5V13l2.4 1.6M10 2.5h4M12 2.5v3"/></svg>
+      </button>
+      <button class="send" disabled={text.trim() === '' || status === 'sending'} onclick={() => void submit()}>
+        {status === 'sending' ? '发送中' : status === 'sent' ? '已记 ✓' : status === 'failed' ? '重试' : '发送'}
+      </button>
     </div>
     <div class="hintrow">{hint}</div>
   {/if}
@@ -179,26 +175,6 @@
     margin-bottom: 14px;
   }
 
-  .chips { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
-  .chip {
-    font: 500 11.5px/1 var(--sans);
-    color: var(--t3);
-    background: var(--pill);
-    border: 0;
-    border-radius: var(--radius-pill);
-    padding: 6px 12px;
-    cursor: pointer;
-    transition: background var(--dur-micro) var(--ease), color var(--dur-micro) var(--ease);
-  }
-  .chip:hover { color: var(--t1); }
-  .chip.on { background: var(--t1); color: var(--onink); font-weight: 600; }
-  .chip.sub { font-size: 11px; padding: 5px 11px; background: transparent; border: 1px solid var(--hair); }
-  .chip.sub.on {
-    border-color: transparent;
-    background: var(--grad);
-    color: #fff;
-  }
-  .tsep { width: 1px; height: 14px; background: var(--hair); margin: 0 3px; }
   .verdict {
     display: inline-flex;
     align-items: center;
@@ -210,8 +186,54 @@
     border-radius: var(--radius-pill);
     padding: 6px 12px;
     cursor: pointer;
-    margin-left: auto;
+    flex: none;
     animation: vpop 0.18s var(--ease);
+  }
+  .vc {
+    font-size: 8px;
+    color: var(--t4);
+    margin-left: 2px;
+  }
+  .whomini {
+    display: inline-flex;
+    gap: 4px;
+    animation: vpop 0.18s var(--ease);
+  }
+  .wm {
+    font: 500 11px/1 var(--sans);
+    color: var(--t3);
+    background: var(--card);
+    border: 1px solid var(--hair);
+    border-radius: var(--radius-pill);
+    padding: 6px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .wm.on {
+    border-color: transparent;
+    background: var(--grad);
+    color: #fff;
+    font-weight: 600;
+  }
+  .fbtn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 0;
+    background: var(--card);
+    color: var(--t3);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+  }
+  .fbtn :global(svg) {
+    width: 16px;
+    height: 16px;
+  }
+  .fbtn:hover {
+    color: var(--t1);
   }
   .verdict.manual {
     color: var(--t4);
