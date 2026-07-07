@@ -58,3 +58,15 @@ describe('CaptureDock', () => {
     expect(await screen.findByText('好的')).toBeInTheDocument()
   })
 })
+
+it('K7 智能判类:时间词自动切任务,点 chip 手动接管', async () => {
+  render(CaptureDock)
+  const input = screen.getByLabelText('捕获内容') as HTMLInputElement
+  await fireEvent.input(input, { target: { value: '明早 9 点跑回归测试' } })
+  // AI 判定徽章出现且 kind 自动切到任务(给自己/交给 agent 双轨浮现)
+  expect(await screen.findByText(/AI · 任务/)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '给自己' })).toBeInTheDocument()
+  // 手动点「速记」chip → 接管,显示手动徽章
+  await fireEvent.click(screen.getByRole('button', { name: '速记' }))
+  expect(screen.getByText(/手动/)).toBeInTheDocument()
+})

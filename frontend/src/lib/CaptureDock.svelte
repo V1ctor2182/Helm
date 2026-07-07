@@ -16,6 +16,28 @@
 
   let kind = $state<Kind>('note')
   let target = $state<'me' | 'agent'>('me')
+  // K7 智能判类:输入实时判定(规则版,LLM 兜底记 backlog);用户点过 chip=手动接管
+  let autoKind = $state(true)
+  const verdict = $derived.by(() => {
+    const t = text.trim()
+    if (!t) return null
+    if (/https?:\/\//.test(t)) return { k: 'note' as Kind, why: /arxiv/.test(t) ? '收藏 · 论文' : /youtu/.test(t) ? '收藏 · 视频' : '收藏 · 链接' }
+    if (/明早|明天|后天|点前|每天|每周|每月|提醒|记得|之前完成|deadline|截止/.test(t))
+      return { k: 'task' as Kind, why: '任务 · 读到时间词' }
+    if (t.length > 14 && /今天|终于|感觉|开心|难受|累|复盘|想了想|反思/.test(t))
+      return { k: 'journal' as Kind, why: '日记 · 叙事' }
+    if (/^(为什么|怎么|如何|什么是|哪个|谁|吗\?|吗？)/.test(t) || /[?？]$/.test(t))
+      return { k: 'ask' as Kind, why: '问大脑 · 疑问句' }
+    return { k: 'note' as Kind, why: '速记' }
+  })
+  $effect(() => {
+    if (autoKind && verdict) kind = verdict.k
+  })
+  function pickKind(k: Kind) {
+    kind = k
+    autoKind = false // 手动接管
+    askAnswer = null
+  }
   let text = $state('')
   let status = $state<'idle' | 'sending' | 'sent' | 'failed'>('idle')
   let askAnswer = $state<string | null>(null)
@@ -78,6 +100,7 @@
       status = ok ? 'sent' : 'failed'
       if (ok) {
         text = ''
+        autoKind = true
         setTimeout(() => (status = 'idle'), 1200)
       }
     } catch {
@@ -113,8 +136,15 @@
 <div class="dock" role="group" aria-label="捕获">
   <div class="chips">
     {#each KINDS as k (k.id)}
-      <button class="chip" class:on={kind === k.id} onclick={() => { kind = k.id; askAnswer = null }}>{k.label}</button>
+      <button class="chip" class:on={kind === k.id} onclick={() => pickKind(k.id)}>{k.label}</button>
     {/each}
+    {#if verdict && autoKind}
+      <button class="verdict" title="AI 判定(点击改为手动)" onclick={() => (autoKind = false)}>
+        <span class="vspark" aria-hidden="true"></span>AI · {verdict.why}
+      </button>
+    {:else if !autoKind && text.trim()}
+      <button class="verdict manual" title="回到 AI 自动判定" onclick={() => (autoKind = true)}>手动 · 点回 AI</button>
+    {/if}
     {#if kind === 'task'}
       <span class="tsep" aria-hidden="true"></span>
       <button class="chip sub" class:on={target === 'me'} onclick={() => (target = 'me')}>给自己</button>
@@ -183,6 +213,34 @@
     color: #fff;
   }
   .tsep { width: 1px; height: 14px; background: var(--hair); margin: 0 3px; }
+  .verdict {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font: 600 11px/1 var(--sans);
+    color: var(--t3);
+    background: var(--pill);
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 6px 12px;
+    cursor: pointer;
+    margin-left: auto;
+    animation: vpop 0.18s var(--ease);
+  }
+  .verdict.manual {
+    color: var(--t4);
+    background: transparent;
+    border: 1px dashed var(--hair);
+  }
+  @keyframes vpop {
+    from { transform: scale(0.86); opacity: 0; }
+  }
+  .vspark {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: conic-gradient(from 210deg, var(--g1), var(--g2), var(--g1));
+  }
 
   .row {
     display: flex;

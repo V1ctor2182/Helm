@@ -12,3 +12,4 @@
 - [ ] [R08][P2][question] Canvas 连线/cluster:稿有橙紫连线(思路关联),后端无关系模型——要不要建 note_links 表?待用户拍板。
 - [x] [R08][P2][gap](R13 清) 分类过滤迁全局侧栏+收藏细分。
 - [ ] [K6][P2][question] 待办完成态:现为「完成即清」(勾选删除);若要保留完成历史需 notes 加 done 列(schema 变更,待用户拍板)。
+- [ ] [K7][P2][enhancement] 判类 LLM 兜底:规则不命中/低置信时调后端轻量 classify(走全局 provider),现为纯规则。
