@@ -35,8 +35,12 @@ struct NotchView: View {
         // precedence over a permission request (620×208) — matching HTML render().
         let waiting = model.bannerSuppressed ? nil : model.localSessions.first(where: { $0.needsAttention })
         let reminder = model.reminder
-        let shellW: CGFloat = reminder != nil ? 560 : (waiting != nil ? model.bannerSize.width : (model.expanded ? model.expandedWidth : collapsedWidth))
-        let shellH: CGFloat = reminder != nil ? 152 : (waiting != nil ? model.bannerSize.height : (model.expanded ? model.autoExpandedHeight : collapsedBarHeight))
+        // 拖文件悬停 → 壳长出 drop 承接面(设计稿 dropmode,2026-07-07 用户拍板),
+        // 即时交互压过横幅/提醒;拖走即回原态(不动 model.expanded)。
+        let shellW: CGFloat = dragOver ? model.expandedWidth
+            : (reminder != nil ? 560 : (waiting != nil ? model.bannerSize.width : (model.expanded ? model.expandedWidth : collapsedWidth)))
+        let shellH: CGFloat = dragOver ? dropModeHeight
+            : (reminder != nil ? 152 : (waiting != nil ? model.bannerSize.height : (model.expanded ? model.autoExpandedHeight : collapsedBarHeight)))
         shell(width: shellW, height: shellH, banner: waiting, reminder: reminder)
             // 深/浅跟 nomiDark 走:否则系统浅色时,TextField 占位符等系统
             // 自配色按浅色方案渲染,深面板上直接看不见(2026-07-07 用户截图)。
@@ -56,7 +60,13 @@ struct NotchView: View {
     /// after a short delay — grow the shell first, then reveal (no mush).
     private func shell(width: CGFloat, height: CGFloat, banner: LocalSession? = nil, reminder: EventReminder? = nil) -> some View {
         ZStack(alignment: .top) {
-            if let reminder {
+            if dragOver {
+                VStack(spacing: 0) {
+                    topBar
+                    dropTargetSurface
+                }
+                .transition(.opacity)
+            } else if let reminder {
                 remindBanner(reminder)
             } else if let banner {
                 // 选择题解析成功走可作答横幅;其余(含解析失败兜底)走允许/拒绝。
@@ -80,17 +90,10 @@ struct NotchView: View {
         .frame(width: width, height: height, alignment: .top)
         // NOMI 单体生长:折叠=纯黑条;展开=面板底色(深 #0f0f11/浅 #fff)。
         // 玻璃材质暂退役(B11 设置页收尾时再定去留)。
-        .background((model.expanded || banner != nil || reminder != nil) ? Color(model.nomi.shellBG) : .black)
-        .clipShape(NotchShape(bottomRadius: (model.expanded || banner != nil || reminder != nil)
+        .background((model.expanded || banner != nil || reminder != nil || dragOver) ? Color(model.nomi.shellBG) : .black)
+        .clipShape(NotchShape(bottomRadius: (model.expanded || banner != nil || reminder != nil || dragOver)
             ? CGFloat(NomiTheme.openRadius) : CGFloat(NomiTheme.foldedRadius)))
-        // Drag a file onto the notch → stage it in 速记 (HTML notch.drag + drop).
-        .overlay {
-            if dragOver {
-                NotchShape(bottomRadius: model.expanded ? 24 : 16)
-                    .stroke(accent.opacity(0.7), style: StrokeStyle(lineWidth: 2, dash: [5]))
-                    .padding(6)
-            }
-        }
+        .animation(Nomi.ease(0.46), value: dragOver)  // drop 态生长/收回同 hover 手感
         .contentShape(Rectangle())
         .onDrop(of: [.fileURL], isTargeted: $dragOver) { providers in
             for p in providers {
@@ -164,6 +167,30 @@ struct NotchView: View {
         guard total > 0 else { return 0.42 }
         let pos = model.nowPlaying != nil ? model.livePosition(at: now) : (np.elapsed ?? 0)
         return min(1, pos / total)
+    }
+
+    /// dropmode 承接面(设计稿 .droptarget):渐变圆+下落箭头,虚线框亮橙。
+    private let dropModeHeight: CGFloat = 196
+    private var dropTargetSurface: some View {
+        let pal = model.nomi
+        return VStack(spacing: 10) {
+            Circle().fill(Nomi.gradient)
+                .frame(width: 40, height: 40)
+                .overlay(Image(systemName: "arrow.down.to.line")
+                    .font(.system(size: 15, weight: .semibold)).foregroundStyle(.white))
+            VStack(spacing: 3) {
+                Text("松手 — 暂存到 Shelf").font(.system(size: 13, weight: .bold)).foregroundStyle(Color(pal.ink))
+                Text("上传到记录,拖走前都在暂存页").font(.system(size: 10.5)).foregroundStyle(Color(pal.ink3))
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color(NomiTheme.g1).opacity(0.07)))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color(NomiTheme.g1), style: StrokeStyle(lineWidth: 2, dash: [6, 5])))
+        .padding(EdgeInsets(top: 6, leading: 16, bottom: 16, trailing: 16))
     }
 
     // MARK: Collapsed — one continuous bar (left content · camera gap · right glyph)
