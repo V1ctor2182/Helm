@@ -224,6 +224,27 @@
   .sheet .ainote .spark{width:10px;height:10px}
   .sheet .ainote .full{display:none}
   .sheet .ainote:hover .full{display:inline}
+  /* AI 归类(按主题分组) */
+  .groupsw{display:flex;gap:4px;margin-bottom:12px}
+  .gsw{display:inline-flex;align-items:center;gap:6px;font:500 11.5px/1 var(--sans);color:var(--ink3);
+    background:transparent;border:0;border-radius:999px;padding:6px 12px;cursor:pointer}
+  .gsw:hover{color:var(--ink)}
+  .gsw.on{color:var(--ink);background:var(--pill);font-weight:600}
+  .aisuggest{display:flex;align-items:center;gap:9px;background:var(--card);border:1.4px dashed color-mix(in srgb,var(--g2) 45%,transparent);
+    border-radius:14px;padding:11px 14px;margin-bottom:16px;font:400 12.5px/1 var(--sans);color:var(--ink2)}
+  .aisuggest b{color:var(--ink)}
+  .sgok{margin-left:auto;font:600 11px/1 var(--sans);color:#fff;background:var(--grad);border:0;border-radius:999px;padding:7px 13px;cursor:pointer}
+  .sgno{font:500 11px/1 var(--sans);color:var(--ink3);background:var(--pill);border:0;border-radius:999px;padding:7px 13px;cursor:pointer}
+  .topich{display:flex;align-items:baseline;gap:8px;margin:16px 2px 10px}
+  .topich.dim{opacity:.72}
+  .tdot{width:9px;height:9px;border-radius:3px;background:var(--grad);align-self:center}
+  .topich b{font:700 13.5px/1 var(--sans)}
+  .topich .tn{font:400 10.5px/1 var(--sans);color:var(--ink3)}
+  .topicchip{display:inline-flex;align-items:center;gap:4px;font:500 9.5px/1 var(--sans);color:var(--ink2);
+    background:var(--pill);border-radius:999px;padding:3px 8px}
+  .topicchip .tx-x{font-style:normal;text-decoration:none;color:var(--ink3);cursor:pointer;padding:0 1px;visibility:hidden}
+  .wcard:hover .topicchip .tx-x{visibility:visible}
+  .topicchip .tx-x:hover{color:#e5484d}
   /* Canvas 画布(速记/日记) */
   .cvs{position:relative;min-height:480px;background:var(--bg);border-radius:20px;overflow:hidden}
   .cvs .wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
@@ -307,6 +328,14 @@
 
   <!-- ═══ 速记:瀑布卡片墙(碎片扫视) ═══ -->
   <div class="pane on" id="p-notes">
+    <!-- AI 归类(2026-07-08 用户:随便记,AI 帮归类):
+         记录零负担;enrich 之后 AI 静默把速记归进「集合」(比 #tag 高一级的主题)。
+         呈现三件套:①墙可切「按主题」分组 ②卡上主题胶囊(hover 可移出=纠错)
+         ③集合自动涌现(AI 建议卡,一键采纳/忽略) -->
+    <div class="groupsw">
+      <button class="gsw on" data-g="time">按时间</button>
+      <button class="gsw" data-g="topic"><span class="spark" style="width:10px;height:10px"></span>按主题 · AI</button>
+    </div>
     <!-- 专注进行中:活的计时卡(专注是速记的一种状态,结束自动记入今日日记) -->
     <div class="focuslive" id="focusCard">
       <span class="fring" id="fring"><span class="ft" id="ftime">00:00</span></span>
@@ -316,6 +345,42 @@
       </div>
       <button class="fstop" onclick="stopFocus()">停止并记入日记</button>
     </div>
+    <!-- ── 按主题(AI 集合)态 ── -->
+    <div class="topicview" id="topicview" hidden>
+      <!-- AI 涌现:发现相似记录,建议建集合(一键采纳) -->
+      <div class="aisuggest">
+        <span class="spark"></span>
+        <span class="sgtx">发现 3 条关于 <b>SwiftUI 布局</b> 的记录 — 建一个集合?</span>
+        <button class="sgok">创建集合</button><button class="sgno">忽略</button>
+      </div>
+      <div class="topich"><span class="tdot"></span><b>Transformer 学习</b><span class="tn">4 条 · AI 维护</span></div>
+      <div class="wall">
+        <div class="wcard"><div class="pad"><span class="badge b-ax">AX</span>
+          <div class="ti">Attention Is All You Need</div>
+          <div class="sum">提出 Transformer:完全基于注意力机制——现代大模型的地基。</div>
+          <div class="foot"><span class="topicchip"><i class="spark" style="width:8px;height:8px"></i>Transformer 学习<u class="tx-x" title="移出集合(AI 会学习)">×</u></span><span class="tm">11:58</span></div></div></div>
+        <div class="wcard plain"><div class="pad"><span class="badge b-n">N</span>
+          <div class="note-tx">多头注意力和 SwiftUI 的 proposal/response 有点像——都是协商。</div>
+          <div class="foot"><span class="topicchip"><i class="spark" style="width:8px;height:8px"></i>Transformer 学习<u class="tx-x">×</u></span><span class="tm">20:15</span></div></div></div>
+      </div>
+      <div class="topich"><span class="tdot" style="background:linear-gradient(135deg,#34d6c0,#0a84ff)"></span><b>Helm 设计灵感</b><span class="tn">3 条 · AI 维护</span></div>
+      <div class="wall">
+        <div class="wcard"><div class="pad"><span class="badge b-web">AW</span>
+          <div class="ti">Awwwards — 年度作品集合集</div>
+          <div class="foot"><span class="topicchip"><i class="spark" style="width:8px;height:8px"></i>Helm 设计灵感<u class="tx-x">×</u></span><span class="tm">16:51</span></div></div></div>
+        <div class="wcard plain"><div class="pad"><span class="badge b-n">N</span>
+          <div class="note-tx">给 notch 加「速记 → AI 整理」入场动效,像仪表暖机。</div>
+          <div class="foot"><span class="topicchip"><i class="spark" style="width:8px;height:8px"></i>Helm 设计灵感<u class="tx-x">×</u></span><span class="tm">21:44</span></div></div></div>
+      </div>
+      <div class="topich dim"><span class="tdot" style="background:var(--ink3)"></span><b>未归类</b><span class="tn">2 条 · AI 攒够相似的会提议建集合</span></div>
+      <div class="wall">
+        <div class="wcard plain"><div class="pad"><span class="badge b-n">N</span>
+          <div class="note-tx">Canvas 连线要不要 note_links 表?明早问一下。</div>
+          <div class="foot"><span class="tm">01:12</span></div></div></div>
+      </div>
+    </div>
+
+    <div id="timeview">
     <div class="daymark">今天 · 07-07<span class="n">3 条</span></div>
     <div class="wall">
       <div class="wcard plain" onclick="openDetail(this)"><div class="pad">
@@ -383,6 +448,7 @@
         <div class="note-tx">周三前把 NOMI 稿逐块进 Svelte。</div>
         <div class="foot"><span class="tm">23:02</span></div>
       </div></div>
+    </div>
     </div>
   </div>
 
@@ -568,6 +634,24 @@
   document.querySelectorAll('.dic').forEach((d,i)=>d.onclick=()=>{
     document.querySelectorAll('.dic').forEach(x=>x.classList.remove('on'));d.classList.add('on');
     curDisp=i===0?'list':'canvas'; showPane();
+  });
+  // 按时间/按主题 分组切换
+  document.querySelectorAll('.gsw').forEach(g=>g.onclick=()=>{
+    document.querySelectorAll('.gsw').forEach(x=>x.classList.remove('on'));g.classList.add('on');
+    const topic=g.dataset.g==='topic';
+    document.getElementById('topicview').hidden=!topic;
+    document.getElementById('timeview').hidden=topic;
+  });
+  document.querySelector('.sgok')?.addEventListener('click',e=>{
+    e.target.closest('.aisuggest').innerHTML='<span class="spark"></span><span class="sgtx">已创建集合 <b>SwiftUI 布局</b> — 3 条已归入,之后的相关记录会自动进来</span>';
+    toast('集合已创建,AI 持续维护');
+  });
+  document.querySelector('.sgno')?.addEventListener('click',e=>{e.target.closest('.aisuggest').remove()});
+  document.querySelectorAll('.tx-x').forEach(x=>x.onclick=ev=>{
+    ev.stopPropagation();
+    const card=ev.target.closest('.wcard');
+    ev.target.closest('.topicchip').remove();
+    toast('已移出集合 — AI 会记住这次纠错');
   });
   // 画布拖拽(两块画布通用)
   document.querySelectorAll('.cnode').forEach(node=>{
