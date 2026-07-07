@@ -90,3 +90,45 @@ describe('Today · NOMI 六卡仪表(真数据)', () => {
     expect(layout.mode).toBe('cockpit')
   })
 })
+
+describe('T4 日记卡 · 每天一篇', () => {
+  const today = (() => {
+    const d = new Date()
+    const p = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+  })()
+
+  it('今日多段按时间升序拼一篇预览,foot 有续写 →', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve(
+              String(url).includes('/api/notes')
+                ? { notes: [
+                    { id: 2, kind: 'journal', title: null, content: '下午修了 bug', tags: [], meta: null, pinned: false, source: 'user', journal_date: today, created_at: `${today}T15:00:00`, updated_at: null },
+                    { id: 1, kind: 'journal', title: null, content: '早上定了稿', tags: [], meta: null, pinned: false, source: 'user', journal_date: today, created_at: `${today}T09:00:00`, updated_at: null },
+                  ] }
+                : { tasks: [], notes: [], runs: [], projects: [], events: [], accounts: [] },
+            ),
+        }),
+      ),
+    )
+    render(Today)
+    const prev = await screen.findByText(/早上定了稿/)
+    // 升序拼接:早上在前,下午在后(notch journalToday 同口径)
+    expect(prev.textContent).toBe('早上定了稿\n\n下午修了 bug')
+    expect(screen.getByText('2 段')).toBeInTheDocument()
+    // 续写 → 落到记录页日记 tab
+    await fireEvent.click(screen.getByRole('button', { name: '续写 →' }))
+    expect(layout.mode).toBe('journal')
+    expect(layout.journalIntent).toBe('journal')
+  })
+
+  it('没写时给空态引导', async () => {
+    render(Today)
+    expect(await screen.findByText(/今天还没写/)).toBeInTheDocument()
+  })
+})

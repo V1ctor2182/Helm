@@ -164,3 +164,22 @@ it('T3 墙上分诊徽章:想法蓝 tag;任务回执卡带抽取 chips+已入待
   await fireEvent.click(receipt)
   expect(layout.journalFilter).toBe('task')
 })
+
+it('T4 每天一篇:天内段落按时间升序渲染(拼一篇)', async () => {
+  const rows = [
+    N({ id: 2, kind: 'journal', journal_date: '2026-07-08', content: '下午修了 bug', created_at: '2026-07-08T15:00:00' }),
+    N({ id: 1, kind: 'journal', journal_date: '2026-07-08', content: '早上定了稿', created_at: '2026-07-08T09:00:00' }),
+  ]
+  vi.stubGlobal('fetch', vi.fn((url: string) =>
+    Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(String(url).includes('/api/notes') ? { notes: rows } : { notes: [], tasks: [], links: [], events: [] }),
+    }),
+  ))
+  render(JournalView)
+  await fireEvent.click(screen.getByRole('tab', { name: '日记' }))
+  const morning = await screen.findByText('早上定了稿')
+  const afternoon = screen.getByText('下午修了 bug')
+  // DOM 顺序:早上段在下午段之前
+  expect(morning.compareDocumentPosition(afternoon) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+})

@@ -116,7 +116,10 @@
   })
 
   function today(): string {
-    return new Date().toISOString().slice(0, 10)
+    // 本地日,不能用 toISOString(UTC)——凌晨 0-8 点会错一天(T4 修)
+    const d = new Date()
+    const p = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
   }
 
   // T2 人话排期:整句(或 fromNote 时的时间短语)交给后端解析落库。
@@ -223,6 +226,8 @@
   }
 
   // Group journal entries by date (newest day first).
+  // T4 每天一篇:天内段落按时间升序拼一篇(与 notch journalToday 口径一致,
+  // \n\n 语义=段落续写);PageDetail 吃同一份序。
   const journalByDate = $derived(
     (() => {
       const groups = new Map<string, Note[]>()
@@ -230,7 +235,9 @@
         const d = n.journal_date ?? '未注明日期'
         ;(groups.get(d) ?? groups.set(d, []).get(d)!).push(n)
       }
-      return [...groups.entries()].sort((a, b) => b[0].localeCompare(a[0]))
+      return [...groups.entries()]
+        .map(([d, xs]) => [d, xs.sort((a, b) => (a.created_at ?? '').localeCompare(b.created_at ?? ''))] as [string, Note[]])
+        .sort((a, b) => b[0].localeCompare(a[0]))
     })(),
   )
 

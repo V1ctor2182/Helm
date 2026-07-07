@@ -143,3 +143,9 @@
 - 门: pytest 254 全绿 / 前端 build ✓ check 0/0 ✓ test 216 全绿(+3,含 CaptureDock 自动/手动挡契约)
 - e2e: 真发「明晚8点在家帮荣荣姐做龙虾」→ 回执 toast[任务·明晚 20:00·@家]+墙上回执卡+待办两层行全链路 ✓;试发已删,截图 shots/t3-receipt.png / t3-todo.png。
 - 取舍: 「完成沉底+已完成分区」依赖 K6 done 列(待拍板)→ [T3+] 备位;深色 duesoon 用橙透明底(稿只给浅色值)。
+## T4 · 2026-07-08 · 日记每天一篇
+- 对齐: ① 天内段落按 created_at 升序拼一篇(journalByDate 单源改序,纸页/PageDetail 同吃),\n\n 段落语义与 notch journalToday 一致;② Today 日记卡:字数+连续天数保留,新增今日聚合全文预览(pre-line,clamp 5 行)+空态引导+foot「N 段 · 续写 →」(journalIntent=journal 落到记录页日记 tab 今天的页)。
+- 修 bug: JournalView.today() 用 toISOString()=UTC,凌晨 0-8 点「今天的页」错一天(实测 02:02 显示 7月7日)——改本地拼日;全仓无同类。
+- 门: pytest 254 全绿 / 前端 build ✓ check 0/0 ✓ test 219 全绿(+3:Today 卡拼序/续写导航/空态,纸页升序)
+- 视觉: shots/t4-today.png(卡:39 字·连续 3 天·两段升序预览·续写→)/ t4-paper.png(修复后今天的页=7月8日);测试日记两条已删。
+- 口径差记录: notch journalToday 按 createdAt 日过滤、主 app 按 journal_date——跨日补写(凌晨写昨天)两边归属不同,T5 通知 notch 线对齐(建议 notch 改吃 journal_date)。

@@ -74,6 +74,17 @@
   // 日记:今日条目 + 字数 + 连续天数
   const todayEntries = $derived(notes.notes.filter((n) => n.kind === 'journal' && n.journal_date === todayStr))
   const todayChars = $derived(todayEntries.reduce((n, e) => n + e.content.length, 0))
+  // T4 每天一篇:今日多段按时间升序拼一篇(与 notch journalToday 同口径 \n\n)
+  const todayText = $derived(
+    [...todayEntries]
+      .sort((a, b) => (a.created_at ?? '').localeCompare(b.created_at ?? ''))
+      .map((e) => e.content)
+      .join('\n\n'),
+  )
+  function goJournal() {
+    layout.journalIntent = 'journal' // 落在记录页·日记 tab(今天的页可续写)
+    layout.setMode('journal')
+  }
   const streak = $derived.by(() => {
     const dates = new Set(
       notes.notes.filter((n) => n.kind === 'journal' && n.journal_date).map((n) => n.journal_date as string),
@@ -180,17 +191,23 @@
       <div class="foot"><span class="tm">今天 {calendar.events.length} 项</span></div>
     </section>
 
-    <!-- 日记 · 今天 -->
+    <!-- 日记 · 今天(T4 每天一篇:全文预览 + 续写 →) -->
     <section class="card">
       <div class="pad">
         <span class="appic" style="background:#c9a227">J</span>
         <div class="ti">日记 · 今天</div>
         <div class="stat"><span class="big">{todayChars}</span><span class="u">字 · 连续 {streak} 天</span></div>
-        <button class="aibtn" onclick={() => layout.setMode('journal')}>
+        {#if todayText}
+          <p class="jprev">{todayText}</p>
+        {:else}
+          <p class="ghost">今天还没写 — 从一句话开始。</p>
+        {/if}
+        <button class="aibtn" onclick={goJournal}>
           <span class="spark" aria-hidden="true"></span>AI 今日小结
         </button>
       </div>
-      <div class="foot"><span class="tm">{todayEntries.length} 条</span></div>
+      <div class="foot"><span class="tm">{todayEntries.length} 段</span>
+        <button class="linkish" onclick={goJournal}>续写 →</button></div>
     </section>
 
     <!-- 智能体 -->
@@ -401,6 +418,18 @@
     font: 400 12px/1.5 var(--sans);
     color: var(--t4);
     margin: 8px 0;
+  }
+  /* T4 每天一篇:今日聚合全文预览(clamp 5 行,续写 → 看全文) */
+  .jprev {
+    font: 400 12.5px/1.65 var(--sans);
+    color: var(--t2);
+    margin: 8px 0 2px;
+    white-space: pre-line;
+    display: -webkit-box;
+    -webkit-line-clamp: 5;
+    line-clamp: 5;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
   .pills {
     margin-top: 12px;
