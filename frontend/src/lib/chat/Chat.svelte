@@ -293,6 +293,7 @@ import Resizer from '../Resizer.svelte'
   }
   .sess {
     width: 100%;
+    overflow: hidden; /* 卡面兜底:内容绝不冲出圆角卡 */
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -334,6 +335,9 @@ import Resizer from '../Resizer.svelte'
     white-space: nowrap;
   }
   .sess .sm {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     font-family: var(--mono);
     font-size: 9px;
     color: var(--t4);
