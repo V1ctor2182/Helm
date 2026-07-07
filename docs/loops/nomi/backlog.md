@@ -23,4 +23,4 @@
 - [x] [T3][P1](本轮清) 前端对齐 kinds 稿本轮增量:待办两层任务行(临近 24h 橙 chip/hover 专注·→agent/完成沉底)+分诊回执 toast(chips+改类,纠正回流)+速记墙分诊徽章+墙上任务回执卡。→ 落地:捕获坞自动挡走后端分诊(triage:true)+回执 toast;墙收编 idea/task 卡;待办 due 临近排序+两层行。「完成沉底」的已完成分区依赖 K6 done 列拍板,现仍完成即清。
 - [ ] [T3+][P2][enhancement] 待办「已完成」分区(donebar+沉底)——被 K6 done 列 schema 拍板阻塞;拍板后一并做。
 - [x] [T4][P2](本轮清) 日记每天一篇:今日聚合(多段按时间拼一篇)+连续天数+字数;TODAY 卡预览/续写→;与 notch journalToday 口径一致。→ 落地:天内段落升序拼一篇(纸页/PageDetail 同序);Today 卡全文预览(clamp 5 行)+段数+续写→落日记 tab;顺带修 JournalView.today() UTC 错一天 bug。注:notch journalToday 按 createdAt 日过滤,主 app 按 journal_date——跨日补写会有口径差,记 T5 一并通知。
-- [ ] [T5][P2][跨线] 分诊契约发布后通知 notch 线接回执 UI(nomi-notch backlog 已备位);契约变更只在本 loop 做,notch 只消费(前科:task kind 收紧 422 炸了 notch)。
+- [x] [T5][P2][跨线](本轮清) 分诊契约发布后通知 notch 线接回执 UI(nomi-notch backlog 已备位);契约变更只在本 loop 做,notch 只消费(前科:task kind 收紧 422 炸了 notch)。→ 通知单已写进 docs/loops/nomi-notch/backlog.md「契约通知」节:KINDS+task/idea、triage 回执块、PATCH 改类、/api/tasks {prompt} 人话排期、/parse 徽章、journalToday 口径差建议(改吃 journal_date)。

@@ -149,3 +149,6 @@
 - 门: pytest 254 全绿 / 前端 build ✓ check 0/0 ✓ test 219 全绿(+3:Today 卡拼序/续写导航/空态,纸页升序)
 - 视觉: shots/t4-today.png(卡:39 字·连续 3 天·两段升序预览·续写→)/ t4-paper.png(修复后今天的页=7月8日);测试日记两条已删。
 - 口径差记录: notch journalToday 按 createdAt 日过滤、主 app 按 journal_date——跨日补写(凌晨写昨天)两边归属不同,T5 通知 notch 线对齐(建议 notch 改吃 journal_date)。
+## T5 · 2026-07-08 · 跨线契约通知(批次 3 收尾块)
+- 通知单落 docs/loops/nomi-notch/backlog.md「契约通知」节:KINDS 收编 task/idea(422 平账)/POST triage:true+响应 triage 块/PATCH 改类回流/POST /api/tasks {prompt} 人话排期+/parse 徽章/journalToday 口径差(notch createdAt vs 主 app journal_date,建议 notch 改吃 journal_date)。
+- 契约全部只加不减,notch 现有调用零破坏;notch 侧工作(回执 UI/待办两层行/口径切换)由 notch 线自排批次。
