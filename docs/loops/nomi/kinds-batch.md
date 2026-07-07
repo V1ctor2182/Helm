@@ -2,7 +2,7 @@
 设计基线(只读,新增): docs/design/helm-journal-kinds.html — 三态 layout/智能捕获/详情态/专注链路,全按此稿。
 
 块清单(建议序,可自调):
-- [ ] K1 速记瀑布墙:Timeline filter=note/collect 视图改 masonry 卡墙(便签/收藏卡混排,天界标;卡=稿样式)
+- [x] K1 速记瀑布墙:Timeline filter=note/collect 视图改 masonry 卡墙(便签/收藏卡混排,天界标;卡=稿样式)
 - [ ] K2 速记详情重排:NoteDetail 改「原文主角(17px+内联链接高亮)/提到的内容附件卡/标签+线索胶囊/AI 注脚(hover 展开)/线索→行动主钮」
 - [ ] K3 后端多链接解析:enrich 从"第一个 URL"扩展为全部 URL→meta.links[](向后兼容保留单链接字段);pytest 覆盖;notch 契约不破(加字段)
 - [ ] K4 日记纸页:filter=journal 视图改纸栏(统计条/今天的页置顶可写/一天一页/AI 小结缀尾)

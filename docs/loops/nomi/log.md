@@ -74,3 +74,7 @@
 - 后端核验: 单进程 83761 在跑,healthz ok(用户问数据库——数据一直从 SQLite 来)。
 - 门: build ✓ / check 0/0 / test 205 全绿
 - 视觉: shots/r16-detail.png
+## K1 · 2026-07-07 16:30 · 速记瀑布卡墙(批次 2)
+- 对齐: Timeline 速记/收藏视图 → masonry 墙(columns 250px 自适应):收藏卡(封面/徽章/标题/摘要 3 行钳/站点+标签)+便签卡(N 徽章+原文),hover 浮操作行(编辑/四转化/确认删全保留),点标题/正文开详情。破图 onerror 隐藏;阅读容器放宽 1180。孤儿样式(mcard 家族/note body)清零。
+- 门: build ✓ / check 0/0 / test 205 全绿
+- 视觉: shots/k1-wall.png(用户真实数据在墙上)

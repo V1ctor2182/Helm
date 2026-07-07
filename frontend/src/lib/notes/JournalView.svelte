@@ -251,58 +251,56 @@
         {:else}
           {#each notesByDate as [d, items] (d)}
           <div class="dstamp">{dayLabel(d)}<span class="dn">{items.length} 条</span></div>
-          <ul class="list">
+          <!-- K1 瀑布卡墙(稿:helm-journal-kinds.html 速记态):便签/收藏卡混排 -->
+          <div class="wall">
             {#each items as n (n.id)}
-              <li class="note">
-                <span class="nt">{localHHMM(n.created_at)}</span>
+              <article class="wcard" class:plain={!n.meta?.url}>
                 {#if editingId === n.id}
-                  <textarea class="editbox" bind:value={editDraft} aria-label="编辑内容" rows="2"></textarea>
-                  <span class="acts">
-                    <button class="act pri" onclick={saveEdit} disabled={!editDraft.trim()}>保存</button>
-                    <button class="act" onclick={() => (editingId = null)}>取消</button>
-                  </span>
+                  <div class="wpad">
+                    <textarea class="editbox" bind:value={editDraft} aria-label="编辑内容" rows="3"></textarea>
+                    <span class="wacts show">
+                      <button class="act pri" onclick={saveEdit} disabled={!editDraft.trim()}>保存</button>
+                      <button class="act" onclick={() => (editingId = null)}>取消</button>
+                    </span>
+                  </div>
                 {:else}
-                <button class="body openable" title="查看详情" onclick={() => (detailNote = n)}>{n.content}</button>
-                <span class="acts">
-                  {#if linkedNoteIds.has(n.id)}<span class="linked">已转任务</span>{/if}
-                  <button class="act" title="编辑" aria-label={`编辑 ${n.content}`} onclick={() => startEdit(n)}>编辑</button>
-                  <button class="act" title="转为今天的日记" onclick={() => notes.toJournal(n.id)}>→日记</button>
-                  <button class="act" title="存入记忆" onclick={() => notes.toMemory(n.id)}>→记忆</button>
-                  <button class="act" title="转为定时任务" onclick={() => noteToTask(n)}>→任务</button>
-                  <button
-                    class="act del"
-                    class:armed={del.pending === `note-${n.id}`}
-                    aria-label={`删除 ${n.content}`}
-                    onclick={() => del.confirm(`note-${n.id}`) && notes.remove(n.id)}
-                  >{del.pending === `note-${n.id}` ? '确认' : '×'}</button>
-                </span>
-                {#if n.meta?.url}
-                  <!-- AI 收藏卡:链接 parse 结果(YouTube/论文/文章/灵感) -->
-                  <div class="mcard">
-                    {#if n.meta.image}<img class="mimg" src={n.meta.image} alt="" loading="lazy" />{/if}
-                    <div class="mbody">
-                      <div class="mline1">
-                        <span class="mtype">{({ youtube: 'YOUTUBE', paper: 'PAPER', inspiration: 'INSPO' } as Record<string, string>)[n.meta.type ?? ''] ?? 'WEB'}</span>
-                        <a class="mtitle" href={n.meta.url} target="_blank" rel="noreferrer">{n.meta.title ?? n.meta.url}</a>
-                      </div>
-                      {#if n.meta.summary}<p class="msum">{n.meta.summary}</p>{/if}
-                      <div class="mfoot">
-                        {#if n.meta.site}<span>{n.meta.site}</span>{/if}
-                        {#each n.meta.tags ?? [] as t (t)}<span class="mtag">#{t}</span>{/each}
-                      </div>
+                  {#if n.meta?.url && n.meta.image}
+                    <img class="wcover" src={n.meta.image} alt="" loading="lazy" onerror={(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')} />
+                  {/if}
+                  <div class="wpad">
+                    {#if n.meta?.url}
+                      <span class="wbadge" style="background:{({ youtube: '#ff2d2d', paper: '#8b5a2b', inspiration: '#0a84ff' } as Record<string, string>)[n.meta.type ?? ''] ?? '#0a84ff'}">
+                        {({ youtube: 'YT', paper: 'AX', inspiration: 'AW' } as Record<string, string>)[n.meta.type ?? ''] ?? 'WEB'}
+                      </span>
+                      <button class="wti openable" title="查看详情" onclick={() => (detailNote = n)}>{n.meta.title ?? n.meta.url}</button>
+                      {#if n.meta.summary}<p class="wsum">{n.meta.summary}</p>{/if}
+                    {:else}
+                      <span class="wbadge" style="background:var(--t1);color:var(--onink)">N</span>
+                      <button class="wtx openable" title="查看详情" onclick={() => (detailNote = n)}>{n.content}</button>
+                    {/if}
+                    <div class="wfoot">
+                      {#if n.meta?.site}<span>{n.meta.site}</span>{/if}
+                      {#each n.meta?.tags ?? [] as t (t)}<span class="wtag">#{t}</span>{/each}
+                      {#if linkedNoteIds.has(n.id)}<span class="linked">已转任务</span>{/if}
+                      <span class="wtm">{localHHMM(n.created_at)}</span>
                     </div>
-                  </div>
-                {:else if n.meta && (n.meta.tags?.length || n.meta.when || n.meta.where)}
-                  <div class="mlite">
-                    {#each n.meta.tags ?? [] as t (t)}<span class="mtag">#{t}</span>{/each}
-                    {#if n.meta.when}<span>⏱ {n.meta.when}</span>{/if}
-                    {#if n.meta.where}<span>◎ {n.meta.where}</span>{/if}
+                    <span class="wacts">
+                      <button class="act" title="编辑" aria-label={`编辑 ${n.content}`} onclick={() => startEdit(n)}>编辑</button>
+                      <button class="act" title="转为今天的日记" onclick={() => notes.toJournal(n.id)}>→日记</button>
+                      <button class="act" title="存入记忆" onclick={() => notes.toMemory(n.id)}>→记忆</button>
+                      <button class="act" title="转为定时任务" onclick={() => noteToTask(n)}>→任务</button>
+                      <button
+                        class="act del"
+                        class:armed={del.pending === `note-${n.id}`}
+                        aria-label={`删除 ${n.content}`}
+                        onclick={() => del.confirm(`note-${n.id}`) && notes.remove(n.id)}
+                      >{del.pending === `note-${n.id}` ? '确认' : '×'}</button>
+                    </span>
                   </div>
                 {/if}
-                {/if}
-              </li>
+              </article>
             {/each}
-          </ul>
+          </div>
           {/each}
         {/if}
       </div>
@@ -518,7 +516,7 @@
     padding: 18px 24px 24px 22px; /* 左侧留白:用户反馈字贴边(07-03);07-06 再提一档 */
     font-family: var(--sans);
     color: var(--t2);
-    max-width: 860px; /* 阅读行长上限(承旧版 760 的约束) */
+    max-width: 1180px; /* 墙态放宽;纸页态(日记)组件内自限窄栏 */
   }
   .calwrap {
     padding-left: var(--gutter-w);
@@ -779,71 +777,108 @@
     flex-wrap: wrap; /* AI 收藏卡换行占满整行 */
   }
 
-  /* —— AI 收藏卡(链接 parse 结果) —— */
-  .mcard {
-    width: 100%;
-    display: flex;
-    gap: 10px;
-    margin: 2px 0 6px 44px;
-    padding: 10px 12px;
-    background: var(--bg);
-    border-radius: var(--radius-sm);
+  /* —— K1 瀑布卡墙 —— */
+  .wall {
+    columns: 3 250px;
+    column-gap: 14px;
+    margin-bottom: 6px;
   }
-  .mimg {
-    width: 96px;
-    height: 60px;
-    object-fit: cover;
-    flex: none;
-  }
-  .mbody { min-width: 0; }
-  .mline1 {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    min-width: 0;
-  }
-  .mtype {
-    font-family: var(--mono);
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    color: var(--acc-ink);
-    flex: none;
-  }
-  .mtitle {
-    color: var(--t1);
-    font-size: 13px;
-    font-weight: 600;
-    text-decoration: none;
+  .wcard {
+    break-inside: avoid;
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin: 0 0 14px;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    transition: box-shadow var(--dur-micro) var(--ease);
+    position: relative;
   }
-  .mtitle:hover { text-decoration: underline; }
-  .msum {
-    margin: 4px 0 0;
-    font-size: 12px;
-    color: var(--t3);
-    line-height: 1.5;
+  .wcard:hover {
+    box-shadow: var(--shadow-lg);
   }
-  .mfoot {
-    display: flex;
-    gap: 8px;
-    margin-top: 4px;
-    font-family: var(--mono);
-    font-size: 9.5px;
-    color: var(--t4);
-  }
-  .mtag { color: var(--cyan); }
-  .mlite {
+  .wcover {
     width: 100%;
+    display: block;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    background: var(--pill);
+  }
+  .wpad {
+    padding: 12px 14px;
+  }
+  .wbadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 5px;
+    border-radius: 7px;
+    color: #fff;
+    font: 800 9.5px/1 var(--sans);
+    margin-bottom: 8px;
+  }
+  .wti,
+  .wtx {
+    display: block;
+    width: 100%;
+    background: none;
+    border: 0;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+    color: var(--t1);
+  }
+  .wti {
+    font: 600 13.5px/1.35 var(--sans);
+  }
+  .wtx {
+    font: 500 13.5px/1.6 var(--sans);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .wti:hover,
+  .wtx:hover {
+    color: var(--t3);
+  }
+  .wsum {
+    font: 400 12px/1.55 var(--sans);
+    color: var(--t3);
+    margin: 5px 0 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .wfoot {
     display: flex;
-    gap: 10px;
-    margin-left: 44px;
-    font-family: var(--mono);
-    font-size: 10px;
+    flex-wrap: wrap;
+    gap: 7px;
+    align-items: center;
+    margin-top: 9px;
+    font: 400 10.5px/1 var(--sans);
     color: var(--t4);
   }
+  .wtag {
+    color: var(--cyan);
+  }
+  .wtm {
+    margin-left: auto;
+  }
+  .wacts {
+    display: flex;
+    gap: 2px;
+    margin-top: 8px;
+    opacity: 0;
+    transition: opacity var(--dur-micro) var(--ease);
+  }
+  .wcard:hover .wacts,
+  .wacts.show {
+    opacity: 1;
+  }
+
+  /* —— AI 收藏卡(链接 parse 结果) —— */
   .note .nt {
     font-family: var(--mono);
     font-size: 10px;
@@ -851,18 +886,6 @@
     flex: none;
     min-width: 34px;
     font-variant-numeric: tabular-nums;
-  }
-  .note .body.openable {
-    background: none;
-    border: 0;
-    padding: 0;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-    color: inherit;
-  }
-  .note .body.openable:hover {
-    color: var(--t1);
   }
   .note .body {
     flex: 1;
