@@ -46,6 +46,12 @@
   let editingId = $state<number | null>(null)
   let detailNote = $state<Note | null>(null)
   let detailDay = $state<string | null>(null)
+  // K6 待办勾选:乐观划线,800ms 后删除(完成即清)
+  let doneIds = $state<Set<number>>(new Set())
+  function completeTodo(n: Note) {
+    doneIds = new Set([...doneIds, n.id])
+    setTimeout(() => void notes.remove(n.id), 800)
+  }
   let editDraft = $state('')
   const promptValue = $derived(fromNote ? fromNote.content : taskPrompt)
 
@@ -389,111 +395,85 @@
       {/if}
     </div>
   {:else if layout.journalFilter === 'task'}
-    <div class="row">
-      <div class="gut"><span class="tm">派发</span></div>
-      <form
-        class="compose"
-        onsubmit={(e) => {
-          e.preventDefault()
-          void addTask()
-        }}
-      >
-        {#if fromNote}
-          <span class="chip">
-            自速记 #{fromNote.id}
-            <button
-              type="button"
-              class="act del"
-              aria-label="取消关联速记"
-              onclick={() => {
-                fromNote = null
-                taskPrompt = ''
-              }}>×</button
-            >
-          </span>
-        {/if}
-        <input
-          placeholder="到点让 agent 做什么(如:汇总未读邮件)…"
-          value={promptValue}
-          oninput={(e) => {
-            if (!fromNote) taskPrompt = e.currentTarget.value
-          }}
-          aria-label="任务指令"
-          readonly={fromNote !== null}
-        />
-        <select class="kind" bind:value={taskKind} aria-label="调度模式">
-          <option value="cron">cron</option>
-          <option value="every">every</option>
-          <option value="at">at</option>
-        </select>
-        {#if taskKind === 'cron'}
-          <input class="cron" placeholder="cron 表达式" bind:value={taskCron} aria-label="cron 表达式" />
-        {:else if taskKind === 'every'}
-          <input class="cron" type="number" min="1" placeholder="间隔秒" bind:value={taskEvery} aria-label="间隔秒" />
-        {:else}
-          <input class="cron at" type="datetime-local" bind:value={taskAt} aria-label="触发时间" />
-        {/if}
-        <button class="act pri" type="submit" disabled={(fromNote ? false : !taskPrompt.trim()) || !scheduleValue()}>加定时</button>
-      </form>
-    </div>
+    <!-- K6 任务操作台(稿:helm-journal-kinds.html 任务态):派发条 + 待办清单 + 定时卡 -->
+    <form
+      class="dispatch"
+      onsubmit={(e) => {
+        e.preventDefault()
+        void addTask()
+      }}
+    >
+      {#if fromNote}
+        <span class="chip">
+          自速记 #{fromNote.id}
+          <button type="button" class="act del" aria-label="取消关联速记"
+            onclick={() => { fromNote = null; taskPrompt = '' }}>×</button>
+        </span>
+      {/if}
+      <input
+        placeholder="到点让 agent 做什么(如:汇总未读邮件)…"
+        value={promptValue}
+        oninput={(e) => { if (!fromNote) taskPrompt = e.currentTarget.value }}
+        aria-label="任务指令"
+        readonly={fromNote !== null}
+      />
+      <select class="kind" bind:value={taskKind} aria-label="调度模式">
+        <option value="cron">cron</option>
+        <option value="every">every</option>
+        <option value="at">at</option>
+      </select>
+      {#if taskKind === 'cron'}
+        <input class="cron" placeholder="cron 表达式" bind:value={taskCron} aria-label="cron 表达式" />
+      {:else if taskKind === 'every'}
+        <input class="cron" type="number" min="1" placeholder="间隔秒" bind:value={taskEvery} aria-label="间隔秒" />
+      {:else}
+        <input class="cron at" type="datetime-local" bind:value={taskAt} aria-label="触发时间" />
+      {/if}
+      <button class="act pri" type="submit" disabled={(fromNote ? false : !taskPrompt.trim()) || !scheduleValue()}>加定时</button>
+    </form>
     {#if tasks.error}<p class="err" role="alert">{tasks.error}</p>{/if}
-    <!-- 待办(给自己):notch/捕获坞「给自己」的任务落 notes kind:task,在这归账 -->
-    <div class="row">
-      <div class="gut"><span class="tm">待办</span><br />{todoItems.length} 条</div>
+
+    <div class="taskcols">
       <div>
-        <div class="h">待办 / MINE(给自己)</div>
+        <div class="colh"><span class="t">待办 · 给自己</span><span class="n">{todoItems.length} 条</span></div>
         {#if todoItems.length === 0}
           <p class="empty">没有待办 — 捕获坞/刘海里选「任务 · 给自己」记一条。</p>
         {:else}
-          <ul class="list">
+          <div class="todolist">
             {#each todoItems as n (n.id)}
-              <li class="note">
-                <span class="nt">{localHHMM(n.created_at)}</span>
-                <span class="body">{n.content}</span>
-                <span class="acts">
-                  <button class="act" title="转为定时任务(交给 agent)" onclick={() => noteToTask(n)}>→交给 agent</button>
-                  <button
-                    class="act del"
-                    class:armed={del.pending === `todo-${n.id}`}
-                    aria-label={`删除 ${n.content}`}
-                    onclick={() => del.confirm(`todo-${n.id}`) && notes.remove(n.id)}
-                  >{del.pending === `todo-${n.id}` ? '确认' : '×'}</button>
-                </span>
-              </li>
+              <div class="todo" class:done={doneIds.has(n.id)}>
+                <button class="cb" aria-label={`完成 ${n.content}`} onclick={() => completeTodo(n)}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4 10-10"/></svg>
+                </button>
+                <button class="tx openable2" title="查看详情" onclick={() => (detailNote = n)}>{n.content}</button>
+                <span class="ttm">{localHHMM(n.created_at)}</span>
+                <button class="up" title="转为定时任务(交给 agent)" onclick={() => noteToTask(n)}>→交给 agent</button>
+              </div>
             {/each}
-          </ul>
+          </div>
         {/if}
       </div>
-    </div>
-    <div class="row">
-      <div class="gut"><span class="tm">定时</span><br />{tasks.tasks.length} 项</div>
       <div>
-        <div class="h">任务 / SCHEDULED · 交给 AGENT</div>
+        <div class="colh"><span class="t">定时 · 交给 agent</span>
+          <span class="n">{tasks.tasks.filter((t) => t.enabled).length} 项启用</span></div>
         {#if tasks.tasks.length === 0}
-          <p class="empty">还没有定时任务 — 加一个,到点自动触发 agent。</p>
+          <p class="empty">还没有定时任务 — 上面派发一个,到点自动触发 agent。</p>
         {:else}
-          <ul class="list">
+          <div class="sched">
             {#each tasks.tasks as t (t.id)}
-              <li class="taskli">
-                <div class="task" class:off={!t.enabled}>
-                  <input type="checkbox" class="cbx" checked={t.enabled} aria-label={`启用 ${t.name}`} onchange={() => tasks.toggle(t)} />
-                  <span class="tname">{t.name}</span>
-                  <span class="tsched">{t.schedule_kind} · 下次 {localDateTime(t.next_run)}</span>
-                  <span class="acts">
-                    <button
-                      class="act runs"
-                      class:open={tasks.runsFor === t.id}
-                      aria-label={`运行记录 ${t.name}`}
-                      aria-expanded={tasks.runsFor === t.id}
-                      onclick={() => tasks.toggleRuns(t.id)}
-                    >{t.run_count} 次{#if t.last_status}&nbsp;· {t.last_status}{/if}</button>
-                    <button
-                      class="act del"
-                      class:armed={del.pending === `task-${t.id}`}
-                      aria-label={`删除 ${t.name}`}
-                      onclick={() => del.confirm(`task-${t.id}`) && tasks.remove(t.id)}
-                    >{del.pending === `task-${t.id}` ? '确认' : '×'}</button>
-                  </span>
+              <div class="scard" class:open={tasks.runsFor === t.id}>
+                <div class="sh">
+                  <span class="nm" class:off={!t.enabled}>{t.name}</span>
+                  <button class="sw" class:on={t.enabled} role="switch" aria-checked={t.enabled}
+                    aria-label={`启用 ${t.name}`} onclick={() => tasks.toggle(t)}></button>
+                </div>
+                <div class="smeta">
+                  <span class="cronchip">{t.schedule_kind}</span>
+                  <span class="nextchip">{t.enabled ? `下次 ${localDateTime(t.next_run)}` : '已停用'}</span>
+                  <button class="runbtn" aria-label={`运行记录 ${t.name}`} aria-expanded={tasks.runsFor === t.id}
+                    onclick={() => tasks.toggleRuns(t.id)}>{t.run_count} 次{#if t.last_status}&nbsp;· {t.last_status}{/if} ▾</button>
+                  <button class="act del sdel" class:armed={del.pending === `task-${t.id}`} aria-label={`删除 ${t.name}`}
+                    onclick={() => del.confirm(`task-${t.id}`) && tasks.remove(t.id)}>{del.pending === `task-${t.id}` ? '确认' : '×'}</button>
                 </div>
                 {#if tasks.runsFor === t.id}
                   <div class="rundrawer">
@@ -513,9 +493,9 @@
                     {/if}
                   </div>
                 {/if}
-              </li>
+              </div>
             {/each}
-          </ul>
+          </div>
         {/if}
       </div>
     </div>
@@ -692,34 +672,8 @@
     align-items: center;
   }
   .compose textarea,
-  .compose input {
-    flex: 1;
-    background: transparent;
-    border: 0;
-    color: var(--t1);
-    font-family: var(--sans);
-    font-size: 13px;
-    padding: 6px 0;
-    resize: vertical;
-    min-width: 0;
-  }
   .compose textarea::placeholder,
-  .compose input::placeholder {
-    color: var(--t4);
-  }
   .compose textarea:focus,
-  .compose input:focus {
-    outline: none;
-  }
-  .compose input.cron {
-    flex: none;
-    width: 110px;
-    font-family: var(--mono);
-    font-size: 11px;
-  }
-  .compose input[readonly] {
-    color: var(--t3);
-  }
   .chip {
     font-family: var(--mono);
     font-size: 10px;
@@ -787,33 +741,208 @@
     padding: 0 4px;
     flex: none;
   }
-  .compose select.kind { flex: none; }
-  .compose input.at { flex: none; width: 190px; }
-  .list {
-    list-style: none;
-    margin: 0 0 6px;
-    padding: 4px 14px;
+  /* —— K6 任务操作台 —— */
+  .dispatch {
+    display: flex;
+    gap: 8px;
     background: var(--card);
-    border-radius: var(--radius);
+    border-radius: var(--radius-pill);
     box-shadow: var(--shadow);
+    padding: 6px 6px 6px 20px;
+    align-items: center;
+    margin: 4px 0 20px;
+    flex-wrap: wrap;
   }
-  .note,
-  .taskli {
-    border-top: 1px solid var(--hair);
+  .dispatch input:not(.cron):not(.at) {
+    flex: 1;
+    min-width: 200px;
+    border: 0;
+    outline: none;
+    font: 400 13.5px/1 var(--sans);
+    background: transparent;
+    color: var(--t1);
   }
-  .note:first-child,
-  .taskli:first-child {
-    border-top: none;
+  .dispatch input::placeholder { color: var(--t4); }
+  .dispatch input.cron {
+    width: 130px;
+    font: 500 12px/1 var(--mono);
+    background: var(--pill);
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 9px 13px;
+    outline: none;
+    color: var(--t1);
   }
-  .note,
-  .task {
+  .taskcols {
+    display: grid;
+    grid-template-columns: 1fr 1.25fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 980px) {
+    .taskcols { grid-template-columns: 1fr; }
+  }
+  .colh {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 0 4px 10px;
+  }
+  .colh .t {
+    font: 700 13.5px/1 var(--sans);
+    color: var(--t1);
+  }
+  .colh .n {
+    font: 400 11px/1 var(--sans);
+    color: var(--t4);
+  }
+  .todolist {
+    background: var(--card);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    padding: 6px 8px;
+  }
+  .todo {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 11px 10px;
+    border-radius: var(--radius-sm);
+  }
+  .todo:hover { background: var(--pill); }
+  .cb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1.6px solid var(--t4);
+    background: transparent;
+    flex: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: transparent;
+    transition: all 0.15s var(--ease);
+  }
+  .todo.done .cb {
+    background: var(--grad);
+    border-color: transparent;
+    color: #fff;
+  }
+  .cb :global(svg) {
+    width: 11px;
+    height: 11px;
+  }
+  .todo .tx {
+    flex: 1;
+    min-width: 0;
+    font: 400 13.5px/1.45 var(--sans);
+    color: var(--t1);
+    background: none;
+    border: 0;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+  }
+  .todo.done .tx {
+    color: var(--t4);
+    text-decoration: line-through;
+  }
+  .todo .ttm {
+    font: 400 10.5px/1 var(--sans);
+    color: var(--t4);
+    flex: none;
+  }
+  .todo .up {
+    font: 500 10.5px/1 var(--sans);
+    color: var(--t3);
+    background: var(--pill);
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 5px 10px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.12s;
+    flex: none;
+  }
+  .todo:hover .up { opacity: 1; }
+  .todo .up:hover { color: var(--t1); }
+  .sched {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .scard {
+    background: var(--card);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    padding: 14px 16px;
+  }
+  .sh {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 4px 0;
-    font-size: 13px;
-    flex-wrap: wrap; /* AI 收藏卡换行占满整行 */
   }
+  .scard .nm {
+    font: 600 13.5px/1.3 var(--sans);
+    color: var(--t1);
+    flex: 1;
+    min-width: 0;
+  }
+  .scard .nm.off { color: var(--t4); }
+  .sw {
+    width: 40px;
+    height: 24px;
+    border-radius: 99px;
+    background: var(--pill);
+    border: 0;
+    position: relative;
+    cursor: pointer;
+    flex: none;
+    transition: background 0.18s var(--ease);
+  }
+  .sw::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--card);
+    box-shadow: var(--shadow);
+    transition: left 0.18s var(--ease);
+  }
+  .sw.on { background: var(--grad); }
+  .sw.on::after { left: 19px; }
+  .smeta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 9px;
+    flex-wrap: wrap;
+  }
+  .cronchip {
+    font: 600 10px/1 var(--mono);
+    color: var(--t3);
+    background: var(--pill);
+    border-radius: var(--radius-pill);
+    padding: 5px 10px;
+  }
+  .nextchip {
+    font: 400 11px/1 var(--sans);
+    color: var(--t4);
+  }
+  .runbtn {
+    margin-left: auto;
+    font: 500 10.5px/1 var(--sans);
+    color: var(--t4);
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+  }
+  .runbtn:hover { color: var(--t1); }
+  .sdel { flex: none; }
 
   /* —— K4 日记纸页 —— */
   .paper {
@@ -1070,19 +1199,6 @@
   }
 
   /* —— AI 收藏卡(链接 parse 结果) —— */
-  .note .nt {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--t4);
-    flex: none;
-    min-width: 34px;
-    font-variant-numeric: tabular-nums;
-  }
-  .note .body {
-    flex: 1;
-    word-break: break-word;
-    color: var(--t2);
-  }
   .acts {
     display: flex;
     align-items: center;
@@ -1117,37 +1233,6 @@
     color: var(--acc-ink);
   }
   /* 任务行 */
-  .cbx {
-    appearance: none;
-    width: 13px;
-    height: 13px;
-    border: 1.4px solid var(--t4);
-    background: transparent;
-    flex: none;
-    cursor: pointer;
-    margin: 0;
-  }
-  .cbx:checked {
-    border-color: var(--acc-ink);
-    background: var(--acc);
-  }
-  .task .tname {
-    color: var(--t2);
-    font-weight: 600;
-    font-size: 12.5px;
-  }
-  .task .tsched {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--t4);
-    font-variant-numeric: tabular-nums;
-  }
-  .act.runs {
-    font-variant-numeric: tabular-nums;
-  }
-  .act.runs.open {
-    color: var(--acc-ink);
-  }
   /* 运行历史抽屉:mono 子账本行 */
   .rundrawer {
     margin: 0 0 6px 23px;
@@ -1177,21 +1262,12 @@
   .rdot.err {
     background: var(--red);
   }
-  .rstatus {
-    color: var(--t4);
-  }
   .rout {
     flex: 1;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: var(--t4);
-  }
-  .task .acts {
-    margin-left: auto;
-  }
-  .task.off .tname {
     color: var(--t4);
   }
   .err {

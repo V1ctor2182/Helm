@@ -94,3 +94,8 @@
 - 对齐: 新组件 PageDetail——点纸页日期头开全页阅读态:大日期/全文 md/专注块(regex 聚合当天「专注 N 分钟」,紫左沿)/这天的碎片时间线(当日速记/收藏/待办,时间+摘要行)/编辑这页。Esc/遮罩关。
 - 门: build ✓ / check 0/0 / test 205 全绿
 - 视觉: shots/k5-page.png(真数据:专注 1 段 1 分钟·工作/三条碎片时间线)
+## K6 · 2026-07-07 18:20 · 任务操作台
+- 对齐: filter=task → 派发胶囊条(输入/cron 三模式胶囊/渐变加定时,fromNote chip 保留)+双列:待办清单(圆 checkbox 勾选=渐变勾+划线+800ms 完成即清,点正文开详情,hover →交给 agent)/定时卡(渐变 switch 启停/cron chip/下次时间/运行历史抽屉 rdot 红绿/确认删)。旧行式任务 UI 退场,孤儿样式清零;runbtn aria/rstatus 保测试契约。
+- 门: build ✓ / check 0/0 / test 205 全绿
+- 视觉: shots/k6-tasks.png
+- 取舍: 待办无 done 字段(后端 Note 无状态列)→「完成即清」语义(勾选=划线动画+删除);要保留完成历史需后端加列 → backlog P2
