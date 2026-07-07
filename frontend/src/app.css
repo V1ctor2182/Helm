@@ -23,7 +23,9 @@
 
   /* ---- 骨架尺寸 ---- */
   --rail-w: 58px;        /* 旧 Rail 宽（侧栏化后由 --side-w 接管，过渡期保留） */
-  --side-w: 250px;       /* NOMI 白侧栏 */
+  --side-w: 250px;       /* NOMI 白侧栏(可拖,R15) */
+  --chat-side: 240px;    /* 对话会话栏(可拖) */
+  --cockpit-side: 200px; /* 驾驶舱侧栏(可拖) */
   --ctx-w: 250px;
   --term-w: 220px;
   --titlebar-h: 32px;

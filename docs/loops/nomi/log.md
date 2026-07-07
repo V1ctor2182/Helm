@@ -63,3 +63,8 @@
 - 对齐: ①全局 select/datetime 皮(app.css:胶囊+自绘 SVG 箭头,原生外观退场——研究/记忆/派发/加事件全部受益),清掉盖它的 scoped 残留;②Calendar 内部(周/列表/月·导入导出 CalDAV·加事件→胶囊,黑激活;事件标题/时间输入→胶囊盒;AGENDA 标签 sans 化,7 patch);③记忆板块(漏网):MEMORY→记忆中文标题/黑胶囊 tab/chips 胶囊/输入胶囊(BrainPanel+Memory 共 6 patch)。
 - 门: build ✓ / check 0/0 / test 205 全绿
 - 视觉: shots/r14-memory.png + r14-calendar.png
+## R15 · 2026-07-07 14:35 · 溢出 bug + 全局可拖分割条(用户指正)
+- 修 bug: 会话卡标题溢出(.st 缺 min-width:0 flex 截断链断)+侧栏横向滚动条(overflow-x hidden);Chat scoped select 盖住全局皮(残留清)。
+- 新能力: 通用 Resizer.svelte(拖 CSS 变量+localStorage 持久,hover 细线高亮)——四处接入:主侧栏(--side-w 180-360)/上下文面板(--ctx-w)/对话会话栏(--chat-side 180-380)/驾驶舱侧栏(--cockpit-side 160-360)。所有分割线可拖,宽度记住。
+- 门: build ✓ / check 0/0 / test 205 全绿(Resizer localStorage 防御测试环境)
+- 视觉: shots/r15-chat.png(截断/胶囊 select/计数 ✓)

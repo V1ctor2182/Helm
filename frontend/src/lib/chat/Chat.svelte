@@ -6,6 +6,7 @@
   import { compare } from './compareStore.svelte'
   import ProviderSettings from './ProviderSettings.svelte'
   import CompareView from './CompareView.svelte'
+import Resizer from '../Resizer.svelte'
 
   let input = $state('')
   let showProviders = $state(false)
@@ -74,6 +75,8 @@
 </script>
 
 <div class="chat">
+  <Resizer cssVar="--chat-side" storageKey="helm.ui.chatSide" min={180} max={380} initial={240}
+    style="left:calc(var(--chat-side, 240px) - 3px)" />
   <aside class="sidebar">
     <div class="h">新会话</div>
     <section class="new">
@@ -175,8 +178,9 @@
     color: var(--red, #d33);
   }
   .chat {
+    position: relative;
     display: grid;
-    grid-template-columns: 210px 1fr;
+    grid-template-columns: var(--chat-side, 240px) 1fr;
     height: 100%;
     min-height: 0;
     font-family: var(--sans);
@@ -185,7 +189,8 @@
   .sidebar {
     border-right: 1px solid var(--hair);
     padding: 14px 12px;
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -206,7 +211,6 @@
     flex-direction: column;
     gap: 8px;
   }
-  .new select,
   .new input {
     background: var(--pill);
     border: 0;
@@ -216,6 +220,7 @@
     font-size: 12px;
     padding: 8px 10px;
   }
+  .new select { width: 100%; }
   .new select:focus,
   .new input:focus {
     outline: none;
@@ -322,6 +327,8 @@
   .sess .st {
     color: var(--t2);
     font-size: 12.5px;
+    flex: 1;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

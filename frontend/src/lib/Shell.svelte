@@ -1,5 +1,6 @@
 <script lang="ts">
   import Rail from './Rail.svelte'
+import Resizer from './Resizer.svelte'
   import ContextPanel from './ContextPanel.svelte'
   import CommandPalette from './CommandPalette.svelte'
   import QuickCapture from './QuickCapture.svelte'
@@ -48,6 +49,12 @@
   </header>
 
   <Rail {layout} />
+  <Resizer cssVar="--side-w" storageKey="helm.ui.sideW" min={180} max={360} initial={250}
+    style={`left:calc(var(--side-w) - 3px);top:var(--titlebar-h);bottom:var(--statusbar-h)`} />
+  {#if !layout.contextCollapsed}
+    <Resizer cssVar="--ctx-w" storageKey="helm.ui.ctxW" min={180} max={420} initial={250}
+      style={`left:calc(var(--side-w) + var(--ctx-w) - 3px);top:var(--titlebar-h);bottom:var(--statusbar-h)`} />
+  {/if}
 
   {#if !layout.contextCollapsed}
     <aside class="context" aria-label="Context panel">
@@ -131,6 +138,7 @@
 
 <style>
   .shell {
+    position: relative;
     height: 100vh;
     display: grid;
     grid-template-columns: var(--side-w) auto 1fr; /* NOMI 白侧栏(R02) */
