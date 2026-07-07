@@ -93,3 +93,23 @@ commit 悬空了。规则:
 
 > 归档 = 状态改「已收尾」留表内,工作区永久保留;下次同交付物的新工作
 > 开新批次或新分支,不复用旧分支名。
+
+---
+
+## 附录 A · 可直接粘贴的启动命令
+
+### A1 重启主 app loop(批次 3,在主仓库目录新会话粘贴)
+
+```
+/loop 1m 按 docs/loops/LOOP-GUIDE.md 规范跑主 app loop:读 docs/loops/nomi/backlog.md,先清未完成的 K 块,再吃批次 3 的 T1-T5(AI 分诊管线/人话排期/前端对齐 kinds 稿/日记每天一篇)。只读设计基线 docs/design/helm-journal-kinds.html;分支 feat/nomi-kinds;每块前端 build+后端测试绿才 commit [loop],不合 main 留我合;契约变更按 T5 通知 notch 线;log/报告/截图记 docs/loops/nomi/;拿不准的产品行为记 Q 别猜。全部块对齐或全卡住才停。
+```
+
+会话还开着就不用这条,直接说:「批次 3 开跑,按 docs/loops/nomi/backlog.md 的 T1-T5」。
+
+### A2 新开一条 loop 的模板(替换尖括号)
+
+```
+/loop 1m 按 docs/loops/LOOP-GUIDE.md 规范跑 <交付物名> loop:读 <只读设计基线文件> 与现状,把 <目标> 逐块做到一致。分支 <feat/xxx>(不合 main,留我合);工作副本 <主检出 或 worktree ../helm-xxx>;每块 <build/test 命令> 绿才 commit [loop];快照/截图视觉对比;log/report/backlog 记 docs/loops/<名>/(先建 README 说明结构)。后端契约不动(契约只归主 app loop);拿不准的产品行为记 Q 别猜。全部块对齐或全卡住才停。
+```
+
+开条前过一遍 §0 和 §1 的四件套检查。
