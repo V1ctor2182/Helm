@@ -222,6 +222,23 @@ public final class NotchModel {
         recentNotes = (try? await backend.recentNotes(kind: kind, limit: 3)) ?? []
     }
 
+    /// 日记「今天卡」正文:今天的 journal 全文(多段按时间拼接;无则 nil)。
+    public private(set) var journalToday: String?
+
+    public func loadJournalToday(now: Date = Date()) async {
+        let notes = (try? await backend.recentNotes(kind: "journal", limit: 10)) ?? []
+        let today = Self.dayString(now)
+        let todays = notes.filter { $0.createdAt.hasPrefix(today) }.reversed()
+        let joined = todays.map(\.content).joined(separator: "\n\n")
+        journalToday = joined.isEmpty ? nil : joined
+    }
+
+    static func dayString(_ d: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: d)
+    }
+
     // MARK: Module switching (dock + view), ported from helm-notch-pro.html
 
     /// The module shown in the expanded panel (HTML `S.view`).
@@ -286,13 +303,15 @@ public final class NotchModel {
         // 多行输入时加 captureInputExtraHeight(App 实测),面板随输入框长。
         // NOMI 胶囊/输入盒都比 ORAGE 高一档,预算整体上调(2026-07-07 用户:被 clip)。
         case .capture:
+            // 任务 kind 已随稿去除(2026-07-08 用户:任务只在 Helm,速记 AI 分诊建);
+            // 日记 = 今天卡(全文可滚)+续写,预算更高。
             captureKind == .focus
                 ? 240
                 : (captureKind == .ask && askAnswer != nil
                     ? 340 + captureInputExtraHeight
                     : (captureShowRecent
-                        ? min(340, (captureKind == .task ? 256 : 232) + 64)
-                        : (captureKind == .task ? 256 : 232)) + captureInputExtraHeight)
+                        ? min(360, (captureKind == .journal ? 300 : 232) + 64)
+                        : (captureKind == .journal ? 300 : 232)) + captureInputExtraHeight)
         }
     }
 
@@ -899,15 +918,7 @@ public final class NotchModel {
                 try await backend.createNote(content: text + ext, kind: "note", journalDate: nil)
             case .journal:
                 try await backend.createNote(content: text + ext, kind: "journal", journalDate: Self.today())
-            case .task:
-                // 给自己 = 「任务:」前缀的 note(后端 2026-07-07 起 kind 只收
-                // note/journal/focus,task kind 已移除——422 失败,用户截图);
-                // 交给 agent = 调度任务(/api/tasks)。
-                if taskTarget == .me {
-                    try await backend.createNote(content: "任务: " + text + ext, kind: "note", journalDate: nil)
-                } else {
-                    try await backend.createTask(prompt: text + ext)
-                }
+                await loadJournalToday()  // 续写后今天卡立即刷新
             case .focus:
                 return  // focus uses start/stop, not submit
             case .ask:

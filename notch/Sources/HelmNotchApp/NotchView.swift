@@ -1366,8 +1366,8 @@ struct NotchView: View {
         if model.captureKind == .focus {
             focusBody.padding(.top, 2)
         } else {
-            // 任务:给自己 / 交给 agent
-            if model.captureKind == .task { taskTargetToggle.padding(.top, 8) }
+            // 日记 = 每天一篇:今天卡(全文可滚)在输入上方,输入即续写。
+            if model.captureKind == .journal { journalTodayCard.padding(.top, 8) }
             // capin — full-width input on its own row (HTML .capin).
             TextField("", text: $model.captureText, prompt: Text(placeholder).foregroundStyle(Color(model.nomi.ink3)), axis: .vertical)
                 .textFieldStyle(.plain).font(.system(size: 13)).foregroundStyle(Color(model.nomi.ink))
@@ -1420,7 +1420,7 @@ struct NotchView: View {
         if !model.captureFiles.isEmpty { return "发送并归档" }
         switch model.captureKind {
         case .ask: return "问"
-        case .task: return model.taskTarget == .agent ? "派发" : "发送"
+        case .journal: return "续写"
         default: return "发送"
         }
     }
@@ -1511,20 +1511,45 @@ struct NotchView: View {
         }
     }
 
-    private var taskTargetToggle: some View {
-        HStack(spacing: 5) {
-            ForEach(TaskTarget.allCases) { target in
-                let on = model.taskTarget == target
-                Button(target.label) { model.taskTarget = target }
-                    .buttonStyle(.plain)
-                    .font(.system(size: 11, weight: on ? .semibold : .regular))
-                    .foregroundStyle(on ? .white : Color(model.nomi.ink2))
-                    .padding(.horizontal, 12).padding(.vertical, 5)
-                    .background(
-                        Capsule().fill(on ? AnyShapeStyle(Nomi.gradientH) : AnyShapeStyle(Color(model.nomi.cardBG))))
-                    .overlay(Capsule().stroke(on ? .clear : Color(model.nomi.hair), lineWidth: 1))
+    /// 日记今天卡:日期头 + 今天全文(可滚,不截断——2026-07-08 用户:要看到之前写的)。
+    @ViewBuilder private var journalTodayCard: some View {
+        let pal = model.nomi
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .firstTextBaseline, spacing: 7) {
+                Text(journalDateLabel).font(.system(size: 12, weight: .bold)).foregroundStyle(Color(pal.ink))
+                Text("今天的日记").font(.system(size: 9.5)).foregroundStyle(Color(pal.ink3))
+                Spacer()
+                if let t = model.journalToday {
+                    Text("\(t.count) 字").font(.system(size: 9.5, design: .monospaced))
+                        .foregroundStyle(Color(pal.ink2))
+                        .padding(.horizontal, 8).padding(.vertical, 2)
+                        .background(Capsule().fill(Color(pal.pill)))
+                }
+            }
+            if let t = model.journalToday {
+                ScrollView(.vertical, showsIndicators: false) {
+                    Text(t).font(.system(size: 11)).foregroundStyle(Color(pal.ink2))
+                        .lineSpacing(3.5)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
+                }
+                .frame(maxHeight: 104)
+                .padding(.top, 6)
+            } else {
+                Text("还没动笔 — 写下今天第一句").font(.system(size: 11)).foregroundStyle(Color(pal.ink3))
+                    .padding(.top, 6)
             }
         }
+        .padding(EdgeInsets(top: 10, leading: 12, bottom: 10, trailing: 12))
+        .wcard(pal, dark: model.nomiDark)
+        .task(id: model.captureKind) { await model.loadJournalToday() }
+    }
+
+    private var journalDateLabel: String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "zh_CN")
+        f.dateFormat = "M月d日 · EEE"
+        return f.string(from: Date())
     }
 
     /// 拖入文件的附件 chip (HTML .attchip). Upload happens on send — TODO.
@@ -1692,8 +1717,7 @@ struct NotchView: View {
     private var placeholder: String {
         switch model.captureKind {
         case .note: "随手记一笔…"
-        case .journal: "今天发生了什么?"
-        case .task: "到点让 agent 做什么…"
+        case .journal: "续写今天 — 回车追加到今天这篇…"
         case .focus: "我现在在做什么…"
         case .ask: "问问 Helm 大脑…"
         }

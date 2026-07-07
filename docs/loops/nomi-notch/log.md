@@ -126,3 +126,9 @@
 - 关联任务文本双击直接进编辑(提示文案跟进"双击或点「换任务」");换任务按钮保留。
 - 权限横幅:高度基数 148→112(固定项实测 ~110),按钮下的大黑边压掉。
 - 全测试绿,已重打包重启(注意:hooks 若仍指旧路径包,横幅高度变化在预览 app 上即可见,与 hook 无关)。
+
+## 2026-07-08 迭代 22 — 任务 kind 退役 + 日记今天卡(Swift 落地) [用户拍板]
+- CaptureKind 去 task(速记页四胶囊:速记/日记/专注/问大脑);taskTargetToggle/双轨/「任务:」note 通道全删;相关测试删 4 个。任务入口收敛:Helm 主 app(agent)+速记 AI 分诊(主线在做)。
+- 日记=每天一篇:journalTodayCard(日期头+字数 chip+今天全文可滚 104px+空态"还没动笔");数据 loadJournalToday(recentNotes kind=journal 过滤今天正序拼接,真数据);输入即续写(placeholder/按钮/hint 改),提交后今天卡即刷;日记预算 232→300。
+- 新测试:journalToday 只拼今天+正序;全套绿。已重打包重启预览。
+- 设计侧同轮:kinds 稿任务两列恢复+两层任务行+人话排期+分诊落待办;两稿 emoji 清零;已并 de71b0b 入 feat/nomi-reskin。

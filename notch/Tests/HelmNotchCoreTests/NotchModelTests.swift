@@ -10,6 +10,7 @@ final class FakeBackend: HelmBackend, @unchecked Sendable {
     var shouldFailCapture = false
     var runs: [AgentRun] = []
     var events: [CalEvent] = []
+    var recents: [RecentNote] = []
     private(set) var notes: [(content: String, kind: String, journalDate: String?)] = []
     private(set) var tasks: [String] = []
 
@@ -23,6 +24,10 @@ final class FakeBackend: HelmBackend, @unchecked Sendable {
 
     func listRuns() async throws -> [AgentRun] {
         runs
+    }
+
+    func recentNotes(kind: String, limit: Int) async throws -> [RecentNote] {
+        recents
     }
 
     func listEvents(start: Date, end: Date) async throws -> [CalEvent] {
@@ -323,8 +328,8 @@ final class NotchModuleTests: XCTestCase {
         model.calMonthView = false
         XCTAssertEqual(model.viewHeight(), 260)
         model.module = .capture
-        model.captureKind = .task
-        XCTAssertEqual(model.viewHeight(), 256)
+        model.captureKind = .journal  // 今天卡+续写,预算更高
+        XCTAssertEqual(model.viewHeight(), 300)
         model.captureKind = .note
         XCTAssertEqual(model.viewHeight(), 232)
     }
@@ -383,39 +388,8 @@ final class NotchModuleTests: XCTestCase {
         XCTAssertEqual(model.viewHeight(), 232)  // clamp 到 0
     }
 
-    @MainActor
-    func testTaskTargetDefaultsToMe() {
-        let model = NotchModel(backend: FakeBackend())
-        XCTAssertEqual(model.taskTarget, .me)
-    }
 
-    @MainActor
-    func testTaskForMyselfPostsAsTaskNote() async {
-        // 给自己 = 「任务:」前缀 note(后端已移除 task kind,2026-07-07),不进调度任务。
-        let backend = FakeBackend()
-        let model = NotchModel(backend: backend)
-        model.captureKind = .task
-        model.taskTarget = .me
-        model.captureText = "买牛奶"
-        await model.submit()
-        XCTAssertEqual(backend.notes.count, 1)
-        XCTAssertEqual(backend.notes[0].kind, "note")
-        XCTAssertEqual(backend.notes[0].content, "任务: 买牛奶")
-        XCTAssertTrue(backend.tasks.isEmpty)
-    }
 
-    @MainActor
-    func testTaskForAgentPostsAsScheduledTask() async {
-        // 交给 agent = 调度任务 → /api/tasks。
-        let backend = FakeBackend()
-        let model = NotchModel(backend: backend)
-        model.captureKind = .task
-        model.taskTarget = .agent
-        model.captureText = "到点跑测试"
-        await model.submit()
-        XCTAssertEqual(backend.tasks, ["到点跑测试"])
-        XCTAssertTrue(backend.notes.isEmpty)
-    }
 
     @MainActor
     func testFocusStartSeedsWhatAndStopRoundsMinutes() {
@@ -567,18 +541,6 @@ final class CaptureTests: XCTestCase {
         XCTAssertNotNil(backend.notes[0].journalDate)
     }
 
-    @MainActor
-    func testTaskCapturePostsTask() async {
-        // 2026-07-05 语义:默认 taskTarget=.me → 记录型待办;.agent 才进调度任务。
-        let backend = FakeBackend()
-        let model = NotchModel(backend: backend)
-        model.captureKind = .task
-        model.taskTarget = .agent
-        model.captureText = "汇总今日进展"
-        await model.submit()
-        XCTAssertEqual(backend.tasks, ["汇总今日进展"])
-        XCTAssertTrue(backend.notes.isEmpty)
-    }
 
     @MainActor
     func testEmptyCaptureIsNoOp() async {
@@ -734,6 +696,20 @@ final class HealthDecodingTests: XCTestCase {
         XCTAssertEqual(model.focusElapsed(at: t1.addingTimeInterval(60)), 360)
         model.resetFocus()
         XCTAssertEqual(model.focusRemaining(), 25 * 60)
+    }
+
+    @MainActor
+    func testJournalTodayJoinsOnlyTodaysEntries() async {
+        let backend = FakeBackend()
+        let today = NotchModel.dayString(Date())
+        backend.recents = [
+            RecentNote(id: 3, content: "晚上收尾", kind: "journal", createdAt: "\(today)T22:10:00"),
+            RecentNote(id: 2, content: "早上开工", kind: "journal", createdAt: "\(today)T09:00:00"),
+            RecentNote(id: 1, content: "昨天的", kind: "journal", createdAt: "2020-01-01T20:00:00"),
+        ]
+        let model = NotchModel(backend: backend)
+        await model.loadJournalToday()
+        XCTAssertEqual(model.journalToday, "早上开工\n\n晚上收尾")  // 只今天,正序拼接
     }
 
 }
