@@ -133,6 +133,65 @@
   .rdot{width:7px;height:7px;border-radius:50%;flex:none}
   .rdot.ok{background:var(--ok)}.rdot.err{background:#e5484d}
   .runrow .out{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink3)}
+
+  /* 智能捕获条 + AI 判定 */
+  .smartcap{display:flex;gap:8px;background:var(--card);border-radius:999px;box-shadow:var(--shadow);
+    padding:6px 6px 6px 20px;align-items:center;margin-bottom:6px}
+  .smartcap input{flex:1;border:0;outline:none;font:400 14px/1 var(--sans);background:transparent;color:var(--ink)}
+  .smartcap input::placeholder{color:var(--ink3)}
+  .aiverdict{display:inline-flex;align-items:center;gap:6px;font:600 11.5px/1 var(--sans);color:var(--ink2);
+    background:var(--pill);border-radius:999px;padding:7px 13px;cursor:pointer;white-space:nowrap;
+    animation:pop .18s var(--ease)}
+  @keyframes pop{from{transform:scale(.85);opacity:0}}
+  .aiverdict .spark{width:11px;height:11px}
+  .scHint{font:400 11px/1 var(--sans);color:var(--ink3);margin:0 4px 20px;padding-left:16px}
+
+  /* 专注进行中卡 */
+  .focuslive{display:flex;align-items:center;gap:16px;background:var(--card);border-radius:18px;
+    box-shadow:var(--shadow);padding:14px 18px;margin-bottom:16px}
+  .fring{width:56px;height:56px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
+    background:conic-gradient(var(--g1) 0deg,var(--g2) var(--deg,40deg),var(--pill) var(--deg,40deg))}
+  .fring .ft{width:44px;height:44px;border-radius:50%;background:var(--card);display:flex;align-items:center;
+    justify-content:center;font:700 11px/1 var(--mono);font-variant-numeric:tabular-nums}
+  .fmid .fl{font:400 10.5px/1 var(--sans);color:var(--ink3);letter-spacing:.4px}
+  .fmid .fw{font:600 14px/1.4 var(--sans);margin-top:3px}
+  .fstop{margin-left:auto;font:600 12px/1 var(--sans);color:#fff;background:var(--grad);border:0;
+    border-radius:999px;padding:9px 17px;cursor:pointer}
+
+  /* 详情弹层(速记/收藏/日记页共用骨架) */
+  .scrim{position:fixed;inset:0;background:rgba(17,17,20,.32);display:none;align-items:center;
+    justify-content:center;z-index:90;padding:30px}
+  .scrim.on{display:flex}
+  .sheet{width:min(600px,92vw);max-height:86vh;overflow-y:auto;background:var(--card);border-radius:22px;
+    box-shadow:var(--shadow-lg);animation:up .22s var(--ease)}
+  @keyframes up{from{transform:translateY(14px);opacity:0}}
+  .sheet .shd{display:flex;align-items:center;gap:10px;padding:16px 20px 10px}
+  .sheet .kbadge{font:600 11px/1 var(--sans);color:var(--ink2);background:var(--pill);border-radius:999px;padding:6px 12px}
+  .sheet .when{font:400 11px/1 var(--sans);color:var(--ink3)}
+  .sheet .x{margin-left:auto;width:28px;height:28px;border-radius:50%;border:0;background:var(--pill);
+    color:var(--ink3);font-size:15px;cursor:pointer}
+  .sheet .shero{width:100%;max-height:250px;object-fit:cover;display:block}
+  .sheet .sbody{padding:14px 20px 8px}
+  .sheet .sti{font:700 18px/1.35 var(--sans);margin:0 0 8px}
+  .sheet .scontent{font:400 14px/1.7 var(--sans);color:var(--ink2);white-space:pre-wrap}
+  .sheet .aibox{display:flex;gap:9px;background:var(--bg);border-radius:12px;padding:12px 14px;margin-top:12px;
+    font:400 12.5px/1.65 var(--sans);color:var(--ink2)}
+  .sheet .aibox .lab{font-weight:700;color:var(--ink)}
+  .sheet .srow{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;font:400 11px/1 var(--sans);color:var(--ink3);align-items:center}
+  .sheet .sacts{display:flex;gap:8px;padding:14px 20px 18px}
+  .sheet .sacts button,.sheet .sacts a{font:500 12px/1 var(--sans);color:var(--ink2);background:var(--pill);
+    border:0;border-radius:999px;padding:9px 16px;cursor:pointer;text-decoration:none}
+  .sheet .sacts .pri{color:#fff;background:var(--grad);font-weight:600}
+  .sheet .focusblock{display:flex;align-items:center;gap:10px;background:var(--bg);border-radius:12px;
+    border-left:3px solid var(--g2);padding:10px 13px;margin-top:12px;font:400 12.5px/1.5 var(--sans);color:var(--ink2)}
+  .sheet .dayline{display:flex;gap:9px;font:400 12px/1.7 var(--sans);color:var(--ink3);padding:3px 0}
+  .sheet .dayline .t{font-family:var(--mono);font-size:10.5px;padding-top:3px}
+
+  /* toast */
+  .toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:var(--ink);color:#fff;
+    font:500 12.5px/1 var(--sans);border-radius:999px;padding:11px 20px;box-shadow:var(--shadow-lg);
+    opacity:0;pointer-events:none;transition:opacity .25s;z-index:99}
+  .toast.on{opacity:1}
 </style>
 </head>
 <body>
@@ -145,16 +204,33 @@
     </div>
   </div>
 
+  <!-- 智能捕获条:一个入口,AI 自动判类(速记/日记/任务/收藏),不用手选 kind -->
+  <div class="smartcap">
+    <input id="scin" type="text" placeholder="随手丢进来 — AI 自动判断这是速记 / 日记 / 任务 / 收藏…">
+    <span class="aiverdict" id="aiv" hidden><span class="spark"></span><span id="aivt">AI · 速记</span></span>
+    <button class="gbtn" style="margin-left:0" onclick="scSend()">发送</button>
+  </div>
+  <div class="scHint">试试输入:「明早 9 点跑回归」→ 任务 · 「https://arxiv.org/…」→ 收藏 · 「今天终于…」→ 日记;判定可点击改</div>
+
   <!-- ═══ 速记:瀑布卡片墙(碎片扫视) ═══ -->
   <div class="pane on" id="p-notes">
+    <!-- 专注进行中:活的计时卡(专注是速记的一种状态,结束自动记入今日日记) -->
+    <div class="focuslive" id="focusCard">
+      <span class="fring" id="fring"><span class="ft" id="ftime">00:00</span></span>
+      <div class="fmid">
+        <div class="fl">专注中</div>
+        <div class="fw">把 NOMI 三态稿进 Svelte</div>
+      </div>
+      <button class="fstop" onclick="stopFocus()">停止并记入日记</button>
+    </div>
     <div class="daymark">今天 · 07-07<span class="n">3 条</span></div>
     <div class="wall">
-      <div class="wcard plain"><div class="pad">
+      <div class="wcard plain" onclick="openDetail(this)"><div class="pad">
         <span class="badge b-n">N</span>
         <div class="note-tx">驾驶舱 e2e 三个坑:中间件吞后台任务 / 事务时序 / 僵尸进程——写进 backlog 复盘。</div>
         <div class="foot"><span class="tag">#复盘</span><span class="tm">14:31</span></div>
       </div></div>
-      <div class="wcard">
+      <div class="wcard" onclick="openDetail(this)">
         <div class="cover" style="background:linear-gradient(135deg,#3a2f18,#1c1c22);display:flex;align-items:center;justify-content:center">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1.6"><polygon points="9,7 9,17 17,12" fill="rgba(255,255,255,.4)" stroke="none"/></svg>
         </div>
@@ -165,18 +241,18 @@
           <div class="foot"><span>officialpsy</span><span class="tag">#音乐</span><span class="tm">10:08</span></div>
         </div>
       </div>
-      <div class="wcard"><div class="pad">
+      <div class="wcard" onclick="openDetail(this)"><div class="pad">
         <span class="badge b-ax">AX</span>
         <div class="ti">Attention Is All You Need</div>
         <div class="sum">提出 Transformer:完全基于注意力机制,弃用循环与卷积——现代大模型的地基。多头注意力让模型同时关注不同位置的关系,训练并行度大幅提升。</div>
         <div class="foot"><span>arXiv</span><span class="tag">#transformer</span><span class="tag">#必读</span><span class="tm">11:58</span></div>
       </div></div>
-      <div class="wcard plain"><div class="pad">
+      <div class="wcard plain" onclick="openDetail(this)"><div class="pad">
         <span class="badge b-n">N</span>
         <div class="note-tx">给 notch 加「速记 → AI 整理」入场动效,像仪表暖机。</div>
         <div class="foot"><span class="tm">21:44</span></div>
       </div></div>
-      <div class="wcard">
+      <div class="wcard" onclick="openDetail(this)">
         <div class="cover" style="background:linear-gradient(135deg,#eef0f4,#dfe3ea);display:flex;align-items:center;justify-content:center;gap:8px">
           <span style="width:42px;height:52px;border-radius:9px;background:#34d6c0"></span>
           <span style="width:36px;height:42px;border-radius:9px;background:#ffb03d"></span>
@@ -189,7 +265,7 @@
           <div class="foot"><span>awwwards.com</span><span class="tag">#灵感</span><span class="tm">16:51</span></div>
         </div>
       </div>
-      <div class="wcard plain"><div class="pad">
+      <div class="wcard plain" onclick="openDetail(this)"><div class="pad">
         <span class="badge b-n">N</span>
         <div class="note-tx">Canvas 连线要不要 note_links 表?明早问一下。</div>
         <div class="foot"><span class="tag">#待定</span><span class="tm">01:12</span></div>
@@ -197,13 +273,13 @@
     </div>
     <div class="daymark">昨天 · 07-06<span class="n">2 条</span></div>
     <div class="wall">
-      <div class="wcard"><div class="pad">
+      <div class="wcard" onclick="openDetail(this)"><div class="pad">
         <span class="badge b-yt">YT</span>
         <div class="ti">SwiftUI Layout 深讲</div>
         <div class="sum">proposal/response 模型,frame 与 fixedSize 的真实语义。</div>
         <div class="foot"><span>Sean Allen</span><span class="tm">19:12</span></div>
       </div></div>
-      <div class="wcard plain"><div class="pad">
+      <div class="wcard plain" onclick="openDetail(this)"><div class="pad">
         <span class="badge b-n">N</span>
         <div class="note-tx">周三前把 NOMI 稿逐块进 Svelte。</div>
         <div class="foot"><span class="tm">23:02</span></div>
@@ -224,12 +300,12 @@
         <textarea placeholder="今天发生了什么?(支持 Markdown,⌘⏎ 写入)">夜里 loop 把整站换成了 NOMI 皮,早上打开像换了个 app。</textarea>
         <div class="actrow"><span class="hint">⌘⏎ 写入今天 · Markdown</span><button class="gbtn">写入今天</button></div>
       </div>
-      <div class="page">
+      <div class="page" onclick="openPage(this)">
         <div class="dh"><span class="d">7月6日</span><span class="w">周一</span><span class="cnt">214 字</span></div>
         <div class="md"><h3>速记管线打通</h3>把链接→卡片的 AI 管线接通了:oEmbed / arXiv / OpenGraph 三路抓取,LLM 再补摘要标签。顺手抓出<strong>三个后台任务深坑</strong>——中间件吞任务、事务时序、僵尸进程,全记进 backlog。</div>
         <div class="aisum"><span class="spark"></span>小结:管线从 0 到 1;根因分析比修复本身更值钱,三个坑都是"看不见的执行环境"问题。</div>
       </div>
-      <div class="page">
+      <div class="page" onclick="openPage(this)">
         <div class="dh"><span class="d">7月5日</span><span class="w">周日</span><span class="cnt">86 字</span></div>
         <div class="md">notch 媒体页六连修,最后波形融进背景那一下终于对味了。晚上把设计稿三视图定稿。</div>
       </div>
@@ -251,7 +327,7 @@
           <div class="todo"><button class="cb" aria-label="完成"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4 10-10"/></svg></button>
             <span class="tx">回复 arXiv 论文作者邮件</span><button class="up">→交给 agent</button></div>
           <div class="todo"><button class="cb" aria-label="完成"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4 10-10"/></svg></button>
-            <span class="tx">明早 9 点前 review notch PR</span><button class="up">→交给 agent</button></div>
+            <span class="tx">明早 9 点前 review notch PR</span><button class="up" onclick="event.stopPropagation();startFocusOn(this)">开始专注</button><button class="up">→交给 agent</button></div>
           <div class="todo done"><button class="cb" aria-label="完成"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4 10-10"/></svg></button>
             <span class="tx">把 nomi-reference 截图整理进仓库</span><button class="up">→交给 agent</button></div>
         </div>
@@ -296,6 +372,131 @@
   document.querySelectorAll('.cb').forEach(b=>b.onclick=()=>b.closest('.todo').classList.toggle('done'));
   document.querySelectorAll('.sw').forEach(b=>b.onclick=()=>b.classList.toggle('on'));
   document.querySelectorAll('.runbtn').forEach(b=>b.onclick=()=>b.closest('.scard').classList.toggle('open'));
+</script>
+
+<!-- 详情弹层 -->
+<div class="scrim" id="scrim" onclick="this.classList.remove('on')">
+  <div class="sheet" id="sheet" onclick="event.stopPropagation()"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── 智能捕获:AI 实时判类(demo 规则模拟真实管线) ── */
+const scin=document.getElementById('scin'), aiv=document.getElementById('aiv'), aivt=document.getElementById('aivt');
+const VERDICTS=['速记','日记','任务','收藏'];
+let vIdx=0, vAuto=true;
+function classify(t){
+  if(!t.trim())return null;
+  if(/https?:\/\//.test(t))return {k:'收藏',hint:/arxiv/.test(t)?'论文':/youtu/.test(t)?'视频':'网页'};
+  if(/明早|明天|点前|每天|每周|提醒|记得|deadline|之前完成/.test(t))return {k:'任务',hint:/9 ?点|明早/.test(t)?'明早 09:00':'待安排'};
+  if(/今天|终于|感觉|开心|累|复盘了|想了想/.test(t)&&t.length>14)return {k:'日记',hint:'写入今天'};
+  return {k:'速记',hint:null};
+}
+scin.addEventListener('input',()=>{
+  const v=classify(scin.value);
+  if(!v){aiv.hidden=true;return}
+  vIdx=VERDICTS.indexOf(v.k); vAuto=true;
+  aivt.textContent='AI · '+v.k+(v.hint?' · '+v.hint:'');
+  aiv.hidden=false;
+});
+aiv.onclick=()=>{ // 判定可点击轮换(AI 判错时一键改)
+  vIdx=(vIdx+1)%VERDICTS.length; vAuto=false;
+  aivt.textContent=(vAuto?'AI':'手动')+' · '+VERDICTS[vIdx];
+};
+function scSend(){
+  if(!scin.value.trim())return;
+  toast('已存为「'+VERDICTS[vIdx]+'」'+(vAuto?' (AI 判定)':'')+' — 落到对应分区');
+  scin.value=''; aiv.hidden=true;
+}
+scin.addEventListener('keydown',e=>{if(e.key==='Enter')scSend()});
+
+/* ── 专注:活计时 + 停止记入日记 ── */
+let fsec=1520, frun=true;
+const ftime=document.getElementById('ftime'), fring=document.getElementById('fring');
+setInterval(()=>{
+  if(!frun)return; fsec++;
+  ftime.textContent=String(Math.floor(fsec/60)).padStart(2,'0')+':'+String(fsec%60).padStart(2,'0');
+  fring.style.setProperty('--deg',(fsec%3600)/3600*360+'deg');
+},1000);
+function stopFocus(){
+  frun=false;
+  const mins=Math.round(fsec/60);
+  document.getElementById('focusCard').style.display='none';
+  toast('专注 '+mins+' 分钟已记入今日日记');
+  // 日记「今天的页」插入专注块
+  const tp=document.querySelector('.todaypage textarea');
+  tp.value+='\n\n⏱ 专注 '+mins+' 分钟 · 把 NOMI 三态稿进 Svelte';
+}
+function startFocusOn(btn){
+  const tx=btn.closest('.todo').querySelector('.tx').textContent;
+  document.querySelector('.fmid .fw').textContent=tx;
+  fsec=0; frun=true;
+  document.getElementById('focusCard').style.display='flex';
+  document.querySelector('[data-p=notes]').click();
+  toast('开始专注:'+tx);
+}
+
+/* ── 速记/收藏卡详情 ── */
+function openDetail(card){
+  const isLink=!!card.querySelector('.ti');
+  const badge=card.querySelector('.badge')?.textContent??'N';
+  const kindZh=badge==='YT'?'视频':badge==='AX'?'论文':badge==='AW'?'灵感':'速记';
+  const ti=card.querySelector('.ti')?.textContent??'';
+  const tx=card.querySelector('.note-tx')?.textContent??'';
+  const sum=card.querySelector('.sum')?.textContent??'';
+  const tm=card.querySelector('.tm')?.textContent??'';
+  const tags=[...card.querySelectorAll('.tag')].map(t=>t.textContent).join(' ');
+  const cover=card.querySelector('.cover');
+  const sheet=document.getElementById('sheet');
+  sheet.innerHTML=`
+    <div class="shd"><span class="kbadge">${kindZh}</span><span class="when">今天 ${tm}</span>
+      <button class="x" onclick="scrim.classList.remove('on')">×</button></div>
+    ${cover?`<div class="shero" style="height:220px;${cover.getAttribute('style')??''}"></div>`:''}
+    <div class="sbody">
+      ${ti?`<h2 class="sti">${ti}</h2>`:''}
+      ${tx?`<p class="scontent">${tx}</p>`:''}
+      ${sum?`<div class="aibox"><span class="spark"></span><span><span class="lab">AI 摘要 · </span>${sum}</span></div>`:''}
+      ${isLink?'':'<div class="aibox"><span class="spark"></span><span><span class="lab">AI 解析 · </span>已自动归类为速记;检测到 1 个标签,未发现时间/地点线索。</span></div>'}
+      <div class="srow">${tags?`<span style="color:var(--cyan)">${tags}</span>`:''}</div>
+    </div>
+    <div class="sacts">
+      ${isLink?'<a class="pri" href="#">打开原链接</a>':''}
+      <button>编辑</button><button>→日记</button><button>→任务</button><button onclick="scrim.classList.remove('on')">关闭</button>
+    </div>`;
+  scrim.classList.add('on');
+}
+
+/* ── 日记页详情:全页阅读态 + 当日碎片时间线 ── */
+function openPage(page){
+  const d=page.querySelector('.d').textContent, w=page.querySelector('.w').textContent;
+  const md=page.querySelector('.md').innerHTML;
+  const ai=page.querySelector('.aisum')?.innerHTML??'';
+  const sheet=document.getElementById('sheet');
+  sheet.innerHTML=`
+    <div class="shd"><span class="kbadge">日记</span><span class="when">${d} · ${w}</span>
+      <button class="x" onclick="scrim.classList.remove('on')">×</button></div>
+    <div class="sbody">
+      <h2 class="sti">${d}</h2>
+      <div class="scontent" style="color:var(--ink2)">${md}</div>
+      ${ai?`<div class="aibox">${ai}</div>`:''}
+      <div class="focusblock"><span class="spark"></span>⏱ 这天专注 2 段共 83 分钟 · NOMI 稿进 Svelte / notch 媒体页</div>
+      <div class="aibox" style="flex-direction:column;gap:6px">
+        <span class="lab">这天的碎片(速记时间线)</span>
+        <div class="dayline"><span class="t">10:08</span><span>收藏了 GANGNAM STYLE M/V(视频)</span></div>
+        <div class="dayline"><span class="t">11:58</span><span>收藏了 Attention Is All You Need(论文)</span></div>
+        <div class="dayline"><span class="t">14:31</span><span>速记:驾驶舱 e2e 三个坑复盘</span></div>
+      </div>
+    </div>
+    <div class="sacts"><button>编辑这页</button><button>AI 重新小结</button><button onclick="scrim.classList.remove('on')">关闭</button></div>`;
+  scrim.classList.add('on');
+}
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('on');
+  setTimeout(()=>t.classList.remove('on'),2400);
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')scrim.classList.remove('on')});
 </script>
 </body>
 </html>
