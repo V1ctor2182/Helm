@@ -38,7 +38,7 @@ struct NotchView: View {
         // 拖文件悬停 → 壳长出 drop 承接面(设计稿 dropmode,2026-07-07 用户拍板),
         // 即时交互压过横幅/提醒;拖走即回原态(不动 model.expanded)。
         let shellW: CGFloat = dragOver ? model.expandedWidth
-            : (reminder != nil ? 560 : (waiting != nil ? model.bannerSize.width : (model.expanded ? model.expandedWidth : collapsedWidth)))
+            : (reminder != nil ? 560 : (waiting != nil ? model.bannerSize.width : (model.expanded ? model.expandedShellWidth : collapsedWidth)))
         let shellH: CGFloat = dragOver ? dropModeHeight
             : (reminder != nil ? 152 : (waiting != nil ? model.bannerSize.height : (model.expanded ? model.autoExpandedHeight : collapsedBarHeight)))
         shell(width: shellW, height: shellH, banner: waiting, reminder: reminder)
@@ -80,7 +80,7 @@ struct NotchView: View {
                 // Only the expanded panel exists while open — the collapsed bar's
                 // repeatForever animations aren't left running invisibly (jank).
                 expandedPanel
-                    .frame(width: model.expandedWidth, height: model.autoExpandedHeight, alignment: .top)
+                    .frame(width: model.expandedShellWidth, height: model.autoExpandedHeight, alignment: .top)
                     .transition(.opacity)
             } else {
                 collapsedBar
@@ -880,12 +880,12 @@ struct NotchView: View {
 
             HStack(alignment: .top, spacing: 18) {
                 VStack(alignment: noLyrics ? .center : .leading, spacing: 0) {
-                    coverArt(np, size: 88, radius: 16)
+                    coverArt(np, size: 76, radius: 16)
                         .shadow(color: .black.opacity(model.nomiDark ? 0 : 0.18), radius: 8, y: 4)
-                    Text(title).font(.system(size: 14.5, weight: .bold)).foregroundStyle(Color(pal.ink))
-                        .lineLimit(1).padding(.top, 10)
+                    Text(title).font(.system(size: 14, weight: .bold)).foregroundStyle(Color(pal.ink))
+                        .lineLimit(1).padding(.top, 8)
                     Text(artist).font(.system(size: 11)).foregroundStyle(Color(pal.ink3)).lineLimit(1).padding(.top, 2)
-                    mediaProgress(np).padding(.top, 10)
+                    mediaProgress(np).padding(.top, 8)
                     HStack(spacing: 12) {
                         mediaButton("backward.fill", size: 36, pal: pal) { model.previousTrack() }
                         Button { model.playPause() } label: {
@@ -896,14 +896,14 @@ struct NotchView: View {
                         }.buttonStyle(.plain)
                         mediaButton("forward.fill", size: 36, pal: pal) { model.nextTrack() }
                     }
-                    .padding(.top, 12)
+                    .padding(.top, 9)
                 }
                 .frame(maxWidth: noLyrics ? .infinity : 196)
                 if !noLyrics {
                     // id 绑曲目:换曲把旧词整棵拆掉,不留跨曲残影;clipped 防越界
                     lyricsColumn
                         .id(model.nowPlaying.map { "\($0.title)|\($0.artist)" } ?? "none")
-                        .frame(maxHeight: 190)  // .mlyr 限高:不许把 dock 顶出面板
+                        .frame(maxHeight: 176)  // .mlyr 限高:不许把 dock 顶出面板
                         .clipped()
                 }
             }

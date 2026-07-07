@@ -269,7 +269,7 @@ public final class NotchModel {
     public func viewHeight() -> Double {
         switch module {
         case .dashboard: 280  // bento+quickcap+dock(2026-07-07 用户:重叠)
-        case .media: 345  // 歌词列限高 190+dock 常驻
+        case .media: 300  // 更宽更矮(2026-07-07 用户):560 宽腾给歌词
         case .calendar: 260  // NOMI 周条+事件+addev(月视图随稿退役)
         case .files: 280  // dropzone+shelf+剪贴板段
         case .agents:
@@ -298,6 +298,9 @@ public final class NotchModel {
 
     /// Total expanded panel height for the current view (HTML `--eh`).
     public var autoExpandedHeight: Double { viewHeight() + Self.topBarHeight }
+
+    /// 展开壳宽:媒体页放宽到 560(歌词要呼吸,2026-07-07 用户),其余 440。
+    public var expandedShellWidth: Double { module == .media ? 560 : expandedWidth }
 
     /// Select a module directly (HTML dock click). Slide direction is inferred
     /// from the dock index delta. Entering Dev resets to its first sub-section.

@@ -298,7 +298,7 @@ final class NotchModuleTests: XCTestCase {
         model.module = .dashboard
         XCTAssertEqual(model.viewHeight(), 280)
         model.module = .media
-        XCTAssertEqual(model.viewHeight(), 345)
+        XCTAssertEqual(model.viewHeight(), 300)
         model.module = .files
         XCTAssertEqual(model.viewHeight(), 280)
     }

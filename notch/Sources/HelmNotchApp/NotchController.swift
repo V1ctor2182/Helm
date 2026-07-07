@@ -125,7 +125,7 @@ final class NotchController {
         guard model.expanded, let panel else { return }
         // Only when the pointer is over the visible top-centered shell.
         guard let screen = NSScreen.main else { return }
-        let w = CGFloat(model.expandedWidth), h = CGFloat(model.autoExpandedHeight)
+        let w = CGFloat(model.expandedShellWidth), h = CGFloat(model.autoExpandedHeight)
         let shell = NSRect(x: screen.frame.midX - w / 2, y: screen.frame.maxY - h, width: w, height: h)
         guard shell.contains(NSEvent.mouseLocation), panel.isVisible else { return }
         // 会话详情 = 阅读态:滚动全部留给内容,上下翻子页/横扫切模块都不抢
@@ -220,11 +220,11 @@ final class NotchController {
             if model.reminder != nil {
                 return CGSize(width: 560, height: 152)  // reminder banner
             }
-            if model.localAttentionCount > 0 {
+            if model.localAttentionCount > 0, !model.bannerSuppressed {
                 return model.bannerSize  // permission banner(高度随内容)
             }
             return model.expanded
-                ? CGSize(width: model.expandedWidth, height: model.autoExpandedHeight)
+                ? CGSize(width: model.expandedShellWidth, height: model.autoExpandedHeight)
                 : CGSize(width: model.collapsedWidth, height: collapsedHeight)
         }
         panel.contentView = host

@@ -15,6 +15,10 @@ final class NotchPanel: NSPanel {
 /// when collapsed only the top slot strip should catch the mouse; everything
 /// below is transparent and must click through to whatever's underneath.
 final class NotchHostingView: NSHostingView<NotchView> {
+    /// 面板非 key 时的第一下点击也直接生效——否则 hover 展开后首点被
+    /// 窗口激活吃掉,要点两下(2026-07-07 用户反馈)。
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
     /// Interactive region (centered, from the top edge): the collapsed bar when
     /// closed, the panel when open. Everything outside clicks through.
     var activeSize: () -> CGSize = { .zero }
