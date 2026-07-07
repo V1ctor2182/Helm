@@ -36,16 +36,25 @@
 
   // 附件卡:当前后端为单链接 meta(K3 扩多链接后此处自动接 meta.links)
   const attachments = $derived(
-    note.meta?.url
-      ? [{
-          url: note.meta.url,
-          title: note.meta.title ?? note.meta.url,
-          summary: note.meta.summary,
-          site: note.meta.site,
-          type: note.meta.type ?? 'article',
-          image: note.meta.image,
-        }]
-      : [],
+    note.meta?.links?.length
+      ? note.meta.links.map((l) => ({
+          url: l.url,
+          title: l.title ?? l.url,
+          summary: l.summary,
+          site: l.site,
+          type: l.type ?? 'article',
+          image: l.image,
+        }))
+      : note.meta?.url
+        ? [{
+            url: note.meta.url,
+            title: note.meta.title ?? note.meta.url,
+            summary: note.meta.summary,
+            site: note.meta.site,
+            type: note.meta.type ?? 'article',
+            image: note.meta.image,
+          }]
+        : [],
   )
   // 链接即全部内容(纯收藏)→ hero 大图态;否则原文主场
   const heroMode = $derived(

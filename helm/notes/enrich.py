@@ -38,6 +38,18 @@ def first_url(text: str) -> str | None:
     return m.group(0).rstrip(".,;:!?、。") if m else None
 
 
+def all_urls(text: str, limit: int = 5) -> list[str]:
+    """一段话里的全部链接(K3 多链接解析),去重保序,上限防滥用。"""
+    seen: list[str] = []
+    for m in URL_RE.finditer(text or ""):
+        u = m.group(0).rstrip(".,;:!?、。")
+        if u not in seen:
+            seen.append(u)
+        if len(seen) >= limit:
+            break
+    return seen
+
+
 def _meta_tag(html: str, prop: str) -> str | None:
     # property/name 两种写法、属性顺序两种排列都接住(正则够用,不引解析器)。
     for pat in (
@@ -177,17 +189,24 @@ async def enrich_note(db: Any, box: Any, note_id: int, cwd: Any = None) -> None:
         return
     if kind == "journal":  # 日记不动(用户:除日记外)
         return
-    url = first_url(content)
+    urls = all_urls(content)
+    url = urls[0] if urls else None
     meta: dict[str, Any] = {}
 
     # 第一段:抓取层立刻落库——卡片先有标题/封面,LLM 再慢也不拖累展示。
-    if url:
-        meta = await fetch_link_meta(url)
-        if meta.get("summary_raw") and "summary" not in meta:
-            meta["summary"] = meta["summary_raw"]
-        # 论文:LLM 没来得及/没配时,用 arXiv abstract 开头顶摘要位
-        if meta.get("abstract") and "summary" not in meta:
-            meta["summary"] = meta["abstract"][:300]
+    # K3 多链接:每个 URL 各抓一份,links=全部;顶层字段=第一个(向后兼容 notch/旧前端)。
+    if urls:
+        links: list[dict[str, Any]] = []
+        for u in urls:
+            lm = await fetch_link_meta(u)
+            if lm.get("summary_raw") and "summary" not in lm:
+                lm["summary"] = lm["summary_raw"]
+            if lm.get("abstract") and "summary" not in lm:
+                lm["summary"] = lm["abstract"][:300]
+            links.append({k: v for k, v in lm.items() if k in ("url", "type", "title", "summary", "image", "site") and v})
+        meta = dict(links[0])
+        if len(links) > 1:
+            meta["links"] = links
         _write(meta)
 
     # 第二段:LLM 补分类/摘要/标签(90s 超时,失败保留第一段)。

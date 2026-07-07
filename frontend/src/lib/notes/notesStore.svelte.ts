@@ -17,6 +17,7 @@ export interface NoteMeta {
   tags?: string[]
   when?: string
   where?: string
+  links?: { url: string; type?: string; title?: string; summary?: string; image?: string; site?: string }[]
 }
 
 export interface Note {

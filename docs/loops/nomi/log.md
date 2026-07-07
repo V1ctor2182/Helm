@@ -82,3 +82,7 @@
 - 对齐: NoteDetail 重写——原文 17px/1.85 主位(URL 内联紫高亮短显);「提到的内容」附件卡(徽章/标题/一行摘要/来源·已解析/打开,当前单链接,K3 后自动多张);标签+时间地点线索胶囊;AI 注脚一行(hover 展开);meta.when 存在时主钮=「→任务 · 线索」(线索变行动);纯收藏(内容≈链接)保留 hero 大图态。
 - 门: build ✓ / check 0/0 / test 205 全绿
 - 视觉: shots/k2-detail.png(用户真实速记:原文主场,AI 一行注脚)
+## K3 · 2026-07-07 17:05 · 后端多链接解析
+- 对齐: enrich 管线 all_urls(去重保序,上限 5)——每个 URL 各抓一份 meta,落 meta.links[];顶层字段=第一个链接(向后兼容:notch/旧前端零破坏,纯加字段)。前端 NoteMeta.links 类型+NoteDetail attachments 优先接 links(fallback 单链接)。
+- 门: pytest 216 全绿(+2:all_urls 去重/多链接接线) / 前端 build·check·test 全绿
+- e2e: 真实一条两链速记 → links=[youtube, paper] ✓ 顶层=YT ✓;后端已重启
