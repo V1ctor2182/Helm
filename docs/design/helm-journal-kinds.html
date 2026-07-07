@@ -6,10 +6,14 @@
 <title>Helm · 记录 · 速记/日记/任务 三态 layout 设计稿</title>
 <!--
   HELM · 记录页三态 layout(2026-07-07,用户:速记/日记/任务的 layout UIUX 应该不一样)
+  2026-07-08 增量(用户):分诊加「想法」类;时间+地点双抽取;发送后结构化回执
+  (chips+改类);速记墙卡片带分诊徽章;日记今天页带连续天数。
   同一 NOMI 语言,三种信息形态各配专属布局:
   · 速记 = 碎片抓取 → 瀑布卡片墙(便签/收藏卡混排,快速扫视)
   · 日记 = 连续叙事 → 纸页窄栏(今天的页在顶部书写,往下一天一页,阅读态)
-  · 任务 = 状态管理 → 清单+卡(待办 checkbox 清单 / 定时任务卡:开关·cron·运行历史)
+  · 任务 = 两列不变(我的待办 / agent 定时;2026-07-08 用户澄清):手动派发入口
+    只面向 agent;速记 AI 分诊出的任务自动落进任务区(个人事项进待办列);
+    排期不用 cron,用人话说——整句输入,AI 解析出「每天早上 9 点」排期 chip
   全交互:tab 切换/待办勾选/任务开关/运行历史展开/日记可写。定稿后进 Svelte。
 -->
 <style>
@@ -63,6 +67,11 @@
   .wcard.plain{background:var(--card)}
   .wcard.plain .pad{padding:14px 15px}
 
+  .ntag{display:inline-block;font-size:9.5px;font-weight:700;border-radius:999px;padding:2px 8px;margin-bottom:6px;color:#fff;background:var(--ink)}
+  .ntag.idea{background:#0a84ff}
+  .ntag.task{background:linear-gradient(90deg,var(--g1),var(--g2))}
+  .ntag.xc{color:var(--ink2);background:var(--pill);font-weight:600;font-family:var(--mono)}
+
   /* ═══ 日记:纸页窄栏 ═══ */
   .paper{max-width:640px;margin:0 auto}
   .streakbar{display:flex;align-items:center;gap:16px;margin-bottom:14px}
@@ -114,10 +123,19 @@
   .cb svg{width:11px;height:11px}
   .todo .tx{flex:1;font:400 13.5px/1.45 var(--sans);color:var(--ink)}
   .todo.done .tx{color:var(--ink3);text-decoration:line-through}
-  .todo .up{font:500 10.5px/1 var(--sans);color:var(--ink3);background:var(--pill);border:0;border-radius:999px;
-    padding:5px 10px;cursor:pointer;opacity:0;transition:opacity .12s}
+  .todo .up{font:500 10.5px/1 var(--sans);color:var(--ink3);background:var(--card);border:1px solid var(--hair);border-radius:999px;
+    padding:5px 10px;cursor:pointer;opacity:0;transition:opacity .12s;white-space:nowrap}
   .todo:hover .up{opacity:1}
   .todo .up:hover{color:var(--ink)}
+  /* 任务行两层:标题 / 元信息 chips(2026-07-08 用户:待办 UIUX 要更「任务」) */
+  .todo{align-items:flex-start}
+  .todo .cb{margin-top:1px}
+  .todo .mid{flex:1;min-width:0}
+  .todo .tmeta{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap;align-items:center}
+  .tchip{font:600 10px/1 var(--mono);color:var(--ink2);background:var(--pill);border-radius:999px;padding:3px 8px;display:inline-flex;align-items:center;gap:4px}
+  .tchip.due{color:#c05e00;background:#fff4e8}   /* 24h 内临近 */
+  .todo .acts{display:flex;gap:5px;align-self:center}
+  .donebar{font:600 10px/1 var(--sans);color:var(--ink3);letter-spacing:.4px;margin:8px 10px 4px}
   .sched{display:flex;flex-direction:column;gap:12px}
   .scard{background:var(--card);border-radius:18px;box-shadow:var(--shadow);padding:14px 16px}
   .scard .h{display:flex;align-items:center;gap:10px}
@@ -312,19 +330,16 @@
 
   <!-- 智能捕获条:一个入口,AI 自动判类(速记/日记/任务/收藏),不用手选 kind -->
   <!-- 捕获坞去重定稿(2026-07-08):无 kind chips 行——AI 判定徽章(可点轮换)承担分流;
-       判为任务时「给自己/交给agent」双轨浮现;专注收成 ⏱ 图标;问大脑由疑问句判定。 -->
+       判为任务时「给自己/交给agent」双轨浮现;专注收成秒表 SVG 图标;问大脑由疑问句判定。 -->
   <div class="smartcap">
     <input id="scin" type="text" placeholder="随手丢进来 — AI 自动分流:速记 / 日记 / 任务 / 收藏 / 问大脑…">
     <span class="aiverdict" id="aiv" hidden><span class="spark"></span><span id="aivt">AI · 速记</span><span class="vcaret">▾</span></span>
-    <span class="whomini" id="whomini" hidden>
-      <button class="wm on" id="wmMe">给自己</button><button class="wm" id="wmAg">交给 agent</button>
-    </span>
     <button class="focusbtn" id="fbtn" title="开始专注(以输入内容为题)" onclick="scFocus()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="13" r="7.2"/><path d="M12 9.5V13l2.4 1.6M10 2.5h4M12 2.5v3"/></svg>
     </button>
     <button class="gbtn" style="margin-left:0" onclick="scSend()">发送</button>
   </div>
-  <div class="scHint">一个入口,AI 分流 — 判定徽章可点改;「明早 9 点…」→ 任务(浮出双轨) · 链接 → 收藏 · 疑问句 → 问大脑 · ⏱ = 用这句话开始专注</div>
+  <div class="scHint">一个入口,AI 分流 — 判定徽章可点改;「明早 9 点…」→ agent 任务 · 链接 → 收藏 · 疑问句 → 问大脑 · 秒表钮 = 用这句话开始专注</div>
 
   <!-- ═══ 速记:瀑布卡片墙(碎片扫视) ═══ -->
   <div class="pane on" id="p-notes">
@@ -369,6 +384,7 @@
           <div class="ti">Awwwards — 年度作品集合集</div>
           <div class="foot"><span class="topicchip"><i class="spark" style="width:8px;height:8px"></i>Helm 设计灵感<u class="tx-x">×</u></span><span class="tm">16:51</span></div></div></div>
         <div class="wcard plain"><div class="pad"><span class="badge b-n">N</span>
+          <span class="ntag idea">想法</span>
           <div class="note-tx">给 notch 加「速记 → AI 整理」入场动效,像仪表暖机。</div>
           <div class="foot"><span class="topicchip"><i class="spark" style="width:8px;height:8px"></i>Helm 设计灵感<u class="tx-x">×</u></span><span class="tm">21:44</span></div></div></div>
       </div>
@@ -381,8 +397,15 @@
     </div>
 
     <div id="timeview">
-    <div class="daymark">今天 · 07-07<span class="n">3 条</span></div>
+    <div class="daymark">今天 · 07-07<span class="n">4 条</span></div>
     <div class="wall">
+      <!-- 分诊出的任务:墙上留结构化回执卡,链到任务分区(2026-07-08 用户) -->
+      <div class="wcard plain" onclick="openDetail(this)" style="border-left:3px solid var(--g1)"><div class="pad">
+        <span class="badge b-n">N</span>
+        <div><span class="ntag task">任务</span> <span class="ntag xc">明晚 20:00</span> <span class="ntag xc">@家</span></div>
+        <div class="note-tx">帮荣荣姐做龙虾</div>
+        <div class="foot"><span style="color:var(--g1);cursor:pointer">已建任务 →</span><span class="tm">20:02</span></div>
+      </div></div>
       <div class="wcard plain" onclick="openDetail(this)"><div class="pad">
         <span class="badge b-n">N</span>
         <div class="note-tx">驾驶舱 e2e 三个坑:中间件吞后台任务 / 事务时序 / 僵尸进程——写进 backlog 复盘。</div>
@@ -461,7 +484,8 @@
         <button class="ai"><span class="spark"></span>AI 今日小结</button>
       </div>
       <div class="todaypage">
-        <div class="dh"><span class="d">7月7日</span><span class="w">周二 · 今天的页</span></div>
+        <div class="dh"><span class="d">7月7日</span><span class="w">周二 · 今天的页</span>
+          <span class="ntag xc" style="margin-left:auto">连续 3 天</span></div>
         <textarea placeholder="今天发生了什么?(支持 Markdown,⌘⏎ 写入)">夜里 loop 把整站换成了 NOMI 皮,早上打开像换了个 app。</textarea>
         <div class="actrow"><span class="hint">⌘⏎ 写入今天 · Markdown</span><button class="gbtn">写入今天</button></div>
       </div>
@@ -479,22 +503,32 @@
 
   <!-- ═══ 任务:清单 + 定时卡(操作台) ═══ -->
   <div class="pane" id="p-tasks">
+    <!-- 人话排期(2026-07-08 用户:不要 cron):一句话连时间一起说,AI 解析出排期徽章 -->
     <div class="dispatch">
-      <input type="text" placeholder="到点让 agent 做什么(如:汇总未读邮件)…">
-      <select><option>cron</option><option>every</option><option>at</option></select>
-      <select><option>0 9 * * *</option></select>
-      <button class="gbtn" style="margin-left:0">加定时</button>
+      <input type="text" id="dispIn" placeholder="让 agent 做什么,时间用人话说 — 「每天早上 9 点汇总未读邮件」「周五下午回顾本周」…"
+        oninput="dispParse(this.value)">
+      <span class="aiverdict" id="dispV" hidden><span class="spark"></span><span id="dispVt">每天 09:00</span></span>
+      <button class="gbtn" style="margin-left:0" onclick="dispSend()">交给 agent</button>
     </div>
     <div class="taskcols">
       <div>
-        <div class="colh"><span class="t">待办 · 给自己</span><span class="n">3 条 · 1 已完成</span></div>
+        <div class="colh"><span class="t">待办 · 给自己</span><span class="n">4 条 · 1 已完成</span></div>
         <div class="todolist">
+          <!-- 按临近排序:有时限的在上(24h 内=橙 chip);完成的沉底 -->
           <div class="todo"><button class="cb" aria-label="完成"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4 10-10"/></svg></button>
-            <span class="tx">回复 arXiv 论文作者邮件</span><button class="up">→交给 agent</button></div>
+            <div class="mid"><span class="tx">明早 9 点前 review notch PR</span>
+              <div class="tmeta"><span class="tchip due">明早 09:00</span></div></div>
+            <div class="acts"><button class="up" onclick="event.stopPropagation();startFocusOn(this)">专注</button><button class="up">→ agent</button></div></div>
           <div class="todo"><button class="cb" aria-label="完成"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4 10-10"/></svg></button>
-            <span class="tx">明早 9 点前 review notch PR</span><button class="up" onclick="event.stopPropagation();startFocusOn(this)">开始专注</button><button class="up">→交给 agent</button></div>
+            <div class="mid"><span class="tx">帮荣荣姐做龙虾</span>
+              <div class="tmeta"><span class="tchip due">明晚 20:00</span><span class="tchip">@家</span><span class="tchip"><span class="spark" style="width:8px;height:8px"></span>速记分诊</span></div></div>
+            <div class="acts"><button class="up" onclick="event.stopPropagation();startFocusOn(this)">专注</button><button class="up">→ agent</button></div></div>
+          <div class="todo"><button class="cb" aria-label="完成"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4 10-10"/></svg></button>
+            <div class="mid"><span class="tx">回复 arXiv 论文作者邮件</span></div>
+            <div class="acts"><button class="up" onclick="event.stopPropagation();startFocusOn(this)">专注</button><button class="up">→ agent</button></div></div>
+          <div class="donebar">已完成 · 1</div>
           <div class="todo done"><button class="cb" aria-label="完成"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4 10-10"/></svg></button>
-            <span class="tx">把 nomi-reference 截图整理进仓库</span><button class="up">→交给 agent</button></div>
+            <div class="mid"><span class="tx">把 nomi-reference 截图整理进仓库</span></div></div>
         </div>
       </div>
       <div>
@@ -502,7 +536,7 @@
         <div class="sched">
           <div class="scard">
             <div class="h"><span class="nm">汇总未读邮件</span><button class="sw on" aria-label="启用"></button></div>
-            <div class="meta"><span class="cronchip">cron · 0 9 * * *</span><span class="nextchip">下次 明天 09:00</span>
+            <div class="meta"><span class="cronchip">每天早上 9 点</span><span class="nextchip">下次 明天 09:00</span>
               <button class="runbtn">12 次 · ok ▾</button></div>
             <div class="rundrawer">
               <div class="runrow"><span class="rdot ok"></span>07-07 09:00<span class="out">12 封未读 → 3 条要点,已写进简报</span></div>
@@ -512,7 +546,7 @@
           </div>
           <div class="scard">
             <div class="h"><span class="nm">跑 swift test 夜巡</span><button class="sw on" aria-label="启用"></button></div>
-            <div class="meta"><span class="cronchip">every · 6h</span><span class="nextchip">下次 18:00</span>
+            <div class="meta"><span class="cronchip">每 6 小时</span><span class="nextchip">下次 18:00</span>
               <button class="runbtn">47 次 · ok ▾</button></div>
             <div class="rundrawer">
               <div class="runrow"><span class="rdot ok"></span>12:00<span class="out">47/47 通过 · 3 分 12 秒</span></div>
@@ -520,7 +554,7 @@
           </div>
           <div class="scard">
             <div class="h"><span class="nm" style="color:var(--ink3)">周报草稿生成</span><button class="sw" aria-label="启用"></button></div>
-            <div class="meta"><span class="cronchip">cron · 0 17 * * 5</span><span class="nextchip">已停用</span></div>
+            <div class="meta"><span class="cronchip">每周五 17:00</span><span class="nextchip">已停用</span></div>
           </div>
         </div>
       </div>
@@ -575,14 +609,14 @@
         <div class="jmini">
           <div class="jmh"><b>7月7日</b><span>周二 · 128 字</span></div>
           <p>夜里 loop 把整站换成了 NOMI 皮,早上打开像换了个 app。</p>
-          <div class="jmf"><span class="fchip">⏱ 专注 83 分钟</span><span class="fchip" style="color:var(--cyan)">3 条碎片</span></div>
+          <div class="jmf"><span class="fchip">专注 83 分钟</span><span class="fchip" style="color:var(--cyan)">3 条碎片</span></div>
         </div>
       </div>
       <div class="cnode" style="left:480px;top:170px;width:270px">
         <div class="jmini">
           <div class="jmh"><b>7月6日</b><span>周一 · 214 字</span></div>
           <p><b>速记管线打通</b> — oEmbed/arXiv/OG 三路抓取,LLM 补摘要标签…</p>
-          <div class="jmf"><span class="fchip">⏱ 专注 2 段</span></div>
+          <div class="jmf"><span class="fchip">专注 2 段</span></div>
         </div>
       </div>
       <div class="cnode" style="left:820px;top:90px;width:250px">
@@ -678,46 +712,68 @@
 <script>
 /* ── 智能捕获:AI 实时判类(demo 规则模拟真实管线) ── */
 const scin=document.getElementById('scin'), aiv=document.getElementById('aiv'), aivt=document.getElementById('aivt');
-const VERDICTS=['速记','日记','任务','收藏'];
+const VERDICTS=['速记','想法','日记','任务','收藏'];
 let vIdx=0, vAuto=true;
 function classify(t){
   if(!t.trim())return null;
   if(/https?:\/\//.test(t))return {k:'收藏',hint:/arxiv/.test(t)?'论文':/youtu/.test(t)?'视频':'网页'};
-  if(/明早|明天|点前|每天|每周|提醒|记得|deadline|之前完成/.test(t))return {k:'任务',hint:/9 ?点|明早/.test(t)?'明早 09:00':'待安排'};
+  if(/明早|明天|今晚|点前|每天|每周|提醒|记得|deadline|之前完成/.test(t)){
+    const time=/明早|9 ?点/.test(t)?'明早 09:00':/今晚|晚上/.test(t)?'今晚 20:00':'待安排';
+    const pl=(t.match(/在([^\s,。]{1,6})/)||[])[1];
+    return {k:'任务',hint:time+(pl?' · @'+pl:'')};
+  }
+  if(/也许|或许|说不定|要不要|想到|点子|如果.*就|可以试试/.test(t))return {k:'想法',hint:'沉淀为点子'};
   if(/今天|终于|感觉|开心|累|复盘了|想了想/.test(t)&&t.length>14)return {k:'日记',hint:'写入今天'};
   return {k:'速记',hint:null};
 }
-const whomini=document.getElementById('whomini');
 scin.addEventListener('input',()=>{
   const v=classify(scin.value);
   if(!v){aiv.hidden=true;whomini.hidden=true;return}
   vIdx=VERDICTS.indexOf(v.k); vAuto=true;
   aivt.textContent='AI · '+v.k+(v.hint?' · '+v.hint:'');
   aiv.hidden=false;
-  whomini.hidden=(v.k!=='任务');
 });
-document.getElementById('wmMe').onclick=e=>{e.target.classList.add('on');document.getElementById('wmAg').classList.remove('on')};
-document.getElementById('wmAg').onclick=e=>{e.target.classList.add('on');document.getElementById('wmMe').classList.remove('on')};
 function scFocus(){
   const t=scin.value.trim()||'未命名专注';
   document.querySelector('.fmid .fw').textContent=t;
   fsec=0;frun=true;
   document.getElementById('focusCard').style.display='flex';
   document.querySelector('[data-p=notes]').click();
-  scin.value='';aiv.hidden=true;whomini.hidden=true;
+  scin.value='';aiv.hidden=true;
   toast('开始专注:'+t);
 }
 aiv.onclick=()=>{ // 判定可点击轮换(AI 判错时一键改)
   vIdx=(vIdx+1)%VERDICTS.length; vAuto=false;
   aivt.textContent='手动 · '+VERDICTS[vIdx];
-  whomini.hidden=(VERDICTS[vIdx]!=='任务');
 };
 function scSend(){
   if(!scin.value.trim())return;
-  toast('已存为「'+VERDICTS[vIdx]+'」'+(vAuto?' (AI 判定)':'')+' — 落到对应分区');
+  // 结构化回执:类型 chip + 抽取 chips + 改类(2026-07-08 用户)
+  const v=classify(scin.value)||{k:VERDICTS[vIdx],hint:null};
+  const k=vAuto?v.k:VERDICTS[vIdx];
+  const cls=k==='想法'?'idea':k==='任务'?'task':'';
+  const extra=k==='任务'?(v.hint?` <span class="ntag xc" style="margin:0">${v.hint}</span><span class="ntag xc" style="margin:0">→ 已建任务</span>`:'')
+             :(v.hint?` <span class="ntag xc" style="margin:0">${v.hint}</span>`:'');
+  toast(`<span class="ntag ${cls}" style="margin:0">${k}</span> 已结构化入库${extra}
+    <span class="ntag xc" style="margin:0;cursor:pointer" onclick="toast('已改类 — 分诊会记住这次纠正')">改</span>`, true);
   scin.value=''; aiv.hidden=true;
 }
 scin.addEventListener('keydown',e=>{if(e.key==='Enter')scSend()});
+
+/* ── 人话排期解析(demo):整句 → 排期徽章 ── */
+function dispParse(t){
+  const v=document.getElementById('dispV'), vt=document.getElementById('dispVt');
+  if(!t.trim()){v.hidden=true;return}
+  vt.textContent=/每天|每早/.test(t)?'每天 09:00':/每周五|周五/.test(t)?'每周五 15:00'
+    :/每 ?(\d+) ?小时/.test(t)?'每 '+t.match(/每 ?(\d+) ?小时/)[1]+' 小时'
+    :/明/.test(t)?'明天 09:00 · 一次':'解析中…';
+  v.hidden=false;
+}
+function dispSend(){
+  const i=document.getElementById('dispIn'); if(!i.value.trim())return;
+  toast('已交给 agent · '+document.getElementById('dispVt').textContent);
+  i.value='';document.getElementById('dispV').hidden=true;
+}
 
 /* ── 专注:活计时 + 停止记入日记 ── */
 let fsec=1520, frun=true;
@@ -734,7 +790,7 @@ function stopFocus(){
   toast('专注 '+mins+' 分钟已记入今日日记');
   // 日记「今天的页」插入专注块
   const tp=document.querySelector('.todaypage textarea');
-  tp.value+='\n\n⏱ 专注 '+mins+' 分钟 · 把 NOMI 三态稿进 Svelte';
+  tp.value+='\n\n专注 '+mins+' 分钟 · 把 NOMI 三态稿进 Svelte';
 }
 function startFocusOn(btn){
   const tx=btn.closest('.todo').querySelector('.tx').textContent;
@@ -796,7 +852,7 @@ function openRichDetail(){
         <div class="asrc">Sean Allen · YouTube</div></span>
         <button class="go">打开</button></div>
       <div class="tagrow"><span class="tg">#transformer</span><span class="tg">#必读</span>
-        <span class="clue">⏱ 周三前 · AI 读出的时间线索</span></div>
+        <span class="clue">周三前 · AI 读出的时间线索</span></div>
       <div class="ainote"><span class="spark"></span>AI · 自动归类为速记
         <span class="full">&nbsp;· 解析出 2 个链接(论文/视频),1 个时间线索;可一键转任务</span></div>
     </div>
@@ -820,7 +876,7 @@ function openPage(page){
       <h2 class="sti">${d}</h2>
       <div class="scontent" style="color:var(--ink2)">${md}</div>
       ${ai?`<div class="aibox">${ai}</div>`:''}
-      <div class="focusblock"><span class="spark"></span>⏱ 这天专注 2 段共 83 分钟 · NOMI 稿进 Svelte / notch 媒体页</div>
+      <div class="focusblock"><span class="spark"></span>这天专注 2 段共 83 分钟 · NOMI 稿进 Svelte / notch 媒体页</div>
       <div class="aibox" style="flex-direction:column;gap:6px">
         <span class="lab">这天的碎片(速记时间线)</span>
         <div class="dayline"><span class="t">10:08</span><span>收藏了 GANGNAM STYLE M/V(视频)</span></div>
@@ -832,9 +888,10 @@ function openPage(page){
   scrim.classList.add('on');
 }
 
-function toast(msg){
+function toast(msg, html){
   const t=document.getElementById('toast');
-  t.textContent=msg; t.classList.add('on');
+  if(html)t.innerHTML=msg; else t.textContent=msg;
+  t.classList.add('on');
   setTimeout(()=>t.classList.remove('on'),2400);
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape')scrim.classList.remove('on')});
