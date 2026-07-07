@@ -57,39 +57,65 @@ public final class NotchModel {
         captureKind = all[((i + direction) % all.count + all.count) % all.count]
     }
 
-    // Focus session (HTML focusOn / focusWhat / focusSec) — a forward timer that
-    // records to Helm on stop. Elapsed is derived from a start time so the UI can
-    // tick without mutating state.
-    public private(set) var focusOn = false
+    // Focus — 25min 番茄倒计时(2026-07-07 用户拍板 Q4:初始即环+开始/重置/换任务)。
+    // 剩余从 startedAt+banked 推导,UI tick 不写状态;跑完/重置有进度才落库。
+    public private(set) var focusOn = false        // 计时进行中
     public private(set) var focusWhat = ""
+    public var focusTotal = 25 * 60                // 秒
+    public private(set) var focusBanked = 0        // 暂停前已累计的秒数
     public private(set) var focusStartedAt = Date()
 
-    /// Seconds elapsed in the current focus session (0 when not focusing).
+    /// 已专注秒数(banked + 本段进行中)。
     public func focusElapsed(at now: Date = Date()) -> Int {
-        focusOn ? max(0, Int(now.timeIntervalSince(focusStartedAt))) : 0
+        focusBanked + (focusOn ? max(0, Int(now.timeIntervalSince(focusStartedAt))) : 0)
     }
 
-    /// Start a focus session, seeding "what" from the capture text.
+    /// 剩余秒数(0 = 该收番茄了)。
+    public func focusRemaining(at now: Date = Date()) -> Int {
+        max(0, focusTotal - focusElapsed(at: now))
+    }
+
+    /// 开始/继续。任务名为空时从速记输入顺手带一个(有就清掉输入)。
     public func startFocus() {
-        let what = captureText.trimmingCharacters(in: .whitespacesAndNewlines)
-        focusWhat = what.isEmpty ? "专注" : what
+        guard !focusOn else { return }
+        if focusWhat.isEmpty {
+            let what = captureText.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !what.isEmpty { focusWhat = what; captureText = "" }
+        }
         focusStartedAt = Date()
         focusOn = true
-        captureText = ""
         locked = false
     }
 
-    /// Stop the focus session; returns the rounded minutes (min 1).
+    /// 暂停:把本段进账,停表。
+    public func pauseFocus(at now: Date = Date()) {
+        guard focusOn else { return }
+        focusBanked += max(0, Int(now.timeIntervalSince(focusStartedAt)))
+        focusOn = false
+    }
+
+    /// 归零(不落库);换任务/放弃用。
+    public func resetFocus() {
+        focusOn = false
+        focusBanked = 0
+    }
+
+    public func focusSetTask(_ t: String) {
+        focusWhat = t.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// 停表归零;返回本轮分钟数(min 1),任务名保留可再来一轮。
     @discardableResult public func stopFocus(at now: Date = Date()) -> Int {
         let minutes = max(1, Int((Double(focusElapsed(at: now)) / 60).rounded()))
         focusOn = false
-        focusWhat = ""
+        focusBanked = 0
         return minutes
     }
 
-    /// 停止专注并落库(kind=focus 的 note,记录页·日记时间线可见)。
+    /// 停止并落库(kind=focus 的 note,记录页·日记时间线可见)。跑完 25:00 或
+    /// 用户主动收都走这里。
     public func stopFocusAndRecord(at now: Date = Date()) async {
-        let what = focusWhat
+        let what = focusWhat.isEmpty ? "专注" : focusWhat
         let minutes = stopFocus(at: now)
         captureStatus = .sending
         do {
@@ -242,8 +268,8 @@ public final class NotchModel {
     /// Each module is as tall as its content needs — no big black void.
     public func viewHeight() -> Double {
         switch module {
-        case .dashboard: 252  // bento(媒体大卡+右两卡)+quickcap+dock
-        case .media: 330
+        case .dashboard: 280  // bento+quickcap+dock(2026-07-07 用户:重叠)
+        case .media: 345  // 歌词列限高 190+dock 常驻
         case .calendar: 260  // NOMI 周条+事件+addev(月视图随稿退役)
         case .files: 280  // dropzone+shelf+剪贴板段
         case .agents:
@@ -258,14 +284,15 @@ public final class NotchModel {
         // 删掉时间/地点行后内容更矮,预算跟着收(2026-07-05 用户:任务下面空太大)。
         // 预算含 dock(~54):note 208 / task +24(target 行) / ask+answer 322。
         // 多行输入时加 captureInputExtraHeight(App 实测),面板随输入框长。
+        // NOMI 胶囊/输入盒都比 ORAGE 高一档,预算整体上调(2026-07-07 用户:被 clip)。
         case .capture:
             captureKind == .focus
-                ? (focusOn ? 300 : 240)
+                ? 265
                 : (captureKind == .ask && askAnswer != nil
-                    ? 322 + captureInputExtraHeight
+                    ? 340 + captureInputExtraHeight
                     : (captureShowRecent
-                        ? min(320, (captureKind == .task ? 232 : 208) + 64)
-                        : (captureKind == .task ? 232 : 208)) + captureInputExtraHeight)
+                        ? min(340, (captureKind == .task ? 256 : 232) + 64)
+                        : (captureKind == .task ? 256 : 232)) + captureInputExtraHeight)
         }
     }
 

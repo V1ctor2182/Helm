@@ -296,9 +296,9 @@ final class NotchModuleTests: XCTestCase {
     func testViewHeightVariesPerModule() {
         let model = NotchModel(backend: FakeBackend())
         model.module = .dashboard
-        XCTAssertEqual(model.viewHeight(), 252)
+        XCTAssertEqual(model.viewHeight(), 280)
         model.module = .media
-        XCTAssertEqual(model.viewHeight(), 330)
+        XCTAssertEqual(model.viewHeight(), 345)
         model.module = .files
         XCTAssertEqual(model.viewHeight(), 280)
     }
@@ -324,16 +324,16 @@ final class NotchModuleTests: XCTestCase {
         XCTAssertEqual(model.viewHeight(), 260)
         model.module = .capture
         model.captureKind = .task
-        XCTAssertEqual(model.viewHeight(), 232)
+        XCTAssertEqual(model.viewHeight(), 256)
         model.captureKind = .note
-        XCTAssertEqual(model.viewHeight(), 208)
+        XCTAssertEqual(model.viewHeight(), 232)
     }
 
     @MainActor
     func testAutoExpandedHeightAddsTopBar() {
         let model = NotchModel(backend: FakeBackend())
         model.module = .dashboard
-        XCTAssertEqual(model.autoExpandedHeight, 252 + NotchModel.topBarHeight)
+        XCTAssertEqual(model.autoExpandedHeight, 280 + NotchModel.topBarHeight)
     }
 
     @MainActor
@@ -364,9 +364,9 @@ final class NotchModuleTests: XCTestCase {
         let model = NotchModel(backend: FakeBackend())
         model.module = .capture
         model.captureKind = .note
-        XCTAssertEqual(model.viewHeight(), 208)
+        XCTAssertEqual(model.viewHeight(), 232)
         model.captureShowRecent = true
-        XCTAssertEqual(model.viewHeight(), 272)  // 208 + 64
+        XCTAssertEqual(model.viewHeight(), 296)  // 232 + 64
     }
 
     @MainActor
@@ -376,11 +376,11 @@ final class NotchModuleTests: XCTestCase {
         model.module = .capture
         model.captureKind = .note
         model.captureInputExtraHeight = 36  // 两行额外
-        XCTAssertEqual(model.viewHeight(), 244)  // 208 + 36
+        XCTAssertEqual(model.viewHeight(), 268)  // 232 + 36
         model.captureInputExtraHeight = 999
-        XCTAssertEqual(model.viewHeight(), 268)  // clamp 到 +60
+        XCTAssertEqual(model.viewHeight(), 292)  // clamp 到 +60
         model.captureInputExtraHeight = -5
-        XCTAssertEqual(model.viewHeight(), 208)  // clamp 到 0
+        XCTAssertEqual(model.viewHeight(), 232)  // clamp 到 0
     }
 
     @MainActor
@@ -434,10 +434,12 @@ final class NotchModuleTests: XCTestCase {
 
     @MainActor
     func testFocusDefaultsWhatWhenTextEmpty() {
+        // 番茄制:任务名可留空(视图显示「未设置」),落库时才兜底成「专注」。
         let model = NotchModel(backend: FakeBackend())
         model.captureText = "   "
         model.startFocus()
-        XCTAssertEqual(model.focusWhat, "专注")
+        XCTAssertEqual(model.focusWhat, "")
+        XCTAssertTrue(model.focusOn)
     }
 
     @MainActor
@@ -445,10 +447,10 @@ final class NotchModuleTests: XCTestCase {
         let model = NotchModel(backend: FakeBackend())
         model.module = .capture
         model.captureKind = .focus
-        XCTAssertEqual(model.viewHeight(), 240)  // idle
+        XCTAssertEqual(model.viewHeight(), 265)  // 番茄环单一预算
         model.captureText = "x"
         model.startFocus()
-        XCTAssertEqual(model.viewHeight(), 300)  // running
+        XCTAssertEqual(model.viewHeight(), 265)  // 跑与不跑同高
     }
 
     @MainActor
@@ -716,6 +718,22 @@ final class HealthDecodingTests: XCTestCase {
         XCTAssertEqual(model.clipboardHistory.count, 5)  // 上限 5
         XCTAssertEqual(model.clipboardHistory.first?.text, "item5")  // 新的在前
         XCTAssertTrue(ClipItem(id: "x", text: "https://a.b", at: Date()).isLink)
+    }
+
+    @MainActor
+    func testPomodoroPauseBanksAndResumes() {
+        let model = NotchModel(backend: FakeBackend())
+        model.startFocus()
+        let t0 = model.focusStartedAt
+        model.pauseFocus(at: t0.addingTimeInterval(300))  // 跑 5 分钟暂停
+        XCTAssertFalse(model.focusOn)
+        XCTAssertEqual(model.focusBanked, 300)
+        XCTAssertEqual(model.focusRemaining(), 25 * 60 - 300)
+        model.startFocus()  // 继续
+        let t1 = model.focusStartedAt
+        XCTAssertEqual(model.focusElapsed(at: t1.addingTimeInterval(60)), 360)
+        model.resetFocus()
+        XCTAssertEqual(model.focusRemaining(), 25 * 60)
     }
 
 }

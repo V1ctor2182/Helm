@@ -18,6 +18,10 @@ struct NotchView: View {
     // NOMI 日历加事件
     @State private var calAddText = ""
     @FocusState private var calAddFocused: Bool
+    // 专注·换任务行内编辑
+    @State private var focusEditing = false
+    @State private var focusTaskDraft = ""
+    @FocusState private var focusTaskFocused: Bool
 
     private var accent: Color { Color(model.accent) }
 
@@ -237,11 +241,12 @@ struct NotchView: View {
         let running = model.localSessions.filter { $0.phase == .running }.count
         if model.focusOn {
             TimelineView(.periodic(from: .now, by: 1)) { context in
-                let s = model.focusElapsed(at: context.date)
+                let s = model.focusRemaining(at: context.date)
                 HStack(spacing: 5) {
-                    Circle().fill(accent).frame(width: 6, height: 6)
+                    Circle().fill(Color(NomiTheme.g1)).frame(width: 6, height: 6)
                     Text(String(format: "%02d:%02d", s / 60, s % 60))
-                        .font(.system(size: 12, weight: .bold)).monospacedDigit().foregroundStyle(accent)
+                        .font(.system(size: 12, weight: .bold)).monospacedDigit()
+                        .foregroundStyle(Color(NomiTheme.g1))
                 }
             }
         } else if waiting > 0 {
@@ -369,10 +374,10 @@ struct NotchView: View {
     /// `.dock` — the five module glyphs; the active one rings in accent, Dev
     /// shows an orange badge when a local agent is waiting on permission.
     private var dockBar: some View {
-        HStack(spacing: 9) {
+        HStack(spacing: 8) {
             ForEach(NotchModule.dock) { m in dockButton(m) }
         }
-        .padding(.top, 8).padding(.bottom, 9)
+        .padding(.top, 6).padding(.bottom, 7)
         .frame(maxWidth: .infinity)
         // Keep the active-state change snappy (HTML .dk transition .12s) instead of
         // letting it inherit the slow panel height/slide animation on module switch.
@@ -385,9 +390,9 @@ struct NotchView: View {
         let p = model.nomi
         return Button { model.selectModule(m) } label: {
             Image(systemName: m.symbol)
-                .font(.system(size: 15, weight: .medium))
+                .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(on ? Color(p.ink) : Color(p.ink2))
-                .frame(width: 40, height: 40)
+                .frame(width: 34, height: 34)
                 .background(Circle().fill(Color(p.pill)))
                 // NOMI 激活态:渐变描边环(HTML .mtab.on border-box 渐变)。
                 .overlay(Circle().stroke(Nomi.gradient, lineWidth: on ? 2 : 0))
@@ -871,6 +876,7 @@ struct NotchView: View {
                     // id 绑曲目:换曲把旧词整棵拆掉,不留跨曲残影;clipped 防越界
                     lyricsColumn
                         .id(model.nowPlaying.map { "\($0.title)|\($0.artist)" } ?? "none")
+                        .frame(maxHeight: 190)  // .mlyr 限高:不许把 dock 顶出面板
                         .clipped()
                 }
             }
@@ -1401,61 +1407,77 @@ struct NotchView: View {
         }
     }
 
-    /// 专注:未开始 = 输入「在做什么」+ 开始;进行中 = 大计时 + 停止并记录。
+    /// 专注 = 25min 番茄(用户拍板 Q4):初始即环(25:00 已暂停)+关联任务+
+    /// 开始/暂停·重置·换任务;跑完自动落库。
     @ViewBuilder private var focusBody: some View {
-        if model.focusOn {
-            // NOMI .focus:渐变环 104 + 右侧关联任务/操作。计时语义保持现行
-            // 正计时记录(设计稿画的是 25min 番茄倒计时——行为差异记 Q4,不猜)。
-            let pal = model.nomi
-            HStack(spacing: 16) {
-                TimelineView(.periodic(from: .now, by: 1)) { context in
-                    let sec = model.focusElapsed(at: context.date)
-                    ZStack {
-                        Circle().stroke(Nomi.gradient, lineWidth: 9)
-                        Circle().fill(Color(pal.cardBG)).frame(width: 86, height: 86)
-                            .overlay(
-                                VStack(spacing: 1) {
-                                    Text(String(format: "%02d:%02d", sec / 60, sec % 60))
-                                        .font(.system(size: 19, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(Color(pal.ink))
-                                    Text("专注中").font(.system(size: 9)).foregroundStyle(Color(pal.ink3))
-                                })
-                    }
-                    .frame(width: 104, height: 104)
+        let pal = model.nomi
+        HStack(spacing: 16) {
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                let remain = model.focusRemaining(at: context.date)
+                let frac = 1 - Double(remain) / Double(max(1, model.focusTotal))
+                ZStack {
+                    Circle().fill(AngularGradient(
+                        stops: [.init(color: Color(NomiTheme.g1), location: 0),
+                                .init(color: Color(NomiTheme.g2), location: max(0.001, frac)),
+                                .init(color: Color(pal.pill), location: max(0.002, frac + 0.001)),
+                                .init(color: Color(pal.pill), location: 1)],
+                        center: .center, angle: .degrees(-90)))
+                    Circle().fill(Color(pal.cardBG)).frame(width: 86, height: 86)
+                        .overlay(
+                            VStack(spacing: 1) {
+                                Text(String(format: "%02d:%02d", remain / 60, remain % 60))
+                                    .font(.system(size: 19, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(Color(pal.ink))
+                                Text(model.focusOn ? "专注中" : "已暂停")
+                                    .font(.system(size: 9)).foregroundStyle(Color(pal.ink3))
+                            })
                 }
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("关联任务").font(.system(size: 10)).foregroundStyle(Color(pal.ink3)).tracking(0.4)
-                    Text(model.focusWhat).font(.system(size: 12.5, weight: .semibold))
-                        .foregroundStyle(Color(pal.ink)).lineLimit(2).padding(.top, 4)
-                    HStack(spacing: 6) {
-                        Button("停止并记录") { Task { await model.stopFocusAndRecord() } }
-                            .buttonStyle(InkButtonStyle(palette: pal))
-                    }
-                    .padding(.top, 10)
-                    Text("停止即记录到 Helm(记录页 · 日记时间线)")
-                        .font(.system(size: 9.5)).foregroundStyle(Color(pal.ink3)).padding(.top, 6)
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(.vertical, 4)
-        } else {
-            VStack(alignment: .leading, spacing: 10) {
-                TextField("", text: $model.captureText, prompt: Text("我现在在做什么…").foregroundStyle(Color(model.nomi.ink3)))
-                    .textFieldStyle(.plain).font(.system(size: 13)).foregroundStyle(Color(model.nomi.ink))
-                    .focused($captureFocused)
-                    .onSubmit { model.startFocus() }
-                    .padding(EdgeInsets(top: 11, leading: 13, bottom: 11, trailing: 13))
-                    .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color(model.nomi.pill)))
-                HStack {
-                    Text("⏎ 开始 · 关掉时自动记录这段专注到 Helm").font(.system(size: 10.5)).foregroundStyle(Color(model.nomi.ink3))
-                    Spacer()
-                    Button("开始专注") { model.startFocus() }.buttonStyle(InkButtonStyle(palette: model.nomi))
+                .frame(width: 104, height: 104)
+                // 跑完自动收番茄落库(focusOn 置 false 后不会重入)
+                .onChange(of: remain == 0 && model.focusOn) { _, done in
+                    if done { Task { await model.stopFocusAndRecord() } }
                 }
             }
+            VStack(alignment: .leading, spacing: 0) {
+                Text("关联任务").font(.system(size: 10)).foregroundStyle(Color(pal.ink3)).tracking(0.4)
+                if focusEditing {
+                    TextField("", text: $focusTaskDraft,
+                              prompt: Text("这个番茄做什么…").foregroundStyle(Color(pal.ink3)))
+                        .textFieldStyle(.plain).font(.system(size: 12.5)).foregroundStyle(Color(pal.ink))
+                        .focused($focusTaskFocused)
+                        .onSubmit { model.focusSetTask(focusTaskDraft); focusEditing = false }
+                        .padding(EdgeInsets(top: 5, leading: 8, bottom: 5, trailing: 8))
+                        .background(RoundedRectangle(cornerRadius: 8).fill(Color(pal.pill)))
+                        .padding(.top, 4)
+                } else {
+                    Text(model.focusWhat.isEmpty ? "未设置 — 点「换任务」" : model.focusWhat)
+                        .font(.system(size: 12.5, weight: .semibold))
+                        .foregroundStyle(Color(model.focusWhat.isEmpty ? pal.ink3 : pal.ink))
+                        .lineLimit(2).padding(.top, 4)
+                }
+                HStack(spacing: 6) {
+                    if model.focusOn {
+                        Button("暂停") { model.pauseFocus() }.buttonStyle(PillButtonStyle(palette: pal, fontSize: 12))
+                    } else {
+                        Button("开始") { model.startFocus() }.buttonStyle(InkButtonStyle(palette: pal))
+                    }
+                    Button("重置") { model.resetFocus() }.buttonStyle(PillButtonStyle(palette: pal, fontSize: 12))
+                    Button("换任务") {
+                        focusTaskDraft = model.focusWhat
+                        focusEditing = true
+                        focusTaskFocused = true
+                    }.buttonStyle(PillButtonStyle(palette: pal, fontSize: 12))
+                }
+                .padding(.top, 10)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 6)
+        .onChange(of: focusTaskFocused) { _, f in
+            if f { model.beginCapture() } else { model.endInteraction(); if focusEditing { model.focusSetTask(focusTaskDraft); focusEditing = false } }
         }
     }
 
-    /// 给自己 / 交给 agent (HTML .ttog). TODO(align-capture): agent path → Cockpit.
     private var taskTargetToggle: some View {
         HStack(spacing: 5) {
             ForEach(TaskTarget.allCases) { target in
