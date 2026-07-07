@@ -57,6 +57,29 @@ export class TasksStore {
     return ok !== null
   }
 
+  /** T2 人话排期:整句(时间在句子里)交给后端解析;422=没听出时间。 */
+  async createNL(prompt: string): Promise<boolean> {
+    if (!prompt.trim()) return false
+    this.error = null
+    const ok = await this.#json('/api/tasks', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    })
+    if (ok) await this.load()
+    else this.error = '没听出时间——把「什么时候」放进句子,如「每天早上 9 点汇总未读邮件」'
+    return ok !== null
+  }
+
+  /** 派发条实时排期徽章——与提交同一后端解析器。 */
+  async parse(q: string): Promise<{ label: string } | null> {
+    if (!q.trim()) return null
+    const body = (await this.#json(`/api/tasks/parse?q=${encodeURIComponent(q)}`)) as
+      | { parsed: { label: string } | null }
+      | null
+    return body?.parsed ?? null
+  }
+
   async toggle(t: Task): Promise<void> {
     const ok = await this.#json(`/api/tasks/${t.id}/enabled`, {
       method: 'POST',

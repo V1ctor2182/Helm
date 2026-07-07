@@ -17,7 +17,9 @@
 
 ## 批次 3 提案 · T 系列(AI 分诊系统+前端对齐新稿;2026-07-08 用户要求,喂给本 loop——不另开新 loop)
 - [x] [T1][P1](本轮清) 后端分诊管线:创建 note 时 AI 分诊(规则先行+LLM 兜底,并 K7)→ 返回 {kind:记录/想法/任务, time?, place?, task_id?};判任务自动落「待办·给自己」(关联 K6 done 列拍板);抽取时间/地点结构化存。→ 落地:POST triage:true;KINDS+task/idea;meta.when/where/due;回执块;无独立 task_id(kind:task 即待办)。
-- [ ] [T2][P1] 人话排期:/api/tasks 收自然语言 schedule(存原句+解析结果),派发条按稿接线(边打字出排期徽章);cron 表达式从 UI 全面退场。
+- [x] [T2][P1](本轮清) 人话排期:/api/tasks 收自然语言 schedule(存原句+解析结果),派发条按稿接线(边打字出排期徽章);cron 表达式从 UI 全面退场。→ 落地:helm/tasks/nl.py(复用 T1 时间解析);POST {prompt} 整句即可(顺带修捕获坞「交给 agent」422);/api/tasks/parse 实时徽章;to-task 收 schedule_nl;原句=prompt,人话标签=schedule_value.nl。
+- [ ] [T2+][P2][bug] next_run 时区显示漂移(既有,非 T2 引入):cron 本地墙钟算出的 next_run 落 SQLite 变 naive(丢 offset),前端 localDateTime 按 UTC 解析 → 9 点任务显示 17:00。修法:后端统一存 UTC(isoformat 带 Z)或前端识别 naive=本地。
+- [ ] [Q-T2][question] 没说时间的「交给 agent」任务(如捕获坞判任务发 /api/tasks):现 422 提示补时间(按默认走)。要不要改成「没时间=立即执行一次」?待拍板。
 - [ ] [T3][P1] 前端对齐 kinds 稿本轮增量:待办两层任务行(临近 24h 橙 chip/hover 专注·→agent/完成沉底)+分诊回执 toast(chips+改类,纠正回流)+速记墙分诊徽章+墙上任务回执卡。
 - [ ] [T4][P2] 日记每天一篇:今日聚合(多段按时间拼一篇)+连续天数+字数;TODAY 卡预览/续写→;与 notch journalToday 口径一致。
 - [ ] [T5][P2][跨线] 分诊契约发布后通知 notch 线接回执 UI(nomi-notch backlog 已备位);契约变更只在本 loop 做,notch 只消费(前科:task kind 收紧 422 炸了 notch)。

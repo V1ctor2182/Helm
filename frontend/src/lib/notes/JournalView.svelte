@@ -64,10 +64,20 @@
   })
   let draft = $state('')
   let taskPrompt = $state('')
-  let taskKind = $state<'cron' | 'every' | 'at'>('cron')
-  let taskCron = $state('0 9 * * *')
-  let taskEvery = $state('3600')
-  let taskAt = $state('')
+  // T2 人话排期:边打字出排期徽章(后端 /api/tasks/parse,与提交同一解析器);
+  // cron/every/at 三模式表单退场,时间在句子里。
+  let parsedLabel = $state<string | null>(null)
+  let parseSeq = 0
+  function onDispatchInput(v: string) {
+    taskPrompt = v
+    const seq = ++parseSeq
+    setTimeout(() => {
+      if (seq !== parseSeq) return
+      void tasks.parse(taskPrompt).then((p) => {
+        if (seq === parseSeq) parsedLabel = p?.label ?? null
+      })
+    }, 250)
+  }
   const del = new ConfirmGate()
   // note→task flow: →任务 jumps here with the note pinned; submit uses
   // /to-task so linked_note_id survives (server takes the note's content).
@@ -84,7 +94,6 @@
     setTimeout(() => void notes.remove(n.id), 800)
   }
   let editDraft = $state('')
-  const promptValue = $derived(fromNote ? fromNote.content : taskPrompt)
 
   onMount(() => {
     // 头部计数要 notes+tasks;providers/日历按 tab 懒加载(见 $effect)。
@@ -110,24 +119,15 @@
     return new Date().toISOString().slice(0, 10)
   }
 
-  // 三模式调度值(cron 表达式=本地墙钟;at 的本地时间转 UTC ISO)
-  function scheduleValue(): Record<string, unknown> | null {
-    if (taskKind === 'cron') return taskCron.trim() ? { expr: taskCron.trim() } : null
-    if (taskKind === 'every') {
-      const n = Number(taskEvery)
-      return Number.isFinite(n) && n > 0 ? { seconds: n } : null
-    }
-    return taskAt ? { at: new Date(taskAt).toISOString() } : null
-  }
-
+  // T2 人话排期:整句(或 fromNote 时的时间短语)交给后端解析落库。
   async function addTask() {
-    const value = scheduleValue()
-    if (!value) return
     if (fromNote) {
       const pinned = fromNote
-      const ok = await notes.toTask(pinned.id, taskKind, value)
+      const ok = await notes.toTaskNL(pinned.id, taskPrompt.trim())
       if (ok) {
         fromNote = null
+        taskPrompt = ''
+        parsedLabel = null
         await tasks.load()
       } else if (!notes.notes.some((n) => n.id === pinned.id)) {
         notes.error = '速记已被删除,已取消关联'
@@ -136,8 +136,11 @@
       return
     }
     if (!taskPrompt.trim()) return
-    const ok = await tasks.create('', taskPrompt, taskKind, value)
-    if (ok) taskPrompt = ''
+    const ok = await tasks.createNL(taskPrompt)
+    if (ok) {
+      taskPrompt = ''
+      parsedLabel = null
+    }
   }
 
   // 已转任务标记:tasks 里 linked_note_id 指向的速记
@@ -480,29 +483,21 @@
         <span class="chip">
           自速记 #{fromNote.id}
           <button type="button" class="act del" aria-label="取消关联速记"
-            onclick={() => { fromNote = null; taskPrompt = '' }}>×</button>
+            onclick={() => { fromNote = null; taskPrompt = ''; parsedLabel = null }}>×</button>
         </span>
       {/if}
       <input
-        placeholder="到点让 agent 做什么(如:汇总未读邮件)…"
-        value={promptValue}
-        oninput={(e) => { if (!fromNote) taskPrompt = e.currentTarget.value }}
+        placeholder={fromNote
+          ? '什么时候?用人话说 —「每天早上 9 点」「明晚 8 点」…'
+          : '让 agent 做什么,时间用人话说 —「每天早上 9 点汇总未读邮件」「周五下午回顾本周」…'}
+        value={taskPrompt}
+        oninput={(e) => onDispatchInput(e.currentTarget.value)}
         aria-label="任务指令"
-        readonly={fromNote !== null}
       />
-      <select class="kind" bind:value={taskKind} aria-label="调度模式">
-        <option value="cron">cron</option>
-        <option value="every">every</option>
-        <option value="at">at</option>
-      </select>
-      {#if taskKind === 'cron'}
-        <input class="cron" placeholder="cron 表达式" bind:value={taskCron} aria-label="cron 表达式" />
-      {:else if taskKind === 'every'}
-        <input class="cron" type="number" min="1" placeholder="间隔秒" bind:value={taskEvery} aria-label="间隔秒" />
-      {:else}
-        <input class="cron at" type="datetime-local" bind:value={taskAt} aria-label="触发时间" />
+      {#if parsedLabel}
+        <span class="aiverdict"><span class="vspark" aria-hidden="true"></span>{parsedLabel}</span>
       {/if}
-      <button class="act pri" type="submit" disabled={(fromNote ? false : !taskPrompt.trim()) || !scheduleValue()}>加定时</button>
+      <button class="act pri" type="submit" disabled={fromNote ? false : !taskPrompt.trim()}>交给 agent</button>
     </form>
     {#if tasks.error}<p class="err" role="alert">{tasks.error}</p>{/if}
 
@@ -542,7 +537,8 @@
                     aria-label={`启用 ${t.name}`} onclick={() => tasks.toggle(t)}></button>
                 </div>
                 <div class="smeta">
-                  <span class="cronchip">{t.schedule_kind}</span>
+                  <!-- 人话排期 chip(T2:cron 表达式退出 UI);老任务没 nl 退回模式名 -->
+                  <span class="cronchip">{(t.schedule_value?.nl as string | undefined) ?? t.schedule_kind}</span>
                   <span class="nextchip">{t.enabled ? `下次 ${localDateTime(t.next_run)}` : '已停用'}</span>
                   <button class="runbtn" aria-label={`运行记录 ${t.name}`} aria-expanded={tasks.runsFor === t.id}
                     onclick={() => tasks.toggleRuns(t.id)}>{t.run_count} 次{#if t.last_status}&nbsp;· {t.last_status}{/if} ▾</button>
@@ -965,7 +961,7 @@
     margin: 4px 0 20px;
     flex-wrap: wrap;
   }
-  .dispatch input:not(.cron):not(.at) {
+  .dispatch input {
     flex: 1;
     min-width: 200px;
     border: 0;
@@ -975,15 +971,24 @@
     color: var(--t1);
   }
   .dispatch input::placeholder { color: var(--t4); }
-  .dispatch input.cron {
-    width: 130px;
-    font: 500 12px/1 var(--mono);
+  /* T2 实时排期徽章(稿 .aiverdict:spark+人话时间) */
+  .aiverdict {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font: 500 11.5px/1 var(--sans);
+    color: var(--t2);
     background: var(--pill);
-    border: 0;
     border-radius: var(--radius-pill);
-    padding: 9px 13px;
-    outline: none;
-    color: var(--t1);
+    padding: 7px 11px;
+    white-space: nowrap;
+  }
+  .vspark {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--g1), var(--g2));
+    flex: none;
   }
   .taskcols {
     display: grid;

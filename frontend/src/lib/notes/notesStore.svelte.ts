@@ -123,6 +123,18 @@ export class NotesStore {
     return ok !== null
   }
 
+  /** T2 人话排期版 note→task:时间用人话说,后端解析;不给则试 note 原文。 */
+  async toTaskNL(id: number, nl: string): Promise<boolean> {
+    this.error = null
+    const ok = await this.#json(`/api/notes/${id}/to-task`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ schedule_nl: nl || null }),
+    })
+    if (!ok) this.error = '没听出时间——用人话说个时间,如「每天早上 9 点」「明晚 8 点」'
+    return ok !== null
+  }
+
   /** 编辑速记/日记内容(PATCH,backlog: 笔记不可编辑)。 */
   async update(id: number, content: string): Promise<boolean> {
     if (!content.trim()) return false

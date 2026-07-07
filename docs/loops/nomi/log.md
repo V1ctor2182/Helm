@@ -130,3 +130,10 @@
 - 门: pytest 240 全绿(+23:triage 单元+API+兜底)/ 前端 build ✓ check 0/0 ✓ test 207 全绿(8 个 unhandled 为 cockpit FileBrowser jsdom 既有噪音,本块未动前端)
 - 取舍: 判任务=kind:task 落库即前端待办列(todoItems 既有契约),不建独立 task 行,无 task_id;「分诊记住纠正」记 backlog [T1+] P2。
 - T5 提醒: 契约已变(只加不减),T5 块通知 notch 线接回执 UI。
+## T2 · 2026-07-08 · 人话排期
+- 契约: TaskBody 的 name/schedule_kind/schedule_value 全部可省——POST /api/tasks {prompt} 整句即可,排期从句子解析(顺带修捕获坞/notch「交给 agent」只发 {prompt} 的 422 活 bug);新增 GET /api/tasks/parse(实时徽章,与提交同一解析器);to-task 收 schedule_nl。原句在 task.prompt,人话标签存 schedule_value.nl(compute_next_run 不受额外键影响);显式 schedule 老契约不动。
+- 实现: helm/tasks/nl.py——每天/每晚/每周X/工作日/每月N号→cron,每N小时/分钟→every,一次性(明早9点/周五下午3点)复用 T1 triage.parse_when→at(本地转带时区 ISO);「每周」没说哪天默认周一(注明可纠)。前端:派发条三模式表单(cron/every/at select+输入)退场→单输入行+250ms 防抖 /parse 徽章(spark+人话)+「交给 agent」渐变钮;fromNote 流改为 chip+人话时间输入(toTaskNL);定时卡 chip 显示 schedule_value.nl,无 nl 的老任务退回模式名。
+- 门: pytest 254 全绿(+14)/前端 build ✓ check 0/0 ✓ test 213 全绿(+6,含 fromNote 新语义改写)
+- e2e: 真发「每天早上9点汇总未读邮件」→ 卡片 chip「每天 09:00」+ expr "0 9 * * *" ✓;试发任务已删,后端已重启(8769)。
+- 视觉: shots/t2-dispatch.png(输入行+徽章)/ t2-card.png(定时卡人话 chip)
+- 发现: next_run 时区显示漂移(9点显示17:00)为 K6 期既有 bug → backlog [T2+];无时间任务默认行为 → backlog Q-T2(现 422 提示,不猜)。

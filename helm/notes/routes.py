@@ -239,8 +239,11 @@ def journal_summary(
 
 class ToTaskBody(BaseModel):
     name: str | None = None
-    schedule_kind: str  # at | every | cron
-    schedule_value: dict
+    # T2 人话排期:schedule_kind/value 可省,给 schedule_nl(人话时间整句)
+    # 由后端解析;两者都没有 → 422 提示补时间。
+    schedule_kind: str | None = None  # at | every | cron
+    schedule_value: dict | None = None
+    schedule_nl: str | None = None
     execution_mode: str = "new_conversation"
 
 
@@ -250,17 +253,27 @@ def note_to_task(
 ) -> dict:
     """Turn a quick note into a scheduled task (intent#1 note→task): the note's
     content becomes the task prompt."""
+    from helm.tasks.nl import parse_schedule
     from helm.tasks.service import TaskService, task_public
 
     note = NoteService(session).get(note_id)
     if note is None:
         raise HTTPException(status_code=404, detail="note not found")
+    kind, value = body.schedule_kind, body.schedule_value
+    if not kind or value is None:
+        # 人话时间:显式 schedule_nl 优先,没有就试 note 自己的内容/分诊线索
+        parsed = parse_schedule(body.schedule_nl or note.content)
+        if parsed is None:
+            raise HTTPException(
+                status_code=422,
+                detail="没听出时间——用人话说个时间,如「每天早上 9 点」「明晚 8 点」")
+        kind, value = parsed.kind, parsed.value
     try:
         task = TaskService(session).create(
             body.name or (note.title or note.content[:40] or "task"),
             note.content,
-            body.schedule_kind,
-            body.schedule_value,
+            kind,
+            value,
             execution_mode=body.execution_mode,
             linked_note_id=note.id,
         )

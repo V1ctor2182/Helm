@@ -71,12 +71,23 @@ describe('JournalView', () => {
     notes.notes = [N({ id: 11, content: 'summarize inbox daily' })]
     render(JournalView)
     await fireEvent.click(await screen.findByRole('button', { name: '→任务' }))
-    // tasks tab is now active, prompt prefilled from the note and locked
+    // tasks tab active with the note pinned as a chip; the input now takes the
+    // 人话时间 phrase (T2), so it stays editable and empty.
     expect(screen.getByRole('tab', { name: '任务' })).toHaveAttribute('aria-selected', 'true')
     const prompt = screen.getByLabelText('任务指令') as HTMLInputElement
-    expect(prompt.value).toBe('summarize inbox daily')
-    expect(prompt).toHaveAttribute('readonly')
+    expect(prompt.value).toBe('')
+    expect(prompt.placeholder).toContain('什么时候')
     expect(screen.getByText(/自速记 #11/)).toBeInTheDocument()
+  })
+
+  it('pinned note submits via to-task with the typed 人话时间', async () => {
+    const spy = vi.spyOn(notes, 'toTaskNL').mockResolvedValue(true)
+    notes.notes = [N({ id: 11, content: 'summarize inbox daily' })]
+    render(JournalView)
+    await fireEvent.click(await screen.findByRole('button', { name: '→任务' }))
+    await fireEvent.input(screen.getByLabelText('任务指令'), { target: { value: '每天早上9点' } })
+    await fireEvent.click(screen.getByRole('button', { name: '交给 agent' }))
+    expect(spy).toHaveBeenCalledWith(11, '每天早上9点')
   })
 })
 
