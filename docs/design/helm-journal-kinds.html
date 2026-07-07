@@ -187,6 +187,31 @@
   .sheet .dayline{display:flex;gap:9px;font:400 12px/1.7 var(--sans);color:var(--ink3);padding:3px 0}
   .sheet .dayline .t{font-family:var(--mono);font-size:10.5px;padding-top:3px}
 
+  .inlink{color:var(--g2);border-bottom:1px solid color-mix(in srgb,var(--g2) 40%,transparent);cursor:pointer}
+  .attachmini{display:flex;align-items:center;gap:5px;margin-top:9px}
+  .attachmini .an{font:400 10.5px/1 var(--sans);color:var(--ink3)}
+  /* 详情:原文主角 + 附件卡 + AI 注脚 */
+  .sheet .prose{font:400 17px/1.85 var(--sans);color:var(--ink);white-space:pre-wrap;word-break:break-word}
+  .sheet .prose .inlink{font-size:inherit}
+  .sheet .attachh{font:600 11px/1 var(--sans);color:var(--ink3);letter-spacing:.4px;margin:18px 0 8px}
+  .sheet .attach{display:flex;gap:11px;align-items:flex-start;background:var(--bg);border-radius:14px;
+    padding:11px 13px;margin-bottom:8px;cursor:pointer;transition:background .12s}
+  .sheet .attach:hover{background:var(--pill)}
+  .sheet .attach .ab{flex:none;margin:2px 0 0}
+  .sheet .attach .at{font:600 13px/1.4 var(--sans);color:var(--ink)}
+  .sheet .attach .as{font:400 11.5px/1.5 var(--sans);color:var(--ink3);margin-top:2px;
+    display:-webkit-box;-webkit-line-clamp:1;line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+  .sheet .attach .asrc{font:400 10px/1 var(--sans);color:var(--ink3);margin-top:4px}
+  .sheet .attach .go{margin-left:auto;flex:none;font:500 10.5px/1 var(--sans);color:var(--ink3);
+    background:var(--card);border:0;border-radius:999px;padding:6px 11px;cursor:pointer}
+  .sheet .tagrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;font:400 11.5px/1 var(--sans);align-items:center}
+  .sheet .tagrow .tg{color:var(--cyan)}
+  .sheet .tagrow .clue{color:var(--ink2);background:var(--pill);border-radius:999px;padding:5px 11px}
+  /* AI 注脚:角落极弱,hover 展开 */
+  .sheet .ainote{display:flex;align-items:center;gap:6px;margin-top:16px;font:400 10.5px/1 var(--sans);color:var(--ink3)}
+  .sheet .ainote .spark{width:10px;height:10px}
+  .sheet .ainote .full{display:none}
+  .sheet .ainote:hover .full{display:inline}
   /* toast */
   .toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:var(--ink);color:#fff;
     font:500 12.5px/1 var(--sans);border-radius:999px;padding:11px 20px;box-shadow:var(--shadow-lg);
@@ -265,6 +290,12 @@
           <div class="foot"><span>awwwards.com</span><span class="tag">#灵感</span><span class="tm">16:51</span></div>
         </div>
       </div>
+      <div class="wcard plain rich" onclick="openRichDetail()"><div class="pad">
+        <span class="badge b-n">N</span>
+        <div class="note-tx">看了 <span class="inlink">arxiv.org/abs/1706.03762</span> 讲注意力的,配 <span class="inlink">youtu.be/swiftui-layout</span> 一起消化,周三前搞完。</div>
+        <div class="attachmini"><span class="badge b-ax" style="margin:0">AX</span><span class="badge b-yt" style="margin:0">YT</span><span class="an">提到 2 个内容</span></div>
+        <div class="foot"><span class="tag">#transformer</span><span class="tm">22:40</span></div>
+      </div></div>
       <div class="wcard plain" onclick="openDetail(this)"><div class="pad">
         <span class="badge b-n">N</span>
         <div class="note-tx">Canvas 连线要不要 note_links 表?明早问一下。</div>
@@ -436,7 +467,7 @@ function startFocusOn(btn){
   toast('开始专注:'+tx);
 }
 
-/* ── 速记/收藏卡详情 ── */
+/* ── 速记/收藏卡详情:原文主角,AI 注脚 ── */
 function openDetail(card){
   const isLink=!!card.querySelector('.ti');
   const badge=card.querySelector('.badge')?.textContent??'N';
@@ -445,7 +476,7 @@ function openDetail(card){
   const tx=card.querySelector('.note-tx')?.textContent??'';
   const sum=card.querySelector('.sum')?.textContent??'';
   const tm=card.querySelector('.tm')?.textContent??'';
-  const tags=[...card.querySelectorAll('.tag')].map(t=>t.textContent).join(' ');
+  const tags=[...card.querySelectorAll('.tag')].map(t=>t.textContent);
   const cover=card.querySelector('.cover');
   const sheet=document.getElementById('sheet');
   sheet.innerHTML=`
@@ -453,15 +484,47 @@ function openDetail(card){
       <button class="x" onclick="scrim.classList.remove('on')">×</button></div>
     ${cover?`<div class="shero" style="height:220px;${cover.getAttribute('style')??''}"></div>`:''}
     <div class="sbody">
-      ${ti?`<h2 class="sti">${ti}</h2>`:''}
-      ${tx?`<p class="scontent">${tx}</p>`:''}
-      ${sum?`<div class="aibox"><span class="spark"></span><span><span class="lab">AI 摘要 · </span>${sum}</span></div>`:''}
-      ${isLink?'':'<div class="aibox"><span class="spark"></span><span><span class="lab">AI 解析 · </span>已自动归类为速记;检测到 1 个标签,未发现时间/地点线索。</span></div>'}
-      <div class="srow">${tags?`<span style="color:var(--cyan)">${tags}</span>`:''}</div>
+      ${isLink
+        ?`<h2 class="sti">${ti}</h2>${sum?`<p class="scontent" style="font-size:13.5px">${sum}</p>`:''}`
+        :`<p class="prose">${tx}</p>`}
+      <div class="tagrow">${tags.map(t=>`<span class="tg">${t}</span>`).join('')}</div>
+      <div class="ainote"><span class="spark"></span>AI · 自动归类为${kindZh}
+        <span class="full">&nbsp;· 检测到 ${tags.length} 个标签,未发现时间/地点线索</span></div>
     </div>
     <div class="sacts">
       ${isLink?'<a class="pri" href="#">打开原链接</a>':''}
       <button>编辑</button><button>→日记</button><button>→任务</button><button onclick="scrim.classList.remove('on')">关闭</button>
+    </div>`;
+  scrim.classList.add('on');
+}
+
+/* 混合速记:一段话夹多个链接 → 原文大字+内联高亮,链接沉淀为「提到的内容」附件卡 */
+function openRichDetail(){
+  const sheet=document.getElementById('sheet');
+  sheet.innerHTML=`
+    <div class="shd"><span class="kbadge">速记</span><span class="when">今天 22:40</span>
+      <button class="x" onclick="scrim.classList.remove('on')">×</button></div>
+    <div class="sbody">
+      <p class="prose">看了 <span class="inlink">arxiv.org/abs/1706.03762</span> 讲注意力的,配 <span class="inlink">youtu.be/swiftui-layout</span> 一起消化,周三前搞完。</p>
+      <div class="attachh">提到的内容 · 2</div>
+      <div class="attach"><span class="badge b-ax ab">AX</span>
+        <span style="min-width:0"><div class="at">Attention Is All You Need</div>
+        <div class="as">The dominant sequence transduction models are based on complex recurrent…</div>
+        <div class="asrc">arXiv · 已解析</div></span>
+        <button class="go">打开</button></div>
+      <div class="attach"><span class="badge b-yt ab">YT</span>
+        <span style="min-width:0"><div class="at">SwiftUI Layout 深讲</div>
+        <div class="as">proposal/response 模型,frame 与 fixedSize 的真实语义。</div>
+        <div class="asrc">Sean Allen · YouTube</div></span>
+        <button class="go">打开</button></div>
+      <div class="tagrow"><span class="tg">#transformer</span><span class="tg">#必读</span>
+        <span class="clue">⏱ 周三前 · AI 读出的时间线索</span></div>
+      <div class="ainote"><span class="spark"></span>AI · 自动归类为速记
+        <span class="full">&nbsp;· 解析出 2 个链接(论文/视频),1 个时间线索;可一键转任务</span></div>
+    </div>
+    <div class="sacts">
+      <button class="pri">→任务 · 周三前</button>
+      <button>编辑</button><button>→日记</button><button onclick="scrim.classList.remove('on')">关闭</button>
     </div>`;
   scrim.classList.add('on');
 }
