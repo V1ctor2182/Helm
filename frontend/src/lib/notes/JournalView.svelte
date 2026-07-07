@@ -10,6 +10,7 @@
   import { ConfirmGate } from '../confirm.svelte'
   import Calendar from './Calendar.svelte'
   import CanvasView from './CanvasView.svelte'
+  import NoteDetail from './NoteDetail.svelte'
 
   // 三视图(阶段 4 R08,source: helm-journal-pro.html 记录板块)+kind 过滤。
   let view = $state<'timeline' | 'canvas' | 'calendar'>('timeline')
@@ -42,6 +43,7 @@
   let fromNote = $state<Note | null>(null)
   // 行内编辑:editingId + 草稿
   let editingId = $state<number | null>(null)
+  let detailNote = $state<Note | null>(null)
   let editDraft = $state('')
   const promptValue = $derived(fromNote ? fromNote.content : taskPrompt)
 
@@ -260,7 +262,7 @@
                     <button class="act" onclick={() => (editingId = null)}>取消</button>
                   </span>
                 {:else}
-                <span class="body">{n.content}</span>
+                <button class="body openable" title="查看详情" onclick={() => (detailNote = n)}>{n.content}</button>
                 <span class="acts">
                   {#if linkedNoteIds.has(n.id)}<span class="linked">已转任务</span>{/if}
                   <button class="act" title="编辑" aria-label={`编辑 ${n.content}`} onclick={() => startEdit(n)}>编辑</button>
@@ -497,6 +499,15 @@
     <div class="calwrap">
       <Calendar />
     </div>
+  {/if}
+
+  {#if detailNote}
+    <NoteDetail
+      note={detailNote}
+      onclose={() => (detailNote = null)}
+      onedit={(n) => startEdit(n)}
+      totask={(n) => noteToTask(n)}
+    />
   {/if}
 </section>
 
@@ -840,6 +851,18 @@
     flex: none;
     min-width: 34px;
     font-variant-numeric: tabular-nums;
+  }
+  .note .body.openable {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    color: inherit;
+  }
+  .note .body.openable:hover {
+    color: var(--t1);
   }
   .note .body {
     flex: 1;

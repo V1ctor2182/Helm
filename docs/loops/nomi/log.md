@@ -68,3 +68,9 @@
 - 新能力: 通用 Resizer.svelte(拖 CSS 变量+localStorage 持久,hover 细线高亮)——四处接入:主侧栏(--side-w 180-360)/上下文面板(--ctx-w)/对话会话栏(--chat-side 180-380)/驾驶舱侧栏(--cockpit-side 160-360)。所有分割线可拖,宽度记住。
 - 门: build ✓ / check 0/0 / test 205 全绿(Resizer localStorage 防御测试环境)
 - 视觉: shots/r15-chat.png(截断/胶囊 select/计数 ✓)
+## R16 · 2026-07-07 15:05 · 记录详情弹层 + option 字体修(用户反馈)
+- 新组件 NoteDetail.svelte:点速记/收藏正文打开白大卡详情——kind 徽章+时间/hero 大图/标题/原文全文/AI 摘要盒(spark)/来源+标签+时间地点线索/操作(打开原链接·编辑·→任务·关闭),遮罩+Esc 关。
+- 修: select option 原生弹层 serif 回退(CSS 变量在原生弹层不解析→显式字体栈)。
+- 后端核验: 单进程 83761 在跑,healthz ok(用户问数据库——数据一直从 SQLite 来)。
+- 门: build ✓ / check 0/0 / test 205 全绿
+- 视觉: shots/r16-detail.png

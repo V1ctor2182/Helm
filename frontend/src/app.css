@@ -192,6 +192,9 @@ select {
 select option {
   background: var(--card);
   color: var(--t1);
+  /* 原生弹层可能不解析 CSS 变量 → 显式字体栈(修 serif 回退) */
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  font-size: 13px;
 }
 input[type='datetime-local'],
 input[type='date'],
