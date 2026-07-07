@@ -19,6 +19,8 @@ struct SettingsView: View {
     var body: some View {
         ScrollView { content }
             .background(Color(red: 0.086, green: 0.090, blue: 0.098))
+            // 深底面板锁深色方案:系统自配色(占位符/控件)别按系统浅色渲染
+            .preferredColorScheme(.dark)
             .frame(minWidth: 440, minHeight: 520)
             .onAppear { installed = ClaudeHookInstaller.isInstalled() }
     }

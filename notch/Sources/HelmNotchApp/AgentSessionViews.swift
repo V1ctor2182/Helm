@@ -68,7 +68,7 @@ struct QuestionBannerView: View {
                 .fixedSize(horizontal: false, vertical: true)
             ForEach(item.options.indices, id: \.self) { oi in optionRow(qi, oi) }
             if pickedFreeform(qi) {
-                TextField("输入你的回答…", text: bindingFreeform(qi))
+                TextField("", text: bindingFreeform(qi), prompt: Text("输入你的回答…").foregroundStyle(Color(model.nomi.ink3)))
                     .textFieldStyle(.plain)
                     .font(.system(size: 11)).foregroundStyle(Color(model.nomi.ink))
                     .focused($freeformFocused)
@@ -218,7 +218,7 @@ struct SessionDetailView: View {
         if TerminalTextSender.canReply(to: session) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 7) {
-                    TextField("回复这个会话…", text: $reply)
+                    TextField("", text: $reply, prompt: Text("回复这个会话…").foregroundStyle(Color(model.nomi.ink3)))
                         .textFieldStyle(.plain)
                         .font(.system(size: 11)).foregroundStyle(Color(model.nomi.ink))
                         .focused($replyFocused)

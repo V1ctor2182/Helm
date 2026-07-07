@@ -34,6 +34,9 @@ struct NotchView: View {
         let shellW: CGFloat = reminder != nil ? 560 : (waiting != nil ? model.bannerSize.width : (model.expanded ? model.expandedWidth : collapsedWidth))
         let shellH: CGFloat = reminder != nil ? 152 : (waiting != nil ? model.bannerSize.height : (model.expanded ? model.autoExpandedHeight : collapsedBarHeight))
         shell(width: shellW, height: shellH, banner: waiting, reminder: reminder)
+            // 深/浅跟 nomiDark 走:否则系统浅色时,TextField 占位符等系统
+            // 自配色按浅色方案渲染,深面板上直接看不见(2026-07-07 用户截图)。
+            .preferredColorScheme(model.nomiDark ? .dark : .light)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .onExitCommand { captureFocused = false; model.locked ? model.endInteraction() : model.collapse() }
             // Focus drives the lock: clicking the field focuses it (panel becomes
@@ -558,7 +561,7 @@ struct NotchView: View {
     /// .quickcap:胶囊速记条(⏎/发送 → 后端 note)。
     private func quickCap(_ p: NomiPalette) -> some View {
         HStack(spacing: 8) {
-            TextField("速记一笔 — ⏎ 发送,链接自动解析…", text: $quickText)
+            TextField("", text: $quickText, prompt: Text("速记一笔 — ⏎ 发送,链接自动解析…").foregroundStyle(Color(p.ink3)))
                 .textFieldStyle(.plain)
                 .font(.system(size: 12.5)).foregroundStyle(Color(p.ink))
                 .focused($quickCapFocused)
@@ -654,7 +657,7 @@ struct NotchView: View {
 
     private func calAddEvent(_ pal: NomiPalette) -> some View {
         HStack(spacing: 8) {
-            TextField("加事件:明天 3pm 和 Sam 过设计…(AI 解析时间)", text: $calAddText)
+            TextField("", text: $calAddText, prompt: Text("加事件:明天 3pm 和 Sam 过设计…(AI 解析时间)").foregroundStyle(Color(pal.ink3)))
                 .textFieldStyle(.plain)
                 .font(.system(size: 12)).foregroundStyle(Color(pal.ink))
                 .focused($calAddFocused)
@@ -1333,7 +1336,7 @@ struct NotchView: View {
             // 任务:给自己 / 交给 agent
             if model.captureKind == .task { taskTargetToggle.padding(.top, 8) }
             // capin — full-width input on its own row (HTML .capin).
-            TextField(placeholder, text: $model.captureText, axis: .vertical)
+            TextField("", text: $model.captureText, prompt: Text(placeholder).foregroundStyle(Color(model.nomi.ink3)), axis: .vertical)
                 .textFieldStyle(.plain).font(.system(size: 13)).foregroundStyle(Color(model.nomi.ink))
                 .lineLimit(1...3).focused($captureFocused)
                 .onSubmit { Task { await model.submit() } }
@@ -1437,7 +1440,7 @@ struct NotchView: View {
             .padding(.vertical, 4)
         } else {
             VStack(alignment: .leading, spacing: 10) {
-                TextField("我现在在做什么…", text: $model.captureText)
+                TextField("", text: $model.captureText, prompt: Text("我现在在做什么…").foregroundStyle(Color(model.nomi.ink3)))
                     .textFieldStyle(.plain).font(.system(size: 13)).foregroundStyle(Color(model.nomi.ink))
                     .focused($captureFocused)
                     .onSubmit { model.startFocus() }
