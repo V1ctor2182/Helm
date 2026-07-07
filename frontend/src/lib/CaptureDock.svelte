@@ -6,9 +6,10 @@
   import { notes } from './notes/notesStore.svelte'
   import { focus } from './focus.svelte'
 
-  type Kind = 'note' | 'journal' | 'task' | 'focus' | 'ask'
+  type Kind = 'note' | 'idea' | 'journal' | 'task' | 'focus' | 'ask'
   const KINDS: { id: Kind; label: string }[] = [
     { id: 'note', label: '速记' },
+    { id: 'idea', label: '想法' },
     { id: 'journal', label: '日记' },
     { id: 'task', label: '任务' },
     { id: 'ask', label: '问大脑' },
@@ -22,8 +23,10 @@
     const t = text.trim()
     if (!t) return null
     if (/https?:\/\//.test(t)) return { k: 'note' as Kind, why: /arxiv/.test(t) ? '收藏 · 论文' : /youtu/.test(t) ? '收藏 · 视频' : '收藏 · 链接' }
-    if (/明早|明天|后天|点前|每天|每周|每月|提醒|记得|之前完成|deadline|截止/.test(t))
+    if (/明早|明晚|今晚|明天|后天|下周|点前|每天|每周|每月|提醒|记得|别忘|之前完成|deadline|截止/.test(t))
       return { k: 'task' as Kind, why: '任务 · 读到时间词' }
+    if (/也许|或许|说不定|要不要|想到|点子|灵感|可以试试/.test(t))
+      return { k: 'idea' as Kind, why: '想法 · 点子' }
     if (t.length > 14 && /今天|终于|感觉|开心|难受|累|复盘|想了想|反思/.test(t))
       return { k: 'journal' as Kind, why: '日记 · 叙事' }
     if (/^(为什么|怎么|如何|什么是|哪个|谁|吗\?|吗？)/.test(t) || /[?？]$/.test(t))
@@ -33,7 +36,7 @@
   $effect(() => {
     if (autoKind && verdict) kind = verdict.k
   })
-  const CYCLE: Kind[] = ['note', 'journal', 'task', 'ask']
+  const CYCLE: Kind[] = ['note', 'idea', 'journal', 'task', 'ask']
   function cycleKind() {
     autoKind = false
     const i = CYCLE.indexOf(kind)
@@ -43,13 +46,29 @@
   let text = $state('')
   let status = $state<'idle' | 'sending' | 'sent' | 'failed'>('idle')
   let askAnswer = $state<string | null>(null)
+  // T3 分诊回执(稿:发送后结构化回执 toast——类型 chip+抽取 chips+改类)
+  let receipt = $state<{ id: number; kind: string; when: string | null; where: string | null } | null>(null)
+  let receiptTimer: ReturnType<typeof setTimeout> | undefined
+  const RECLASS: string[] = ['note', 'idea', 'journal', 'task']
+  const kindLabel = (k: string) => (KINDS.find((x) => x.id === k)?.label ?? k)
+  function showReceipt(r: { id: number; kind: string; when: string | null; where: string | null }) {
+    receipt = r
+    clearTimeout(receiptTimer)
+    receiptTimer = setTimeout(() => (receipt = null), 8000)
+  }
+  async function reclassReceipt() {
+    if (!receipt) return
+    const next = RECLASS[(RECLASS.indexOf(receipt.kind) + 1) % RECLASS.length]
+    if (await notes.reclass(receipt.id, next)) showReceipt({ ...receipt, kind: next })
+  }
 
   // 专注计时:K8 起走全局 store(速记墙顶活卡/待办发起共用)
 
   const placeholder = $derived(
     kind === 'note' ? '随手记一笔…'
+    : kind === 'idea' ? '记下这个点子…'
     : kind === 'journal' ? '写两行今天…'
-    : kind === 'task' ? (target === 'me' ? '要做什么…' : '到点让 agent 做什么…')
+    : kind === 'task' ? (target === 'me' ? '要做什么…' : '到点让 agent 做什么,时间用人话说…')
     : kind === 'ask' ? '问 Helm 大脑…'
     : '在做什么…',
   )
@@ -69,7 +88,14 @@
     askAnswer = null
     try {
       let ok = true
-      if (kind === 'note') ok = await notes.create(t, 'note')
+      const dockable = kind === 'note' || kind === 'idea' || kind === 'journal' || (kind === 'task' && target === 'me')
+      if (autoKind && dockable) {
+        // T3 自动挡:后端分诊为准(规则+LLM 兜底)→ 结构化回执 toast
+        const out = await notes.createTriage(t)
+        ok = out !== null
+        if (out) showReceipt({ id: out.id, kind: out.kind, when: out.triage?.when ?? out.meta?.when ?? null, where: out.triage?.where ?? out.meta?.where ?? null })
+      } else if (kind === 'note') ok = await notes.create(t, 'note')
+      else if (kind === 'idea') ok = await notes.create(t, 'idea')
       else if (kind === 'journal') ok = await notes.create(t, 'journal', today())
       else if (kind === 'task' && target === 'me') ok = await notes.create(t, 'task')
       else if (kind === 'task') {
@@ -163,6 +189,18 @@
   {#if askAnswer !== null}
     <div class="answer"><span class="spark" aria-hidden="true"></span><span class="alab">大脑</span>{askAnswer === '' ? '（空回答）' : askAnswer}</div>
   {/if}
+
+  {#if receipt}
+    <!-- T3 分诊回执(稿):类型 chip + 抽取 chips + 改类(纠正回流 PATCH kind) -->
+    <div class="receipt" role="status">
+      <span class="ntag" class:idea={receipt.kind === 'idea'} class:task={receipt.kind === 'task'}>{kindLabel(receipt.kind)}</span>
+      <span class="rtxt">已结构化入库</span>
+      {#if receipt.when}<span class="ntag xc">{receipt.when}</span>{/if}
+      {#if receipt.where}<span class="ntag xc">@{receipt.where}</span>{/if}
+      {#if receipt.kind === 'task'}<span class="ntag xc">→ 已入待办</span>{/if}
+      <button class="rfix" title="判错了?点击改类" onclick={() => void reclassReceipt()}>改</button>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -174,6 +212,45 @@
     padding: 12px 14px;
     margin-bottom: 14px;
   }
+
+  /* T3 分诊回执 toast(稿 .ntag 族) */
+  .receipt {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .ntag {
+    display: inline-block;
+    font-size: 9.5px;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: 3px 9px;
+    color: var(--onink); /* 深浅双模式:与 --t1 底反色 */
+    background: var(--t1);
+  }
+  .ntag.idea,
+  .ntag.task { color: #fff; }
+  .ntag.idea { background: #0a84ff; }
+  .ntag.task { background: linear-gradient(90deg, var(--g1), var(--g2)); }
+  .ntag.xc {
+    color: var(--t2);
+    background: var(--pill);
+    font-weight: 600;
+    font-family: var(--mono);
+  }
+  .rtxt { font: 400 11.5px/1 var(--sans); color: var(--t3); }
+  .rfix {
+    font: 600 10.5px/1 var(--sans);
+    color: var(--t3);
+    background: var(--pill);
+    border: 0;
+    border-radius: 999px;
+    padding: 4px 10px;
+    cursor: pointer;
+  }
+  .rfix:hover { color: var(--t1); }
 
   .verdict {
     display: inline-flex;

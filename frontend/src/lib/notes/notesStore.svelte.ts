@@ -17,8 +17,20 @@ export interface NoteMeta {
   tags?: string[]
   when?: string
   where?: string
+  due?: string // T1 分诊:可解析的绝对时刻(本地 ISO),待办临近高亮用
+  triage?: { by: 'rule' | 'llm'; confident: boolean }
   links?: { url: string; type?: string; title?: string; summary?: string; image?: string; site?: string }[]
   topic?: string
+}
+
+/** T1 分诊回执(POST /api/notes triage:true 的响应附带)。 */
+export interface TriageReceipt {
+  kind: string
+  when: string | null
+  where: string | null
+  due: string | null
+  recurring: boolean
+  confident: boolean
 }
 
 export interface Note {
@@ -73,9 +85,34 @@ export class NotesStore {
     if (xs) this.notes = xs
   }
 
+  /** T3 自动挡:后端分诊判类+双抽取,返回落库 note+回执(toast 用)。 */
+  async createTriage(content: string): Promise<(Note & { triage: TriageReceipt }) | null> {
+    if (!content.trim()) return null
+    this.error = null
+    const out = (await this.#json('/api/notes', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ content, source: 'capture', triage: true }),
+    })) as (Note & { triage: TriageReceipt }) | null
+    if (out) await this.load()
+    else this.error = '速记保存失败'
+    return out
+  }
+
+  /** 回执「改」:分诊纠错,PATCH kind 回流。 */
+  async reclass(id: number, kind: string): Promise<boolean> {
+    const ok = await this.#json(`/api/notes/${id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ kind }),
+    })
+    if (ok) await this.load()
+    return ok !== null
+  }
+
   async create(
     content: string,
-    kind: 'note' | 'journal' | 'task' = 'note',
+    kind: 'note' | 'journal' | 'task' | 'idea' = 'note',
     journalDate: string | null = null,
   ): Promise<boolean> {
     if (!content.trim()) return false

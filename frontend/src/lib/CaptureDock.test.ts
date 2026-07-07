@@ -38,15 +38,58 @@ describe('CaptureDock', () => {
     expect(screen.getByText(/手动/)).toBeInTheDocument()
   })
 
-  it('task→给自己 posts a task note (notes kind:task)', async () => {
+  it('自动挡发送=后端分诊(triage:true 不带 kind)+ 结构化回执 toast', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, init?: RequestInit) => {
+        const method = init?.method ?? 'GET'
+        if (String(url) === '/api/notes' && method === 'POST')
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              id: 5, kind: 'task', meta: { when: '明天 09:00', where: null },
+              triage: { kind: 'task', when: '明天 09:00', where: null, due: null, recurring: false, confident: true },
+            }),
+          })
+        if (String(url) === '/api/notes/5' && method === 'PATCH')
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ id: 5, kind: 'note' }) })
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ notes: [] }) })
+      }),
+    )
     render(CaptureDock)
     await fireEvent.input(screen.getByLabelText('捕获内容'), { target: { value: '明天买牛奶' } })
     await screen.findByRole('button', { name: '给自己' })
     await fireEvent.click(screen.getByRole('button', { name: '发送' }))
+    // POST 带 triage:true、不带 kind(后端为准)
     const calls = (fetch as ReturnType<typeof vi.fn>).mock.calls
     const post = calls.find(([u, i]) => u === '/api/notes' && (i as RequestInit)?.method === 'POST')
-    expect(post).toBeTruthy()
-    expect(JSON.parse((post![1] as RequestInit).body as string).kind).toBe('task')
+    const body = JSON.parse((post![1] as RequestInit).body as string)
+    expect(body.triage).toBe(true)
+    expect(body.kind).toBeUndefined()
+    // 回执 toast:类型 chip + 抽取 chip + 已入待办 + 改
+    expect(await screen.findByText('已结构化入库')).toBeInTheDocument()
+    expect(screen.getByText('明天 09:00')).toBeInTheDocument()
+    expect(screen.getByText('→ 已入待办')).toBeInTheDocument()
+    // 「改」纠正回流:task → note(PATCH kind)
+    await fireEvent.click(screen.getByRole('button', { name: '改' }))
+    const patch = (fetch as ReturnType<typeof vi.fn>).mock.calls.find(
+      ([u, i]) => u === '/api/notes/5' && (i as RequestInit)?.method === 'PATCH')
+    expect(JSON.parse((patch![1] as RequestInit).body as string)).toEqual({ kind: 'note' })
+  })
+
+  it('手动接管发送=显式 kind,不走分诊', async () => {
+    render(CaptureDock)
+    // 叙事→AI 判日记;点徽章轮换一档(CYCLE journal→task)=手动 · 任务
+    await fireEvent.input(screen.getByLabelText('捕获内容'), { target: { value: '今天终于把三态设计稿全部定下来了,感觉很顺' } })
+    await fireEvent.click(await screen.findByText(/AI · 日记/))
+    expect(screen.getByText(/手动 · 任务/)).toBeInTheDocument()
+    await screen.findByRole('button', { name: '给自己' })
+    await fireEvent.click(screen.getByRole('button', { name: '发送' }))
+    const post = (fetch as ReturnType<typeof vi.fn>).mock.calls.find(
+      ([u, i]) => u === '/api/notes' && (i as RequestInit)?.method === 'POST')
+    const body = JSON.parse((post![1] as RequestInit).body as string)
+    expect(body.kind).toBe('task')
+    expect(body.triage).toBeUndefined()
   })
 
   it('task→交给 agent posts to /api/tasks with prompt', async () => {

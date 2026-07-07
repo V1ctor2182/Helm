@@ -173,9 +173,10 @@
   }
 
   // One load, three derived views (kind split) — captures/journal/todos share the table.
+  // T3:墙上混排 速记/想法/任务回执卡(稿:速记墙分诊徽章+墙上任务回执卡)。
   const noteItems = $derived(
     notes.notes.filter((n) => {
-      if (n.kind !== 'note') return false
+      if (n.kind !== 'note' && n.kind !== 'idea' && n.kind !== 'task') return false
       const f = layout.journalFilter
       if (f === 'collect') return !!n.meta?.url
       if (f === 'youtube' || f === 'paper' || f === 'inspiration') return n.meta?.type === f
@@ -183,8 +184,23 @@
     }),
   )
   const journalItems = $derived(notes.notes.filter((n) => n.kind === 'journal' || n.kind === 'focus'))
-  // 「给自己」的任务(notch/捕获坞分流后落 notes kind:task)——任务 tab 顶部待办段。
-  const todoItems = $derived(notes.notes.filter((n) => n.kind === 'task'))
+  // 「给自己」的任务(分诊/捕获坞落 notes kind:task)——待办列。
+  // 稿:按临近排序,有时限的在上(due 升序),没时限的按新旧。
+  const todoItems = $derived(
+    [...notes.notes.filter((n) => n.kind === 'task')].sort((a, b) => {
+      const da = a.meta?.due
+      const db = b.meta?.due
+      if (da && db) return da.localeCompare(db)
+      if (da) return -1
+      if (db) return 1
+      return (b.created_at ?? '').localeCompare(a.created_at ?? '')
+    }),
+  )
+  // 24h 内(含已过期)= 橙色临近 chip
+  function dueSoon(n: Note): boolean {
+    const d = n.meta?.due
+    return !!d && new Date(d).getTime() - Date.now() < 24 * 3600e3
+  }
 
   // 速记按天分组(最新日在前;今天/昨天友好标)——2026-07-06 用户:页面要结构化。
   const notesByDate = $derived(
@@ -268,7 +284,7 @@
   <header class="head">
     <h1>记录</h1>
     <span class="hd">速记 · 日记 · 任务 · 日历</span>
-    <span class="pg">{notes.notes.filter((n) => n.kind === 'note').length} 条速记 · {journalItems.length} 篇日记 · {tasks.tasks.length} 个任务</span>
+    <span class="pg">{notes.notes.filter((n) => n.kind === 'note' || n.kind === 'idea').length} 条速记 · {journalItems.length} 篇日记 · {tasks.tasks.length} 个任务</span>
   </header>
 
   <!-- 分类为主维度(含日历=全量记录的日历视角);Canvas/Timeline 只是速记·日记内部
@@ -300,6 +316,7 @@
               <div
                 class="wcard"
                 class:plain={!n.meta?.url}
+                class:taskcard={n.kind === 'task'}
                 role="button"
                 tabindex="0"
                 onclick={() => (detailNote = n)}
@@ -327,6 +344,16 @@
                       {#if n.meta.summary}<p class="wsum">{n.meta.summary}</p>{/if}
                     {:else}
                       <span class="wbadge" style="background:var(--t1);color:var(--onink)">N</span>
+                      <!-- T3 分诊徽章:想法蓝 tag;任务=回执卡(tag+抽取 chips) -->
+                      {#if n.kind === 'idea'}
+                        <div class="tagrow"><span class="ntag idea">想法</span></div>
+                      {:else if n.kind === 'task'}
+                        <div class="tagrow">
+                          <span class="ntag task">任务</span>
+                          {#if n.meta?.when}<span class="ntag xc">{n.meta.when}</span>{/if}
+                          {#if n.meta?.where}<span class="ntag xc">@{n.meta.where}</span>{/if}
+                        </div>
+                      {/if}
                       <span class="wtx">{n.content}</span>
                     {/if}
                     <div class="wfoot">
@@ -340,6 +367,9 @@
                       {#if n.meta?.site}<span>{n.meta.site}</span>{/if}
                       {#each n.meta?.tags ?? [] as t (t)}<span class="wtag">#{t}</span>{/each}
                       {#if linkedNoteIds.has(n.id)}<span class="linked">已转任务</span>{/if}
+                      {#if n.kind === 'task'}
+                        <button class="gotask" onclick={(e) => { e.stopPropagation(); view = 'timeline'; layout.journalFilter = 'task' }}>已入待办 →</button>
+                      {/if}
                       <span class="wtm">{localHHMM(n.created_at)}</span>
                     </div>
                     <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
@@ -508,15 +538,26 @@
           <p class="empty">没有待办 — 捕获坞/刘海里选「任务 · 给自己」记一条。</p>
         {:else}
           <div class="todolist">
+            <!-- T3 两层任务行(稿):标题行 / 元信息 chips(临近 24h 橙);操作 hover 浮现 -->
             {#each todoItems as n (n.id)}
               <div class="todo" class:done={doneIds.has(n.id)}>
                 <button class="cb" aria-label={`完成 ${n.content}`} onclick={() => completeTodo(n)}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4 10-10"/></svg>
                 </button>
-                <button class="tx openable2" title="查看详情" onclick={() => (detailNote = n)}>{n.content}</button>
-                <span class="ttm">{localHHMM(n.created_at)}</span>
-                <button class="up" title="开始专注做这件事" onclick={() => { focus.start(n.content); layout.journalFilter = 'note' }}>开始专注</button>
-                <button class="up" title="转为定时任务(交给 agent)" onclick={() => noteToTask(n)}>→交给 agent</button>
+                <div class="mid">
+                  <button class="tx openable2" title="查看详情" onclick={() => (detailNote = n)}>{n.content}</button>
+                  {#if n.meta?.when || n.meta?.where || n.meta?.triage}
+                    <div class="tmeta">
+                      {#if n.meta?.when}<span class="tchip" class:duesoon={dueSoon(n)}>{n.meta.when}</span>{/if}
+                      {#if n.meta?.where}<span class="tchip">@{n.meta.where}</span>{/if}
+                      {#if n.meta?.triage}<span class="tchip"><span class="gspark sm" aria-hidden="true"></span>速记分诊</span>{/if}
+                    </div>
+                  {/if}
+                </div>
+                <span class="acts">
+                  <button class="up" title="开始专注做这件事" onclick={() => { focus.start(n.content); layout.journalFilter = 'note' }}>专注</button>
+                  <button class="up" title="转为定时任务(交给 agent)" onclick={() => noteToTask(n)}>→ agent</button>
+                </span>
               </div>
             {/each}
           </div>
@@ -1019,14 +1060,51 @@
     box-shadow: var(--shadow);
     padding: 6px 8px;
   }
+  /* T3 两层任务行(稿):cb 顶对齐,mid=标题+chips,acts 垂直居中 hover 现 */
   .todo {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 11px;
     padding: 11px 10px;
     border-radius: var(--radius-sm);
   }
   .todo:hover { background: var(--pill); }
+  .todo .cb { margin-top: 1px; }
+  .todo .mid {
+    flex: 1;
+    min-width: 0;
+  }
+  .todo .tmeta {
+    display: flex;
+    gap: 5px;
+    margin-top: 5px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .tchip {
+    font: 600 10px/1 var(--mono);
+    color: var(--t2);
+    background: var(--pill);
+    border-radius: var(--radius-pill);
+    padding: 3px 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .todo:hover .tchip { background: var(--card); }
+  .tchip.duesoon {
+    color: #c05e00;
+    background: #fff4e8; /* 稿:24h 内临近橙 */
+  }
+  :global([data-theme='dark']) .tchip.duesoon {
+    color: #ffab70;
+    background: rgba(255, 138, 61, 0.16);
+  }
+  .todo .acts {
+    display: flex;
+    gap: 5px;
+    align-self: center;
+  }
   .cb {
     width: 20px;
     height: 20px;
@@ -1051,7 +1129,8 @@
     height: 11px;
   }
   .todo .tx {
-    flex: 1;
+    display: block;
+    width: 100%;
     min-width: 0;
     font: 400 13.5px/1.45 var(--sans);
     color: var(--t1);
@@ -1065,11 +1144,6 @@
     color: var(--t4);
     text-decoration: line-through;
   }
-  .todo .ttm {
-    font: 400 10.5px/1 var(--sans);
-    color: var(--t4);
-    flex: none;
-  }
   .todo .up {
     font: 500 10.5px/1 var(--sans);
     color: var(--t3);
@@ -1082,7 +1156,8 @@
     transition: opacity 0.12s;
     flex: none;
   }
-  .todo:hover .up { opacity: 1; }
+  .todo:hover .up,
+  .todo:focus-within .up { opacity: 1; }
   .todo .up:hover { color: var(--t1); }
   .sched {
     display: flex;
@@ -1332,6 +1407,39 @@
   }
   .wcard:hover {
     box-shadow: var(--shadow-lg);
+  }
+  /* T3 墙上任务回执卡(稿):橙左沿 + tag/chips + 已入待办 → */
+  .wcard.taskcard { border-left: 3px solid var(--g1); }
+  .tagrow {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+    align-items: center;
+  }
+  .ntag {
+    display: inline-block;
+    font-size: 9.5px;
+    font-weight: 700;
+    border-radius: var(--radius-pill);
+    padding: 2px 8px;
+    color: #fff;
+  }
+  .ntag.idea { background: #0a84ff; }
+  .ntag.task { background: var(--grad); }
+  .ntag.xc {
+    color: var(--t2);
+    background: var(--pill);
+    font-weight: 600;
+    font-family: var(--mono);
+  }
+  .gotask {
+    font: 600 10.5px/1 var(--sans);
+    color: var(--g1);
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
   }
   .wcover {
     width: 100%;

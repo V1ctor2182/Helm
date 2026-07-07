@@ -137,3 +137,9 @@
 - e2e: 真发「每天早上9点汇总未读邮件」→ 卡片 chip「每天 09:00」+ expr "0 9 * * *" ✓;试发任务已删,后端已重启(8769)。
 - 视觉: shots/t2-dispatch.png(输入行+徽章)/ t2-card.png(定时卡人话 chip)
 - 发现: next_run 时区显示漂移(9点显示17:00)为 K6 期既有 bug → backlog [T2+];无时间任务默认行为 → backlog Q-T2(现 422 提示,不猜)。
+## T3 · 2026-07-08 · 前端对齐 kinds 稿(回执/徽章/两层待办)
+- 对齐: ① 捕获坞自动挡改走后端分诊(POST triage:true 不带 kind,后端为准)→ 发送后结构化回执 toast(类型 chip[想法蓝/任务渐变]+when/where chips+「→ 已入待办」+「改」轮换纠类=PATCH kind 回流);手动接管仍显式 kind 不走分诊;判类规则补「想法」档(CYCLE note→idea→journal→task→ask)。② 速记墙收编 idea/task:想法卡蓝 tag;任务回执卡橙左沿+tag+抽取 chips+「已入待办 →」跳任务列。③ 待办两层任务行:标题行/chips 行(when[24h 内含过期=橙 duesoon]/@where/spark 速记分诊),due 临近升序在上、无 due 按新旧;操作(专注/→ agent)hover+focus-within 浮现;创建时间戳退场。
+- 后端小补: PATCH 改类到 journal 自动补 journal_date(纠错不落「未注明日期」)。
+- 门: pytest 254 全绿 / 前端 build ✓ check 0/0 ✓ test 216 全绿(+3,含 CaptureDock 自动/手动挡契约)
+- e2e: 真发「明晚8点在家帮荣荣姐做龙虾」→ 回执 toast[任务·明晚 20:00·@家]+墙上回执卡+待办两层行全链路 ✓;试发已删,截图 shots/t3-receipt.png / t3-todo.png。
+- 取舍: 「完成沉底+已完成分区」依赖 K6 done 列(待拍板)→ [T3+] 备位;深色 duesoon 用橙透明底(稿只给浅色值)。

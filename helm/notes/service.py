@@ -99,6 +99,9 @@ class NoteService:
             note.title = title
         if kind is not None:
             note.kind = kind
+            # 分诊纠错(T3 回执「改」):改成日记时补默认日期,不落「未注明日期」
+            if kind == "journal" and journal_date is None and note.journal_date is None:
+                note.journal_date = (note.created_at or _dt.now()).date()
         if tags is not None:
             note.tags_json = json.dumps(tags, ensure_ascii=False)
         if pinned is not None:

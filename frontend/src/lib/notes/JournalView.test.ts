@@ -115,3 +115,52 @@ it('AI 归类:按主题分组显示分区/未归类,≥3 条涌现建议卡', as
   await fireEvent.click(screen.getByRole('button', { name: '创建集合' }))
   expect(screen.queryByText(/建一个集合/)).toBeNull()
 })
+
+it('T3 待办两层行:临近橙 chip+地点+速记分诊 chips,临近的排上面', async () => {
+  const soon = new Date(Date.now() + 3600e3).toISOString().slice(0, 19)
+  const rows = [
+    N({ id: 22, kind: 'task', content: '整理桌面', created_at: '2026-07-08T10:00:00' }),
+    N({ id: 21, kind: 'task', content: '帮荣荣姐做龙虾', created_at: '2026-07-08T09:00:00',
+      meta: { type: 'text', when: '明晚 20:00', where: '家', due: soon, triage: { by: 'rule', confident: true } } }),
+  ]
+  vi.stubGlobal('fetch', vi.fn((url: string) =>
+    Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(String(url).includes('/api/notes') ? { notes: rows } : { notes: [], tasks: [], links: [], events: [] }),
+    }),
+  ))
+  render(JournalView)
+  await fireEvent.click(screen.getByRole('tab', { name: '任务' }))
+  const chip = await screen.findByText('明晚 20:00')
+  expect(chip.classList.contains('duesoon')).toBe(true)      // 24h 内=橙
+  expect(screen.getByText('@家')).toBeInTheDocument()
+  expect(screen.getByText('速记分诊')).toBeInTheDocument()
+  // 有时限的沉不到底:龙虾(due)在整理桌面(无 due)前面
+  const txs = screen.getAllByTitle('查看详情').map((b) => b.textContent)
+  expect(txs[0]).toContain('龙虾')
+  // hover 操作按钮存在(CSS 控制显隐)
+  expect(screen.getAllByTitle('开始专注做这件事').length).toBe(2)
+  expect(screen.getAllByTitle('转为定时任务(交给 agent)').length).toBe(2)
+})
+
+it('T3 墙上分诊徽章:想法蓝 tag;任务回执卡带抽取 chips+已入待办→', async () => {
+  const rows = [
+    N({ id: 31, kind: 'idea', content: '给 notch 加入场动效' }),
+    N({ id: 32, kind: 'task', content: '帮荣荣姐做龙虾', meta: { type: 'text', when: '明晚 20:00', where: '家' } }),
+  ]
+  vi.stubGlobal('fetch', vi.fn((url: string) =>
+    Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(String(url).includes('/api/notes') ? { notes: rows } : { notes: [], tasks: [], links: [], events: [] }),
+    }),
+  ))
+  render(JournalView)
+  expect(await screen.findByText('想法')).toBeInTheDocument()
+  const receipt = await screen.findByText('已入待办 →')
+  expect(receipt).toBeInTheDocument()
+  expect(screen.getByText('明晚 20:00')).toBeInTheDocument()
+  expect(screen.getByText('@家')).toBeInTheDocument()
+  // 点「已入待办 →」跳任务列
+  await fireEvent.click(receipt)
+  expect(layout.journalFilter).toBe('task')
+})
