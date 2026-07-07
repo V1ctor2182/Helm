@@ -11,6 +11,7 @@
   import Calendar from './Calendar.svelte'
   import CanvasView from './CanvasView.svelte'
   import NoteDetail from './NoteDetail.svelte'
+  import PageDetail from './PageDetail.svelte'
 
   // 三视图(阶段 4 R08,source: helm-journal-pro.html 记录板块)+kind 过滤。
   let view = $state<'timeline' | 'canvas' | 'calendar'>('timeline')
@@ -44,6 +45,7 @@
   // 行内编辑:editingId + 草稿
   let editingId = $state<number | null>(null)
   let detailNote = $state<Note | null>(null)
+  let detailDay = $state<string | null>(null)
   let editDraft = $state('')
   const promptValue = $derived(fromNote ? fromNote.content : taskPrompt)
 
@@ -199,6 +201,9 @@
     }
     return count
   })
+  function notesOfDay(day: string): Note[] {
+    return notes.notes.filter((n) => n.kind !== 'journal' && (n.created_at ?? '').slice(0, 10) === day)
+  }
   const WD_ZH = ['日', '一', '二', '三', '四', '五', '六']
   function weekdayOf(day: string): string {
     const d = new Date(day + 'T00:00:00')
@@ -362,8 +367,9 @@
       {:else}
         {#each journalByDate as [day, entries] (day)}
           <section class="jpage">
-            <div class="dh"><span class="d">{dayNum(day)}</span><span class="w">{weekdayOf(day)}</span>
-              <span class="cnt">{entries.reduce((a, e) => a + e.content.length, 0)} 字</span></div>
+            <button class="dh openbtn" title="查看这一天" onclick={() => (detailDay = day)}>
+              <span class="d">{dayNum(day)}</span><span class="w">{weekdayOf(day)}</span>
+              <span class="cnt">{entries.reduce((a, e) => a + e.content.length, 0)} 字</span></button>
             {#each entries as e (e.id)}
               {#if editingId === e.id}
                 <textarea class="editbox" bind:value={editDraft} aria-label="编辑日记" rows="4"></textarea>
@@ -521,6 +527,18 @@
     <div class="calwrap">
       <Calendar />
     </div>
+  {/if}
+
+  {#if detailDay}
+    {@const dayEntries = journalByDate.find(([d]) => d === detailDay)?.[1] ?? []}
+    <PageDetail
+      day={detailDay}
+      entries={dayEntries}
+      dayNotes={notesOfDay(detailDay)}
+      {renderMd}
+      onclose={() => (detailDay = null)}
+      onedit={(n) => startEdit(n)}
+    />
   {/if}
 
   {#if detailNote}
@@ -923,6 +941,17 @@
     box-shadow: var(--shadow);
     padding: 20px 26px;
     margin-bottom: 18px;
+  }
+  .dh.openbtn {
+    width: 100%;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
+  }
+  .dh.openbtn:hover .d {
+    color: var(--t3);
   }
   .jpage .md {
     font: 400 14px/1.75 var(--sans);
