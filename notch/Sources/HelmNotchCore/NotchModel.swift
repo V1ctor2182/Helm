@@ -287,7 +287,7 @@ public final class NotchModel {
         // NOMI 胶囊/输入盒都比 ORAGE 高一档,预算整体上调(2026-07-07 用户:被 clip)。
         case .capture:
             captureKind == .focus
-                ? 265
+                ? 240
                 : (captureKind == .ask && askAnswer != nil
                     ? 340 + captureInputExtraHeight
                     : (captureShowRecent
@@ -428,7 +428,7 @@ public final class NotchModel {
         let lines = detail.split(separator: "\n", omittingEmptySubsequences: false)
             .reduce(0) { $0 + max(1, Int(ceil(Double($1.count) / 56.0))) }
         let clamped = min(8, max(1, lines))
-        return CGSize(width: w, height: CGFloat(148 + clamped * 16))
+        return CGSize(width: w, height: CGFloat(112 + clamped * 16))
     }
 
     /// 折叠态两翼宽度随内容走(2026-07-03 用户:折叠态太宽)。

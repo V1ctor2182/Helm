@@ -1364,7 +1364,7 @@ struct NotchView: View {
         }
         .padding(.top, 6)
         if model.captureKind == .focus {
-            focusBody.padding(.top, 10)
+            focusBody.padding(.top, 2)
         } else {
             // 任务:给自己 / 交给 agent
             if model.captureKind == .task { taskTargetToggle.padding(.top, 8) }
@@ -1477,10 +1477,16 @@ struct NotchView: View {
                         .background(RoundedRectangle(cornerRadius: 8).fill(Color(pal.pill)))
                         .padding(.top, 4)
                 } else {
-                    Text(model.focusWhat.isEmpty ? "未设置 — 点「换任务」" : model.focusWhat)
+                    Text(model.focusWhat.isEmpty ? "未设置 — 双击或点「换任务」" : model.focusWhat)
                         .font(.system(size: 12.5, weight: .semibold))
                         .foregroundStyle(Color(model.focusWhat.isEmpty ? pal.ink3 : pal.ink))
                         .lineLimit(2).padding(.top, 4)
+                        .contentShape(Rectangle())
+                        .onTapGesture(count: 2) {
+                            focusTaskDraft = model.focusWhat
+                            focusEditing = true
+                            focusTaskFocused = true
+                        }
                 }
                 HStack(spacing: 6) {
                     if model.focusOn {
@@ -1499,7 +1505,7 @@ struct NotchView: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 2)
         .onChange(of: focusTaskFocused) { _, f in
             if f { model.beginCapture() } else { model.endInteraction(); if focusEditing { model.focusSetTask(focusTaskDraft); focusEditing = false } }
         }

@@ -120,3 +120,9 @@
 - 根因:HookRunner allow 决定带 "updatedInput": null + "updatedPermissions": [],Claude Code 判无效整个丢弃;选择题带真对象所以幸免。
 - 修:allow 只发 {"behavior":"allow"},updatedInput 仅在有值时携带;updatedPermissions 移除。
 - 注意:hooks 仍指向旧路径包(未含修复)——改 settings.json/覆盖旧包均被 auto-mode 分类器拦(自修改),留给用户:设置里重装 hook 或手动同步包。
+
+## 2026-07-07 迭代 21 — 间距三连修 + 任务双击编辑 [用户反馈]
+- 专注:kinds→环间距 10→2、环块纵 padding 6→2、预算 265→240(环与 dock 不再隔一大片黑)。
+- 关联任务文本双击直接进编辑(提示文案跟进"双击或点「换任务」");换任务按钮保留。
+- 权限横幅:高度基数 148→112(固定项实测 ~110),按钮下的大黑边压掉。
+- 全测试绿,已重打包重启(注意:hooks 若仍指旧路径包,横幅高度变化在预览 app 上即可见,与 hook 无关)。

@@ -447,10 +447,10 @@ final class NotchModuleTests: XCTestCase {
         let model = NotchModel(backend: FakeBackend())
         model.module = .capture
         model.captureKind = .focus
-        XCTAssertEqual(model.viewHeight(), 265)  // 番茄环单一预算
+        XCTAssertEqual(model.viewHeight(), 240)  // 番茄环单一预算
         model.captureText = "x"
         model.startFocus()
-        XCTAssertEqual(model.viewHeight(), 265)  // 跑与不跑同高
+        XCTAssertEqual(model.viewHeight(), 240)  // 跑与不跑同高
     }
 
     @MainActor
