@@ -16,7 +16,8 @@
    6 智能体(会话列表+权限横幅 diff+Allow/Deny+选择题横幅)
    7 剪贴板(历史:重新复制/存速记)
    8 专注(番茄钟:渐变圆环+开始/暂停/重置+关联任务)
-  外加:折叠态(左封面缩影+均衡器,右状态)/权限 banner 态演示/Esc 收起。
+  外加:折叠态(左封面缩影+均衡器,右状态)/权限 banner 态演示/Esc 收起/
+  拖文件悬停→壳长出 drop 承接面(松手暂存,2026-07-07 用户拍板新增)。
   进 Swift 时以本文件 + DESIGN.md 为准:不改本文件、改代码。
 -->
 <style>
@@ -85,6 +86,21 @@
   .hw .stat{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.75)}
   .hw .stat .dot{width:6px;height:6px;border-radius:50%;background:var(--ok)}
   .shell.dragover{outline:2px dashed var(--g1);outline-offset:-5px}
+  /* 拖文件悬停 → 壳像 hover 一样长出 drop 承接面(2026-07-07 用户拍板新增) */
+  #dropwrap{overflow:hidden;min-height:0;opacity:0;transition:opacity .3s .12s linear;display:none;padding:14px 16px 16px}
+  .shell.dropmode #dropwrap{display:block}
+  .shell.dropmode #pwrap,.shell.dropmode #bwrap{display:none}
+  .shell.open #dropwrap{opacity:1}
+  .droptarget{border:2px dashed #3a3a40;border-radius:18px;padding:26px 16px;text-align:center;
+    transition:all .18s var(--ease)}
+  .shell:not(.dark) .droptarget{border-color:#d8d8de}
+  .droptarget .dic{width:40px;height:40px;border-radius:50%;margin:0 auto 10px;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff}
+  .droptarget .dic svg{width:18px;height:18px}
+  .droptarget .t1{font-size:13px;font-weight:700;color:var(--ink)}
+  .droptarget .t2{font-size:10.5px;color:var(--ink3);margin-top:3px}
+  .droptarget.hot{border-color:var(--g1);background:rgba(255,138,61,.07)}
 
   /* ── 主面板 ─────────────── */
   .grow{display:grid;grid-template-rows:0fr;transition:grid-template-rows .46s var(--ease)}
@@ -362,6 +378,13 @@
     <button class="mtab" data-t="files" title="暂存"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8l3-4h12l3 4v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M3 8h18M12 12v5M9.5 14.5L12 17l2.5-2.5"/></svg></button>
   </div>
   </div>
+  <div id="dropwrap">
+    <div class="droptarget" id="droptarget">
+      <div class="dic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/></svg></div>
+      <div class="t1">松手 — 暂存到 Shelf</div>
+      <div class="t2">上传到记录 / 关联驾驶舱,拖走前都在暂存页</div>
+    </div>
+  </div>
   <div id="bwrap">
     <div class="ph" style="display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--ink2)"><span class="spark"></span><b style="color:var(--ink)">claude · ~/helm</b>&nbsp;请求编辑&nbsp;<b style="color:var(--ink)">enrich.py</b></div>
     <div class="diff">
@@ -380,7 +403,7 @@
 <div class="deskhint">悬停刘海展开 · 全部可点 · 总览点封面=放大媒体
   <button onclick="showBanner()">模拟权限请求</button>
   <button onclick="document.getElementById('shell').classList.toggle('dark')">浅色/深色</button>
-  <button onclick="document.getElementById('notch').classList.add('dragover');setTimeout(()=>{document.getElementById('notch').classList.remove('dragover');openPanel('files');addFile('设计稿-v3.fig','Figma · 4.2 MB','#a855f7','FG')},900)">模拟拖文件</button>
+  <button onclick="closePanel();setTimeout(()=>{enterDropMode();setTimeout(()=>{exitDropMode(true);addFile('设计稿-v3.fig','Figma · 4.2 MB','#a855f7','FG')},1400)},350)">模拟拖文件</button>
 </div>
 
 <script>
@@ -695,12 +718,26 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){closePanel();hideBa
 function showBanner(){const sh=$('#shell');sh.classList.add('bannermode','open');open=true}
 function hideBanner(){const sh=$('#shell');sh.classList.remove('bannermode');closePanel()}
 
-/* 刘海拖文件 */
+/* 刘海拖文件:悬入 → 壳像 hover 一样长出 drop 承接面(2026-07-07 用户拍板) */
 const notchEl=$('#shell');
-notchEl.addEventListener('dragover',e=>{e.preventDefault();notchEl.classList.add('dragover')});
-notchEl.addEventListener('dragleave',()=>notchEl.classList.remove('dragover'));
-notchEl.addEventListener('drop',e=>{e.preventDefault();notchEl.classList.remove('dragover');
-  openPanel('files');addFile('拖入的文件.png','PNG · 640 KB','#0a84ff','IM')});
+let wasOpenBeforeDrag=false, dragDepth=0;
+function enterDropMode(){
+  if(notchEl.classList.contains('dropmode'))return;
+  wasOpenBeforeDrag=open;
+  notchEl.classList.add('dropmode','open');open=true;
+  $('#droptarget').classList.add('hot');
+}
+function exitDropMode(drop){
+  notchEl.classList.remove('dropmode');
+  $('#droptarget').classList.remove('hot');
+  if(drop){openPanel('files');}
+  else if(!wasOpenBeforeDrag){closePanel();}
+}
+notchEl.addEventListener('dragenter',e=>{e.preventDefault();dragDepth++;enterDropMode()});
+notchEl.addEventListener('dragover',e=>e.preventDefault());
+notchEl.addEventListener('dragleave',()=>{if(--dragDepth<=0){dragDepth=0;exitDropMode(false)}});
+notchEl.addEventListener('drop',e=>{e.preventDefault();dragDepth=0;
+  exitDropMode(true);addFile('拖入的文件.png','PNG · 640 KB','#0a84ff','IM')});
 
 /* 计时器们 */
 setInterval(()=>{

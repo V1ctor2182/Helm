@@ -164,4 +164,20 @@ final class LocalSessionHookTests: XCTestCase {
         model.selectModule(.dashboard)
         XCTAssertNil(model.selectedLocalSessionID)
     }
+    @MainActor
+    func testBannerSuppressAndRevive() {
+        let model = makeModel()
+        model.applyHook(HookMessage(
+            event: "PermissionRequest", session: "s1", cwd: "/w",
+            tool: "Bash", detail: "swift build", reply: true))
+        XCTAssertEqual(model.bannerSize.width, 460)  // NOMI bannermode 宽
+        XCTAssertFalse(model.bannerSuppressed)
+        model.openPendingSession()  // 打开会话:压横幅进智能体页
+        XCTAssertTrue(model.bannerSuppressed)
+        XCTAssertEqual(model.module, .agents)
+        // 解决后复位;新请求也会复位重弹
+        model.resolveLocalPermission("s1", allow: true)
+        XCTAssertFalse(model.bannerSuppressed)
+    }
+
 }

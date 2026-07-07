@@ -114,13 +114,12 @@ enum HookRunner {
             var inner: [String: Any] = ["behavior": decision.behavior]
             if allow {
                 // 选择题:答案已合并进 updatedInput,工具照常执行但带上用户的选择。
+                // 没有 updatedInput 就整个省略——发 null/空数组会被 Claude Code
+                // 判无效丢弃,Allow 形同虚设(2026-07-07 用户:Allow 没反应)。
                 if let json = decision.updatedInput,
                    let obj = try? JSONSerialization.jsonObject(with: Data(json.utf8)) {
                     inner["updatedInput"] = obj
-                } else {
-                    inner["updatedInput"] = NSNull()
                 }
-                inner["updatedPermissions"] = []
             } else {
                 inner["message"] = decision.message ?? "Denied in Helm Notch."
                 inner["interrupt"] = false

@@ -39,10 +39,10 @@ enum NotchSnapshot {
             ("cap", { $0.module = .capture; $0.captureKind = .note }),
             ("cal-month", { $0.module = .calendar; $0.calMonthView = true }),
             ("cal-week", { $0.module = .calendar; $0.calMonthView = false }),
-            ("dev-agents", { $0.module = .dev; $0.devSection = .agents }),
-            ("dev-ports", { $0.module = .dev; $0.devSection = .ports }),
-            ("dev-stats", { $0.module = .dev; $0.devSection = .stats }),
-            ("clip", { $0.module = .clipboard }),
+            ("agents-sessions", { $0.module = .agents; $0.agentPage = .sessions }),
+            ("agents-ports", { $0.module = .agents; $0.agentPage = .ports }),
+            ("agents-prs", { $0.module = .agents; $0.agentPage = .prs }),
+            ("files", { $0.module = .files }),
             ("collapsed", { $0.expanded = false }),
             ("banner-permission", {
                 $0.applyHook(HookMessage(event: "PermissionRequest", session: "notch",
@@ -61,8 +61,8 @@ enum NotchSnapshot {
                     """#))
             }),
             ("dev-agent-detail", {
-                $0.module = .dev
-                $0.devSection = .agents
+                $0.module = .agents
+                $0.agentPage = .sessions
                 $0.applyHook(HookMessage(
                     event: "UserPromptSubmit", session: "s-detail", cwd: "~/work/helm/notch",
                     prompt: "优化 notch 的 vibeisland 效果,可以点开会话看详情、回答问题",
@@ -72,8 +72,16 @@ enum NotchSnapshot {
                     assistant: "三块能力已经落地:选择题横幅在 notch 内直接作答(答案经阻塞 hook 的 updatedInput 注回 CLI);Dev/Agents 点行进详情;idle 会话可从 notch 注入回复到 tmux/Ghostty。"))
                 $0.selectedLocalSessionID = "s-detail"
             }),
-            ("mat-darkglass", { $0.module = .dashboard; $0.backgroundMaterial = .darkGlass }),
-            ("mat-lightglass", { $0.module = .dashboard; $0.backgroundMaterial = .lightGlass }),
+            // NOMI 浅色变体(深浅=整套色板切换)
+            ("light-dash", { $0.module = .dashboard; $0.nomiDark = false }),
+            ("light-cap", { $0.module = .capture; $0.captureKind = .note; $0.nomiDark = false }),
+            ("light-agents", { $0.module = .agents; $0.agentPage = .prs; $0.nomiDark = false }),
+            ("light-banner", {
+                $0.nomiDark = false
+                $0.applyHook(HookMessage(event: "PermissionRequest", session: "notch",
+                                         cwd: "~/notch", tool: "Edit",
+                                         detail: "src/auth/middleware.ts", reply: true))
+            }),
             ("mat-vibrant", { $0.module = .dashboard; $0.backgroundMaterial = .vibrant }),
         ]
 

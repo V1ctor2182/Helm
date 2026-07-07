@@ -21,12 +21,13 @@ struct QuestionBannerView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 HStack(spacing: 7) {
-                    Circle().fill(accent).frame(width: 7, height: 7)
-                    Text("Claude 提问 · \(session.folderName)")
-                        .font(.system(size: 11, weight: .bold)).foregroundStyle(accent)
+                    SparkDot()
+                    Text("claude · \(session.folderName)").font(.system(size: 11.5, weight: .bold))
+                        .foregroundStyle(Color(model.nomi.ink))
+                    Text("提问").font(.system(size: 11.5)).foregroundStyle(Color(model.nomi.ink2))
                 }
                 Spacer()
-                Text("选择后提交 — 无需回终端").font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
+                Text("选择后提交 — 无需回终端").font(.system(size: 10)).foregroundStyle(Color(model.nomi.ink3))
             }
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 12) {
@@ -35,20 +36,16 @@ struct QuestionBannerView: View {
                 .padding(.top, 10)
             }
             HStack(spacing: 10) {
-                Button {
-                    // 不作答放行:CLI 会在终端弹自己的选择器。
-                    model.resolveLocalPermission(session.id, allow: true)
-                } label: {
-                    Text("终端作答").font(.system(size: 12, weight: .semibold)).foregroundStyle(.white)
-                        .frame(width: 108).padding(.vertical, 9)
-                        .background(RoundedRectangle(cornerRadius: 10).fill(.white.opacity(0.1)))
-                }.buttonStyle(.plain)
+                Button("终端作答") { model.resolveLocalPermission(session.id, allow: true) }
+                    .buttonStyle(PillButtonStyle(palette: model.nomi, fontSize: 12))
+                Button("打开会话") { model.openPendingSession() }
+                    .buttonStyle(PillButtonStyle(palette: model.nomi, fontSize: 12))
                 Button(action: submit) {
                     Text("提交答案").font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(canSubmit ? Color(red: 0.1, green: 0.07, blue: 0.03) : .white.opacity(0.4))
+                        .foregroundStyle(canSubmit ? .white : Color(model.nomi.ink3))
                         .frame(maxWidth: .infinity).padding(.vertical, 9)
-                        .background(RoundedRectangle(cornerRadius: 10)
-                            .fill(canSubmit ? AnyShapeStyle(accent) : AnyShapeStyle(.white.opacity(0.08))))
+                        .background(Capsule()
+                            .fill(canSubmit ? AnyShapeStyle(Nomi.gradientH) : AnyShapeStyle(Color(model.nomi.pill))))
                 }
                 .buttonStyle(.plain)
                 .disabled(!canSubmit)
@@ -64,20 +61,20 @@ struct QuestionBannerView: View {
             if !item.header.isEmpty {
                 Text(item.header.uppercased())
                     .font(.system(size: 9, weight: .bold)).tracking(0.6)
-                    .foregroundStyle(.white.opacity(0.35))
+                    .foregroundStyle(Color(model.nomi.ink3))
             }
             Text(item.question)
-                .font(.system(size: 12, weight: .semibold)).foregroundStyle(.white.opacity(0.92))
+                .font(.system(size: 12, weight: .semibold)).foregroundStyle(Color(model.nomi.ink))
                 .fixedSize(horizontal: false, vertical: true)
             ForEach(item.options.indices, id: \.self) { oi in optionRow(qi, oi) }
             if pickedFreeform(qi) {
-                TextField("输入你的回答…", text: bindingFreeform(qi))
+                TextField("", text: bindingFreeform(qi), prompt: Text("输入你的回答…").foregroundStyle(Color(model.nomi.ink3)))
                     .textFieldStyle(.plain)
-                    .font(.system(size: 11)).foregroundStyle(.white)
+                    .font(.system(size: 11)).foregroundStyle(Color(model.nomi.ink))
                     .focused($freeformFocused)
                     .padding(.horizontal, 9).padding(.vertical, 6)
-                    .background(RoundedRectangle(cornerRadius: 7).fill(.black.opacity(0.4)))
-                    .overlay(RoundedRectangle(cornerRadius: 7).stroke(accent.opacity(0.5), lineWidth: 1))
+                    .background(RoundedRectangle(cornerRadius: 7).fill(Color(model.nomi.pill)))
+                    .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color(NomiTheme.g1).opacity(0.5), lineWidth: 1))
                     .onSubmit { if canSubmit { submit() } }
             }
         }
@@ -99,22 +96,22 @@ struct QuestionBannerView: View {
             if opt.allowsFreeform && !on { freeformFocused = true }
         } label: {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(glyph).font(.system(size: 11)).foregroundStyle(on ? accent : .white.opacity(0.45))
+                Text(glyph).font(.system(size: 11)).foregroundStyle(on ? Color(NomiTheme.g1) : Color(model.nomi.ink3))
                     .frame(width: 14, alignment: .center)
                 Text(opt.label)
                     .font(.system(size: 11, weight: on ? .semibold : .regular))
-                    .foregroundStyle(on ? .white : .white.opacity(0.75))
+                    .foregroundStyle(Color(model.nomi.ink).opacity(on ? 1 : 0.8))
                     .lineLimit(2)
                 if !opt.detail.isEmpty {
-                    Text(opt.detail).font(.system(size: 10)).foregroundStyle(.white.opacity(0.34))
+                    Text(opt.detail).font(.system(size: 10)).foregroundStyle(Color(model.nomi.ink3))
                         .lineLimit(1).truncationMode(.tail)
                 }
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 8).padding(.vertical, 5)
-            .background(RoundedRectangle(cornerRadius: 7).fill(on ? accent.opacity(0.14) : .white.opacity(0.04)))
+            .background(RoundedRectangle(cornerRadius: 7).fill(Color(model.nomi.pill).opacity(on ? 1 : 0.55)))
             .overlay(RoundedRectangle(cornerRadius: 7)
-                .stroke(on ? accent.opacity(0.55) : .white.opacity(0.08), lineWidth: 1))
+                .strokeBorder(on ? AnyShapeStyle(Nomi.gradient) : AnyShapeStyle(Color(model.nomi.hair)), lineWidth: on ? 1.5 : 1))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -170,40 +167,40 @@ struct SessionDetailView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 Button { model.selectedLocalSessionID = nil } label: {
-                    Text("‹ 返回").font(.system(size: 10, weight: .semibold)).foregroundStyle(.white.opacity(0.56))
+                    Text("‹ 返回").font(.system(size: 10, weight: .semibold)).foregroundStyle(Color(model.nomi.ink2))
                 }.buttonStyle(.plain)
-                Text(session.folderName).font(.system(size: 12, weight: .bold)).foregroundStyle(.white)
+                Text(session.folderName).font(.system(size: 12, weight: .bold)).foregroundStyle(Color(model.nomi.ink))
                     .lineLimit(1)
                 Spacer()
                 Circle().fill(phaseColor).frame(width: 6, height: 6)
-                Text(phaseLabel).font(.system(size: 9)).foregroundStyle(.white.opacity(0.45))
+                Text(phaseLabel).font(.system(size: 9)).foregroundStyle(Color(model.nomi.ink3))
             }
             Text(session.cwd)
-                .font(.system(size: 9, design: .monospaced)).foregroundStyle(.white.opacity(0.3))
+                .font(.system(size: 9, design: .monospaced)).foregroundStyle(Color(model.nomi.ink3))
                 .lineLimit(1).truncationMode(.head)
                 .padding(.top, 2)
 
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 9) {
                     if let prompt = session.lastPrompt {
-                        block(label: "你 ›", text: prompt, textColor: .white.opacity(0.7))
+                        block(label: "你 ›", text: prompt, textColor: Color(model.nomi.ink2))
                     }
                     if session.phase == .running {
                         HStack(spacing: 6) {
                             SpinningStar(color: accent).scaleEffect(0.78)
                             if let act = session.activity, act != "正在思考…" {
                                 Text(act).font(.system(size: 10, design: .monospaced))
-                                    .foregroundStyle(.white.opacity(0.6)).lineLimit(2)
+                                    .foregroundStyle(Color(model.nomi.ink2)).lineLimit(2)
                             } else {
                                 ShineText("正在思考…", accent: accent, size: 10)
                             }
                         }
                     }
                     if let assistant = session.lastAssistant {
-                        block(label: "✻ CLAUDE", text: assistant, textColor: .white.opacity(0.88))
+                        block(label: "✻ CLAUDE", text: assistant, textColor: Color(model.nomi.ink))
                     } else if session.phase != .running && session.lastPrompt == nil {
                         Text("等待 hook 事件带回内容…")
-                            .font(.system(size: 10)).foregroundStyle(.white.opacity(0.3))
+                            .font(.system(size: 10)).foregroundStyle(Color(model.nomi.ink3))
                     }
                 }
                 .padding(.top, 9)
@@ -221,26 +218,26 @@ struct SessionDetailView: View {
         if TerminalTextSender.canReply(to: session) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 7) {
-                    TextField("回复这个会话…", text: $reply)
+                    TextField("", text: $reply, prompt: Text("回复这个会话…").foregroundStyle(Color(model.nomi.ink3)))
                         .textFieldStyle(.plain)
-                        .font(.system(size: 11)).foregroundStyle(.white)
+                        .font(.system(size: 11)).foregroundStyle(Color(model.nomi.ink))
                         .focused($replyFocused)
                         .onSubmit(sendReply)
                         .padding(.horizontal, 10).padding(.vertical, 7)
-                        .background(RoundedRectangle(cornerRadius: 9).fill(.white.opacity(0.07)))
+                        .background(RoundedRectangle(cornerRadius: 9).fill(Color(model.nomi.pill)))
                         .overlay(RoundedRectangle(cornerRadius: 9)
-                            .stroke(replyFocused ? accent.opacity(0.6) : .white.opacity(0.1), lineWidth: 1))
+                            .stroke(replyFocused ? Color(NomiTheme.g1).opacity(0.6) : Color(model.nomi.hair), lineWidth: 1))
                     Button(action: sendReply) {
                         Text("发送").font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(reply.isEmpty ? .white.opacity(0.35) : Color(red: 0.1, green: 0.07, blue: 0.03))
+                            .foregroundStyle(reply.isEmpty ? Color(model.nomi.ink3) : .white)
                             .padding(.horizontal, 13).padding(.vertical, 7)
-                            .background(Capsule().fill(reply.isEmpty ? AnyShapeStyle(.white.opacity(0.08)) : AnyShapeStyle(accent)))
+                            .background(Capsule().fill(reply.isEmpty ? AnyShapeStyle(Color(model.nomi.pill)) : AnyShapeStyle(Nomi.gradientH)))
                     }
                     .buttonStyle(.plain)
                     .disabled(reply.isEmpty)
                 }
                 if let sendState {
-                    Text(sendState).font(.system(size: 9)).foregroundStyle(.white.opacity(0.45))
+                    Text(sendState).font(.system(size: 9)).foregroundStyle(Color(model.nomi.ink3))
                 }
             }
             // 输入时锁住面板,别让 hover 离开把它折叠掉。
@@ -249,7 +246,7 @@ struct SessionDetailView: View {
             }
         } else {
             Text("在 tmux 或 Ghostty 里跑的会话可直接从这里回复")
-                .font(.system(size: 9)).foregroundStyle(.white.opacity(0.3))
+                .font(.system(size: 9)).foregroundStyle(Color(model.nomi.ink3))
         }
     }
 
@@ -268,7 +265,7 @@ struct SessionDetailView: View {
     private func block(label: String, text: String, textColor: Color) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(label).font(.system(size: 9, weight: .bold)).tracking(0.6)
-                .foregroundStyle(.white.opacity(0.35))
+                .foregroundStyle(Color(model.nomi.ink3))
             Text(text)
                 .font(.system(size: 11)).foregroundStyle(textColor)
                 .fixedSize(horizontal: false, vertical: true)
@@ -280,8 +277,8 @@ struct SessionDetailView: View {
         switch session.phase {
         case .running: .green
         case .waitingPermission, .waitingQuestion: .orange
-        case .idle: .white.opacity(0.55)
-        case .ended: .white.opacity(0.35)
+        case .idle: Color(model.nomi.ink3)
+        case .ended: Color(model.nomi.hair)
         }
     }
 
