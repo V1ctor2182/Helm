@@ -113,3 +113,8 @@
 - 实现: 记录页旧 compose 行/gut(随手/收集)/SCRATCH mono 标签全退场——顶部换智能捕获坞(CaptureDock,K7 判类内置,一个入口自动分流);墙区脱账本壳直接铺;头部计数中文化(10 条速记·3 篇日记·0 个任务);墙卡整卡可点开详情(操作钮/编辑态 stopPropagation,键盘 Enter 同开)。
 - 门: build ✓ / check 0/0 / test 206 全绿
 - 视觉: shots/top-clean.png + spec-cal.png
+## R+ · 2026-07-08 · 信息架构定稿:分类为主,双 icon 切展示,日历=全量(用户拍板)
+- 结构: 大视图胶囊组退场——分类 chips(全部/速记/日记/任务/日历)为主维度;Canvas/Timeline 只是速记·日记内部展示方式,右上两枚小 icon(☰ 列表/⊞ 画布,用户给的图形);任务/日历无 icon。
+- Calendar 全量: 周历落格所有记录——events(紫)/tasks(绿)/速记·收藏(蓝)/日记(琥珀)按时间上格。
+- 稿(helm-journal-kinds.html)同步同构。门: build ✓ / check 0/0 / test 206 全绿。
+- 视觉: shots/f1-chips.png + f1-cal.png(日记琥珀卡/速记蓝卡已在周历上)

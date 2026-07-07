@@ -32,9 +32,10 @@
   .top h1{font:800 22px/1.2 var(--sans);letter-spacing:-.2px;margin:0}
   .top .sub{font:400 13px/1 var(--sans);color:var(--ink3)}
   .ctlrow{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
-  .vseg{display:inline-flex;gap:4px;background:var(--card);border-radius:999px;padding:4px;box-shadow:var(--shadow)}
-  .vbtn{font:500 13px/1 var(--sans);color:var(--ink2);background:transparent;border:0;border-radius:999px;padding:8px 18px;cursor:pointer}
-  .vbtn.on{background:var(--ink);color:#fff;font-weight:600}
+  .dispicons{display:flex;gap:4px;margin-left:auto}
+  .dic{width:34px;height:34px;border-radius:10px;border:0;background:transparent;color:var(--ink3);cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .dic svg{width:17px;height:17px}
+  .dic:hover,.dic.on{color:var(--ink);background:var(--pill)}
   .chips{display:flex;gap:5px}
   .chip{font:500 12.5px/1 var(--sans);color:var(--ink2);background:var(--pill);border:0;border-radius:999px;padding:8px 16px;cursor:pointer}
   .chip.on{background:var(--ink);color:#fff;font-weight:600}
@@ -249,16 +250,18 @@
     <h1>记录</h1><span class="sub">视图 × 分类:两个维度,一行说清</span>
   </div>
   <!-- 顶部两组控制:左=视图(怎么看),右=分类(看什么)。旧账本 gutter/SCRATCH 标签/独立记一笔行全部退场 -->
+  <!-- 定稿(2026-07-08 用户拍板):分类是主维度(日历=全量记录的日历视角);
+       Canvas/Timeline 只是速记·日记内部的展示方式,右侧两枚小 icon 切换 -->
   <div class="ctlrow">
-    <div class="vseg">
-      <button class="vbtn on" data-v="timeline">Timeline</button>
-      <button class="vbtn" data-v="canvas">Canvas</button>
-      <button class="vbtn" data-v="calendar">Calendar</button>
-    </div>
     <div class="chips">
       <button class="chip on" data-p="notes">速记</button>
       <button class="chip" data-p="journal">日记</button>
       <button class="chip" data-p="tasks">任务</button>
+      <button class="chip" data-p="cal2">日历</button>
+    </div>
+    <div class="dispicons">
+      <button class="dic on" title="列表"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="5" cy="18" r="1" fill="currentColor" stroke="none"/><path d="M9.5 6h10M9.5 12h10M9.5 18h10"/></svg></button>
+      <button class="dic" title="画布"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg></button>
     </div>
   </div>
 
@@ -448,20 +451,17 @@
 
 <script>
   // 视图切换(Timeline 显示三态分类;Canvas/Calendar 各自 pane)
-  document.querySelectorAll('.vbtn').forEach(v=>v.onclick=()=>{
-    document.querySelectorAll('.vbtn').forEach(x=>x.classList.remove('on'));
-    v.classList.add('on');
-    const which=v.dataset.v;
-    document.querySelectorAll('.pane').forEach(x=>x.classList.remove('on'));
-    if(which==='calendar'){document.getElementById('p-cal').classList.add('on');}
-    else if(which==='canvas'){document.getElementById('p-notes').classList.add('on');/* Canvas 见 helm-journal-pro.html,此稿聚焦三态+周历 */}
-    else{document.querySelector('.chip.on')?.click()||document.getElementById('p-notes').classList.add('on');}
-  });
   document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
     document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
     document.querySelectorAll('.pane').forEach(x=>x.classList.remove('on'));
     c.classList.add('on');
-    document.getElementById('p-'+c.dataset.p).classList.add('on');
+    const p=c.dataset.p==='cal2'?'cal':c.dataset.p;
+    document.getElementById('p-'+p).classList.add('on');
+    // 双 icon 只在速记/日记显示
+    document.querySelector('.dispicons').style.visibility=(c.dataset.p==='notes'||c.dataset.p==='journal')?'visible':'hidden';
+  });
+  document.querySelectorAll('.dic').forEach(d=>d.onclick=()=>{
+    document.querySelectorAll('.dic').forEach(x=>x.classList.remove('on'));d.classList.add('on');
   });
   document.querySelectorAll('.cb').forEach(b=>b.onclick=()=>b.closest('.todo').classList.toggle('done'));
   document.querySelectorAll('.sw').forEach(b=>b.onclick=()=>b.classList.toggle('on'));

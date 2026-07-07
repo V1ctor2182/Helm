@@ -17,6 +17,7 @@
 
   // 三视图(阶段 4 R08,source: helm-journal-pro.html 记录板块)+kind 过滤。
   let view = $state<'timeline' | 'canvas' | 'calendar'>('timeline')
+  let display = $state<'timeline' | 'canvas'>('timeline') // 速记/日记内部的展示偏好
   // filter 共享自 layout(侧栏分类与页内 chips 同源)
   const filterOf = () => layout.journalFilter
 
@@ -239,18 +240,24 @@
     <span class="pg">{notes.notes.filter((n) => n.kind === 'note').length} 条速记 · {journalItems.length} 篇日记 · {tasks.tasks.length} 个任务</span>
   </header>
 
+  <!-- 分类为主维度(含日历=全量记录的日历视角);Canvas/Timeline 只是速记·日记内部
+       的展示方式,右侧两枚小 icon 切换(用户拍板 2026-07-08) -->
   <div class="viewrow">
-    <div class="seg" aria-label="视图">
-      <button class:active={view === 'timeline'} onclick={() => (view = 'timeline')}>Timeline</button>
-      <button class:active={view === 'canvas'} onclick={() => (view = 'canvas')}>Canvas</button>
-      <button class:active={view === 'calendar'} onclick={() => (view = 'calendar')}>Calendar</button>
+    <div class="chips2" role="tablist" aria-label="分类">
+      <button role="tab" aria-selected={view !== 'calendar' && layout.journalFilter === 'all'} class:on={view !== 'calendar' && layout.journalFilter === 'all'} onclick={() => { view = display; layout.journalFilter = 'all' }}>全部</button>
+      <button role="tab" aria-selected={view !== 'calendar' && layout.journalFilter === 'note'} class:on={view !== 'calendar' && layout.journalFilter === 'note'} onclick={() => { view = display; layout.journalFilter = 'note' }}>速记</button>
+      <button role="tab" aria-selected={view !== 'calendar' && layout.journalFilter === 'journal'} class:on={view !== 'calendar' && layout.journalFilter === 'journal'} onclick={() => { view = 'timeline'; layout.journalFilter = 'journal' }}>日记</button>
+      <button role="tab" aria-selected={view !== 'calendar' && layout.journalFilter === 'task'} class:on={view !== 'calendar' && layout.journalFilter === 'task'} onclick={() => { view = 'timeline'; layout.journalFilter = 'task' }}>任务</button>
+      <button role="tab" aria-selected={view === 'calendar'} class:on={view === 'calendar'} onclick={() => (view = 'calendar')}>日历</button>
     </div>
-    {#if view !== 'calendar'}
-      <div class="chips2" role="tablist" aria-label="分类">
-        <button role="tab" aria-selected={layout.journalFilter === 'all'} class:on={layout.journalFilter === 'all'} onclick={() => (layout.journalFilter = 'all')}>全部</button>
-        <button role="tab" aria-selected={layout.journalFilter === 'note'} class:on={layout.journalFilter === 'note'} onclick={() => (layout.journalFilter = 'note')}>速记</button>
-        <button role="tab" aria-selected={layout.journalFilter === 'journal'} class:on={layout.journalFilter === 'journal'} onclick={() => (layout.journalFilter = 'journal')}>日记</button>
-        <button role="tab" aria-selected={layout.journalFilter === 'task'} class:on={layout.journalFilter === 'task'} onclick={() => (layout.journalFilter = 'task')}>任务</button>
+    {#if view !== 'calendar' && layout.journalFilter !== 'task' && layout.journalFilter !== 'journal'}
+      <div class="dispicons" role="group" aria-label="展示方式">
+        <button class="dic" class:on={view === 'timeline'} title="列表" aria-label="列表视图" onclick={() => { view = 'timeline'; display = 'timeline' }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="5" cy="18" r="1" fill="currentColor" stroke="none"/><path d="M9.5 6h10M9.5 12h10M9.5 18h10"/></svg>
+        </button>
+        <button class="dic" class:on={view === 'canvas'} title="画布" aria-label="画布视图" onclick={() => { view = 'canvas'; display = 'canvas' }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg>
+        </button>
       </div>
     {/if}
   </div>
@@ -575,6 +582,37 @@
     align-items: center;
     gap: 12px;
     flex-wrap: wrap;
+    margin: 2px 0 12px;
+  }
+  .dispicons {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+  }
+  .dic {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-sm);
+    border: 0;
+    background: transparent;
+    color: var(--t4);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--dur-micro) var(--ease);
+  }
+  .dic :global(svg) {
+    width: 17px;
+    height: 17px;
+  }
+  .dic:hover {
+    color: var(--t1);
+    background: var(--pill);
+  }
+  .dic.on {
+    color: var(--t1);
+    background: var(--pill);
   }
   .chips2 {
     display: flex;
@@ -590,33 +628,6 @@
     cursor: pointer;
   }
   .chips2 button.on {
-    background: var(--t1);
-    color: var(--onink);
-    font-weight: 600;
-  }
-  .seg {
-    display: inline-flex;
-    gap: 4px;
-    background: var(--card);
-    border-radius: var(--radius-pill);
-    padding: 4px;
-    box-shadow: var(--shadow);
-    margin: 4px 0 12px;
-  }
-  .seg button {
-    font: 500 13px/1 var(--sans);
-    color: var(--t3);
-    background: transparent;
-    border: 0;
-    border-radius: var(--radius-pill);
-    padding: 8px 18px;
-    cursor: pointer;
-    transition: all .18s var(--ease);
-  }
-  .seg button:hover {
-    color: var(--t1);
-  }
-  .seg button.active {
     background: var(--t1);
     color: var(--onink);
     font-weight: 600;

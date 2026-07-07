@@ -4,6 +4,7 @@
   // is currently disabled but the calendar capability stands alone.
   import { calendar, type CalEvent } from '../mail/calendarStore.svelte'
   import { tasks, type Task } from './tasksStore.svelte'
+  import { notes, type Note } from './notesStore.svelte'
   import { localDate, localHHMM } from '../time'
   import { ConfirmGate } from '../confirm.svelte'
 
@@ -73,7 +74,7 @@
       })
     })(),
   )
-  interface WkItem { key: string; title: string; hh: number; mm: number; kind: 'event' | 'task' }
+  interface WkItem { key: string; title: string; hh: number; mm: number; kind: 'event' | 'task' | 'note' | 'journal' }
   const weekItems = $derived(
     (() => {
       const m = new Map<string, WkItem[]>()
@@ -91,6 +92,20 @@
         if (!weekDays.includes(day)) continue
         const d = new Date(t.next_run)
         push(day, { key: `t${t.id}`, title: t.name, hh: d.getHours(), mm: d.getMinutes(), kind: 'task' })
+      }
+      // 所有记录都上日历(2026-07-08 用户拍板):速记/收藏(蓝)/日记(琥珀)按创建时间落格
+      for (const n of notes.notes) {
+        if (!n.created_at) continue
+        const day = localDate(n.created_at)
+        if (!weekDays.includes(day)) continue
+        const d = new Date(n.created_at)
+        const title = n.kind === 'journal'
+          ? `日记 · ${n.content.slice(0, 14)}`
+          : (n.meta?.title ?? n.content.slice(0, 18))
+        push(day, {
+          key: `n${n.id}`, title, hh: d.getHours(), mm: d.getMinutes(),
+          kind: n.kind === 'journal' ? 'journal' : 'note',
+        })
       }
       return m
     })(),
@@ -234,7 +249,7 @@
           {#each weekDays as d (d + h)}
             <div class="wkcell">
               {#each (weekItems.get(d) ?? []).filter((it) => it.hh === h) as it (it.key)}
-                <div class="wkcard" class:k-task={it.kind === 'task'} style="top:{Math.round((ROW * it.mm) / 60) + 2}px">
+                <div class="wkcard" class:k-task={it.kind === 'task'} class:k-note={it.kind === 'note'} class:k-jr={it.kind === 'journal'} style="top:{Math.round((ROW * it.mm) / 60) + 2}px">
                   <div class="when">{String(it.hh).padStart(2, '0')}:{String(it.mm).padStart(2, '0')}</div>
                   <div class="t">{it.title}</div>
                 </div>
@@ -678,6 +693,8 @@
     border-left: 3px solid var(--g2);
   }
   .wkcard.k-task { border-left-color: var(--green); }
+  .wkcard.k-note { border-left-color: var(--blue); }
+  .wkcard.k-jr { border-left-color: #c9a227; }
   .wkcard .when { font: 400 10px/1 var(--sans); color: var(--t4); }
   .wkcard .t {
     font: 600 11.5px/1.3 var(--sans);
