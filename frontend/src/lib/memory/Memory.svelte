@@ -148,19 +148,15 @@
     flex-wrap: wrap;
   }
   .chip {
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: .5px;
-    color: var(--t4);
-    background: transparent;
-    border: 1px solid var(--line);
-    padding: 3px 9px;
+    font: 500 11.5px/1 var(--sans);
+    color: var(--t3);
+    background: var(--pill);
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 6px 12px;
     cursor: pointer;
-    transition: color .12s var(--ease);
   }
-  .chip:hover {
-    color: var(--t1);
-  }
+  .chip:hover { color: var(--t1); }
   .chip.active {
     color: var(--acc-ink);
     border-color: var(--acc-ink);
@@ -171,25 +167,26 @@
     gap: 8px;
   }
   .act {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--t4);
-    background: transparent;
-    border: 1px solid var(--line);
-    padding: 4px 10px;
+    font: 500 11.5px/1 var(--sans);
+    color: var(--t3);
+    background: var(--pill);
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 7px 13px;
     cursor: pointer;
-    transition: color .12s var(--ease);
+    transition: all .12s var(--ease);
   }
   .act:hover {
     color: var(--t1);
   }
   .act.pri {
-    color: var(--acc-ink);
-    border-color: var(--acc-ink);
+    color: #fff;
+    background: var(--grad);
+    font-weight: 600;
   }
   .act.pri:disabled {
+    background: var(--pill);
     color: var(--t4);
-    border-color: var(--line);
     cursor: default;
   }
   .import {
@@ -216,9 +213,7 @@
   }
   .compose input {
     flex: 1;
-    background: transparent;
-    border: 0;
-    border-bottom: 1px solid var(--hair);
+    background: var(--pill); border: 0; border-radius: var(--radius-sm);
     color: var(--t1);
     font-family: var(--sans);
     font-size: 13px;
@@ -230,7 +225,7 @@
   }
   .compose input:focus {
     outline: none;
-    border-bottom-color: var(--acc-ink);
+    
   }
   .compose select {
     background: transparent;
@@ -247,7 +242,7 @@
   }
   .compose select:focus {
     outline: none;
-    border-bottom-color: var(--acc-ink);
+    
   }
   .search {
     padding-left: 11px; /* 与 compose 的 caret 对齐 */

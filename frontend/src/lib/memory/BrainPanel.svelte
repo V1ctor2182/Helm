@@ -17,8 +17,8 @@
 
 <div class="brain">
   <header class="head">
-    <h1>MEMORY</h1>
-    <span class="hd">大脑</span>
+    <h1>记忆</h1>
+    <span class="hd">事实 · 偏好 · 决策 · 知识库</span>
     <span class="pg">{pad3(memory.items.length)} MEMORIES · {pad3(rag.sources.length)} SOURCES · {pad3(skills.skills.length)} SKILLS</span>
   </header>
   <div class="seg" role="tablist" aria-label="记忆 / 知识库">
@@ -69,18 +69,14 @@
     padding: 18px 24px 6px 18px;
   }
   .head h1 {
-    font-family: var(--mono);
-    font-size: 24px;
-    font-weight: 800;
-    letter-spacing: 1px;
+    font: 800 22px/1.2 var(--sans);
+    letter-spacing: -0.2px;
     color: var(--t1);
     margin: 0;
   }
   .head .hd {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--acc-ink);
-    font-weight: 700;
+    font: 400 13px/1 var(--sans);
+    color: var(--t4);
   }
   .head .pg {
     margin-left: auto;
@@ -91,29 +87,28 @@
     font-variant-numeric: tabular-nums;
   }
   .seg {
-    display: flex;
-    gap: 18px;
-    padding: 0 18px;
-    border-bottom: 1px solid var(--hair);
+    display: inline-flex;
+    gap: 4px;
+    background: var(--card);
+    border-radius: var(--radius-pill);
+    padding: 4px;
+    box-shadow: var(--shadow);
+    margin: 6px 18px 12px;
   }
   .seg button {
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 1px;
+    font: 500 13px/1 var(--sans);
     color: var(--t3);
     background: transparent;
     border: 0;
-    border-bottom: 2px solid transparent;
-    padding: 4px 1px 6px;
+    border-radius: var(--radius-pill);
+    padding: 8px 18px;
     cursor: pointer;
-    transition: color .12s var(--ease);
   }
-  .seg button:hover {
-    color: var(--t1);
-  }
+  .seg button:hover { color: var(--t1); }
   .seg button.active {
-    color: var(--t1);
-    border-bottom-color: var(--acc);
+    background: var(--t1);
+    color: var(--onink);
+    font-weight: 600;
   }
   .panel {
     flex: 1;

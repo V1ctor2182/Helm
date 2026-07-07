@@ -317,11 +317,9 @@
     color: var(--t2);
   }
   .h {
-    font-family: var(--mono);
-    font-size: 10px;
+    font: 600 12px/1 var(--sans);
     color: var(--t3);
-    letter-spacing: 1px;
-    text-transform: uppercase;
+    margin-bottom: 8px;
   }
   .tools {
     display: flex;
@@ -329,14 +327,14 @@
     flex-wrap: wrap;
   }
   .act {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--t4);
-    background: transparent;
-    border: 1px solid var(--line);
-    padding: 4px 10px;
+    font: 500 11.5px/1 var(--sans);
+    color: var(--t3);
+    background: var(--pill);
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 7px 13px;
     cursor: pointer;
-    transition: color .12s var(--ease);
+    transition: all .12s var(--ease);
   }
   .act:hover:not(:disabled) {
     color: var(--t1);
@@ -347,12 +345,14 @@
     border-color: var(--hair);
   }
   .act.pri {
-    color: var(--acc-ink);
-    border-color: var(--acc-ink);
+    color: #fff;
+    background: var(--grad);
+    font-weight: 600;
   }
   .act.pri:disabled {
+    background: var(--pill);
     color: var(--t4);
-    border-color: var(--line);
+    cursor: default;
   }
   .act.del {
     border: 0;
@@ -379,9 +379,7 @@
   }
   .compose input,
   .cdform input {
-    background: transparent;
-    border: 0;
-    border-bottom: 1px solid var(--hair);
+    background: var(--pill); border: 0; border-radius: var(--radius-sm);
     color: var(--t1);
     font-family: var(--sans);
     font-size: 13px;
@@ -395,7 +393,7 @@
   .compose input:focus,
   .cdform input:focus {
     outline: none;
-    border-bottom-color: var(--acc-ink);
+    
   }
   .compose input {
     flex: 1;
@@ -498,8 +496,9 @@
     gap: 8px;
   }
   .act.on {
-    color: var(--acc-ink);
-    border-color: var(--acc-ink);
+    background: var(--t1);
+    color: var(--onink);
+    font-weight: 600;
   }
   .mnav {
     display: flex;

@@ -740,24 +740,8 @@
     padding: 0 4px;
     flex: none;
   }
-  .compose select.kind {
-    flex: none;
-    background: transparent;
-    border: 0;
-    border-bottom: 1px solid var(--hair);
-    color: var(--t1);
-    font-family: var(--mono);
-    font-size: 11px;
-    padding: 3px 0 5px;
-  }
-  .compose select.kind option {
-    background: var(--panel);
-    color: var(--t1);
-  }
-  .compose input.at {
-    width: 170px;
-    color-scheme: dark light;
-  }
+  .compose select.kind { flex: none; }
+  .compose input.at { flex: none; width: 190px; }
   .list {
     list-style: none;
     margin: 0 0 6px;

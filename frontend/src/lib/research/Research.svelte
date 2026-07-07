@@ -242,23 +242,6 @@
     color: var(--t4);
     align-self: center;
   }
-  .controls select {
-    background: transparent;
-    border: 0;
-    border-bottom: 1px solid var(--hair);
-    color: var(--t1);
-    font-family: var(--mono);
-    font-size: 11px;
-    padding: 3px 0 5px;
-  }
-  .controls select option {
-    background: var(--panel);
-    color: var(--t1);
-  }
-  .controls select:focus {
-    outline: none;
-    border-bottom-color: var(--acc-ink);
-  }
   .act {
     font: 500 11.5px/1 var(--sans);
     color: var(--t3);

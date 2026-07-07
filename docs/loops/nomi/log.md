@@ -59,3 +59,7 @@
 - 对齐: journalFilter 提升为 layout 共享状态;Rail 在记录模式渲染稿的两段分类(记录:全部/速记/日记/任务 · 收藏:全部收藏/视频/论文/灵感,胶囊激活),与页内 chips 同源双入口;noteItems 支持 collect(meta.url)/youtube/paper/inspiration 细分过滤。
 - 门: build ✓ / check 0/0 / test 205 全绿(共享 store 测试间重置)
 - 视觉: shots/r13-sidecats.png——「全部收藏」过滤流只剩链接收藏,与稿侧栏结构一比一
+## R14 · 2026-07-07 14:10 · 残留清剿:全局表单皮 + Calendar 内部 + 记忆板块(用户指正)
+- 对齐: ①全局 select/datetime 皮(app.css:胶囊+自绘 SVG 箭头,原生外观退场——研究/记忆/派发/加事件全部受益),清掉盖它的 scoped 残留;②Calendar 内部(周/列表/月·导入导出 CalDAV·加事件→胶囊,黑激活;事件标题/时间输入→胶囊盒;AGENDA 标签 sans 化,7 patch);③记忆板块(漏网):MEMORY→记忆中文标题/黑胶囊 tab/chips 胶囊/输入胶囊(BrainPanel+Memory 共 6 patch)。
+- 门: build ✓ / check 0/0 / test 205 全绿
+- 视觉: shots/r14-memory.png + r14-calendar.png
