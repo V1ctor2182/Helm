@@ -83,6 +83,7 @@ class NoteService:
         tags: list[str] | None = None,
         pinned: bool | None = None,
         journal_date: date_cls | None = None,
+        meta: dict | None = None,
     ) -> Note | None:
         note = self.get(note_id)
         if note is None:
@@ -99,6 +100,8 @@ class NoteService:
             note.pinned = pinned
         if journal_date is not None:
             note.journal_date = journal_date
+        if meta is not None:
+            note.meta_json = json.dumps(meta, ensure_ascii=False) if meta else None
         self.session.flush()
         return note
 

@@ -115,3 +115,19 @@ async def test_multi_link_note_gets_links_array(config, monkeypatch) -> None:
     assert meta["url"] == "https://x.com/a"          # 顶层=第一个
     assert len(meta["links"]) == 2
     assert meta["links"][1]["url"] == "https://y.com/b"
+
+
+def test_patch_meta_rewrites_topic(config) -> None:
+    """AI 归类纠错:PATCH /notes/{id} 带 meta 整份回写(移出集合)。"""
+    from fastapi.testclient import TestClient
+
+    from helm.app import create_app
+
+    c = TestClient(create_app(config))
+    nid = c.post("/api/notes", json={"content": "hello", "kind": "note"}).json()["id"]
+    r = c.patch(f"/api/notes/{nid}", json={"meta": {"type": "text", "topic": "测试集合"}})
+    assert r.status_code == 200
+    assert r.json()["meta"]["topic"] == "测试集合"
+    # 移出集合 = topic 拿掉后整份回写
+    r2 = c.patch(f"/api/notes/{nid}", json={"meta": {"type": "text"}})
+    assert "topic" not in (r2.json()["meta"] or {})

@@ -131,12 +131,15 @@ async def fetch_link_meta(url: str, client: httpx.AsyncClient | None = None) -> 
 _LINK_SYSTEM = (
     "你是 Helm 的收藏解析器。根据给出的链接元数据(可能不全)输出 JSON:"
     '{"type":"youtube|paper|article|inspiration","summary":"2-3 句中文,讲清这是什么、为什么值得看",'
-    '"tags":["≤3个中文短标签"]}。UI/UX/设计/作品集类判为 inspiration。只输出 JSON。'
+    '"tags":["≤3个中文短标签"],"topic":"2-6字的主题集合名(如 Transformer 学习/设计灵感),不确定给 null"}。'
+    "UI/UX/设计/作品集类判为 inspiration。只输出 JSON。"
 )
 _TEXT_SYSTEM = (
     "你是 Helm 的速记整理器。把用户随手记的一条整理成 JSON:"
     '{"title":"≤12字标题","tags":["≤3个中文短标签"],"when":"文中提到的时间线索,无则null",'
-    '"where":"文中提到的地点线索,无则null"}。不改写原文,只输出 JSON。'
+    '"where":"文中提到的地点线索,无则null",'
+    '"topic":"2-6字的主题集合名(把相关记录归到同一集合,如 Transformer 学习),不确定给 null"}。'
+    "不改写原文,只输出 JSON。"
 )
 
 
@@ -225,6 +228,8 @@ async def enrich_note(db: Any, box: Any, note_id: int, cwd: Any = None) -> None:
                     meta["summary"] = str(d["summary"])[:600]
                 if isinstance(d.get("tags"), list):
                     meta["tags"] = [str(t)[:24] for t in d["tags"][:3]]
+                if d.get("topic"):
+                    meta["topic"] = str(d["topic"])[:24]
             else:
                 d = _parse_llm_json(await asyncio.wait_for(llm_once(
                     session, box, provider, system=_TEXT_SYSTEM, user=content, cwd=cwd), 90))
@@ -235,6 +240,8 @@ async def enrich_note(db: Any, box: Any, note_id: int, cwd: Any = None) -> None:
                             meta[k] = str(d[k])[:120]
                     if isinstance(d.get("tags"), list):
                         meta["tags"] = [str(t)[:24] for t in d["tags"][:3]]
+                    if d.get("topic"):
+                        meta["topic"] = str(d["topic"])[:24]
         except Exception as exc:  # LLM 失败/超时 → 保留第一段结果
             log.info("llm enrich failed for note %s: %s", note_id, exc)
             return

@@ -44,6 +44,8 @@ class NotePatch(BaseModel):
     tags: list[str] | None = None
     pinned: bool | None = None
     journal_date: date | None = None
+    # AI 归类纠错(2026-07-08):整份 meta 回写(前端移出集合/改 topic)
+    meta: dict | None = None
 
 
 def _check_kind(kind: str | None) -> None:
@@ -117,6 +119,7 @@ def update_note(
         tags=body.tags,
         pinned=body.pinned,
         journal_date=body.journal_date,
+        meta=body.meta,
     )
     if note is None:
         raise HTTPException(status_code=404, detail="note not found")
