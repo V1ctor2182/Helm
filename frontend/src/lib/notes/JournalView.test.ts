@@ -47,8 +47,8 @@ describe('JournalView', () => {
     render(JournalView)
     await fireEvent.click(screen.getByRole('tab', { name: '日记' }))
     // both date headers present, newest first
-    expect(await screen.findByText('2026-06-27')).toBeInTheDocument()
-    expect(screen.getByText('2026-06-26')).toBeInTheDocument()
+    expect(await screen.findByText('6月27日')).toBeInTheDocument()
+    expect(screen.getByText('6月26日')).toBeInTheDocument()
     // markdown rendered (bold + heading)
     expect(screen.getByRole('heading', { name: 'Big day' })).toBeInTheDocument()
     expect(screen.getByText('m3').tagName).toBe('STRONG')

@@ -182,6 +182,33 @@
 
   const pad3 = (n: number) => String(n).padStart(3, '0')
 
+  // K4 日记纸页:今日字数 + 连续天数(与 Today 同口径)
+  const jToday = $derived(journalItems.filter((n) => n.journal_date === today()))
+  const jTodayChars = $derived(jToday.reduce((a, e) => a + e.content.length, 0))
+  const jStreak = $derived.by(() => {
+    const dates = new Set(journalItems.filter((n) => n.journal_date).map((n) => n.journal_date as string))
+    let count = 0
+    const d = new Date()
+    const p2 = (x: number) => String(x).padStart(2, '0')
+    if (!dates.has(today())) d.setDate(d.getDate() - 1)
+    for (;;) {
+      const k = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`
+      if (!dates.has(k)) break
+      count += 1
+      d.setDate(d.getDate() - 1)
+    }
+    return count
+  })
+  const WD_ZH = ['日', '一', '二', '三', '四', '五', '六']
+  function weekdayOf(day: string): string {
+    const d = new Date(day + 'T00:00:00')
+    return Number.isNaN(d.getTime()) ? '' : `周${WD_ZH[d.getDay()]}`
+  }
+  function dayNum(day: string): string {
+    const m = day.match(/(\d{4})-(\d{2})-(\d{2})/)
+    return m ? `${Number(m[2])}月${Number(m[3])}日` : day
+  }
+
   async function add() {
     if (!draft.trim()) return
     const ok =
@@ -217,9 +244,9 @@
 
   {#if notes.error}<p class="err" role="alert">{notes.error}</p>{/if}
 
-  {#if view === 'timeline' && layout.journalFilter !== 'task'}
+  {#if view === 'timeline' && layout.journalFilter !== 'task' && layout.journalFilter !== 'journal'}
     <div class="row">
-      <div class="gut"><span class="tm">{layout.journalFilter !== 'journal' ? '随手' : today().slice(5)}</span></div>
+      <div class="gut"><span class="tm">随手</span></div>
       <form
         class="compose"
         onsubmit={(e) => {
@@ -229,13 +256,13 @@
       >
         <span class="car" aria-hidden="true"></span>
         <textarea
-          placeholder={layout.journalFilter !== 'journal' ? '随手记一笔…' : '今天发生了什么?(支持 Markdown)'}
+          placeholder="随手记一笔…"
           bind:value={draft}
-          aria-label={layout.journalFilter !== 'journal' ? '速记内容' : '日记内容'}
-          rows={layout.journalFilter !== 'journal' ? 1 : 3}
+          aria-label="速记内容"
+          rows={1}
           onkeydown={cmdEnter}
         ></textarea>
-        <button class="act pri" type="submit" disabled={!draft.trim()}>{layout.journalFilter !== 'journal' ? '记一笔' : '写入今天'}</button>
+        <button class="act pri" type="submit" disabled={!draft.trim()}>记一笔</button>
       </form>
     </div>
   {/if}
@@ -306,57 +333,54 @@
       </div>
     </div>
   {:else if layout.journalFilter === 'journal'}
-    <div class="row">
-      <div class="gut"><span class="tm">AI</span></div>
-      <div>
-        <div class="h">今日小结 / SUMMARY</div>
-        <span class="sumbtns">
-          <button class="act pri" onclick={() => notes.summarizeToday(today())} disabled={notes.summarizing}>
-            {notes.summarizing ? '生成中…' : 'AI 今日小结'}
-          </button>
-          <button class="act" onclick={() => notes.summarizeToday(today(), 7)} disabled={notes.summarizing}>周回顾</button>
-        </span>
-        {#if notes.summary}
-          <div class="framed"><p class="summary">{notes.summary}</p></div>
-        {/if}
+    <!-- K4 日记纸页(稿:helm-journal-kinds.html 日记态):窄栏/今天的页/一天一页 -->
+    <div class="paper">
+      <div class="streakbar">
+        <span class="s"><span class="big">{jTodayChars}</span><span class="u">字 · 今天</span></span>
+        <span class="s"><span class="big">{jStreak}</span><span class="u">天连续</span></span>
+        <button class="aibtn2" onclick={() => notes.summarizeToday(today())} disabled={notes.summarizing}>
+          <span class="spark2" aria-hidden="true"></span>{notes.summarizing ? '生成中…' : 'AI 今日小结'}
+        </button>
+        <button class="aibtn2" onclick={() => notes.summarizeToday(today(), 7)} disabled={notes.summarizing}>周回顾</button>
       </div>
-    </div>
-    <div class="row">
-      <div class="gut"><span class="tm">条目</span><br />{journalItems.length} 条</div>
-      <div>
-        <div class="h">日记 / ENTRIES</div>
-        {#if journalByDate.length === 0}
-          <p class="empty">还没有日记 — 写下今天的第一条。</p>
-        {:else}
-          <div>
-            {#each journalByDate as [day, entries] (day)}
-              <section class="day">
-                <h3>{day}</h3>
-                {#each entries as e (e.id)}
-                  <article class="entry">
-                    {#if editingId === e.id}
-                      <textarea class="editbox" bind:value={editDraft} aria-label="编辑日记" rows="4"></textarea>
-                      <span class="acts">
-                        <button class="act pri" onclick={saveEdit} disabled={!editDraft.trim()}>保存</button>
-                        <button class="act" onclick={() => (editingId = null)}>取消</button>
-                      </span>
-                    {:else}
-                    <div class="md">{@html renderMd(e.content)}</div>
-                    <button class="act" aria-label="编辑日记" onclick={() => startEdit(e)}>编辑</button>
-                    <button
-                      class="act del"
-                      class:armed={del.pending === `jr-${e.id}`}
-                      aria-label="删除日记"
-                      onclick={() => del.confirm(`jr-${e.id}`) && notes.remove(e.id)}
-                    >{del.pending === `jr-${e.id}` ? '确认' : '×'}</button>
-                    {/if}
-                  </article>
-                {/each}
-              </section>
+      {#if notes.summary}
+        <div class="sumcard"><span class="spark2" aria-hidden="true"></span><p>{notes.summary}</p></div>
+      {/if}
+      <div class="todaypage">
+        <div class="dh"><span class="d">{dayNum(today())}</span><span class="w">{weekdayOf(today())} · 今天的页</span></div>
+        <textarea
+          placeholder="今天发生了什么?(支持 Markdown,⌘⏎ 写入)"
+          bind:value={draft}
+          onkeydown={cmdEnter}
+          aria-label="日记内容"
+        ></textarea>
+        <div class="actrow"><span class="hint2">⌘⏎ 写入今天 · Markdown</span>
+          <button class="act pri" onclick={() => void add()} disabled={!draft.trim()}>写入今天</button></div>
+      </div>
+      {#if journalByDate.length === 0}
+        <p class="empty">还没有日记 — 上面写下今天的第一条。</p>
+      {:else}
+        {#each journalByDate as [day, entries] (day)}
+          <section class="jpage">
+            <div class="dh"><span class="d">{dayNum(day)}</span><span class="w">{weekdayOf(day)}</span>
+              <span class="cnt">{entries.reduce((a, e) => a + e.content.length, 0)} 字</span></div>
+            {#each entries as e (e.id)}
+              {#if editingId === e.id}
+                <textarea class="editbox" bind:value={editDraft} aria-label="编辑日记" rows="4"></textarea>
+                <span class="acts"><button class="act pri" onclick={saveEdit} disabled={!editDraft.trim()}>保存</button>
+                  <button class="act" onclick={() => (editingId = null)}>取消</button></span>
+              {:else}
+                <div class="md">{@html renderMd(e.content)}</div>
+                <span class="pacts">
+                  <button class="act" aria-label="编辑日记" onclick={() => startEdit(e)}>编辑</button>
+                  <button class="act del" class:armed={del.pending === `jr-${e.id}`} aria-label="删除日记"
+                    onclick={() => del.confirm(`jr-${e.id}`) && notes.remove(e.id)}>{del.pending === `jr-${e.id}` ? '确认' : '×'}</button>
+                </span>
+              {/if}
             {/each}
-          </div>
-        {/if}
-      </div>
+          </section>
+        {/each}
+      {/if}
     </div>
   {:else if layout.journalFilter === 'task'}
     <div class="row">
@@ -721,10 +745,6 @@
   .act.del.armed {
     color: var(--red);
   }
-  .sumbtns {
-    display: inline-flex;
-    gap: 8px;
-  }
   .editbox {
     flex: 1;
     background: transparent;
@@ -775,6 +795,148 @@
     padding: 4px 0;
     font-size: 13px;
     flex-wrap: wrap; /* AI 收藏卡换行占满整行 */
+  }
+
+  /* —— K4 日记纸页 —— */
+  .paper {
+    max-width: 640px;
+    margin: 6px auto 0;
+  }
+  .streakbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 14px;
+  }
+  .streakbar .s {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+  }
+  .streakbar .big {
+    font: 800 24px/1 var(--sans);
+    color: var(--t1);
+  }
+  .streakbar .u {
+    font: 400 11.5px/1 var(--sans);
+    color: var(--t4);
+  }
+  .aibtn2 {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--card);
+    border: 1px solid var(--hair);
+    border-radius: var(--radius-pill);
+    padding: 8px 15px;
+    font: 500 12px/1 var(--sans);
+    color: var(--t3);
+    cursor: pointer;
+  }
+  .aibtn2:first-of-type {
+    margin-left: auto;
+  }
+  .aibtn2:hover:not(:disabled) {
+    color: var(--t1);
+  }
+  .spark2 {
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    flex: none;
+    background: conic-gradient(from 210deg, var(--g1), var(--g2), var(--g1));
+  }
+  .sumcard {
+    display: flex;
+    gap: 9px;
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 13px 16px;
+    margin-bottom: 14px;
+    font: 400 13px/1.65 var(--sans);
+    color: var(--t2);
+  }
+  .sumcard p { margin: 0; }
+  .todaypage {
+    background: var(--card);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    padding: 22px 26px;
+    margin-bottom: 26px;
+  }
+  .todaypage .dh,
+  .jpage .dh {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .todaypage .d {
+    font: 800 19px/1 var(--sans);
+    color: var(--t1);
+  }
+  .jpage .d {
+    font: 800 15.5px/1 var(--sans);
+    color: var(--t1);
+  }
+  .todaypage .w,
+  .jpage .w {
+    font: 400 12px/1 var(--sans);
+    color: var(--t4);
+  }
+  .jpage .cnt {
+    margin-left: auto;
+    font: 400 10.5px/1 var(--sans);
+    color: var(--t4);
+  }
+  .todaypage textarea {
+    width: 100%;
+    min-height: 120px;
+    border: 0;
+    outline: none;
+    resize: vertical;
+    font: 400 14.5px/1.75 var(--sans);
+    color: var(--t1);
+    background: transparent;
+  }
+  .todaypage textarea::placeholder {
+    color: var(--t4);
+  }
+  .actrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .hint2 {
+    font: 400 11px/1 var(--sans);
+    color: var(--t4);
+  }
+  .actrow .act.pri {
+    margin-left: auto;
+  }
+  .jpage {
+    position: relative;
+    background: var(--card);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    padding: 20px 26px;
+    margin-bottom: 18px;
+  }
+  .jpage .md {
+    font: 400 14px/1.75 var(--sans);
+    color: var(--t2);
+  }
+  .pacts {
+    display: flex;
+    gap: 4px;
+    margin-top: 10px;
+    opacity: 0;
+    transition: opacity var(--dur-micro) var(--ease);
+  }
+  .jpage:hover .pacts {
+    opacity: 1;
   }
 
   /* —— K1 瀑布卡墙 —— */
@@ -899,26 +1061,6 @@
     flex: none;
   }
   /* 日记:日期 = accent 账本界标 */
-  .day h3 {
-    margin: 12px 0 4px;
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: .5px;
-    color: var(--acc-ink);
-    border-bottom: 1px solid var(--hair);
-    padding-bottom: 3px;
-    font-variant-numeric: tabular-nums;
-  }
-  .day:first-child h3 {
-    margin-top: 0;
-  }
-  .entry {
-    display: flex;
-    gap: 8px;
-    align-items: flex-start;
-    padding: 4px 0;
-  }
   .md {
     flex: 1;
     line-height: 1.55;
@@ -944,20 +1086,6 @@
   }
   .md :global(a) {
     color: var(--acc-ink);
-  }
-  /* AI 小结 = 框选视口(frame + accent L 角,ORAGE) */
-  .framed {
-    background: var(--bg);
-    border-radius: var(--radius-sm);
-    padding: 12px 14px;
-    margin-top: 10px;
-  }
-  .framed::before,
-  .summary {
-    margin: 0;
-    font-size: 13px;
-    line-height: 1.55;
-    color: var(--t2);
   }
   /* 任务行 */
   .cbx {

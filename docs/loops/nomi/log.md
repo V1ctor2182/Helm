@@ -86,3 +86,7 @@
 - 对齐: enrich 管线 all_urls(去重保序,上限 5)——每个 URL 各抓一份 meta,落 meta.links[];顶层字段=第一个链接(向后兼容:notch/旧前端零破坏,纯加字段)。前端 NoteMeta.links 类型+NoteDetail attachments 优先接 links(fallback 单链接)。
 - 门: pytest 216 全绿(+2:all_urls 去重/多链接接线) / 前端 build·check·test 全绿
 - e2e: 真实一条两链速记 → links=[youtube, paper] ✓ 顶层=YT ✓;后端已重启
+## K4 · 2026-07-07 17:30 · 日记纸页
+- 对齐: filter=journal → 640px 纸栏:统计行(今日字数/连续天数+AI 今日小结/周回顾)/小结白卡(spark)/「今天的页」置顶(大 textarea+⌘⏎+渐变写入)/一天一页(N月N日+周X+字数,md 正文,hover 编辑/确认删)。共用 compose 行让位(journal 由纸页自写);旧日记样式(day/entry/framed/sumbtns)清零;测试日期断言随新格式(6月27日)。
+- 门: build ✓ / check 0/0 / test 205 全绿
+- 视觉: shots/k4-paper.png(真数据:14 字·今天/2 天连续/专注记录在页上)
