@@ -50,7 +50,10 @@ final class NotchController {
         if let screen = NSScreen.main {
             model.notchWidth = detectNotchWidth(screen)
         }
-        if let w = defaults.object(forKey: widthKey) as? Double { model.expandedWidth = w }
+        // NOMI 单体壳固定 440(设计定稿):旧版可拖宽的持久化值不再生效,
+        // 顺手清掉残留 key(2026-07-07 用户:旧 600 宽把布局撑爆还重叠)。
+        defaults.removeObject(forKey: widthKey)
+        model.expandedWidth = NomiTheme.openWidth
         if let dark = defaults.object(forKey: "notch.nomiDark") as? Bool { model.nomiDark = dark }
 
         let panel = makePanel()

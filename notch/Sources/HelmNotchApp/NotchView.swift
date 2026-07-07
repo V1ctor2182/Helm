@@ -84,7 +84,6 @@ struct NotchView: View {
                     .padding(6)
             }
         }
-        .overlay(alignment: .bottomTrailing) { if model.expanded { resizeHandle } }
         .contentShape(Rectangle())
         .onDrop(of: [.fileURL], isTargeted: $dragOver) { providers in
             for p in providers {
@@ -466,22 +465,41 @@ struct NotchView: View {
                     .font(.system(size: 30)).foregroundStyle(.white.opacity(0.35))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            VStack(alignment: .leading, spacing: 1) {
-                Text(np.title).font(.system(size: 13.5, weight: .bold)).foregroundStyle(.white).lineLimit(1)
-                Text(np.subtitle).font(.system(size: 10.5)).foregroundStyle(.white.opacity(0.65)).lineLimit(1)
+            HStack(alignment: .bottom, spacing: 8) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(np.title).font(.system(size: 13.5, weight: .bold)).foregroundStyle(.white).lineLimit(1)
+                    Text(np.subtitle).font(.system(size: 10.5)).foregroundStyle(.white.opacity(0.65)).lineLimit(1)
+                }
+                Spacer(minLength: 4)
+                // 卡上直接控制(2026-07-07 用户):前/播暂/后;点卡片其余区域仍进媒体页
+                HStack(spacing: 5) {
+                    bentoMediaButton("backward.fill", size: 22, icon: 8) { model.previousTrack() }
+                    bentoMediaButton(np.isPlaying ? "pause.fill" : "play.fill", size: 26, icon: 10) { model.playPause() }
+                    bentoMediaButton("forward.fill", size: 22, icon: 8) { model.nextTrack() }
+                }
             }
-            .padding(EdgeInsets(top: 12, leading: 14, bottom: 12, trailing: 14))
+            .padding(EdgeInsets(top: 12, leading: 14, bottom: 10, trailing: 12))
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(LinearGradient(colors: [.clear, Color(red: 0.04, green: 0.04, blue: 0.047).opacity(0.82)],
                                        startPoint: .top, endPoint: .bottom))
         }
         .frame(minHeight: 128)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(alignment: .bottomTrailing) {
-            if np.isPlaying { WaveBars(heights: [5, 10, 7]).padding(.trailing, 12).padding(.bottom, 14) }
+        .overlay(alignment: .topTrailing) {
+            if np.isPlaying { WaveBars(heights: [5, 10, 7]).padding(.trailing, 12).padding(.top, 12) }
         }
         .contentShape(Rectangle())
         .onTapGesture { model.selectModule(.media) }
+    }
+
+    /// 媒体大卡上的迷你控制钮(半透明白底,吃掉自己的点击不触发卡片 zoom)。
+    private func bentoMediaButton(_ symbol: String, size: CGFloat, icon: CGFloat, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: icon, weight: .semibold)).foregroundStyle(.white)
+                .frame(width: size, height: size)
+                .background(Circle().fill(.white.opacity(0.16)))
+        }.buttonStyle(.plain)
     }
 
     /// .bcard 日历:spark+「日历 · 下一项」/事件/副行;无日程诚实显示。点→日历。
