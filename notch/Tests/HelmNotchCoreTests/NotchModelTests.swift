@@ -10,6 +10,7 @@ final class FakeBackend: HelmBackend, @unchecked Sendable {
     var shouldFailCapture = false
     var runs: [AgentRun] = []
     var events: [CalEvent] = []
+    var recents: [RecentNote] = []
     private(set) var notes: [(content: String, kind: String, journalDate: String?)] = []
     private(set) var tasks: [String] = []
 
@@ -23,6 +24,10 @@ final class FakeBackend: HelmBackend, @unchecked Sendable {
 
     func listRuns() async throws -> [AgentRun] {
         runs
+    }
+
+    func recentNotes(kind: String, limit: Int) async throws -> [RecentNote] {
+        recents
     }
 
     func listEvents(start: Date, end: Date) async throws -> [CalEvent] {
@@ -92,19 +97,19 @@ final class NotchModuleTests: XCTestCase {
     func testStartsOnDashboard() {
         let model = NotchModel(backend: FakeBackend())
         XCTAssertEqual(model.module, .dashboard)
-        XCTAssertEqual(model.devSection, .agents)
+        XCTAssertEqual(model.agentPage, .sessions)
     }
 
     @MainActor
     func testDockOrderExcludesMedia() {
-        XCTAssertEqual(NotchModule.dock, [.dashboard, .capture, .calendar, .dev, .clipboard])
+        XCTAssertEqual(NotchModule.dock, [.dashboard, .capture, .calendar, .agents, .files])
         XCTAssertFalse(NotchModule.dock.contains(.media))
     }
 
     @MainActor
     func testSwitchModuleWrapsForward() {
         let model = NotchModel(backend: FakeBackend())
-        model.module = .clipboard  // last in the dock
+        model.module = .files  // last in the dock
         model.switchModule(1)
         XCTAssertEqual(model.module, .dashboard)  // wraps to first
     }
@@ -113,7 +118,7 @@ final class NotchModuleTests: XCTestCase {
     func testSwitchModuleWrapsBackward() {
         let model = NotchModel(backend: FakeBackend())
         model.switchModule(-1)  // from dashboard (first)
-        XCTAssertEqual(model.module, .clipboard)  // wraps to last
+        XCTAssertEqual(model.module, .files)  // wraps to last
     }
 
     @MainActor
@@ -202,7 +207,7 @@ final class NotchModuleTests: XCTestCase {
         model.switchModule(-1)
         XCTAssertFalse(model.moduleSwitchForward)  // backward
         // dock click: dashboard(0) → dev(3) is forward; → capture(1) back is not
-        model.selectModule(.dev)
+        model.selectModule(.agents)
         XCTAssertTrue(model.moduleSwitchForward)
         model.selectModule(.capture)
         XCTAssertFalse(model.moduleSwitchForward)
@@ -211,44 +216,44 @@ final class NotchModuleTests: XCTestCase {
     @MainActor
     func testEnteringDevResetsSubSection() {
         let model = NotchModel(backend: FakeBackend())
-        model.devSection = .stats
-        model.selectModule(.dev)
-        XCTAssertEqual(model.devSection, .agents)
+        model.agentPage = .prs
+        model.selectModule(.agents)
+        XCTAssertEqual(model.agentPage, .sessions)
     }
 
     @MainActor
     func testSelectDevTracksDirection() {
         let model = NotchModel(backend: FakeBackend())
-        model.devSection = .agents
-        model.selectDev(.stats)  // forward (down)
-        XCTAssertTrue(model.devSwitchForward)
-        XCTAssertEqual(model.devSection, .stats)
-        model.selectDev(.agents)  // backward (up)
-        XCTAssertFalse(model.devSwitchForward)
-        model.devSection = .ports
-        model.switchDev(1)
-        XCTAssertTrue(model.devSwitchForward)
+        model.agentPage = .sessions
+        model.selectAgentPage(.prs)  // forward (down)
+        XCTAssertTrue(model.agentPageForward)
+        XCTAssertEqual(model.agentPage, .prs)
+        model.selectAgentPage(.sessions)  // backward (up)
+        XCTAssertFalse(model.agentPageForward)
+        model.agentPage = .ports
+        model.switchAgentPage(1)
+        XCTAssertTrue(model.agentPageForward)
     }
 
     @MainActor
     func testSwitchDevClampsAtEnds() {
         let model = NotchModel(backend: FakeBackend())
-        model.devSection = .agents
-        model.switchDev(-1)  // already at top
-        XCTAssertEqual(model.devSection, .agents)  // clamped, no wrap
-        model.devSection = .stats
-        model.switchDev(1)  // already at bottom
-        XCTAssertEqual(model.devSection, .stats)  // clamped, no wrap
+        model.agentPage = .sessions
+        model.switchAgentPage(-1)  // already at top
+        XCTAssertEqual(model.agentPage, .sessions)  // clamped, no wrap
+        model.agentPage = .prs
+        model.switchAgentPage(1)  // already at bottom
+        XCTAssertEqual(model.agentPage, .prs)  // clamped, no wrap
     }
 
     @MainActor
     func testSwitchDevPagesThrough() {
         let model = NotchModel(backend: FakeBackend())
-        model.devSection = .agents
-        model.switchDev(1)
-        XCTAssertEqual(model.devSection, .ports)
-        model.switchDev(1)
-        XCTAssertEqual(model.devSection, .reviews)
+        model.agentPage = .sessions
+        model.switchAgentPage(1)
+        XCTAssertEqual(model.agentPage, .ports)
+        model.switchAgentPage(1)
+        XCTAssertEqual(model.agentPage, .prs)
     }
 
     @MainActor
@@ -296,43 +301,44 @@ final class NotchModuleTests: XCTestCase {
     func testViewHeightVariesPerModule() {
         let model = NotchModel(backend: FakeBackend())
         model.module = .dashboard
-        XCTAssertEqual(model.viewHeight(), 172)
+        XCTAssertEqual(model.viewHeight(), 280)
         model.module = .media
-        XCTAssertEqual(model.viewHeight(), 330)
-        model.module = .clipboard
-        XCTAssertEqual(model.viewHeight(), 232)
+        XCTAssertEqual(model.viewHeight(), 300)
+        model.module = .files
+        XCTAssertEqual(model.viewHeight(), 280)
     }
 
     @MainActor
     func testViewHeightFollowsDevSection() {
         let model = NotchModel(backend: FakeBackend())
-        model.module = .dev
-        model.devSection = .agents
-        XCTAssertEqual(model.viewHeight(), 204)
-        model.devSection = .stats
-        XCTAssertEqual(model.viewHeight(), 252)
+        model.module = .agents
+        model.agentPage = .sessions
+        XCTAssertEqual(model.viewHeight(), 260)
+        model.agentPage = .prs
+        XCTAssertEqual(model.viewHeight(), 300)
     }
 
     @MainActor
     func testViewHeightFollowsCalAndCaptureState() {
         let model = NotchModel(backend: FakeBackend())
         model.module = .calendar
+        // NOMI:日历单一预算(月视图随稿退役,calMonthView 不再影响高度)
         model.calMonthView = true
-        XCTAssertEqual(model.viewHeight(), 312)
+        XCTAssertEqual(model.viewHeight(), 260)
         model.calMonthView = false
-        XCTAssertEqual(model.viewHeight(), 240)
+        XCTAssertEqual(model.viewHeight(), 260)
         model.module = .capture
-        model.captureKind = .task
-        XCTAssertEqual(model.viewHeight(), 232)
+        model.captureKind = .journal  // 今天卡+续写,预算更高
+        XCTAssertEqual(model.viewHeight(), 300)
         model.captureKind = .note
-        XCTAssertEqual(model.viewHeight(), 208)
+        XCTAssertEqual(model.viewHeight(), 232)
     }
 
     @MainActor
     func testAutoExpandedHeightAddsTopBar() {
         let model = NotchModel(backend: FakeBackend())
         model.module = .dashboard
-        XCTAssertEqual(model.autoExpandedHeight, 172 + NotchModel.topBarHeight)
+        XCTAssertEqual(model.autoExpandedHeight, 280 + NotchModel.topBarHeight)
     }
 
     @MainActor
@@ -363,9 +369,9 @@ final class NotchModuleTests: XCTestCase {
         let model = NotchModel(backend: FakeBackend())
         model.module = .capture
         model.captureKind = .note
-        XCTAssertEqual(model.viewHeight(), 208)
+        XCTAssertEqual(model.viewHeight(), 232)
         model.captureShowRecent = true
-        XCTAssertEqual(model.viewHeight(), 272)  // 208 + 64
+        XCTAssertEqual(model.viewHeight(), 296)  // 232 + 64
     }
 
     @MainActor
@@ -375,46 +381,15 @@ final class NotchModuleTests: XCTestCase {
         model.module = .capture
         model.captureKind = .note
         model.captureInputExtraHeight = 36  // 两行额外
-        XCTAssertEqual(model.viewHeight(), 244)  // 208 + 36
+        XCTAssertEqual(model.viewHeight(), 268)  // 232 + 36
         model.captureInputExtraHeight = 999
-        XCTAssertEqual(model.viewHeight(), 268)  // clamp 到 +60
+        XCTAssertEqual(model.viewHeight(), 292)  // clamp 到 +60
         model.captureInputExtraHeight = -5
-        XCTAssertEqual(model.viewHeight(), 208)  // clamp 到 0
+        XCTAssertEqual(model.viewHeight(), 232)  // clamp 到 0
     }
 
-    @MainActor
-    func testTaskTargetDefaultsToMe() {
-        let model = NotchModel(backend: FakeBackend())
-        XCTAssertEqual(model.taskTarget, .me)
-    }
 
-    @MainActor
-    func testTaskForMyselfPostsAsTaskNote() async {
-        // 给自己 = 记录型待办 → notes(kind:task),不进调度任务。
-        let backend = FakeBackend()
-        let model = NotchModel(backend: backend)
-        model.captureKind = .task
-        model.taskTarget = .me
-        model.captureText = "买牛奶"
-        await model.submit()
-        XCTAssertEqual(backend.notes.count, 1)
-        XCTAssertEqual(backend.notes[0].kind, "task")
-        XCTAssertEqual(backend.notes[0].content, "买牛奶")
-        XCTAssertTrue(backend.tasks.isEmpty)
-    }
 
-    @MainActor
-    func testTaskForAgentPostsAsScheduledTask() async {
-        // 交给 agent = 调度任务 → /api/tasks。
-        let backend = FakeBackend()
-        let model = NotchModel(backend: backend)
-        model.captureKind = .task
-        model.taskTarget = .agent
-        model.captureText = "到点跑测试"
-        await model.submit()
-        XCTAssertEqual(backend.tasks, ["到点跑测试"])
-        XCTAssertTrue(backend.notes.isEmpty)
-    }
 
     @MainActor
     func testFocusStartSeedsWhatAndStopRoundsMinutes() {
@@ -433,10 +408,12 @@ final class NotchModuleTests: XCTestCase {
 
     @MainActor
     func testFocusDefaultsWhatWhenTextEmpty() {
+        // 番茄制:任务名可留空(视图显示「未设置」),落库时才兜底成「专注」。
         let model = NotchModel(backend: FakeBackend())
         model.captureText = "   "
         model.startFocus()
-        XCTAssertEqual(model.focusWhat, "专注")
+        XCTAssertEqual(model.focusWhat, "")
+        XCTAssertTrue(model.focusOn)
     }
 
     @MainActor
@@ -444,10 +421,10 @@ final class NotchModuleTests: XCTestCase {
         let model = NotchModel(backend: FakeBackend())
         model.module = .capture
         model.captureKind = .focus
-        XCTAssertEqual(model.viewHeight(), 240)  // idle
+        XCTAssertEqual(model.viewHeight(), 240)  // 番茄环单一预算
         model.captureText = "x"
         model.startFocus()
-        XCTAssertEqual(model.viewHeight(), 300)  // running
+        XCTAssertEqual(model.viewHeight(), 240)  // 跑与不跑同高
     }
 
     @MainActor
@@ -465,7 +442,7 @@ final class NotchModuleTests: XCTestCase {
     }
 
     @MainActor
-    func testAddFilesStagesAndSwitchesToCapture() {
+    func testAddFilesStagesAndSwitchesToFiles() {
         let model = NotchModel(backend: FakeBackend())
         model.module = .dashboard
         model.captureKind = .focus
@@ -473,8 +450,7 @@ final class NotchModuleTests: XCTestCase {
         XCTAssertEqual(model.captureFiles.count, 2)
         XCTAssertEqual(model.captureFiles[0].ext, "PDF")
         XCTAssertEqual(model.captureFiles[1].ext, "PNG")
-        XCTAssertEqual(model.module, .capture)
-        XCTAssertEqual(model.captureKind, .note)  // focus → note when files dropped
+        XCTAssertEqual(model.module, .files)  // NOMI:拖拽进 shelf
         XCTAssertTrue(model.expanded)
     }
 
@@ -565,18 +541,6 @@ final class CaptureTests: XCTestCase {
         XCTAssertNotNil(backend.notes[0].journalDate)
     }
 
-    @MainActor
-    func testTaskCapturePostsTask() async {
-        // 2026-07-05 语义:默认 taskTarget=.me → 记录型待办;.agent 才进调度任务。
-        let backend = FakeBackend()
-        let model = NotchModel(backend: backend)
-        model.captureKind = .task
-        model.taskTarget = .agent
-        model.captureText = "汇总今日进展"
-        await model.submit()
-        XCTAssertEqual(backend.tasks, ["汇总今日进展"])
-        XCTAssertTrue(backend.notes.isEmpty)
-    }
 
     @MainActor
     func testEmptyCaptureIsNoOp() async {
@@ -706,4 +670,46 @@ final class HealthDecodingTests: XCTestCase {
         let health = try JSONDecoder().decode(Health.self, from: json)
         XCTAssertEqual(health, Health(status: "ok", version: "0.0.1"))
     }
+    @MainActor
+    func testClipboardHistoryDedupesAndCaps() {
+        let model = NotchModel(backend: FakeBackend())
+        model.recordClipboard("aaa")
+        model.recordClipboard("aaa")  // 连续重复不重记
+        XCTAssertEqual(model.clipboardHistory.count, 1)
+        for i in 0..<6 { model.recordClipboard("item\(i)") }
+        XCTAssertEqual(model.clipboardHistory.count, 5)  // 上限 5
+        XCTAssertEqual(model.clipboardHistory.first?.text, "item5")  // 新的在前
+        XCTAssertTrue(ClipItem(id: "x", text: "https://a.b", at: Date()).isLink)
+    }
+
+    @MainActor
+    func testPomodoroPauseBanksAndResumes() {
+        let model = NotchModel(backend: FakeBackend())
+        model.startFocus()
+        let t0 = model.focusStartedAt
+        model.pauseFocus(at: t0.addingTimeInterval(300))  // 跑 5 分钟暂停
+        XCTAssertFalse(model.focusOn)
+        XCTAssertEqual(model.focusBanked, 300)
+        XCTAssertEqual(model.focusRemaining(), 25 * 60 - 300)
+        model.startFocus()  // 继续
+        let t1 = model.focusStartedAt
+        XCTAssertEqual(model.focusElapsed(at: t1.addingTimeInterval(60)), 360)
+        model.resetFocus()
+        XCTAssertEqual(model.focusRemaining(), 25 * 60)
+    }
+
+    @MainActor
+    func testJournalTodayJoinsOnlyTodaysEntries() async {
+        let backend = FakeBackend()
+        let today = NotchModel.dayString(Date())
+        backend.recents = [
+            RecentNote(id: 3, content: "晚上收尾", kind: "journal", createdAt: "\(today)T22:10:00"),
+            RecentNote(id: 2, content: "早上开工", kind: "journal", createdAt: "\(today)T09:00:00"),
+            RecentNote(id: 1, content: "昨天的", kind: "journal", createdAt: "2020-01-01T20:00:00"),
+        ]
+        let model = NotchModel(backend: backend)
+        await model.loadJournalToday()
+        XCTAssertEqual(model.journalToday, "早上开工\n\n晚上收尾")  // 只今天,正序拼接
+    }
+
 }

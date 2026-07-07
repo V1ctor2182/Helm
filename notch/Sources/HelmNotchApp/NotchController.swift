@@ -50,7 +50,11 @@ final class NotchController {
         if let screen = NSScreen.main {
             model.notchWidth = detectNotchWidth(screen)
         }
-        if let w = defaults.object(forKey: widthKey) as? Double { model.expandedWidth = w }
+        // NOMI 单体壳固定 440(设计定稿):旧版可拖宽的持久化值不再生效,
+        // 顺手清掉残留 key(2026-07-07 用户:旧 600 宽把布局撑爆还重叠)。
+        defaults.removeObject(forKey: widthKey)
+        model.expandedWidth = NomiTheme.openWidth
+        if let dark = defaults.object(forKey: "notch.nomiDark") as? Bool { model.nomiDark = dark }
 
         let panel = makePanel()
         self.panel = panel
@@ -121,9 +125,12 @@ final class NotchController {
         guard model.expanded, let panel else { return }
         // Only when the pointer is over the visible top-centered shell.
         guard let screen = NSScreen.main else { return }
-        let w = CGFloat(model.expandedWidth), h = CGFloat(model.autoExpandedHeight)
+        let w = CGFloat(model.expandedShellWidth), h = CGFloat(model.autoExpandedHeight)
         let shell = NSRect(x: screen.frame.midX - w / 2, y: screen.frame.maxY - h, width: w, height: h)
         guard shell.contains(NSEvent.mouseLocation), panel.isVisible else { return }
+        // 会话详情 = 阅读态:滚动全部留给内容,上下翻子页/横扫切模块都不抢
+        // (2026-07-07 用户:点开详情一滑就跳走)。
+        if model.module == .agents, model.selectedLocalSessionID != nil { return }
 
         // AppKit deltas are inverted vs the web's wheel deltas; flip so
         // swipe-right → next module, swipe-down → next Dev page.
@@ -149,10 +156,12 @@ final class NotchController {
             let cooled = Date().timeIntervalSince(lastSwitchAt) > 0.30
             // 会话详情页打开时竖滑留给内容滚动,不翻 Dev 子页
             // (2026-07-06 用户:详情里一滑就跳到下个 category)。
-            let devPagingEnabled = model.module == .dev && model.selectedLocalSessionID == nil
-            if devPagingEnabled, abs(gestureAccumY) > abs(gestureAccumX), abs(gestureAccumY) > threshold {
+            let devPagingEnabled = model.module == .agents && model.selectedLocalSessionID == nil
+            // 子页翻页要明确的大幅竖扫(阈值 60 且竖向显著占优)——列表里
+            // 随手滚两下不许翻到端口/PR(2026-07-07 用户反馈)。
+            if devPagingEnabled, abs(gestureAccumY) > abs(gestureAccumX) * 2, abs(gestureAccumY) > 60 {
                 gestureSwitched = true
-                if cooled { animatedSwitch { model.switchDev(gestureAccumY > 0 ? 1 : -1) } }
+                if cooled { animatedSwitch { model.switchAgentPage(gestureAccumY > 0 ? 1 : -1) } }
             } else if abs(gestureAccumX) > abs(gestureAccumY), abs(gestureAccumX) > threshold {
                 gestureSwitched = true
                 if cooled { animatedSwitch { model.switchModule(gestureAccumX > 0 ? 1 : -1) } }
@@ -162,8 +171,8 @@ final class NotchController {
 
         // Mouse wheel (discrete, no phase): a short cooldown paces the steps.
         guard Date().timeIntervalSince(lastSwitchAt) > 0.30 else { return }
-        if model.module == .dev, model.selectedLocalSessionID == nil, abs(dy) > abs(dx), abs(dy) > 1 {
-            animatedSwitch { model.switchDev(dy > 0 ? 1 : -1) }
+        if model.module == .agents, model.selectedLocalSessionID == nil, abs(dy) > abs(dx) * 2, abs(dy) > 4 {
+            animatedSwitch { model.switchAgentPage(dy > 0 ? 1 : -1) }
         } else if abs(dx) > abs(dy), abs(dx) > 1 {
             animatedSwitch { model.switchModule(dx > 0 ? 1 : -1) }
         }
@@ -211,11 +220,11 @@ final class NotchController {
             if model.reminder != nil {
                 return CGSize(width: 560, height: 152)  // reminder banner
             }
-            if model.localAttentionCount > 0 {
+            if model.localAttentionCount > 0, !model.bannerSuppressed {
                 return model.bannerSize  // permission banner(高度随内容)
             }
             return model.expanded
-                ? CGSize(width: model.expandedWidth, height: model.autoExpandedHeight)
+                ? CGSize(width: model.expandedShellWidth, height: model.autoExpandedHeight)
                 : CGSize(width: model.collapsedWidth, height: collapsedHeight)
         }
         panel.contentView = host

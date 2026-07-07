@@ -9,6 +9,7 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var controller: NotchController?
     private var bridge: BridgeServer?
+    private var clipWatcher: ClipboardWatcher?
     private var statusItem: NSStatusItem?
     private var settingsWindow: NSWindow?
     private var model: NotchModel?
@@ -32,13 +33,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             bridge?.resolve(session, allow: allow, updatedInput: updatedInput)
         }
         model.openSettings = { [weak self] in self?.showSettings() }
+        // 端口子页数据源:真 lsof 探测(后台线程跑,~百毫秒)。
+        model.portsProvider = {
+            await Task.detached(priority: .utility) { PortsProbe.listListeningPorts() }.value
+        }
 
         let controller = NotchController(model: model)
         controller.start()
         self.controller = controller
+
+        // NOMI 暂存页剪贴板段的数据源(2s 轮询 changeCount)。
+        let clipWatcher = ClipboardWatcher(model: model)
+        clipWatcher.start()
+        self.clipWatcher = clipWatcher
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        clipWatcher?.stop()
         bridge?.stop()
     }
 

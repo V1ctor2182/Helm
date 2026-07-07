@@ -22,7 +22,6 @@ public enum ConnectionState: Sendable, Equatable {
 public enum CaptureKind: String, Sendable, CaseIterable, Identifiable {
     case note     // 速记 → /api/notes kind=note
     case journal  // 日记 → /api/notes kind=journal (today)
-    case task     // 任务 → /api/tasks (default daily schedule)
     case focus    // 专注 → forward timer; records to /api/focus on stop
     case ask      // 问大脑 → query Helm's brain (interim: stored as kind=ask)
 
@@ -32,7 +31,6 @@ public enum CaptureKind: String, Sendable, CaseIterable, Identifiable {
         switch self {
         case .note: "速记"
         case .journal: "日记"
-        case .task: "任务"
         case .focus: "专注"
         case .ask: "问大脑"
         }
@@ -125,4 +123,33 @@ public enum CaptureStatus: Sendable, Equatable {
 
 public enum HelmError: Error, Equatable {
     case badStatus(Int)
+}
+
+/// 剪贴板历史条目(App 侧 NSPasteboard watcher 喂入;NOMI 暂存页剪贴板段)。
+public struct ClipItem: Sendable, Equatable, Identifiable {
+    public let id: String
+    public let text: String
+    public let at: Date
+
+    public init(id: String, text: String, at: Date) {
+        self.id = id
+        self.text = text
+        self.at = at
+    }
+
+    /// 链接还是纯文本(决定行图标)。
+    public var isLink: Bool { text.hasPrefix("http://") || text.hasPrefix("https://") }
+}
+
+/// 本机监听端口(App 侧 lsof 探测喂入;NOMI 智能体·端口子页)。
+public struct PortInfo: Sendable, Equatable, Identifiable {
+    public let port: Int
+    public let name: String
+
+    public init(port: Int, name: String) {
+        self.port = port
+        self.name = name
+    }
+
+    public var id: Int { port }
 }

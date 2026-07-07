@@ -44,8 +44,7 @@ public final class NotchModel {
             let ext = String((name as NSString).pathExtension.uppercased().prefix(4))
             captureFiles.append(CaptureFile(id: "\(fileSeq)", name: name, ext: ext.isEmpty ? "FILE" : ext))
         }
-        module = .capture
-        if captureKind == .focus { captureKind = .note }
+        module = .files  // NOMI:拖拽暂存进 shelf(旧行为进速记页)
         expanded = true
     }
 
@@ -58,39 +57,65 @@ public final class NotchModel {
         captureKind = all[((i + direction) % all.count + all.count) % all.count]
     }
 
-    // Focus session (HTML focusOn / focusWhat / focusSec) — a forward timer that
-    // records to Helm on stop. Elapsed is derived from a start time so the UI can
-    // tick without mutating state.
-    public private(set) var focusOn = false
+    // Focus — 25min 番茄倒计时(2026-07-07 用户拍板 Q4:初始即环+开始/重置/换任务)。
+    // 剩余从 startedAt+banked 推导,UI tick 不写状态;跑完/重置有进度才落库。
+    public private(set) var focusOn = false        // 计时进行中
     public private(set) var focusWhat = ""
+    public var focusTotal = 25 * 60                // 秒
+    public private(set) var focusBanked = 0        // 暂停前已累计的秒数
     public private(set) var focusStartedAt = Date()
 
-    /// Seconds elapsed in the current focus session (0 when not focusing).
+    /// 已专注秒数(banked + 本段进行中)。
     public func focusElapsed(at now: Date = Date()) -> Int {
-        focusOn ? max(0, Int(now.timeIntervalSince(focusStartedAt))) : 0
+        focusBanked + (focusOn ? max(0, Int(now.timeIntervalSince(focusStartedAt))) : 0)
     }
 
-    /// Start a focus session, seeding "what" from the capture text.
+    /// 剩余秒数(0 = 该收番茄了)。
+    public func focusRemaining(at now: Date = Date()) -> Int {
+        max(0, focusTotal - focusElapsed(at: now))
+    }
+
+    /// 开始/继续。任务名为空时从速记输入顺手带一个(有就清掉输入)。
     public func startFocus() {
-        let what = captureText.trimmingCharacters(in: .whitespacesAndNewlines)
-        focusWhat = what.isEmpty ? "专注" : what
+        guard !focusOn else { return }
+        if focusWhat.isEmpty {
+            let what = captureText.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !what.isEmpty { focusWhat = what; captureText = "" }
+        }
         focusStartedAt = Date()
         focusOn = true
-        captureText = ""
         locked = false
     }
 
-    /// Stop the focus session; returns the rounded minutes (min 1).
+    /// 暂停:把本段进账,停表。
+    public func pauseFocus(at now: Date = Date()) {
+        guard focusOn else { return }
+        focusBanked += max(0, Int(now.timeIntervalSince(focusStartedAt)))
+        focusOn = false
+    }
+
+    /// 归零(不落库);换任务/放弃用。
+    public func resetFocus() {
+        focusOn = false
+        focusBanked = 0
+    }
+
+    public func focusSetTask(_ t: String) {
+        focusWhat = t.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// 停表归零;返回本轮分钟数(min 1),任务名保留可再来一轮。
     @discardableResult public func stopFocus(at now: Date = Date()) -> Int {
         let minutes = max(1, Int((Double(focusElapsed(at: now)) / 60).rounded()))
         focusOn = false
-        focusWhat = ""
+        focusBanked = 0
         return minutes
     }
 
-    /// 停止专注并落库(kind=focus 的 note,记录页·日记时间线可见)。
+    /// 停止并落库(kind=focus 的 note,记录页·日记时间线可见)。跑完 25:00 或
+    /// 用户主动收都走这里。
     public func stopFocusAndRecord(at now: Date = Date()) async {
-        let what = focusWhat
+        let what = focusWhat.isEmpty ? "专注" : focusWhat
         let minutes = stopFocus(at: now)
         captureStatus = .sending
         do {
@@ -108,6 +133,81 @@ public final class NotchModel {
     public private(set) var askQuestion = ""
     public private(set) var recentNotes: [RecentNote] = []
 
+    // MARK: 本地端口(App lsof 探测)
+
+    public private(set) var localPorts: [PortInfo] = []
+    /// App 注入的探测器(纯 Core 不碰 Process);nil = 未接线,页面显示探测不可用。
+    public var portsProvider: (@Sendable () async -> [PortInfo])?
+    public private(set) var portsRefreshing = false
+
+    /// 进入端口子页时刷新一次(探测 ~百毫秒,后台跑)。
+    public func refreshLocalPorts() async {
+        guard let portsProvider, !portsRefreshing else { return }
+        portsRefreshing = true
+        localPorts = await portsProvider().sorted { $0.port < $1.port }
+        portsRefreshing = false
+    }
+
+    // MARK: 剪贴板历史(App watcher 喂入)与暂存 shelf 动作
+
+    public private(set) var clipboardHistory: [ClipItem] = []
+    private var clipSeq = 0
+
+    /// 记入剪贴板历史:连续重复不重记,新的在前,只留 5 条。
+    public func recordClipboard(_ text: String, at now: Date = Date()) {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty, clipboardHistory.first?.text != t else { return }
+        clipSeq += 1
+        clipboardHistory.insert(ClipItem(id: "c\(clipSeq)", text: t, at: now), at: 0)
+        if clipboardHistory.count > 5 { clipboardHistory = Array(clipboardHistory.prefix(5)) }
+    }
+
+    /// 剪贴板条目存速记(真通道:createNote)。
+    public func saveClipToNote(_ item: ClipItem) async {
+        captureStatus = .sending
+        do {
+            try await backend.createNote(content: item.text, kind: "note", journalDate: nil)
+            captureStatus = .sent
+        } catch { captureStatus = .failed }
+    }
+
+    /// shelf 文件「上传到记录」:文件名折进 note(真文件上传等附件 schema,同速记页做法),成功后移出 shelf。
+    public func uploadShelfFile(_ id: String) async {
+        guard let f = captureFiles.first(where: { $0.id == id }) else { return }
+        captureStatus = .sending
+        do {
+            try await backend.createNote(content: "附件: \(f.name)", kind: "note", journalDate: nil)
+            removeFile(id)
+            captureStatus = .sent
+        } catch { captureStatus = .failed }
+    }
+
+    /// 日历 addev:无建事件 API(契约不动)→ 建 agent 任务让 AI 解析时间加事件。
+    public func addEventViaAgent(_ text: String) async {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return }
+        captureStatus = .sending
+        do {
+            try await backend.createTask(prompt: "加日历事件:\(t)")
+            captureStatus = .sent
+        } catch {
+            captureStatus = .failed
+        }
+    }
+
+    /// 总览 quickcap:一条速记直发后端,不动速记页的 kind/文本状态。
+    public func quickNote(_ text: String) async {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return }
+        captureStatus = .sending
+        do {
+            try await backend.createNote(content: t, kind: "note", journalDate: nil)
+            captureStatus = .sent
+        } catch {
+            captureStatus = .failed
+        }
+    }
+
     /// 把上一问答存成速记。
     public func saveAskAsNote() async {
         guard let a = askAnswer, !askQuestion.isEmpty else { return }
@@ -122,18 +222,35 @@ public final class NotchModel {
         recentNotes = (try? await backend.recentNotes(kind: kind, limit: 3)) ?? []
     }
 
+    /// 日记「今天卡」正文:今天的 journal 全文(多段按时间拼接;无则 nil)。
+    public private(set) var journalToday: String?
+
+    public func loadJournalToday(now: Date = Date()) async {
+        let notes = (try? await backend.recentNotes(kind: "journal", limit: 10)) ?? []
+        let today = Self.dayString(now)
+        let todays = notes.filter { $0.createdAt.hasPrefix(today) }.reversed()
+        let joined = todays.map(\.content).joined(separator: "\n\n")
+        journalToday = joined.isEmpty ? nil : joined
+    }
+
+    static func dayString(_ d: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: d)
+    }
+
     // MARK: Module switching (dock + view), ported from helm-notch-pro.html
 
     /// The module shown in the expanded panel (HTML `S.view`).
     public var module: NotchModule = .dashboard
     /// The Dev module's active sub-section (HTML `S.devSec`).
-    public var devSection: DevSection = .agents
+    public var agentPage: AgentPage = .sessions
     /// Direction of the last module switch — drives the slide-in transition
     /// (HTML `slideTo(dir)`): true = forward (new enters from the right).
     public private(set) var moduleSwitchForward = true
     /// Direction of the last Dev sub-page change — drives the vertical slide
     /// (HTML `slideDev(dir)`): true = down (new enters from the bottom).
-    public private(set) var devSwitchForward = true
+    public private(set) var agentPageForward = true
     /// The player the transport controls (HTML `S.mediaSrc`).
     public private(set) var mediaSource: MediaSource = .system
 
@@ -162,42 +279,47 @@ public final class NotchModel {
     // MARK: Per-view height (HTML viewHeight() + NTOP)
 
     /// Height of the top bar, added on top of every view budget (HTML `NTOP`).
-    public static let topBarHeight: Double = 30
+    public static let topBarHeight: Double = 34  // NOMI toprow(=折叠条高)
 
     /// The view+dock budget for the current module (HTML `viewHeight()` / `VH`).
     /// Each module is as tall as its content needs — no big black void.
     public func viewHeight() -> Double {
         switch module {
-        case .dashboard: 172
-        case .media: 330
-        case .clipboard: 232
-        case .calendar: calMonthView ? 312 : 240
-        case .dev:
-            switch devSection {
-            // 详情页(prompt+最后回复+回复框)比列表高。
-            case .agents: selectedLocalSessionID != nil ? 316 : 204
-            case .ports: 248
-            case .reviews: 252
-            case .stats: 252
+        case .dashboard: 280  // bento+quickcap+dock(2026-07-07 用户:重叠)
+        case .media: 300  // 更宽更矮(2026-07-07 用户):560 宽腾给歌词
+        case .calendar: 260  // NOMI 周条+事件+addev(月视图随稿退役)
+        case .files: 280  // dropzone+shelf+剪贴板段
+        case .agents:
+            switch agentPage {
+            // NOMI 卡片比旧行高;详情页(prompt+最后回复+回复框)最高。
+            case .sessions: selectedLocalSessionID != nil ? 316 : 260
+            case .ports: 260
+            case .prs: 300
             }
         // Tightened vs the HTML prototype — the Swift content is more compact, so
         // the taller HTML budgets left too much empty space below (device feedback).
         // 删掉时间/地点行后内容更矮,预算跟着收(2026-07-05 用户:任务下面空太大)。
         // 预算含 dock(~54):note 208 / task +24(target 行) / ask+answer 322。
         // 多行输入时加 captureInputExtraHeight(App 实测),面板随输入框长。
+        // NOMI 胶囊/输入盒都比 ORAGE 高一档,预算整体上调(2026-07-07 用户:被 clip)。
         case .capture:
+            // 任务 kind 已随稿去除(2026-07-08 用户:任务只在 Helm,速记 AI 分诊建);
+            // 日记 = 今天卡(全文可滚)+续写,预算更高。
             captureKind == .focus
-                ? (focusOn ? 300 : 240)
+                ? 240
                 : (captureKind == .ask && askAnswer != nil
-                    ? 322 + captureInputExtraHeight
+                    ? 340 + captureInputExtraHeight
                     : (captureShowRecent
-                        ? min(320, (captureKind == .task ? 232 : 208) + 64)
-                        : (captureKind == .task ? 232 : 208)) + captureInputExtraHeight)
+                        ? min(360, (captureKind == .journal ? 300 : 232) + 64)
+                        : (captureKind == .journal ? 300 : 232)) + captureInputExtraHeight)
         }
     }
 
     /// Total expanded panel height for the current view (HTML `--eh`).
     public var autoExpandedHeight: Double { viewHeight() + Self.topBarHeight }
+
+    /// 展开壳宽:媒体页放宽到 560(歌词要呼吸,2026-07-07 用户),其余 440。
+    public var expandedShellWidth: Double { module == .media ? 560 : expandedWidth }
 
     /// Select a module directly (HTML dock click). Slide direction is inferred
     /// from the dock index delta. Entering Dev resets to its first sub-section.
@@ -220,32 +342,38 @@ public final class NotchModel {
     private func setModule(_ m: NotchModule, forward: Bool) {
         moduleSwitchForward = forward
         module = m
-        if m == .dev { devSection = .agents } else { selectedLocalSessionID = nil }
+        if m == .agents { agentPage = .sessions } else { selectedLocalSessionID = nil }
         // Leaving 速记 ends the capture lock so hover-away can collapse again.
         if m != .capture { locked = false }
     }
 
-    /// Page the Dev sub-sections vertically (HTML `switchDev(dir)`). Clamps at
-    /// the ends — no wrap.
-    public func switchDev(_ direction: Int) {
-        let all = DevSection.allCases
-        guard let i = all.firstIndex(of: devSection) else { return }
+    /// 智能体子页上下滑翻页(HTML .swipe snap)。Clamps at the ends — no wrap.
+    public func switchAgentPage(_ direction: Int) {
+        let all = AgentPage.allCases
+        guard let i = all.firstIndex(of: agentPage) else { return }
         let next = i + direction
         guard next >= 0, next < all.count else { return }
-        devSwitchForward = direction > 0
-        devSection = all[next]
+        agentPageForward = direction > 0
+        agentPage = all[next]
     }
 
-    /// Jump to a Dev sub-section (rail tap); infers the slide direction.
-    public func selectDev(_ s: DevSection) {
-        let all = DevSection.allCases
-        let from = all.firstIndex(of: devSection) ?? 0
+    /// 跳到某张智能体子页(sdot 点击);推断滑动方向。
+    public func selectAgentPage(_ s: AgentPage) {
+        let all = AgentPage.allCases
+        let from = all.firstIndex(of: agentPage) ?? 0
         let to = all.firstIndex(of: s) ?? from
-        devSwitchForward = to >= from
-        devSection = s
+        agentPageForward = to >= from
+        agentPage = s
     }
 
-    // MARK: Theme (daily-rotating accent)
+    // MARK: NOMI theme (深默认+浅色,helm-notch-nomi.html)
+
+    /// 深/浅面板。NOMI 重塑后这是唯一的模式开关;渐变 accent 不随它变。
+    public var nomiDark = true
+    /// 当前成套色板 — 视图只从这里取色,禁止单点混用两套。
+    public var nomi: NomiPalette { nomiDark ? .dark : .light }
+
+    // MARK: Theme (daily-rotating accent — 旧 ORAGE 皮,NOMI 转正后退役备用)
 
     /// Notch background material (HTML MATS). Default black keeps the current look.
     public var backgroundMaterial: NotchMaterial = .black { didSet { refreshTheme() } }
@@ -263,7 +391,7 @@ public final class NotchModel {
 
     /// Detected physical notch width in points (set by the controller).
     public var notchWidth: Double = 200
-    public var expandedWidth: Double = 600
+    public var expandedWidth: Double = NomiTheme.openWidth  // 440,NOMI .shell.open
     public var expandedHeight: Double = 268
 
     /// Agent runs Helm knows about (backend orchestration).
@@ -276,6 +404,17 @@ public final class NotchModel {
     /// Set by the controller — routes a permission verdict back to the bridge.
     /// `updatedInput` (tool_input JSON) rides along for question answers.
     public var resolvePermission: (@MainActor (_ session: String, _ allow: Bool, _ updatedInput: String?) -> Void)?
+
+    /// 「打开会话」按下后压住横幅,改在智能体页里处理(新请求/解决后复位)。
+    public var bannerSuppressed = false
+
+    /// banner 上的「打开会话」:压横幅 → 智能体页会话列表(permcard 在列表里)。
+    public func openPendingSession() {
+        bannerSuppressed = true
+        selectedLocalSessionID = nil
+        selectModule(.agents)
+        expanded = true
+    }
 
     /// Session opened in the Dev/Agents detail view (nil = list).
     public var selectedLocalSessionID: String?
@@ -290,8 +429,9 @@ public final class NotchModel {
     /// Permission banner 高度随内容走:头 40 + 标题 25 + 正文行数 + 按钮区 60。
     /// 定高 208 在一行 detail 时底下剩一大块黑(2026-07-03 用户反馈)。
     public var bannerSize: CGSize {
+        let w = NomiTheme.bannerWidth  // NOMI bannermode 460
         guard let s = localSessions.first(where: { $0.needsAttention }) else {
-            return CGSize(width: 620, height: 208)
+            return CGSize(width: w, height: 208)
         }
         // 选择题横幅:头 40 + 每题(题面 ~22 + 每选项 ~30) + 提交区 56。
         if let q = s.question {
@@ -300,15 +440,14 @@ public final class NotchModel {
                 h += 24 + Double(item.options.count) * 30
                 if !item.header.isEmpty { h += 16 }
             }
-            return CGSize(width: 620, height: min(560, max(208, h)))
+            return CGSize(width: w, height: min(560, max(208, h)))
         }
         let detail = s.pendingDetail ?? s.pendingTool ?? ""
-        // 显式换行 + 长行折行估算(monospaced 11pt,620-36-18 宽约容 78 字符)
+        // 显式换行 + 长行折行估算(monospaced 10.5pt,460 宽约容 56 字符)
         let lines = detail.split(separator: "\n", omittingEmptySubsequences: false)
-            .reduce(0) { $0 + max(1, Int(ceil(Double($1.count) / 78.0))) }
+            .reduce(0) { $0 + max(1, Int(ceil(Double($1.count) / 56.0))) }
         let clamped = min(8, max(1, lines))
-        // 实测布局:上下 padding 28 + 头 16 + 题行 25 + 正文框 18 + 按钮区 48 ≈ 144 固定 + 行高 16
-        return CGSize(width: 620, height: CGFloat(144 + clamped * 16))
+        return CGSize(width: w, height: CGFloat(112 + clamped * 16))
     }
 
     /// 折叠态两翼宽度随内容走(2026-07-03 用户:折叠态太宽)。
@@ -333,10 +472,11 @@ public final class NotchModel {
     public var collapsedMeasuredWidth: CGFloat?
 
     public var collapsedWidth: CGFloat {
+        let floor = CGFloat(NomiTheme.foldedWidth)  // NOMI 折叠条设计宽 310
         let estimate = CGFloat(notchWidth) + collapsedLeftWing + collapsedRightWing
-        guard let m = collapsedMeasuredWidth else { return estimate }
-        // 实测为准,但不窄于物理刘海+两侧最小呼吸
-        return max(m, CGFloat(notchWidth) + 76)
+        guard let m = collapsedMeasuredWidth else { return max(estimate, floor) }
+        // 实测为准,但不窄于设计宽/物理刘海+两侧最小呼吸
+        return max(m, CGFloat(notchWidth) + 76, floor)
     }
 
     public var localAttentionCount: Int { localSessions.lazy.filter(\.needsAttention).count }
@@ -600,6 +740,7 @@ public final class NotchModel {
                 upsert(m, phase: .running, activity: activityLabel(m), now: now)
             }
         case "PermissionRequest":
+            bannerSuppressed = false  // 新请求重新弹横幅
             // 选择题解析成功 → 独立的 waitingQuestion(notch 内可作答);
             // 解析不了照旧走 waitingPermission 允许/拒绝。
             let question = (m.tool == "AskUserQuestion" && m.toolInput != nil)
@@ -646,6 +787,7 @@ public final class NotchModel {
     }
 
     private func clearPending(_ session: String, phase: LocalSession.Phase) {
+        bannerSuppressed = false
         guard let i = localSessions.firstIndex(where: { $0.id == session }) else { return }
         localSessions[i].phase = phase
         localSessions[i].pendingTool = nil
@@ -776,13 +918,7 @@ public final class NotchModel {
                 try await backend.createNote(content: text + ext, kind: "note", journalDate: nil)
             case .journal:
                 try await backend.createNote(content: text + ext, kind: "journal", journalDate: Self.today())
-            case .task:
-                // 给自己 = 记录型待办(notes/kind:task);交给 agent = 调度任务(/api/tasks)。
-                if taskTarget == .me {
-                    try await backend.createNote(content: text + ext, kind: "task", journalDate: nil)
-                } else {
-                    try await backend.createTask(prompt: text + ext)
-                }
+                await loadJournalToday()  // 续写后今天卡立即刷新
             case .focus:
                 return  // focus uses start/stop, not submit
             case .ask:
