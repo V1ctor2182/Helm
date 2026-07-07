@@ -88,7 +88,7 @@ commit 悬空了。规则:
 
 | Loop | 分支 | 工作区 | 状态 |
 |---|---|---|---|
-| 主 app NOMI | feat/nomi-reskin → feat/nomi-kinds | docs/loops/nomi/ | 活跃(批次 3:K 续+T 分诊) |
+| 主 app NOMI | feat/nomi-reskin → feat/nomi-kinds | docs/loops/nomi/ | 已收尾(批次 3 T1-T5 全清,PR 待用户合;终报 reports/batch3-final.md) |
 | notch NOMI | feat/notch-nomi-m1 | docs/loops/nomi-notch/ | 已收尾(PR #55 已合;worktree 承重:hook+app,合 main 后迁回正式路径) |
 
 > 归档 = 状态改「已收尾」留表内,工作区永久保留;下次同交付物的新工作
