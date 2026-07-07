@@ -150,6 +150,13 @@
   @keyframes pop{from{transform:scale(.85);opacity:0}}
   .aiverdict .spark{width:11px;height:11px}
   .scHint{font:400 11px/1 var(--sans);color:var(--ink3);margin:0 4px 20px;padding-left:16px}
+  .vcaret{font-size:8px;color:var(--ink3);margin-left:2px}
+  .whomini{display:inline-flex;gap:4px;animation:pop .18s var(--ease)}
+  .wm{font:500 11px/1 var(--sans);color:var(--ink2);background:#fff;border:1px solid var(--hair);border-radius:999px;padding:6px 12px;cursor:pointer}
+  .wm.on{border-color:transparent;background:var(--grad);color:#fff;font-weight:600}
+  .focusbtn{width:36px;height:36px;border-radius:50%;border:0;background:var(--pill);color:var(--ink2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none}
+  .focusbtn svg{width:17px;height:17px}
+  .focusbtn:hover{color:var(--ink)}
 
   /* 专注进行中卡 */
   .focuslive{display:flex;align-items:center;gap:16px;background:var(--card);border-radius:18px;
@@ -266,12 +273,20 @@
   </div>
 
   <!-- 智能捕获条:一个入口,AI 自动判类(速记/日记/任务/收藏),不用手选 kind -->
+  <!-- 捕获坞去重定稿(2026-07-08):无 kind chips 行——AI 判定徽章(可点轮换)承担分流;
+       判为任务时「给自己/交给agent」双轨浮现;专注收成 ⏱ 图标;问大脑由疑问句判定。 -->
   <div class="smartcap">
-    <input id="scin" type="text" placeholder="随手丢进来 — AI 自动判断这是速记 / 日记 / 任务 / 收藏…">
-    <span class="aiverdict" id="aiv" hidden><span class="spark"></span><span id="aivt">AI · 速记</span></span>
+    <input id="scin" type="text" placeholder="随手丢进来 — AI 自动分流:速记 / 日记 / 任务 / 收藏 / 问大脑…">
+    <span class="aiverdict" id="aiv" hidden><span class="spark"></span><span id="aivt">AI · 速记</span><span class="vcaret">▾</span></span>
+    <span class="whomini" id="whomini" hidden>
+      <button class="wm on" id="wmMe">给自己</button><button class="wm" id="wmAg">交给 agent</button>
+    </span>
+    <button class="focusbtn" id="fbtn" title="开始专注(以输入内容为题)" onclick="scFocus()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="13" r="7.2"/><path d="M12 9.5V13l2.4 1.6M10 2.5h4M12 2.5v3"/></svg>
+    </button>
     <button class="gbtn" style="margin-left:0" onclick="scSend()">发送</button>
   </div>
-  <div class="scHint">试试输入:「明早 9 点跑回归」→ 任务 · 「https://arxiv.org/…」→ 收藏 · 「今天终于…」→ 日记;判定可点击改</div>
+  <div class="scHint">一个入口,AI 分流 — 判定徽章可点改;「明早 9 点…」→ 任务(浮出双轨) · 链接 → 收藏 · 疑问句 → 问大脑 · ⏱ = 用这句话开始专注</div>
 
   <!-- ═══ 速记:瀑布卡片墙(碎片扫视) ═══ -->
   <div class="pane on" id="p-notes">
@@ -486,16 +501,30 @@ function classify(t){
   if(/今天|终于|感觉|开心|累|复盘了|想了想/.test(t)&&t.length>14)return {k:'日记',hint:'写入今天'};
   return {k:'速记',hint:null};
 }
+const whomini=document.getElementById('whomini');
 scin.addEventListener('input',()=>{
   const v=classify(scin.value);
-  if(!v){aiv.hidden=true;return}
+  if(!v){aiv.hidden=true;whomini.hidden=true;return}
   vIdx=VERDICTS.indexOf(v.k); vAuto=true;
   aivt.textContent='AI · '+v.k+(v.hint?' · '+v.hint:'');
   aiv.hidden=false;
+  whomini.hidden=(v.k!=='任务');
 });
+document.getElementById('wmMe').onclick=e=>{e.target.classList.add('on');document.getElementById('wmAg').classList.remove('on')};
+document.getElementById('wmAg').onclick=e=>{e.target.classList.add('on');document.getElementById('wmMe').classList.remove('on')};
+function scFocus(){
+  const t=scin.value.trim()||'未命名专注';
+  document.querySelector('.fmid .fw').textContent=t;
+  fsec=0;frun=true;
+  document.getElementById('focusCard').style.display='flex';
+  document.querySelector('[data-p=notes]').click();
+  scin.value='';aiv.hidden=true;whomini.hidden=true;
+  toast('开始专注:'+t);
+}
 aiv.onclick=()=>{ // 判定可点击轮换(AI 判错时一键改)
   vIdx=(vIdx+1)%VERDICTS.length; vAuto=false;
-  aivt.textContent=(vAuto?'AI':'手动')+' · '+VERDICTS[vIdx];
+  aivt.textContent='手动 · '+VERDICTS[vIdx];
+  whomini.hidden=(VERDICTS[vIdx]!=='任务');
 };
 function scSend(){
   if(!scin.value.trim())return;
