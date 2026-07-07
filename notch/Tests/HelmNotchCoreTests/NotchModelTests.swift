@@ -391,7 +391,7 @@ final class NotchModuleTests: XCTestCase {
 
     @MainActor
     func testTaskForMyselfPostsAsTaskNote() async {
-        // 给自己 = 记录型待办 → notes(kind:task),不进调度任务。
+        // 给自己 = 「任务:」前缀 note(后端已移除 task kind,2026-07-07),不进调度任务。
         let backend = FakeBackend()
         let model = NotchModel(backend: backend)
         model.captureKind = .task
@@ -399,8 +399,8 @@ final class NotchModuleTests: XCTestCase {
         model.captureText = "买牛奶"
         await model.submit()
         XCTAssertEqual(backend.notes.count, 1)
-        XCTAssertEqual(backend.notes[0].kind, "task")
-        XCTAssertEqual(backend.notes[0].content, "买牛奶")
+        XCTAssertEqual(backend.notes[0].kind, "note")
+        XCTAssertEqual(backend.notes[0].content, "任务: 买牛奶")
         XCTAssertTrue(backend.tasks.isEmpty)
     }
 

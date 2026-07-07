@@ -900,9 +900,11 @@ public final class NotchModel {
             case .journal:
                 try await backend.createNote(content: text + ext, kind: "journal", journalDate: Self.today())
             case .task:
-                // 给自己 = 记录型待办(notes/kind:task);交给 agent = 调度任务(/api/tasks)。
+                // 给自己 = 「任务:」前缀的 note(后端 2026-07-07 起 kind 只收
+                // note/journal/focus,task kind 已移除——422 失败,用户截图);
+                // 交给 agent = 调度任务(/api/tasks)。
                 if taskTarget == .me {
-                    try await backend.createNote(content: text + ext, kind: "task", journalDate: nil)
+                    try await backend.createNote(content: "任务: " + text + ext, kind: "note", journalDate: nil)
                 } else {
                     try await backend.createTask(prompt: text + ext)
                 }

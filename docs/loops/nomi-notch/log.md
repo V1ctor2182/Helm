@@ -109,3 +109,8 @@
 - 媒体页专属壳宽 560(expandedShellWidth,其余模块仍 440),高度 345→300;封面 88→76、行距收紧、歌词限高 176——歌词栏宽了不再截字,底部不再空。
 - hover 展开后首点没反应:NotchHostingView 加 acceptsFirstMouse(面板非 key 的第一下点击直接生效);顺手修 activeSize 两处失配(banner 压住时点击区误算 banner 尺寸;展开点击区宽度未跟模块壳宽)。
 - 全测试绿,已重打包重启。
+
+## 2026-07-07 迭代 19 — 任务落库 422 修复 [用户截图]
+- 根因:后端 notes API 收紧 kind ∈ (note/journal/focus),旧「给自己=kind:task」422(后端侧新流程是 note→/to-task 转调度)。
+- 修:给自己 → 「任务: 」前缀的 note(真通道);交给 agent(/api/tasks 全字段)与 healthz 均未受影响,验证过。
+- 测试同步;全绿;已重打包重启。
