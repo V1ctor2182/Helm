@@ -114,3 +114,9 @@
 - 根因:后端 notes API 收紧 kind ∈ (note/journal/focus),旧「给自己=kind:task」422(后端侧新流程是 note→/to-task 转调度)。
 - 修:给自己 → 「任务: 」前缀的 note(真通道);交给 agent(/api/tasks 全字段)与 healthz 均未受影响,验证过。
 - 测试同步;全绿;已重打包重启。
+
+## 2026-07-07 迭代 20 — 权限 Allow 失效修复 [用户截图]
+- 症状:横幅 Allow 点了没反应,终端提示仍在;选择题却通(实测回执正常)。
+- 根因:HookRunner allow 决定带 "updatedInput": null + "updatedPermissions": [],Claude Code 判无效整个丢弃;选择题带真对象所以幸免。
+- 修:allow 只发 {"behavior":"allow"},updatedInput 仅在有值时携带;updatedPermissions 移除。
+- 注意:hooks 仍指向旧路径包(未含修复)——改 settings.json/覆盖旧包均被 auto-mode 分类器拦(自修改),留给用户:设置里重装 hook 或手动同步包。
