@@ -31,7 +31,11 @@
   .top{display:flex;align-items:center;gap:14px;margin-bottom:20px}
   .top h1{font:800 22px/1.2 var(--sans);letter-spacing:-.2px;margin:0}
   .top .sub{font:400 13px/1 var(--sans);color:var(--ink3)}
-  .chips{display:flex;gap:5px;margin-left:8px}
+  .ctlrow{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+  .vseg{display:inline-flex;gap:4px;background:var(--card);border-radius:999px;padding:4px;box-shadow:var(--shadow)}
+  .vbtn{font:500 13px/1 var(--sans);color:var(--ink2);background:transparent;border:0;border-radius:999px;padding:8px 18px;cursor:pointer}
+  .vbtn.on{background:var(--ink);color:#fff;font-weight:600}
+  .chips{display:flex;gap:5px}
   .chip{font:500 12.5px/1 var(--sans);color:var(--ink2);background:var(--pill);border:0;border-radius:999px;padding:8px 16px;cursor:pointer}
   .chip.on{background:var(--ink);color:#fff;font-weight:600}
   .pane{display:none}
@@ -212,6 +216,27 @@
   .sheet .ainote .spark{width:10px;height:10px}
   .sheet .ainote .full{display:none}
   .sheet .ainote:hover .full{display:inline}
+  /* Calendar 视图 */
+  .calbar{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .nbtn{width:30px;height:30px;border-radius:50%;background:var(--pill);border:0;color:var(--ink2);cursor:pointer}
+  .calrng{font:700 13px/1 var(--sans)}
+  .todaybtn{font:500 11px/1 var(--sans);color:var(--ink2);background:var(--pill);border:0;border-radius:999px;padding:6px 12px;cursor:pointer}
+  .caltip{margin-left:auto;font:400 11px/1 var(--sans);color:var(--ink3)}
+  .calgrid{display:grid;grid-template-columns:48px repeat(7,1fr)}
+  .cald{text-align:center;padding:6px 0 10px}
+  .cald span{display:block;font:400 11px/1.4 var(--sans);color:var(--ink3)}
+  .cald b{font:400 14px/1.4 var(--sans);color:var(--ink2)}
+  .cald.on span,.cald.on b{color:var(--ink);font-weight:700}
+  .calh{font:400 10.5px/1 var(--sans);color:var(--ink3);text-align:right;padding:4px 8px 0 0;height:52px}
+  .calc{height:52px;border-left:1px dashed #e6e6ea;position:relative}
+  .calc.nowc::after{content:'';position:absolute;left:0;right:-700%;top:26px;border-top:1.5px solid var(--g1);z-index:1}
+  .calcard{position:absolute;left:4px;right:4px;top:2px;z-index:2;background:var(--card);border-radius:10px;
+    box-shadow:var(--shadow);padding:5px 8px;font:600 11px/1.4 var(--sans);color:var(--ink);
+    border-left:3px solid var(--g2);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer}
+  .calcard i{display:block;font:400 9.5px/1.3 var(--sans);color:var(--ink3);font-style:normal}
+  .calcard.k-task{border-left-color:var(--ok)}
+  .calcard.k-note{border-left-color:#0a84ff}
+  .calcard.k-jr{border-left-color:#c9a227}
   /* toast */
   .toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:var(--ink);color:#fff;
     font:500 12.5px/1 var(--sans);border-radius:999px;padding:11px 20px;box-shadow:var(--shadow-lg);
@@ -221,7 +246,15 @@
 </head>
 <body>
   <div class="top">
-    <h1>记录</h1><span class="sub">三态 layout:各配各的形</span>
+    <h1>记录</h1><span class="sub">视图 × 分类:两个维度,一行说清</span>
+  </div>
+  <!-- 顶部两组控制:左=视图(怎么看),右=分类(看什么)。旧账本 gutter/SCRATCH 标签/独立记一笔行全部退场 -->
+  <div class="ctlrow">
+    <div class="vseg">
+      <button class="vbtn on" data-v="timeline">Timeline</button>
+      <button class="vbtn" data-v="canvas">Canvas</button>
+      <button class="vbtn" data-v="calendar">Calendar</button>
+    </div>
     <div class="chips">
       <button class="chip on" data-p="notes">速记</button>
       <button class="chip" data-p="journal">日记</button>
@@ -393,7 +426,37 @@
     </div>
   </div>
 
+  <!-- ═══ Calendar 视图:周历(视图维度;分类 chips 同样过滤落格内容) ═══ -->
+  <div class="pane" id="p-cal">
+    <div class="calbar">
+      <button class="nbtn">‹</button><span class="calrng">07-07 — 07-13</span><button class="nbtn">›</button>
+      <button class="todaybtn">今天</button>
+      <span class="caltip">分类 chips 同样作用:选「任务」只看任务落格,选「日记」看有日记的天</span>
+    </div>
+    <div class="calgrid">
+      <div></div>
+      <div class="cald on"><span>周二</span><b>07</b></div><div class="cald"><span>周三</span><b>08</b></div>
+      <div class="cald"><span>周四</span><b>09</b></div><div class="cald"><span>周五</span><b>10</b></div>
+      <div class="cald"><span>周六</span><b>11</b></div><div class="cald"><span>周日</span><b>12</b></div><div class="cald"><span>周一</span><b>13</b></div>
+      <div class="calh">09:00</div><div class="calc"><div class="calcard k-task"><i>09:00</i>汇总未读邮件</div></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div>
+      <div class="calh">10:00</div><div class="calc"><div class="calcard k-ev"><i>10:00</i>站会</div></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div>
+      <div class="calh">14:00</div><div class="calc nowc"><div class="calcard k-note"><i>14:31</i>驾驶舱复盘(速记)</div></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div>
+      <div class="calh">18:00</div><div class="calc"><div class="calcard k-task"><i>18:00</i>swift test 夜巡</div></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div>
+      <div class="calh">21:00</div><div class="calc"><div class="calcard k-jr"><i>21:00</i>日记 · 写了 128 字</div></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div>
+    </div>
+  </div>
+
 <script>
+  // 视图切换(Timeline 显示三态分类;Canvas/Calendar 各自 pane)
+  document.querySelectorAll('.vbtn').forEach(v=>v.onclick=()=>{
+    document.querySelectorAll('.vbtn').forEach(x=>x.classList.remove('on'));
+    v.classList.add('on');
+    const which=v.dataset.v;
+    document.querySelectorAll('.pane').forEach(x=>x.classList.remove('on'));
+    if(which==='calendar'){document.getElementById('p-cal').classList.add('on');}
+    else if(which==='canvas'){document.getElementById('p-notes').classList.add('on');/* Canvas 见 helm-journal-pro.html,此稿聚焦三态+周历 */}
+    else{document.querySelector('.chip.on')?.click()||document.getElementById('p-notes').classList.add('on');}
+  });
   document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
     document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
     document.querySelectorAll('.pane').forEach(x=>x.classList.remove('on'));

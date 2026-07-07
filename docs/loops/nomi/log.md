@@ -108,3 +108,8 @@
 - 对齐: 全局 FocusStore(focus.svelte.ts)——start(what)/stop→写「专注 N 分钟 · what」进今日日记/mmss/圆环 deg。速记墙顶活卡(conic 圆环计时+任务名+渐变停止);待办 hover「开始专注」(带着待办内容发起并跳速记);CaptureDock 专注 kind 改走 store(与墙顶活卡同一状态)。闭环:任务发起→速记区活着→归宿日记→PageDetail 专注块聚合。
 - 门: build ✓ / check 0/0 / test 206 全绿
 - 视觉: shots/k8-live2.png(活卡 00:03 计时中;墙上还见 enrich 实时新卡)
+## R+ · 2026-07-08 · 记录页顶部重设计 + Calendar 视图补稿 + 整卡可点(用户三点反馈)
+- 稿(helm-journal-kinds.html): 顶部重构=标题行+「视图(Timeline/Canvas/Calendar)×分类」两组控制一行;新增 Calendar pane(周历落格四色分类沿+时刻线+『分类 chips 同样作用』说明);旧账本元素不再出现在稿中。
+- 实现: 记录页旧 compose 行/gut(随手/收集)/SCRATCH mono 标签全退场——顶部换智能捕获坞(CaptureDock,K7 判类内置,一个入口自动分流);墙区脱账本壳直接铺;头部计数中文化(10 条速记·3 篇日记·0 个任务);墙卡整卡可点开详情(操作钮/编辑态 stopPropagation,键盘 Enter 同开)。
+- 门: build ✓ / check 0/0 / test 206 全绿
+- 视觉: shots/top-clean.png + spec-cal.png

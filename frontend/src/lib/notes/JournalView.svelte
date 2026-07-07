@@ -13,6 +13,7 @@
   import NoteDetail from './NoteDetail.svelte'
   import PageDetail from './PageDetail.svelte'
   import { focus } from '../focus.svelte'
+  import CaptureDock from '../CaptureDock.svelte'
 
   // 三视图(阶段 4 R08,source: helm-journal-pro.html 记录板块)+kind 过滤。
   let view = $state<'timeline' | 'canvas' | 'calendar'>('timeline')
@@ -235,7 +236,7 @@
   <header class="head">
     <h1>记录</h1>
     <span class="hd">速记 · 日记 · 任务 · 日历</span>
-    <span class="pg">{pad3(noteItems.length)} NOTES · {pad3(journalItems.length)} ENTRIES · {pad3(tasks.tasks.length)} TASKS</span>
+    <span class="pg">{notes.notes.filter((n) => n.kind === 'note').length} 条速记 · {journalItems.length} 篇日记 · {tasks.tasks.length} 个任务</span>
   </header>
 
   <div class="viewrow">
@@ -257,34 +258,13 @@
   {#if notes.error}<p class="err" role="alert">{notes.error}</p>{/if}
 
   {#if view === 'timeline' && layout.journalFilter !== 'task' && layout.journalFilter !== 'journal'}
-    <div class="row">
-      <div class="gut"><span class="tm">随手</span></div>
-      <form
-        class="compose"
-        onsubmit={(e) => {
-          e.preventDefault()
-          void add()
-        }}
-      >
-        <span class="car" aria-hidden="true"></span>
-        <textarea
-          placeholder="随手记一笔…"
-          bind:value={draft}
-          aria-label="速记内容"
-          rows={1}
-          onkeydown={cmdEnter}
-        ></textarea>
-        <button class="act pri" type="submit" disabled={!draft.trim()}>记一笔</button>
-      </form>
-    </div>
+    <!-- 智能捕获坞(K7 判类内置):旧账本 compose 行退场,一个入口自动分流 -->
+    <CaptureDock />
   {/if}
 
   {#if view === 'timeline'}
   {#if ['all', 'note', 'collect', 'youtube', 'paper', 'inspiration'].includes(layout.journalFilter)}
-    <div class="row">
-      <div class="gut"><span class="tm">收集</span><br />{noteItems.length} 条</div>
-      <div>
-        <div class="h">速记 / SCRATCH</div>
+    <div class="wallwrap">
         {#if focus.running}
           <div class="focuslive">
             <span class="fring" style="background:conic-gradient(var(--g1) 0deg, var(--g2) {focus.deg}deg, var(--pill) {focus.deg}deg)">
@@ -305,9 +285,18 @@
           <!-- K1 瀑布卡墙(稿:helm-journal-kinds.html 速记态):便签/收藏卡混排 -->
           <div class="wall">
             {#each items as n (n.id)}
-              <article class="wcard" class:plain={!n.meta?.url}>
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <div
+                class="wcard"
+                class:plain={!n.meta?.url}
+                role="button"
+                tabindex="0"
+                onclick={() => (detailNote = n)}
+                onkeydown={(e) => e.key === 'Enter' && (detailNote = n)}
+              >
                 {#if editingId === n.id}
-                  <div class="wpad">
+                  <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+                  <div class="wpad" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
                     <textarea class="editbox" bind:value={editDraft} aria-label="编辑内容" rows="3"></textarea>
                     <span class="wacts show">
                       <button class="act pri" onclick={saveEdit} disabled={!editDraft.trim()}>保存</button>
@@ -323,11 +312,11 @@
                       <span class="wbadge" style="background:{({ youtube: '#ff2d2d', paper: '#8b5a2b', inspiration: '#0a84ff' } as Record<string, string>)[n.meta.type ?? ''] ?? '#0a84ff'}">
                         {({ youtube: 'YT', paper: 'AX', inspiration: 'AW' } as Record<string, string>)[n.meta.type ?? ''] ?? 'WEB'}
                       </span>
-                      <button class="wti openable" title="查看详情" onclick={() => (detailNote = n)}>{n.meta.title ?? n.meta.url}</button>
+                      <span class="wti">{n.meta.title ?? n.meta.url}</span>
                       {#if n.meta.summary}<p class="wsum">{n.meta.summary}</p>{/if}
                     {:else}
                       <span class="wbadge" style="background:var(--t1);color:var(--onink)">N</span>
-                      <button class="wtx openable" title="查看详情" onclick={() => (detailNote = n)}>{n.content}</button>
+                      <span class="wtx">{n.content}</span>
                     {/if}
                     <div class="wfoot">
                       {#if n.meta?.site}<span>{n.meta.site}</span>{/if}
@@ -335,7 +324,8 @@
                       {#if linkedNoteIds.has(n.id)}<span class="linked">已转任务</span>{/if}
                       <span class="wtm">{localHHMM(n.created_at)}</span>
                     </div>
-                    <span class="wacts">
+                    <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+                    <span class="wacts" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
                       <button class="act" title="编辑" aria-label={`编辑 ${n.content}`} onclick={() => startEdit(n)}>编辑</button>
                       <button class="act" title="转为今天的日记" onclick={() => notes.toJournal(n.id)}>→日记</button>
                       <button class="act" title="存入记忆" onclick={() => notes.toMemory(n.id)}>→记忆</button>
@@ -349,12 +339,11 @@
                     </span>
                   </div>
                 {/if}
-              </article>
+              </div>
             {/each}
           </div>
           {/each}
         {/if}
-      </div>
     </div>
   {:else if layout.journalFilter === 'journal'}
     <!-- K4 日记纸页(稿:helm-journal-kinds.html 日记态):窄栏/今天的页/一天一页 -->
@@ -633,20 +622,6 @@
     font-weight: 600;
   }
   /* 账本行:左槽 mono + 发丝分隔(承 Today .rdrow) */
-  .row {
-    display: grid;
-    grid-template-columns: var(--gutter-w) 1fr;
-    border-top: none;
-    padding: 10px 0;
-  }
-  .gut {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--t3);
-    line-height: 1.5;
-    padding-top: 3px;
-    letter-spacing: .3px;
-  }
   /* 速记按天界标(今天/昨天/日期 + 条数) */
   .dstamp {
     display: flex;
@@ -659,35 +634,6 @@
   .dstamp:first-of-type { margin-top: 2px; }
   .dstamp .dn { color: var(--t4); font-size: 9px; }
 
-  .h {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--t3);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    margin-bottom: 7px;
-  }
-  /* 输入 = 光标细丝 + 透明输入面,发丝托底 */
-  .compose {
-    display: flex;
-    align-items: flex-start;
-    gap: 9px;
-  }
-  .car {
-    display: none;
-  }
-  @keyframes blink {
-    50% { opacity: 0; }
-  }
-  .compose {
-    background: var(--pill);
-    border-radius: var(--radius);
-    padding: 8px 8px 8px 14px;
-    align-items: center;
-  }
-  .compose textarea,
-  .compose textarea::placeholder,
-  .compose textarea:focus,
   .chip {
     font-family: var(--mono);
     font-size: 10px;
@@ -754,6 +700,9 @@
     border: 1px solid var(--hair);
     padding: 0 4px;
     flex: none;
+  }
+  .wallwrap {
+    margin-top: 4px;
   }
   /* —— K8 专注活卡 —— */
   .focuslive {
