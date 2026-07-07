@@ -224,6 +224,23 @@
   .sheet .ainote .spark{width:10px;height:10px}
   .sheet .ainote .full{display:none}
   .sheet .ainote:hover .full{display:inline}
+  /* Canvas 画布(速记/日记) */
+  .cvs{position:relative;min-height:480px;background:var(--bg);border-radius:20px;overflow:hidden}
+  .cvs .wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .cnode{position:absolute;cursor:grab;user-select:none}
+  .cnode:active{cursor:grabbing;z-index:30}
+  .cluster2{position:absolute;z-index:5}
+  .pillg2{background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff;font:600 12px/1 var(--sans);padding:7px 16px;border-radius:999px;box-shadow:var(--shadow)}
+  .cvhint{position:absolute;left:18px;bottom:14px;font:400 11px/1 var(--sans);color:var(--ink3)}
+  .jmini{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:14px 16px}
+  .jmini.dim{opacity:.75}
+  .jmh{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}
+  .jmh b{font:800 14px/1 var(--sans)}
+  .jmh span{font:400 10.5px/1 var(--sans);color:var(--ink3)}
+  .jmini p{font:400 12px/1.6 var(--sans);color:var(--ink2);margin:0;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .jmini p b{color:var(--ink)}
+  .jmf{display:flex;gap:6px;margin-top:8px}
+  .fchip{font:500 10px/1 var(--sans);color:var(--g2);background:var(--pill);border-radius:999px;padding:4px 9px}
   /* Calendar 视图 */
   .calbar{display:flex;align-items:center;gap:10px;margin-bottom:10px}
   .nbtn{width:30px;height:30px;border-radius:50%;background:var(--pill);border:0;color:var(--ink2);cursor:pointer}
@@ -444,6 +461,74 @@
     </div>
   </div>
 
+  <!-- ═══ 速记 · Canvas:自由画布(卡片可拖,橙紫连线=思路关联,cluster 胶囊) ═══ -->
+  <div class="pane" id="p-notes-canvas">
+    <div class="cvs" id="cvs1">
+      <svg class="wires"><defs><linearGradient id="wg2" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#ff8a3d"/><stop offset="1" stop-color="#a855f7"/></linearGradient></defs>
+        <path d="M 330,150 C 420,150 420,240 510,240" fill="none" stroke="url(#wg2)" stroke-width="2.5" opacity=".9"/>
+        <circle cx="330" cy="150" r="5" fill="#ff8a3d"/><circle cx="510" cy="240" r="5" fill="#a855f7"/>
+        <path d="M 640,140 C 730,140 730,90 820,90" fill="none" stroke="url(#wg2)" stroke-width="2.5" opacity=".9"/>
+        <circle cx="640" cy="140" r="5" fill="#ff8a3d"/><circle cx="820" cy="90" r="5" fill="#a855f7"/>
+      </svg>
+      <span class="cluster2" style="left:96px;top:44px"><span class="pillg2">Transformer 思路串</span></span>
+      <div class="cnode" style="left:80px;top:90px;width:250px">
+        <div class="wcard" style="margin:0"><div class="pad"><span class="badge b-ax">AX</span>
+          <div class="ti">Attention Is All You Need</div>
+          <div class="sum">提出 Transformer:完全基于注意力机制——现代大模型的地基。</div>
+          <div class="foot"><span>arXiv</span><span class="tag">#必读</span></div></div></div>
+      </div>
+      <div class="cnode" style="left:510px;top:190px;width:250px">
+        <div class="wcard" style="margin:0">
+          <div class="cover" style="background:linear-gradient(135deg,#3a2f18,#1c1c22);display:flex;align-items:center;justify-content:center;aspect-ratio:16/8">
+            <svg width="30" height="30" viewBox="0 0 24 24"><polygon points="9,7 9,17 17,12" fill="rgba(255,255,255,.4)"/></svg></div>
+          <div class="pad"><span class="badge b-yt">YT</span><div class="ti">SwiftUI Layout 深讲</div></div></div>
+      </div>
+      <div class="cnode" style="left:820px;top:40px;width:240px">
+        <div class="wcard plain" style="margin:0"><div class="pad"><span class="badge b-n">N</span>
+          <div class="note-tx">周三前把 NOMI 稿逐块进 Svelte。</div>
+          <div class="foot"><span class="tag">#待定</span></div></div></div>
+      </div>
+      <div class="cnode" style="left:400px;top:20px;width:240px">
+        <div class="wcard plain" style="margin:0"><div class="pad"><span class="badge b-n">N</span>
+          <div class="note-tx">多头注意力和 SwiftUI 的 proposal/response 有点像——都是协商。</div></div></div>
+      </div>
+      <div class="cvhint">速记 · 画布:卡片自由拖放 · 连线=思路关联 · 位置自动记住</div>
+    </div>
+  </div>
+
+  <!-- ═══ 日记 · Canvas:回顾画布(纸页缩略卡+专注块,把日子摆成一张图) ═══ -->
+  <div class="pane" id="p-journal-canvas">
+    <div class="cvs" id="cvs2">
+      <svg class="wires">
+        <path d="M 300,120 C 390,120 390,220 480,220" fill="none" stroke="url(#wg2)" stroke-width="2.5" opacity=".9"/>
+        <circle cx="300" cy="120" r="5" fill="#ff8a3d"/><circle cx="480" cy="220" r="5" fill="#a855f7"/>
+      </svg>
+      <span class="cluster2" style="left:90px;top:24px"><span class="pillg2">本周 · NOMI 重塑</span></span>
+      <div class="cnode" style="left:70px;top:70px;width:270px">
+        <div class="jmini">
+          <div class="jmh"><b>7月7日</b><span>周二 · 128 字</span></div>
+          <p>夜里 loop 把整站换成了 NOMI 皮,早上打开像换了个 app。</p>
+          <div class="jmf"><span class="fchip">⏱ 专注 83 分钟</span><span class="fchip" style="color:var(--cyan)">3 条碎片</span></div>
+        </div>
+      </div>
+      <div class="cnode" style="left:480px;top:170px;width:270px">
+        <div class="jmini">
+          <div class="jmh"><b>7月6日</b><span>周一 · 214 字</span></div>
+          <p><b>速记管线打通</b> — oEmbed/arXiv/OG 三路抓取,LLM 补摘要标签…</p>
+          <div class="jmf"><span class="fchip">⏱ 专注 2 段</span></div>
+        </div>
+      </div>
+      <div class="cnode" style="left:820px;top:90px;width:250px">
+        <div class="jmini dim">
+          <div class="jmh"><b>7月5日</b><span>周日 · 86 字</span></div>
+          <p>notch 媒体页六连修,波形融进背景终于对味。</p>
+        </div>
+      </div>
+      <div class="cvhint">日记 · 画布:把日子摆成一张图 — 页卡可拖 · 连线=一段时间的叙事线 · 页卡点开=全页回放</div>
+    </div>
+  </div>
+
   <!-- ═══ Calendar 视图:周历(视图维度;分类 chips 同样过滤落格内容) ═══ -->
   <div class="pane" id="p-cal">
     <div class="calbar">
@@ -466,17 +551,34 @@
 
 <script>
   // 视图切换(Timeline 显示三态分类;Canvas/Calendar 各自 pane)
+  let curCat='notes', curDisp='list';
+  function showPane(){
+    document.querySelectorAll('.pane').forEach(x=>x.classList.remove('on'));
+    let id;
+    if(curCat==='cal2')id='p-cal';
+    else if(curCat==='tasks')id='p-tasks';
+    else id='p-'+curCat+(curDisp==='canvas'?'-canvas':'');
+    document.getElementById(id)?.classList.add('on');
+    document.querySelector('.dispicons').style.visibility=(curCat==='notes'||curCat==='journal')?'visible':'hidden';
+  }
   document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
     document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
-    document.querySelectorAll('.pane').forEach(x=>x.classList.remove('on'));
-    c.classList.add('on');
-    const p=c.dataset.p==='cal2'?'cal':c.dataset.p;
-    document.getElementById('p-'+p).classList.add('on');
-    // 双 icon 只在速记/日记显示
-    document.querySelector('.dispicons').style.visibility=(c.dataset.p==='notes'||c.dataset.p==='journal')?'visible':'hidden';
+    c.classList.add('on'); curCat=c.dataset.p; showPane();
   });
-  document.querySelectorAll('.dic').forEach(d=>d.onclick=()=>{
+  document.querySelectorAll('.dic').forEach((d,i)=>d.onclick=()=>{
     document.querySelectorAll('.dic').forEach(x=>x.classList.remove('on'));d.classList.add('on');
+    curDisp=i===0?'list':'canvas'; showPane();
+  });
+  // 画布拖拽(两块画布通用)
+  document.querySelectorAll('.cnode').forEach(node=>{
+    node.addEventListener('pointerdown',e=>{
+      const r=node.getBoundingClientRect(), pr=node.parentElement.getBoundingClientRect();
+      const ox=e.clientX-r.left, oy=e.clientY-r.top;
+      node.setPointerCapture(e.pointerId);
+      const mv=ev=>{node.style.left=Math.max(0,ev.clientX-pr.left-ox)+'px';node.style.top=Math.max(0,ev.clientY-pr.top-oy)+'px'};
+      const up=()=>{node.removeEventListener('pointermove',mv);node.removeEventListener('pointerup',up)};
+      node.addEventListener('pointermove',mv);node.addEventListener('pointerup',up);
+    });
   });
   document.querySelectorAll('.cb').forEach(b=>b.onclick=()=>b.closest('.todo').classList.toggle('done'));
   document.querySelectorAll('.sw').forEach(b=>b.onclick=()=>b.classList.toggle('on'));
