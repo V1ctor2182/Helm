@@ -79,3 +79,28 @@ describe('JournalView', () => {
     expect(screen.getByText(/自速记 #11/)).toBeInTheDocument()
   })
 })
+
+it('AI 归类:按主题分组显示分区/未归类,≥3 条涌现建议卡', async () => {
+  // onMount load() 会覆盖预置 → mock 直接返回带 topic 的 4 条
+  const rows = [
+    N({ id: 1, content: 'a1', meta: { type: 'text', topic: 'T学习' } }),
+    N({ id: 2, content: 'a2', meta: { type: 'text', topic: 'T学习' } }),
+    N({ id: 3, content: 'a3', meta: { type: 'text', topic: 'T学习' } }),
+    N({ id: 4, content: 'loose' }),
+  ]
+  vi.stubGlobal('fetch', vi.fn((url: string) =>
+    Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(String(url).includes('/api/notes') ? { notes: rows } : { notes: [], tasks: [], links: [], events: [] }),
+    }),
+  ))
+  render(JournalView)
+  await fireEvent.click(screen.getByText('按主题 · AI'))
+  // 分区头 + 胶囊 + 建议卡都带主题名(≥2 处)
+  expect((await screen.findAllByText('T学习')).length).toBeGreaterThanOrEqual(2)
+  expect(screen.getByText('未归类')).toBeInTheDocument()
+  // 涌现建议(3 条未确认)
+  expect(screen.getByText(/建一个集合/)).toBeInTheDocument()
+  await fireEvent.click(screen.getByRole('button', { name: '创建集合' }))
+  expect(screen.queryByText(/建一个集合/)).toBeNull()
+})

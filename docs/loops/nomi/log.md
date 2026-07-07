@@ -118,3 +118,9 @@
 - Calendar 全量: 周历落格所有记录——events(紫)/tasks(绿)/速记·收藏(蓝)/日记(琥珀)按时间上格。
 - 稿(helm-journal-kinds.html)同步同构。门: build ✓ / check 0/0 / test 206 全绿。
 - 视觉: shots/f1-chips.png + f1-cal.png(日记琥珀卡/速记蓝卡已在周历上)
+## 批次3 · 2026-07-08 · 捕获坞去重 + AI 归类 + 日记画布(用户确认稿后实现)
+- 捕获坞: kind chips 行撤——输入行内 AI 判定徽章(点=轮换 note→journal→task→ask)/判为任务双轨浮现/⏱ 专注钮/疑问句→问大脑;测试改语义(207)。
+- AI 归类: 后端 enrich 双 prompt 出 meta.topic(2-6 字集合名);NotePatch+service 支持 meta 整份回写(纠错)。前端:墙顶「按时间/按主题·AI」;主题分区(计数+AI 维护)+未归类;卡上主题胶囊 hover ×=移出集合(PATCH 回写);涌现:≥3 条未确认→虚线建议卡,创建/忽略记 localStorage(helm.topics.ack)。
+- 日记画布: JournalCanvas 页卡(日期/首行/字数/专注·碎片徽章)自由拖放,位置 localStorage,点开=PageDetail 全页回放;日记分类也吃双 icon。
+- 门: 前端 build/check 0/0/test 207 全绿;pytest 217 全绿;后端已重启。
+- 视觉: shots/b3-dock.png / b3-topics.png / b3-jcanvas.png

@@ -18,6 +18,7 @@ export interface NoteMeta {
   when?: string
   where?: string
   links?: { url: string; type?: string; title?: string; summary?: string; image?: string; site?: string }[]
+  topic?: string
 }
 
 export interface Note {
@@ -133,6 +134,17 @@ export class NotesStore {
     })
     if (ok) await this.load()
     else this.error = '保存失败'
+    return ok !== null
+  }
+
+  /** AI 归类纠错:整份 meta 回写(如移出集合=拿掉 topic) */
+  async updateMeta(id: number, meta: NoteMeta): Promise<boolean> {
+    const ok = await this.#json(`/api/notes/${id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ meta }),
+    })
+    if (ok) await this.load()
     return ok !== null
   }
 

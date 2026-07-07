@@ -10,6 +10,7 @@
   import { ConfirmGate } from '../confirm.svelte'
   import Calendar from './Calendar.svelte'
   import CanvasView from './CanvasView.svelte'
+  import JournalCanvas from './JournalCanvas.svelte'
   import NoteDetail from './NoteDetail.svelte'
   import PageDetail from './PageDetail.svelte'
   import { focus } from '../focus.svelte'
@@ -18,6 +19,33 @@
   // 三视图(阶段 4 R08,source: helm-journal-pro.html 记录板块)+kind 过滤。
   let view = $state<'timeline' | 'canvas' | 'calendar'>('timeline')
   let display = $state<'timeline' | 'canvas'>('timeline') // 速记/日记内部的展示偏好
+  // AI 归类(2026-07-08 用户确认):随便记,AI 静默归集合;墙可切按主题,胶囊可纠错,集合涌现
+  let groupBy = $state<'time' | 'topic'>('time')
+  const TKEY = 'helm.topics.ack' // {confirmed:[],dismissed:[]}
+  function tAck(): { confirmed: string[]; dismissed: string[] } {
+    try { return JSON.parse(localStorage.getItem(TKEY) ?? '') } catch { return { confirmed: [], dismissed: [] } }
+  }
+  function tSave(a: { confirmed: string[]; dismissed: string[] }) {
+    try { localStorage.setItem(TKEY, JSON.stringify(a)) } catch { /* test env */ }
+  }
+  let topicAck = $state(tAck())
+  const byTopic = $derived.by(() => {
+    const m = new Map<string, Note[]>()
+    const loose: Note[] = []
+    for (const n of noteItems) {
+      const t = n.meta?.topic
+      if (t && !topicAck.dismissed.includes(t)) (m.get(t) ?? m.set(t, []).get(t)!).push(n)
+      else loose.push(n)
+    }
+    return { topics: [...m.entries()].sort((a, b) => b[1].length - a[1].length), loose }
+  })
+  // 涌现:≥3 条且未确认过 → 建议卡
+  const suggestion = $derived(byTopic.topics.find(([t, xs]) => xs.length >= 3 && !topicAck.confirmed.includes(t)) ?? null)
+  async function unTopic(n: Note) {
+    const meta = { ...(n.meta ?? {}) }
+    delete meta.topic
+    await notes.updateMeta(n.id, meta)
+  }
   // filter 共享自 layout(侧栏分类与页内 chips 同源)
   const filterOf = () => layout.journalFilter
 
@@ -246,11 +274,11 @@
     <div class="chips2" role="tablist" aria-label="分类">
       <button role="tab" aria-selected={view !== 'calendar' && layout.journalFilter === 'all'} class:on={view !== 'calendar' && layout.journalFilter === 'all'} onclick={() => { view = display; layout.journalFilter = 'all' }}>全部</button>
       <button role="tab" aria-selected={view !== 'calendar' && layout.journalFilter === 'note'} class:on={view !== 'calendar' && layout.journalFilter === 'note'} onclick={() => { view = display; layout.journalFilter = 'note' }}>速记</button>
-      <button role="tab" aria-selected={view !== 'calendar' && layout.journalFilter === 'journal'} class:on={view !== 'calendar' && layout.journalFilter === 'journal'} onclick={() => { view = 'timeline'; layout.journalFilter = 'journal' }}>日记</button>
+      <button role="tab" aria-selected={view !== 'calendar' && layout.journalFilter === 'journal'} class:on={view !== 'calendar' && layout.journalFilter === 'journal'} onclick={() => { view = display; layout.journalFilter = 'journal' }}>日记</button>
       <button role="tab" aria-selected={view !== 'calendar' && layout.journalFilter === 'task'} class:on={view !== 'calendar' && layout.journalFilter === 'task'} onclick={() => { view = 'timeline'; layout.journalFilter = 'task' }}>任务</button>
       <button role="tab" aria-selected={view === 'calendar'} class:on={view === 'calendar'} onclick={() => (view = 'calendar')}>日历</button>
     </div>
-    {#if view !== 'calendar' && layout.journalFilter !== 'task' && layout.journalFilter !== 'journal'}
+    {#if view !== 'calendar' && layout.journalFilter !== 'task'}
       <div class="dispicons" role="group" aria-label="展示方式">
         <button class="dic" class:on={view === 'timeline'} title="列表" aria-label="列表视图" onclick={() => { view = 'timeline'; display = 'timeline' }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="5" cy="18" r="1" fill="currentColor" stroke="none"/><path d="M9.5 6h10M9.5 12h10M9.5 18h10"/></svg>
@@ -262,34 +290,7 @@
     {/if}
   </div>
 
-  {#if notes.error}<p class="err" role="alert">{notes.error}</p>{/if}
-
-  {#if view === 'timeline' && layout.journalFilter !== 'task' && layout.journalFilter !== 'journal'}
-    <!-- 智能捕获坞(K7 判类内置):旧账本 compose 行退场,一个入口自动分流 -->
-    <CaptureDock />
-  {/if}
-
-  {#if view === 'timeline'}
-  {#if ['all', 'note', 'collect', 'youtube', 'paper', 'inspiration'].includes(layout.journalFilter)}
-    <div class="wallwrap">
-        {#if focus.running}
-          <div class="focuslive">
-            <span class="fring" style="background:conic-gradient(var(--g1) 0deg, var(--g2) {focus.deg}deg, var(--pill) {focus.deg}deg)">
-              <span class="ftime">{focus.mmss}</span>
-            </span>
-            <span class="fmid">
-              <span class="fl">专注中</span>
-              <span class="fw">{focus.what || '未命名专注'}</span>
-            </span>
-            <button class="fstop" onclick={() => void focus.stop()}>停止并记入日记</button>
-          </div>
-        {/if}
-        {#if noteItems.length === 0}
-          <p class="empty">还没有速记 — 上面记一笔,或用 ⌘N 随手记。</p>
-        {:else}
-          {#each notesByDate as [d, items] (d)}
-          <div class="dstamp">{dayLabel(d)}<span class="dn">{items.length} 条</span></div>
-          <!-- K1 瀑布卡墙(稿:helm-journal-kinds.html 速记态):便签/收藏卡混排 -->
+{#snippet wall(items: Note[], showTopic: boolean)}
           <div class="wall">
             {#each items as n (n.id)}
               <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -326,6 +327,13 @@
                       <span class="wtx">{n.content}</span>
                     {/if}
                     <div class="wfoot">
+                      {#if showTopic && n.meta?.topic && groupBy === 'topic'}
+                        <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+                        <span class="topicchip" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
+                          <i class="gspark sm" aria-hidden="true"></i>{n.meta.topic}
+                          <button class="tx-x" title="移出集合(AI 会学习)" aria-label={`移出集合 ${n.meta.topic}`} onclick={() => void unTopic(n)}>×</button>
+                        </span>
+                      {/if}
                       {#if n.meta?.site}<span>{n.meta.site}</span>{/if}
                       {#each n.meta?.tags ?? [] as t (t)}<span class="wtag">#{t}</span>{/each}
                       {#if linkedNoteIds.has(n.id)}<span class="linked">已转任务</span>{/if}
@@ -349,6 +357,62 @@
               </div>
             {/each}
           </div>
+{/snippet}
+
+  {#if notes.error}<p class="err" role="alert">{notes.error}</p>{/if}
+
+  {#if view === 'timeline' && layout.journalFilter !== 'task' && layout.journalFilter !== 'journal'}
+    <!-- 智能捕获坞(K7 判类内置):旧账本 compose 行退场,一个入口自动分流 -->
+    <CaptureDock />
+  {/if}
+
+  {#if view === 'timeline'}
+  {#if ['all', 'note', 'collect', 'youtube', 'paper', 'inspiration'].includes(layout.journalFilter)}
+    <div class="wallwrap">
+        <div class="groupsw">
+          <button class="gsw" class:on={groupBy === 'time'} onclick={() => (groupBy = 'time')}>按时间</button>
+          <button class="gsw" class:on={groupBy === 'topic'} onclick={() => (groupBy = 'topic')}>
+            <span class="gspark" aria-hidden="true"></span>按主题 · AI
+          </button>
+        </div>
+        {#if focus.running}
+          <div class="focuslive">
+            <span class="fring" style="background:conic-gradient(var(--g1) 0deg, var(--g2) {focus.deg}deg, var(--pill) {focus.deg}deg)">
+              <span class="ftime">{focus.mmss}</span>
+            </span>
+            <span class="fmid">
+              <span class="fl">专注中</span>
+              <span class="fw">{focus.what || '未命名专注'}</span>
+            </span>
+            <button class="fstop" onclick={() => void focus.stop()}>停止并记入日记</button>
+          </div>
+        {/if}
+        {#if noteItems.length === 0}
+          <p class="empty">还没有速记 — 上面记一笔,或用 ⌘N 随手记。</p>
+        {:else if groupBy === 'topic'}
+          {#if suggestion}
+            <div class="aisuggest">
+              <span class="gspark" aria-hidden="true"></span>
+              <span>发现 {suggestion[1].length} 条关于 <b>{suggestion[0]}</b> 的记录 — 建一个集合?</span>
+              <button class="sgok" onclick={() => { topicAck = { ...topicAck, confirmed: [...topicAck.confirmed, suggestion![0]] }; tSave(topicAck) }}>创建集合</button>
+              <button class="sgno" onclick={() => { topicAck = { ...topicAck, dismissed: [...topicAck.dismissed, suggestion![0]] }; tSave(topicAck) }}>忽略</button>
+            </div>
+          {/if}
+          {#each byTopic.topics as [t, items] (t)}
+            <div class="topich"><span class="tdot" aria-hidden="true"></span><b>{t}</b>
+              <span class="tn">{items.length} 条 · AI 维护</span></div>
+            {@render wall(items, true)}
+          {/each}
+          {#if byTopic.loose.length > 0}
+            <div class="topich dim"><span class="tdot loose" aria-hidden="true"></span><b>未归类</b>
+              <span class="tn">{byTopic.loose.length} 条 · AI 攒够相似的会提议建集合</span></div>
+            {@render wall(byTopic.loose, false)}
+          {/if}
+        {:else}
+          {#each notesByDate as [d, items] (d)}
+          <div class="dstamp">{dayLabel(d)}<span class="dn">{items.length} 条</span></div>
+          <!-- K1 瀑布卡墙(稿:helm-journal-kinds.html 速记态):便签/收藏卡混排 -->
+          {@render wall(items, true)}
           {/each}
         {/if}
     </div>
@@ -511,7 +575,15 @@
     </div>
   {/if}
   {:else if view === 'canvas'}
-    <CanvasView notes={notes.notes.filter((n) => n.kind !== 'journal')} />
+    {#if layout.journalFilter === 'journal'}
+      <JournalCanvas
+        days={journalByDate}
+        fragCount={(day) => notesOfDay(day).length}
+        onopen={(day) => (detailDay = day)}
+      />
+    {:else}
+      <CanvasView notes={notes.notes.filter((n) => n.kind !== 'journal')} />
+    {/if}
   {:else}
     <!-- TODO(F7 日历轮): Calendar.svelte 仍旧样式,周视图轮重设计 -->
     <div class="calwrap">
@@ -715,6 +787,113 @@
   .wallwrap {
     margin-top: 4px;
   }
+  /* —— AI 归类(按主题) —— */
+  .groupsw {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+  .gsw {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font: 500 11.5px/1 var(--sans);
+    color: var(--t4);
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 6px 12px;
+    cursor: pointer;
+  }
+  .gsw:hover { color: var(--t1); }
+  .gsw.on {
+    color: var(--t1);
+    background: var(--pill);
+    font-weight: 600;
+  }
+  .gspark {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex: none;
+    background: conic-gradient(from 210deg, var(--g1), var(--g2), var(--g1));
+  }
+  .gspark.sm {
+    width: 8px;
+    height: 8px;
+  }
+  .aisuggest {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background: var(--card);
+    border: 1.4px dashed color-mix(in srgb, var(--g2) 45%, transparent);
+    border-radius: 14px;
+    padding: 11px 14px;
+    margin-bottom: 16px;
+    font: 400 12.5px/1.4 var(--sans);
+    color: var(--t2);
+  }
+  .aisuggest b { color: var(--t1); }
+  .sgok {
+    margin-left: auto;
+    font: 600 11px/1 var(--sans);
+    color: #fff;
+    background: var(--grad);
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 7px 13px;
+    cursor: pointer;
+    flex: none;
+  }
+  .sgno {
+    font: 500 11px/1 var(--sans);
+    color: var(--t4);
+    background: var(--pill);
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 7px 13px;
+    cursor: pointer;
+    flex: none;
+  }
+  .topich {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 16px 2px 10px;
+  }
+  .topich.dim { opacity: 0.72; }
+  .tdot {
+    width: 9px;
+    height: 9px;
+    border-radius: 3px;
+    background: var(--grad);
+    align-self: center;
+  }
+  .tdot.loose { background: var(--t4); }
+  .topich b { font: 700 13.5px/1 var(--sans); color: var(--t1); }
+  .topich .tn { font: 400 10.5px/1 var(--sans); color: var(--t4); }
+  .topicchip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font: 500 9.5px/1 var(--sans);
+    color: var(--t3);
+    background: var(--pill);
+    border-radius: var(--radius-pill);
+    padding: 3px 8px;
+  }
+  .topicchip .tx-x {
+    border: 0;
+    background: none;
+    color: var(--t4);
+    cursor: pointer;
+    padding: 0 1px;
+    font-size: 10px;
+    visibility: hidden;
+  }
+  .wcard:hover .topicchip .tx-x { visibility: visible; }
+  .topicchip .tx-x:hover { color: #e5484d; }
   /* —— K8 专注活卡 —— */
   .focuslive {
     display: flex;
