@@ -13,3 +13,10 @@
 - [x] [R08][P2][gap](R13 清) 分类过滤迁全局侧栏+收藏细分。
 - [ ] [K6][P2][question] 待办完成态:现为「完成即清」(勾选删除);若要保留完成历史需 notes 加 done 列(schema 变更,待用户拍板)。
 - [ ] [K7][P2][enhancement] 判类 LLM 兜底:规则不命中/低置信时调后端轻量 classify(走全局 provider),现为纯规则。
+
+## 批次 3 提案 · T 系列(AI 分诊系统+前端对齐新稿;2026-07-08 用户要求,喂给本 loop——不另开新 loop)
+- [ ] [T1][P1] 后端分诊管线:创建 note 时 AI 分诊(规则先行+LLM 兜底,并 K7)→ 返回 {kind:记录/想法/任务, time?, place?, task_id?};判任务自动落「待办·给自己」(关联 K6 done 列拍板);抽取时间/地点结构化存。
+- [ ] [T2][P1] 人话排期:/api/tasks 收自然语言 schedule(存原句+解析结果),派发条按稿接线(边打字出排期徽章);cron 表达式从 UI 全面退场。
+- [ ] [T3][P1] 前端对齐 kinds 稿本轮增量:待办两层任务行(临近 24h 橙 chip/hover 专注·→agent/完成沉底)+分诊回执 toast(chips+改类,纠正回流)+速记墙分诊徽章+墙上任务回执卡。
+- [ ] [T4][P2] 日记每天一篇:今日聚合(多段按时间拼一篇)+连续天数+字数;TODAY 卡预览/续写→;与 notch journalToday 口径一致。
+- [ ] [T5][P2][跨线] 分诊契约发布后通知 notch 线接回执 UI(nomi-notch backlog 已备位);契约变更只在本 loop 做,notch 只消费(前科:task kind 收紧 422 炸了 notch)。
