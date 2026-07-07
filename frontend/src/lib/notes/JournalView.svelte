@@ -12,6 +12,7 @@
   import CanvasView from './CanvasView.svelte'
   import NoteDetail from './NoteDetail.svelte'
   import PageDetail from './PageDetail.svelte'
+  import { focus } from '../focus.svelte'
 
   // 三视图(阶段 4 R08,source: helm-journal-pro.html 记录板块)+kind 过滤。
   let view = $state<'timeline' | 'canvas' | 'calendar'>('timeline')
@@ -284,6 +285,18 @@
       <div class="gut"><span class="tm">收集</span><br />{noteItems.length} 条</div>
       <div>
         <div class="h">速记 / SCRATCH</div>
+        {#if focus.running}
+          <div class="focuslive">
+            <span class="fring" style="background:conic-gradient(var(--g1) 0deg, var(--g2) {focus.deg}deg, var(--pill) {focus.deg}deg)">
+              <span class="ftime">{focus.mmss}</span>
+            </span>
+            <span class="fmid">
+              <span class="fl">专注中</span>
+              <span class="fw">{focus.what || '未命名专注'}</span>
+            </span>
+            <button class="fstop" onclick={() => void focus.stop()}>停止并记入日记</button>
+          </div>
+        {/if}
         {#if noteItems.length === 0}
           <p class="empty">还没有速记 — 上面记一笔,或用 ⌘N 随手记。</p>
         {:else}
@@ -447,6 +460,7 @@
                 </button>
                 <button class="tx openable2" title="查看详情" onclick={() => (detailNote = n)}>{n.content}</button>
                 <span class="ttm">{localHHMM(n.created_at)}</span>
+                <button class="up" title="开始专注做这件事" onclick={() => { focus.start(n.content); layout.journalFilter = 'note' }}>开始专注</button>
                 <button class="up" title="转为定时任务(交给 agent)" onclick={() => noteToTask(n)}>→交给 agent</button>
               </div>
             {/each}
@@ -741,6 +755,65 @@
     padding: 0 4px;
     flex: none;
   }
+  /* —— K8 专注活卡 —— */
+  .focuslive {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--card);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    padding: 14px 18px;
+    margin-bottom: 16px;
+  }
+  .fring {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ftime {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 700 11px/1 var(--mono);
+    color: var(--t1);
+    font-variant-numeric: tabular-nums;
+  }
+  .fmid {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+  }
+  .fl {
+    font: 400 10.5px/1 var(--sans);
+    color: var(--t4);
+    letter-spacing: 0.4px;
+  }
+  .fw {
+    font: 600 14px/1.4 var(--sans);
+    color: var(--t1);
+  }
+  .fstop {
+    margin-left: auto;
+    font: 600 12px/1 var(--sans);
+    color: #fff;
+    background: var(--grad);
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 9px 17px;
+    cursor: pointer;
+    flex: none;
+  }
+
   /* —— K6 任务操作台 —— */
   .dispatch {
     display: flex;

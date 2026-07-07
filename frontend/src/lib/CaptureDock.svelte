@@ -4,6 +4,7 @@
   // 语义与 notch 一致:给自己→notes(kind:task);交给 agent→POST /api/tasks(prompt);
   // 时间/地点不手选,发送后 Helm 侧 AI 解析(F6 阶段2)。专注:计时,停止记入日记。
   import { notes } from './notes/notesStore.svelte'
+  import { focus } from './focus.svelte'
 
   type Kind = 'note' | 'journal' | 'task' | 'focus' | 'ask'
   const KINDS: { id: Kind; label: string }[] = [
@@ -42,17 +43,7 @@
   let status = $state<'idle' | 'sending' | 'sent' | 'failed'>('idle')
   let askAnswer = $state<string | null>(null)
 
-  // 专注计时
-  let focusStart = $state<number | null>(null)
-  let focusWhat = $state('')
-  let tick = $state(0)
-  $effect(() => {
-    if (focusStart === null) return
-    const t = setInterval(() => (tick = Date.now()), 1000)
-    return () => clearInterval(t)
-  })
-  const focusSecs = $derived(focusStart ? Math.max(0, Math.floor(((tick || Date.now()) - focusStart) / 1000)) : 0)
-  const mmss = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
+  // 专注计时:K8 起走全局 store(速记墙顶活卡/待办发起共用)
 
   const placeholder = $derived(
     kind === 'note' ? '随手记一笔…'
@@ -109,16 +100,11 @@
   }
 
   function startFocus() {
-    focusWhat = text.trim()
-    focusStart = Date.now()
-    tick = Date.now()
+    focus.start(text)
+    text = ''
   }
   async function stopFocus() {
-    const mins = Math.max(1, Math.round(focusSecs / 60))
-    const what = focusWhat ? `:${focusWhat}` : ''
-    focusStart = null
-    text = ''
-    await notes.create(`专注 ${mins} 分钟${what}`, 'journal', today())
+    await focus.stop()
     status = 'sent'
     setTimeout(() => (status = 'idle'), 1200)
   }
@@ -127,7 +113,7 @@
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       if (kind === 'focus') {
-        if (focusStart === null) startFocus()
+        if (!focus.running) startFocus()
       } else void submit()
     }
   }
@@ -152,10 +138,10 @@
     {/if}
   </div>
 
-  {#if kind === 'focus' && focusStart !== null}
+  {#if kind === 'focus' && focus.running}
     <div class="focusrun">
-      <span class="ft" aria-live="polite">{mmss(focusSecs)}</span>
-      {#if focusWhat}<span class="fw">{focusWhat}</span>{/if}
+      <span class="ft" aria-live="polite">{focus.mmss}</span>
+      {#if focus.what}<span class="fw">{focus.what}</span>{/if}
       <button class="send stop" onclick={() => void stopFocus()}>停止并记录</button>
     </div>
   {:else}

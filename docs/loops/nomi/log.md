@@ -104,3 +104,7 @@
 - 门: build ✓ / check 0/0 / test 206 全绿(+1 判类行为测试)
 - 视觉: shots/k7-verdict.png(「明早 9 点跑回归」→任务+时间词徽章+双轨)
 - 取舍: LLM 兜底判类(规则不确定时调后端)记 backlog P2——规则版零延迟已覆盖常见 4 类。
+## K8 · 2026-07-07 18:55 · 专注链路(批次 2 全清)
+- 对齐: 全局 FocusStore(focus.svelte.ts)——start(what)/stop→写「专注 N 分钟 · what」进今日日记/mmss/圆环 deg。速记墙顶活卡(conic 圆环计时+任务名+渐变停止);待办 hover「开始专注」(带着待办内容发起并跳速记);CaptureDock 专注 kind 改走 store(与墙顶活卡同一状态)。闭环:任务发起→速记区活着→归宿日记→PageDetail 专注块聚合。
+- 门: build ✓ / check 0/0 / test 206 全绿
+- 视觉: shots/k8-live2.png(活卡 00:03 计时中;墙上还见 enrich 实时新卡)
