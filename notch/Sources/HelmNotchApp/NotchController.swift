@@ -128,6 +128,9 @@ final class NotchController {
         let w = CGFloat(model.expandedWidth), h = CGFloat(model.autoExpandedHeight)
         let shell = NSRect(x: screen.frame.midX - w / 2, y: screen.frame.maxY - h, width: w, height: h)
         guard shell.contains(NSEvent.mouseLocation), panel.isVisible else { return }
+        // 会话详情 = 阅读态:滚动全部留给内容,上下翻子页/横扫切模块都不抢
+        // (2026-07-07 用户:点开详情一滑就跳走)。
+        if model.module == .agents, model.selectedLocalSessionID != nil { return }
 
         // AppKit deltas are inverted vs the web's wheel deltas; flip so
         // swipe-right → next module, swipe-down → next Dev page.
@@ -154,7 +157,9 @@ final class NotchController {
             // 会话详情页打开时竖滑留给内容滚动,不翻 Dev 子页
             // (2026-07-06 用户:详情里一滑就跳到下个 category)。
             let devPagingEnabled = model.module == .agents && model.selectedLocalSessionID == nil
-            if devPagingEnabled, abs(gestureAccumY) > abs(gestureAccumX), abs(gestureAccumY) > threshold {
+            // 子页翻页要明确的大幅竖扫(阈值 60 且竖向显著占优)——列表里
+            // 随手滚两下不许翻到端口/PR(2026-07-07 用户反馈)。
+            if devPagingEnabled, abs(gestureAccumY) > abs(gestureAccumX) * 2, abs(gestureAccumY) > 60 {
                 gestureSwitched = true
                 if cooled { animatedSwitch { model.switchAgentPage(gestureAccumY > 0 ? 1 : -1) } }
             } else if abs(gestureAccumX) > abs(gestureAccumY), abs(gestureAccumX) > threshold {
@@ -166,7 +171,7 @@ final class NotchController {
 
         // Mouse wheel (discrete, no phase): a short cooldown paces the steps.
         guard Date().timeIntervalSince(lastSwitchAt) > 0.30 else { return }
-        if model.module == .agents, model.selectedLocalSessionID == nil, abs(dy) > abs(dx), abs(dy) > 1 {
+        if model.module == .agents, model.selectedLocalSessionID == nil, abs(dy) > abs(dx) * 2, abs(dy) > 4 {
             animatedSwitch { model.switchAgentPage(dy > 0 ? 1 : -1) }
         } else if abs(dx) > abs(dy), abs(dx) > 1 {
             animatedSwitch { model.switchModule(dx > 0 ? 1 : -1) }
