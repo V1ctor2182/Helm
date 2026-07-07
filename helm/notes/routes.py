@@ -22,6 +22,7 @@ from helm.notes.enrich import enrich_note
 from helm.notes.models import Note
 from helm.notes.service import KINDS, NoteService, note_public
 from helm.notes.summary import summarize_journal
+from helm.notes.triage import triage_note
 from helm.research.llm import ChatLLM  # patched in tests
 
 router = APIRouter(prefix="/api/notes", tags=["notes"])
@@ -35,6 +36,9 @@ class NoteBody(BaseModel):
     pinned: bool = False
     source: str = "user"
     journal_date: date | None = None
+    # T1 分诊(2026-07-08 稿):True=后端规则判类+时间/地点双抽取,kind 字段
+    # 忽略(捕获坞自动挡);手动改类的客户端照旧传 kind 不传 triage。
+    triage: bool = False
 
 
 class NotePatch(BaseModel):
@@ -72,21 +76,35 @@ async def create_note(
     if not body.content.strip() and not (body.title or "").strip():
         raise HTTPException(status_code=422, detail="content or title required")
     _check_kind(body.kind)
+    # T1 分诊:规则判类(链接/任务/想法/日记/速记)+ 双抽取进 meta;判为任务
+    # 即 kind='task' 落库=进「待办·给自己」列。规则拿不准(confident=False)
+    # 由下面的 enrich LLM 兜底改判。
+    kind, journal_date, meta_seed, verdict = body.kind, body.journal_date, None, None
+    if body.triage:
+        verdict = triage_note(body.content)
+        kind = verdict.kind
+        if kind == "journal" and journal_date is None:
+            journal_date = date.today()
+        meta_seed = {k: v for k, v in (
+            ("when", verdict.when), ("where", verdict.where), ("due", verdict.due),
+        ) if v}
+        meta_seed["triage"] = {"by": "rule", "confident": verdict.confident}
     note = NoteService(session).create(
         content=body.content,
-        kind=body.kind,
+        kind=kind,
         title=body.title,
         tags=body.tags,
         pinned=body.pinned,
         source=body.source,
-        journal_date=body.journal_date,
+        journal_date=journal_date,
+        meta=meta_seed,
     )
     # 速记 AI 管线(2026-07-06):除日记外,发送后后台 enrich(链接 parse/AI 整理)。
     # 不用 BackgroundTasks——BaseHTTPMiddleware 会在响应结束时取消未完的
     # background(著名坑,实测 enrich 被静默杀掉);asyncio.create_task 与响应
     # 生命周期解耦。先显式 commit 让任务的独立 session 读得到这条 note;
     # 任务引用挂 app.state 防 GC。
-    if body.kind != "journal":
+    if kind != "journal":
         session.commit()
         task = asyncio.create_task(enrich_note(
             request.app.state.db, request.app.state.secret_box,
@@ -103,7 +121,10 @@ async def create_note(
                     "notes enrich task failed: %r", t.exception())
 
         task.add_done_callback(_on_done)
-    return note_public(note)
+    out = note_public(note)
+    if verdict is not None:  # 结构化回执(前端 toast:类型 chip+抽取 chips+改类)
+        out["triage"] = verdict.public()
+    return out
 
 
 @router.patch("/{note_id}")

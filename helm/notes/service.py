@@ -13,7 +13,10 @@ from sqlalchemy.orm import Session
 
 from helm.notes.models import Note
 
-KINDS = ("note", "journal", "focus")  # focus=专注计时落库(notch),内容"专注 N 分钟 · 干什么"
+# focus=专注计时落库(notch);task=待办·给自己(分诊/捕获坞落库,前端任务区
+# 待办列直接吃这个 kind);idea=想法(T1 分诊新增)。收编 task/idea 同时修掉
+# 捕获坞「给自己的任务」422(前科:收紧 kind 炸 notch,契约只加不减)。
+KINDS = ("note", "journal", "focus", "task", "idea")
 
 
 def note_public(n: Note) -> dict:
@@ -59,6 +62,7 @@ class NoteService:
         pinned: bool = False,
         source: str = "user",
         journal_date: date_cls | None = None,
+        meta: dict | None = None,
     ) -> Note:
         note = Note(
             kind=kind,
@@ -68,6 +72,7 @@ class NoteService:
             pinned=pinned,
             source=source,
             journal_date=journal_date,
+            meta_json=json.dumps(meta, ensure_ascii=False) if meta else None,
         )
         self.session.add(note)
         self.session.flush()

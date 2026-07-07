@@ -124,3 +124,9 @@
 - 日记画布: JournalCanvas 页卡(日期/首行/字数/专注·碎片徽章)自由拖放,位置 localStorage,点开=PageDetail 全页回放;日记分类也吃双 icon。
 - 门: 前端 build/check 0/0/test 207 全绿;pytest 217 全绿;后端已重启。
 - 视觉: shots/b3-dock.png / b3-topics.png / b3-jcanvas.png
+## T1 · 2026-07-08 · 后端分诊管线
+- 契约: KINDS 收编 task/idea(顺带修捕获坞「给自己的任务」kind:task 落库 422 活 bug);NoteBody 加 triage:bool(默认 false,notch 不传不受影响);POST 响应加 triage 回执块;meta 新增 when/where/due/triage(by:rule|llm, confident)。
+- 实现: helm/notes/triage.py——规则判类(链接→任务→想法→日记→速记,与前端 K7/设计稿 demo 同口径,后端为准)+ 人话时间(明早/明晚/今晚/明后天/周X/X点前/每天…→ label+due 本地 ISO;recurring 结果是 T2 人话排期的地基)+ 地点(懒匹配+动词边界前瞻,宁缺毋滥不吞动词);enrich 改 meta 合并不覆盖(规则种子优先,LLM 只补空),LLM 兜底改判仅从 confident=False 升格、用户 enrich 期间手动改类不覆盖。
+- 门: pytest 240 全绿(+23:triage 单元+API+兜底)/ 前端 build ✓ check 0/0 ✓ test 207 全绿(8 个 unhandled 为 cockpit FileBrowser jsdom 既有噪音,本块未动前端)
+- 取舍: 判任务=kind:task 落库即前端待办列(todoItems 既有契约),不建独立 task 行,无 task_id;「分诊记住纠正」记 backlog [T1+] P2。
+- T5 提醒: 契约已变(只加不减),T5 块通知 notch 线接回执 UI。
