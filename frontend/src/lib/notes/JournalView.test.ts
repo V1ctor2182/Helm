@@ -31,12 +31,26 @@ afterEach(() => {
 })
 
 describe('JournalView', () => {
-  it('lists quick notes with convert actions', async () => {
-    notes.notes = [N({ id: 7, content: 'buy milk' })]
+  it('lists quick notes with convert actions in the ⋯ menu', async () => {
+    const rows = [N({ id: 7, content: 'buy milk' })]
+    vi.stubGlobal('fetch', vi.fn((url: string, init?: RequestInit) =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(
+          (init?.method ?? 'GET') !== 'GET' ? {}
+          : String(url).includes('/api/notes') ? { notes: rows } : { notes: [], tasks: [], links: [], events: [] }),
+      }),
+    ))
     render(JournalView)
     expect(await screen.findByText('buy milk')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '→日记' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '→记忆' })).toBeInTheDocument()
+    // 操作收进 ⋯ 菜单(2026-07-08 用户拍板),点开才显示
+    expect(screen.queryByRole('menuitem', { name: '→日记' })).toBeNull()
+    await fireEvent.click(screen.getByRole('button', { name: '更多操作 buy milk' }))
+    expect(screen.getByRole('menuitem', { name: '→日记' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: '→记忆' })).toBeInTheDocument()
+    // 删除两击确认
+    await fireEvent.click(screen.getByRole('menuitem', { name: '删除' }))
+    expect(screen.getByRole('menuitem', { name: '确认删除' })).toBeInTheDocument()
   })
 
   it('switching to 日记 groups entries by date and renders markdown', async () => {
@@ -56,9 +70,18 @@ describe('JournalView', () => {
 
   it('convert button calls toJournal', async () => {
     const spy = vi.spyOn(notes, 'toJournal').mockResolvedValue(true)
-    notes.notes = [N({ id: 9, content: 'convert me' })]
+    const rows = [N({ id: 9, content: 'convert me' })]
+    vi.stubGlobal('fetch', vi.fn((url: string, init?: RequestInit) =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(
+          (init?.method ?? 'GET') !== 'GET' ? {}
+          : String(url).includes('/api/notes') ? { notes: rows } : { notes: [], tasks: [], links: [], events: [] }),
+      }),
+    ))
     render(JournalView)
-    await fireEvent.click(await screen.findByRole('button', { name: '→日记' }))
+    await fireEvent.click(await screen.findByRole('button', { name: '更多操作 convert me' }))
+    await fireEvent.click(screen.getByRole('menuitem', { name: '→日记' }))
     expect(spy).toHaveBeenCalledWith(9)
   })
 
@@ -68,9 +91,18 @@ describe('JournalView', () => {
   })
 
   it('→任务 jumps to the tasks tab with the note pinned', async () => {
-    notes.notes = [N({ id: 11, content: 'summarize inbox daily' })]
+    const rows = [N({ id: 11, content: 'summarize inbox daily' })]
+    vi.stubGlobal('fetch', vi.fn((url: string, init?: RequestInit) =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(
+          (init?.method ?? 'GET') !== 'GET' ? {}
+          : String(url).includes('/api/notes') ? { notes: rows } : { notes: [], tasks: [], links: [], events: [] }),
+      }),
+    ))
     render(JournalView)
-    await fireEvent.click(await screen.findByRole('button', { name: '→任务' }))
+    await fireEvent.click(await screen.findByRole('button', { name: '更多操作 summarize inbox daily' }))
+    await fireEvent.click(screen.getByRole('menuitem', { name: '→任务' }))
     // tasks tab active with the note pinned as a chip; the input now takes the
     // 人话时间 phrase (T2), so it stays editable and empty.
     expect(screen.getByRole('tab', { name: '任务' })).toHaveAttribute('aria-selected', 'true')
@@ -82,9 +114,18 @@ describe('JournalView', () => {
 
   it('pinned note submits via to-task with the typed 人话时间', async () => {
     const spy = vi.spyOn(notes, 'toTaskNL').mockResolvedValue(true)
-    notes.notes = [N({ id: 11, content: 'summarize inbox daily' })]
+    const rows = [N({ id: 11, content: 'summarize inbox daily' })]
+    vi.stubGlobal('fetch', vi.fn((url: string, init?: RequestInit) =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(
+          (init?.method ?? 'GET') !== 'GET' ? {}
+          : String(url).includes('/api/notes') ? { notes: rows } : { notes: [], tasks: [], links: [], events: [] }),
+      }),
+    ))
     render(JournalView)
-    await fireEvent.click(await screen.findByRole('button', { name: '→任务' }))
+    await fireEvent.click(await screen.findByRole('button', { name: '更多操作 summarize inbox daily' }))
+    await fireEvent.click(screen.getByRole('menuitem', { name: '→任务' }))
     await fireEvent.input(screen.getByLabelText('任务指令'), { target: { value: '每天早上9点' } })
     await fireEvent.click(screen.getByRole('button', { name: '交给 agent' }))
     expect(spy).toHaveBeenCalledWith(11, '每天早上9点')

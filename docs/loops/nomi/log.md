@@ -160,3 +160,9 @@
 - AI 真测(claude-cli 订阅 provider): ① 不确定速记→15s 内 LLM 补 title/where/tags,判 note 不升格 ✓;② 「把 nomi-reference 的截图整理进仓库」→ LLM 判 task,kind 升格+triage{by:llm,confident:true},自动进待办 ✓。顺手补:LLM 确认 note 也标 by:llm(不再留 pending)。测试速记已删,后端已重启。
 - 门: pytest 254 全绿 / 前端 build ✓ check 0/0 ✓ test 224 全绿(+5:canvas 点击/拖拽/删除/高度+详情删除/无全部)
 - 视觉: shots/fb-canvas.png(画布不遮挡+无全部 chip)
+## 反馈修复 2 · 2026-07-08 · 墙阴影断带 + ⋯ 菜单 + 编辑提案稿 [用户反馈]
+- 阴影断带: WebKit 多列会把 block 卡从分栏边界切开(壳内出现空带/半卡+阴影)——.wcard 改 display:inline-block(不参与分栏切割),overflow 改 visible(菜单要浮出)+封面图自圆角。
+- ⋯ 菜单(用户拍板): 墙卡操作行(编辑/→日记/→记忆/→任务/×)收进三点菜单,点开显示;删除在菜单内两击确认;点外面/Esc 关;hover/focus 出 ⋯。
+- 编辑提案稿: docs/design/helm-note-edit.html——A 双栏 md+实时 HTML 预览 / B 单栏写-预览切换,共同点=行内编辑升级居中弹层。待拍板(Q-EDIT,建议 A),拍板前不进代码。
+- 门: pytest 254 全绿 / 前端 build ✓ check 0/0 ✓ test 224 全绿(菜单交互 4 例改写+竞态 mock 修正)
+- 视觉: shots/fb-menu.png(实况菜单+断带消失)/ edit-proposal.png(提案稿)

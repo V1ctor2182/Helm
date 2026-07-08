@@ -94,6 +94,9 @@
     setTimeout(() => void notes.remove(n.id), 800)
   }
   let editDraft = $state('')
+  // ⋯ 菜单(2026-07-08 用户拍板):打开的卡 id + 删除确认态;点外面/Esc 关
+  let menuId = $state<number | null>(null)
+  let menuArmed = $state<number | null>(null)
 
   onMount(() => {
     // 头部计数要 notes+tasks;providers/日历按 tab 懒加载(见 $effect)。
@@ -287,6 +290,11 @@
   }
 </script>
 
+<svelte:window
+  onclick={() => { menuId = null; menuArmed = null }}
+  onkeydown={(e) => { if (e.key === 'Escape') { menuId = null; menuArmed = null } }}
+/>
+
 <section class="jnt" aria-label="日记 / 速记">
   <header class="head">
     <h1>记录</h1>
@@ -379,18 +387,26 @@
                       {/if}
                       <span class="wtm">{localHHMM(n.created_at)}</span>
                     </div>
+                    <!-- ⋯ 菜单(2026-07-08 用户拍板:编辑/删除收进三个点,点开显示) -->
                     <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-                    <span class="wacts" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
-                      <button class="act" title="编辑" aria-label={`编辑 ${n.content}`} onclick={() => startEdit(n)}>编辑</button>
-                      <button class="act" title="转为今天的日记" onclick={() => notes.toJournal(n.id)}>→日记</button>
-                      <button class="act" title="存入记忆" onclick={() => notes.toMemory(n.id)}>→记忆</button>
-                      <button class="act" title="转为定时任务" onclick={() => noteToTask(n)}>→任务</button>
-                      <button
-                        class="act del"
-                        class:armed={del.pending === `note-${n.id}`}
-                        aria-label={`删除 ${n.content}`}
-                        onclick={() => del.confirm(`note-${n.id}`) && notes.remove(n.id)}
-                      >{del.pending === `note-${n.id}` ? '确认' : '×'}</button>
+                    <span class="wacts" class:show={menuId === n.id} onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
+                      <button class="dots" title="更多操作" aria-label={`更多操作 ${n.content}`}
+                        aria-haspopup="menu" aria-expanded={menuId === n.id}
+                        onclick={() => { menuArmed = null; menuId = menuId === n.id ? null : n.id }}>
+                        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="5" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="19" cy="12" r="1.8" fill="currentColor"/></svg>
+                      </button>
+                      {#if menuId === n.id}
+                        <div class="cmenu" role="menu">
+                          <button role="menuitem" onclick={() => { menuId = null; startEdit(n) }}>编辑</button>
+                          <button role="menuitem" onclick={() => { menuId = null; void notes.toJournal(n.id) }}>→日记</button>
+                          <button role="menuitem" onclick={() => { menuId = null; void notes.toMemory(n.id) }}>→记忆</button>
+                          <button role="menuitem" onclick={() => { menuId = null; noteToTask(n) }}>→任务</button>
+                          <button role="menuitem" class="mdanger"
+                            onclick={() => { if (menuArmed === n.id) { menuId = null; menuArmed = null; void notes.remove(n.id) } else menuArmed = n.id }}>
+                            {menuArmed === n.id ? '确认删除' : '删除'}
+                          </button>
+                        </div>
+                      {/if}
                     </span>
                   </div>
                 {/if}
@@ -1408,14 +1424,21 @@
     margin-bottom: 6px;
   }
   .wcard {
+    /* inline-block:WebKit 多列会把 block 卡从中间切开(壳里出现阴影断带,
+       2026-07-08 用户反馈)——inline-block 项不参与分栏切割 */
+    display: inline-block;
+    width: 100%;
     break-inside: avoid;
     background: var(--card);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     margin: 0 0 14px;
-    overflow: hidden;
+    overflow: visible; /* ⋯ 菜单要浮出卡外 */
     transition: box-shadow var(--dur-micro) var(--ease);
     position: relative;
+  }
+  .wcard .wcover {
+    border-radius: var(--radius) var(--radius) 0 0; /* overflow:visible 后自己圆角 */
   }
   .wcard:hover {
     box-shadow: var(--shadow-lg);
@@ -1529,11 +1552,57 @@
     margin-top: 8px;
     opacity: 0;
     transition: opacity var(--dur-micro) var(--ease);
+    position: relative;
   }
   .wcard:hover .wacts,
+  .wcard:focus-within .wacts,
   .wacts.show {
     opacity: 1;
   }
+  /* ⋯ 三点钮 + 下拉菜单(用户拍板) */
+  .dots {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 22px;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: var(--pill);
+    color: var(--t3);
+    cursor: pointer;
+  }
+  .dots:hover,
+  .wacts.show .dots { color: var(--t1); }
+  .cmenu {
+    position: absolute;
+    top: 26px;
+    left: 0;
+    z-index: 40;
+    min-width: 128px;
+    background: var(--card);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+  }
+  .cmenu button {
+    border: 0;
+    background: none;
+    text-align: left;
+    font: 500 12px/1 var(--sans);
+    color: var(--t2);
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .cmenu button:hover {
+    background: var(--pill);
+    color: var(--t1);
+  }
+  .cmenu .mdanger:hover,
+  .cmenu .mdanger { color: #d3382f; }
 
   /* —— AI 收藏卡(链接 parse 结果) —— */
   .acts {
