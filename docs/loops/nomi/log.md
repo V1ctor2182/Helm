@@ -177,3 +177,6 @@
 - 修法: 瀑布墙改 JS 轮转分列 + flex(splitCols + .wall flex/.wcol),multicol 从记录页彻底退场;bind:clientWidth 自适应 1-3 列;卡片 inline-block/break-inside 补丁一并移除。副产物:阅读顺序从纵向填列变成横向时间序(更对)。
 - 门: pytest 254 全绿 / 前端 build ✓ check 0/0 ✓ test 231 全绿
 - 视觉: shots/fb3-flexwall.png(菜单完整悬浮跨卡不断裂,阴影干净)
+## 收尾杂项 · 2026-07-08 · 清测试数据 + AI 系统文档 [用户要求]
+- 清库: 删 12 条 loop 历次测试速记/日记/专注(id 1-11,13:probe 链接卡/哈喽/今天干了很多事情/专注1分钟);保留 4 条用户真实记录(12/14/15/16)。tasks 表本就为空。DB 不进 git,此处留账。
+- 文档: docs/AI-SYSTEM.md——分诊/enrich/主题归类/人话排期/小结/问大脑全管线详解,含全部 prompt 原文、触发条件、成本与降级链、已知边界。
