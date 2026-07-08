@@ -98,6 +98,15 @@
   // ⋯ 菜单(2026-07-08 用户拍板):打开的卡 id + 删除确认态;点外面/Esc 关
   let menuId = $state<number | null>(null)
   let menuArmed = $state<number | null>(null)
+  // 瀑布墙分列:JS 轮转分列 + flex(用户反馈:CSS multicol 在 WebKit 把卡
+  // 和绝对定位菜单切进邻列——hover 闪烁/菜单断裂/阴影伪影,一并根治)
+  let wallW = $state(0)
+  const wallCols = $derived(Math.max(1, Math.min(3, Math.floor((wallW + 14) / 264))))
+  function splitCols(items: Note[], n: number): Note[][] {
+    const cols: Note[][] = Array.from({ length: n }, () => [])
+    items.forEach((it, i) => cols[i % n].push(it))
+    return cols
+  }
 
   onMount(() => {
     // 头部计数要 notes+tasks;providers/日历按 tab 懒加载(见 $effect)。
@@ -323,7 +332,9 @@
 
 {#snippet wall(items: Note[], showTopic: boolean)}
           <div class="wall">
-            {#each items as n (n.id)}
+            {#each splitCols(items, wallCols) as col, ci (ci)}
+            <div class="wcol">
+            {#each col as n (n.id)}
               <!-- svelte-ignore a11y_no_static_element_interactions -->
               <div
                 class="wcard"
@@ -400,6 +411,8 @@
                 {/if}
               </div>
             {/each}
+            </div>
+            {/each}
           </div>
 {/snippet}
 
@@ -412,7 +425,7 @@
 
   {#if view === 'timeline'}
   {#if ['all', 'note', 'collect', 'youtube', 'paper', 'inspiration'].includes(layout.journalFilter)}
-    <div class="wallwrap">
+    <div class="wallwrap" bind:clientWidth={wallW}>
         <div class="groupsw">
           <button class="gsw" class:on={groupBy === 'time'} onclick={() => (groupBy = 'time')}>按时间</button>
           <button class="gsw" class:on={groupBy === 'topic'} onclick={() => (groupBy = 'topic')}>
@@ -1392,16 +1405,16 @@
 
   /* —— K1 瀑布卡墙 —— */
   .wall {
-    columns: 3 250px;
-    column-gap: 14px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
     margin-bottom: 6px;
   }
+  .wcol {
+    flex: 1;
+    min-width: 0;
+  }
   .wcard {
-    /* inline-block:WebKit 多列会把 block 卡从中间切开(壳里出现阴影断带,
-       2026-07-08 用户反馈)——inline-block 项不参与分栏切割 */
-    display: inline-block;
-    width: 100%;
-    break-inside: avoid;
     background: var(--card);
     border-radius: var(--radius);
     box-shadow: var(--shadow);

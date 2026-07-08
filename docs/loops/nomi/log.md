@@ -172,3 +172,8 @@
 - 稿: helm-note-edit.html 改定稿(A/B 提案废弃,注明拍板)。
 - 门: pytest 254 全绿 / 前端 build ✓ check 0/0 ✓ test 231 全绿(+7:inlineMd 5 例 roundtrip/防注入+弹层保存+卡片轻渲染)
 - 视觉: shots/fb2-sheet.png(实况弹层:B/I/H+字数+渐变保存)
+## 反馈修复 4 · 2026-07-08 · 瀑布墙弃 CSS multicol(hover 闪烁/菜单断裂根治)[用户反馈]
+- 根因: WebKit 对 CSS columns 里的绝对定位元素也做分栏搬运——⋯ 菜单超出卡片的部分被切到邻列顶部(截图实锤:左卡菜单的「→任务/删除」出现在右卡上方);hover 触发 multicol 重排=其他卡闪烁;此前 inline-block 补丁只治了卡体切割,治不了菜单。
+- 修法: 瀑布墙改 JS 轮转分列 + flex(splitCols + .wall flex/.wcol),multicol 从记录页彻底退场;bind:clientWidth 自适应 1-3 列;卡片 inline-block/break-inside 补丁一并移除。副产物:阅读顺序从纵向填列变成横向时间序(更对)。
+- 门: pytest 254 全绿 / 前端 build ✓ check 0/0 ✓ test 231 全绿
+- 视觉: shots/fb3-flexwall.png(菜单完整悬浮跨卡不断裂,阴影干净)
