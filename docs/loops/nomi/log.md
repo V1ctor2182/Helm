@@ -192,3 +192,6 @@
 - 开头加架构图:mermaid 数据流图(经浏览器 mermaid@11 渲染校验通过 OK)+ 纯文本 ASCII 兜底版(终端可读);新增文件地图表(功能→文件)。
 - 图内容:捕获坞→前端徽章/发送→分诊规则层→落库(确定/不确定)→异步 enrich(抓取层→LLM 链接解析 family/label/topic / LLM 文本整理兜底改类)→回写;所有 LLM 汇入 pick_provider→llm_once→claude-cli;其它入口(人话排期纯规则/小结/问大脑)旁挂。
 - 视觉: shots/ai-arch.png(渲染图)
+## 文档细化 · 2026-07-08 · ASCII 图前端徽章子流程展开 [用户要求]
+- ASCII 图把「打字→判类徽章」两行展开:5 类实时判定(收藏/任务+双轨/想法/日记/问大脑/速记)+徽章文案+点击轮换改判/手动接管+专注钮+"只是预告后端为准";发送按判定分三条路(notes 主线 / tasks 人话排期 / ask 问大脑)。
+- 同步:mermaid BADGE 节点补分类概要,重导 ai-system-arch.png(1280 宽,neutral,渲染校验 OK);ASCII 前言注明"前端徽章处更展开"。
