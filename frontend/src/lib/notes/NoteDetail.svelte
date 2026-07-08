@@ -78,7 +78,8 @@
 <div class="scrim" role="presentation" onclick={onclose}>
   <div class="sheet" role="dialog" aria-label="记录详情" tabindex="-1" onclick={(e) => e.stopPropagation()}>
     <header class="dh">
-      <span class="kind">{TYPE_ZH[note.meta?.type ?? ''] ?? KIND_ZH[note.kind] ?? note.kind}</span>
+      <!-- F1:优先 label(精确规范类别),否则老 type 中文,再否则 kind -->
+      <span class="kind">{note.meta?.label ?? TYPE_ZH[note.meta?.type ?? ''] ?? KIND_ZH[note.kind] ?? note.kind}</span>
       <span class="when">{note.created_at ? localDateTime(note.created_at) : ''}</span>
       <button class="x" aria-label="关闭" onclick={onclose}>×</button>
     </header>

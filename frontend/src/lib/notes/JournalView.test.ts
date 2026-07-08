@@ -289,3 +289,38 @@ it('卡片轻渲染:**粗** 显示为加粗而不是星号', async () => {
   expect(strong.tagName).toBe('B')
   expect(screen.queryByText(/\*\*/)).toBeNull()
 })
+
+it('F1 链接分类:family 决定 badge 色/名,label 显示精确类别 chip', async () => {
+  const rows = [
+    N({ id: 61, content: 'x https://linkedin.com/jobs/1',
+      meta: { type: 'article', family: 'link', label: '招聘', title: '后端工程师', url: 'https://linkedin.com/jobs/1' } }),
+    N({ id: 62, content: 'v https://bilibili.com/v',
+      meta: { type: 'article', family: 'video', label: '视频', title: '布局教程', url: 'https://bilibili.com/v' } }),
+  ]
+  vi.stubGlobal('fetch', vi.fn((url: string) =>
+    Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(String(url).includes('/api/notes') ? { notes: rows } : { notes: [], tasks: [], links: [], events: [] }),
+    }),
+  ))
+  render(JournalView)
+  // 招聘链接:family=link → badge「链接」;label「招聘」单独 chip(与族名不同才显示)
+  expect(await screen.findByText('链接')).toBeInTheDocument()
+  expect(screen.getByText('招聘')).toBeInTheDocument()
+  // bilibili 视频:family=video → badge「视频」;label 也是「视频」→ 不重复显示 chip
+  expect(screen.getByText('视频')).toBeInTheDocument()
+})
+
+it('F1 兼容:老数据只有 type、无 family 时按 type 推 family', async () => {
+  const rows = [N({ id: 63, content: 'yt https://youtu.be/x',
+    meta: { type: 'youtube', title: '老视频卡', url: 'https://youtu.be/x' } })]
+  vi.stubGlobal('fetch', vi.fn((url: string) =>
+    Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(String(url).includes('/api/notes') ? { notes: rows } : { notes: [], tasks: [], links: [], events: [] }),
+    }),
+  ))
+  render(JournalView)
+  // type=youtube 无 family → 推 video 族 → badge「视频」(不再是旧的 YT/WEB)
+  expect(await screen.findByText('视频')).toBeInTheDocument()
+})

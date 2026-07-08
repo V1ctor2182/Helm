@@ -3,7 +3,7 @@
   import { onMount } from 'svelte'
   import { marked } from 'marked'
   import DOMPurify from 'dompurify'
-  import { notes, type Note } from './notesStore.svelte'
+  import { notes, famOf, FAM_BADGE, type Note } from './notesStore.svelte'
   import { tasks } from './tasksStore.svelte'
   import { calendar } from '../mail/calendarStore.svelte'
   import { localHHMM, localDate, localDateTime } from '../time'
@@ -191,7 +191,10 @@
       if (n.kind !== 'note' && n.kind !== 'idea' && n.kind !== 'task') return false
       const f = layout.journalFilter
       if (f === 'collect') return !!n.meta?.url
-      if (f === 'youtube' || f === 'paper' || f === 'inspiration') return n.meta?.type === f
+      // F1:侧栏收藏筛选按 family(兼容老 type),视频类不再漏 bilibili 等。
+      if (f === 'youtube') return famOf(n.meta) === 'video' && !!n.meta?.url
+      if (f === 'paper') return famOf(n.meta) === 'paper' && !!n.meta?.url
+      if (f === 'inspiration') return famOf(n.meta) === 'design' && !!n.meta?.url
       return true
     }),
   )
@@ -351,9 +354,10 @@
                   {/if}
                   <div class="wpad">
                     {#if n.meta?.url}
-                      <span class="wbadge" style="background:{({ youtube: '#ff2d2d', paper: '#8b5a2b', inspiration: '#0a84ff' } as Record<string, string>)[n.meta.type ?? ''] ?? '#0a84ff'}">
-                        {({ youtube: 'YT', paper: 'AX', inspiration: 'AW' } as Record<string, string>)[n.meta.type ?? ''] ?? 'WEB'}
-                      </span>
+                      <!-- F1:badge=family 视觉族(色),label=规范类别精确 chip -->
+                      {@const fam = famOf(n.meta)}
+                      <span class="wbadge" style="background:{FAM_BADGE[fam][1]}">{FAM_BADGE[fam][0]}</span>
+                      {#if n.meta.label && n.meta.label !== FAM_BADGE[fam][0]}<span class="labelchip">{n.meta.label}</span>{/if}
                       <span class="wti">{n.meta.title ?? n.meta.url}</span>
                       {#if n.meta.summary}<p class="wsum">{n.meta.summary}</p>{/if}
                     {:else}
@@ -1484,11 +1488,22 @@
     justify-content: center;
     min-width: 24px;
     height: 24px;
-    padding: 0 5px;
+    padding: 0 6px;
     border-radius: 7px;
     color: #fff;
     font: 800 9.5px/1 var(--sans);
     margin-bottom: 8px;
+  }
+  /* F1 规范类别 chip(label,精确类型词) */
+  .labelchip {
+    display: inline-block;
+    margin: 0 0 8px 6px;
+    padding: 3px 8px;
+    border-radius: var(--radius-pill);
+    background: var(--pill);
+    color: var(--t2);
+    font: 600 10px/1 var(--sans);
+    vertical-align: top;
   }
   .wti,
   .wtx {

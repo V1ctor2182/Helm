@@ -42,3 +42,13 @@
 - **人话排期**:POST /api/tasks 只发 `{prompt}` 整句即可(「每天早上9点汇总未读邮件」),排期从句子解析,人话标签在 `schedule_value.nl`;GET /api/tasks/parse?q=… 可做输入实时徽章;没听出时间→422(detail 带提示)。notch「交给 agent」的 {prompt} 契约由 422 变为可用。
 - **口径差提醒(journalToday)**:notch 现按 createdAt 日过滤今天的日记,主 app 按 journal_date——凌晨补写昨天会两边归属不同。建议 notch 改吃 journal_date(GET /api/notes?kind=journal&journal_date=YYYY-MM-DD 已支持)。
 - 待办 UI 参考主 app T3:两层任务行(when 24h 内橙 chip/@where/速记分诊来源),稿 docs/design/helm-journal-kinds.html。
+
+## 契约通知 2 · 链接分类三层已发布(2026-07-08,主 app F1;只加不减)
+- notes.meta 新增两字段(旧字段 type 保留不删,notch 现有读取不破):
+  · `family`: "video|paper|design|link" 视觉族(死枚举)——用来出 badge 图标/色。
+    映射建议:video 红/paper 棕/design 蓝/link 中性灰。老数据无 family 时按
+    type 推:youtube→video、paper→paper、inspiration→design、article→link。
+  · `label`: 2-6 字中文规范类别(招聘/仓库/餐厅/视频…),精确类型 chip,直接显示,
+    无需映射。可能为空(老数据/抓取失败)。
+- topic 语义不变(主题集合,与 label 正交)。notch 若展示收藏卡,badge 建议改吃
+  family、类别 chip 吃 label(比原来的 type 缩写更精确、覆盖更全)。

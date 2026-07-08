@@ -180,3 +180,10 @@
 ## 收尾杂项 · 2026-07-08 · 清测试数据 + AI 系统文档 [用户要求]
 - 清库: 删 12 条 loop 历次测试速记/日记/专注(id 1-11,13:probe 链接卡/哈喽/今天干了很多事情/专注1分钟);保留 4 条用户真实记录(12/14/15/16)。tasks 表本就为空。DB 不进 git,此处留账。
 - 文档: docs/AI-SYSTEM.md——分诊/enrich/主题归类/人话排期/小结/问大脑全管线详解,含全部 prompt 原文、触发条件、成本与降级链、已知边界。
+## F1 · 2026-07-08 · 链接分类三层(family/label/topic)[用户拍板]
+- 设计: 固定枚举穷举不完、纯自由 label 碎片化——拆三层:family(video|paper|design|link 视觉族,死枚举,给 badge)/label(自由但归一化的规范类别,给精确 chip)/topic(主题集合,不变)。label 收敛靠 prompt 归一化规则(不带来源/子类修饰)+ 注入库里已有 label 优先复用(自举)+ 后端 alias 兜底。family/label/topic 三者正交。详见 docs/AI-SYSTEM.md。
+- 后端: enrich _LINK_SYSTEM 改双字段 prompt(%s 注入已有 label);抓取层按 type 给 family 默认;LLM 出 family(白名单)+label(归一化);type 保留兼容旧读者/notch。
+- 前端: NoteMeta 加 family/label;famOf()/FAM_BADGE 共享(family 优先,老 type 回退推 family);墙卡 badge=family 族名/色 + label 精确 chip;详情标题优先 label;侧栏收藏筛选改按 family(视频类不再漏 bilibili)。
+- 门: pytest 257 全绿(+3:norm_label/family 默认/family+label+注入)/前端 build ✓ check 0/0 ✓ test 233 全绿(+2:family badge+label chip/老数据 type 兼容)
+- e2e(真 LLM claude-cli): GitHub repo → family=link·label=仓库·topic=前端框架 ✓;arXiv → 论文族;badge「WEB」→「链接/论文/视频/设计」。测试速记已删,保留用户真实记录。
+- 视觉: shots/f1-labelchip.png(GitHub 卡:链接 badge+仓库 chip;arXiv 卡:论文 badge)

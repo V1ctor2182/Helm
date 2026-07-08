@@ -24,6 +24,7 @@ from html import unescape
 from typing import Any
 
 import httpx
+from sqlalchemy import select
 
 log = logging.getLogger(__name__)
 
@@ -129,12 +130,50 @@ async def fetch_link_meta(url: str, client: httpx.AsyncClient | None = None) -> 
     return meta
 
 
+# 链接分类三层(F1,2026-07-08 用户拍板,详见 docs/AI-SYSTEM.md):
+# family=视觉族(死枚举,给 badge)/ label=规范类别(自由但归一化,注入已有优先复用)
+# / topic=主题集合(不变)。%s 处运行时注入库里已有 label 让 LLM 复用,防碎片化。
+_FAMILIES = ("video", "paper", "design", "link")
+# 抓取层 type → 默认 family(LLM 没给时兜底);inspiration 只由 LLM 判。
+_TYPE_FAMILY = {"youtube": "video", "paper": "paper", "inspiration": "design", "article": "link"}
+# label 极简 alias 兜底(prompt 归一化的最后一道网)——把来源/子类修饰塌回泛类。
+_LABEL_ALIAS = {
+    "youtube视频": "视频", "b站视频": "视频", "bilibili视频": "视频", "教学视频": "视频",
+    "岗位": "招聘", "职位": "招聘", "求职": "招聘", "招聘启事": "招聘",
+    "github仓库": "仓库", "代码库": "仓库", "开源项目": "仓库",
+}
 _LINK_SYSTEM = (
     "你是 Helm 的收藏解析器。根据给出的链接元数据(可能不全)输出 JSON:"
-    '{"type":"youtube|paper|article|inspiration","summary":"2-3 句中文,讲清这是什么、为什么值得看",'
-    '"tags":["≤3个中文短标签"],"topic":"2-6字的主题集合名(如 Transformer 学习/设计灵感),不确定给 null"}。'
-    "UI/UX/设计/作品集类判为 inspiration。只输出 JSON。"
+    '{"family":"video|paper|design|link",'
+    '"label":"2-6字中文规范类别,给最泛化的那层,不带来源/子类修饰'
+    "(YouTube视频/B站视频→视频;数学论文/AI论文→论文;职位/岗位→招聘)。"
+    '优先复用已有类别:%s;没有再造一个同样泛的词",'
+    '"summary":"2-3 句中文,讲清这是什么、为什么值得看",'
+    '"tags":["≤3个中文短标签"],'
+    '"topic":"2-6字的主题集合名(如 Transformer 学习/设计灵感),不确定给 null"}。'
+    "family:video=视频,paper=论文/文献,design=UI·UX·设计·作品集,其余一律 link。只输出 JSON。"
 )
+
+
+def _norm_label(s: str) -> str:
+    return _LABEL_ALIAS.get(s.strip().lower(), s.strip())
+
+
+def _existing_labels(session: Any, limit: int = 40) -> list[str]:
+    """库里已出现过的 label,去重保序——注入 prompt 让 LLM 优先复用(自举收敛)。"""
+    from helm.notes.models import Note
+
+    seen: list[str] = []
+    for mj in session.scalars(select(Note.meta_json).where(Note.meta_json.is_not(None))):
+        try:
+            lab = (json.loads(mj) or {}).get("label")
+        except (json.JSONDecodeError, TypeError):
+            continue
+        if lab and lab not in seen:
+            seen.append(lab)
+        if len(seen) >= limit:
+            break
+    return seen
 _TEXT_SYSTEM = (
     "你是 Helm 的速记整理器。把用户随手记的一条整理成 JSON:"
     '{"title":"≤12字标题","tags":["≤3个中文短标签"],"when":"文中提到的时间线索,无则null",'
@@ -223,6 +262,8 @@ async def enrich_note(db: Any, box: Any, note_id: int, cwd: Any = None) -> None:
                 lm["summary"] = lm["abstract"][:300]
             links.append({k: v for k, v in lm.items() if k in ("url", "type", "title", "summary", "image", "site") and v})
         meta = {**meta0, **links[0]}
+        # F1:抓取层给 family 默认(按 type 映射),LLM 层再精化——没 provider 也有族。
+        meta.setdefault("family", _TYPE_FAMILY.get(meta.get("type", ""), "link"))
         if len(links) > 1:
             meta["links"] = links
         _write(meta)
@@ -234,11 +275,16 @@ async def enrich_note(db: Any, box: Any, note_id: int, cwd: Any = None) -> None:
             return
         try:
             if url:
+                # F1:注入库里已有 label 让 LLM 优先复用(自举收敛,防同义碎片)。
+                existing = _existing_labels(session)
+                sys_prompt = _LINK_SYSTEM % ("、".join(existing) if existing else "暂无")
                 user = f"链接: {url}\n元数据: {json.dumps(meta, ensure_ascii=False)}\n用户原话: {content}"
                 d = _parse_llm_json(await asyncio.wait_for(llm_once(
-                    session, box, provider, system=_LINK_SYSTEM, user=user, cwd=cwd), 90))
-                if d.get("type") in {"youtube", "paper", "article", "inspiration"}:
-                    meta["type"] = d["type"]
+                    session, box, provider, system=sys_prompt, user=user, cwd=cwd), 90))
+                if d.get("family") in _FAMILIES:
+                    meta["family"] = d["family"]
+                if d.get("label"):
+                    meta["label"] = _norm_label(str(d["label"])[:12])
                 if d.get("summary"):
                     meta["summary"] = str(d["summary"])[:600]
                 if isinstance(d.get("tags"), list):

@@ -101,13 +101,43 @@ backlog [T1+],未实现。
 **meta 合并规则**:enrich 从不覆盖分诊的规则种子(when/where/due 优先,
 LLM 只补空)。
 
+### 链接分类三层(F1,2026-07-08 用户拍板)
+
+固定枚举穷举不完世界上的链接(招聘/商品/仓库/餐厅…),但完全自由的类型词又会
+碎片化(YouTube视频/B站视频/教学视频 各成一类)。解法是把"类型"这件事拆成
+**三个正交层**,各用不同机制防失控:
+
+| 层 | 谁定 | 防爆炸机制 | 用途 | 值域 |
+|---|---|---|---|---|
+| **family** 视觉族 | LLM 4 选 1 | 死枚举(永不增长) | 卡片 badge 图标/颜色 | `video｜paper｜design｜link` |
+| **label** 规范类别 | LLM,优先复用 | 归一化规则 + 已有集合注入 | 卡上"这是什么"chip | 自由中文,但收敛 |
+| **topic** 主题集合 | LLM,优先复用 | 已有集合注入(现有机制) | 跨条目聚成集合 | 自由中文 |
+
+- **family** 只管卡长什么样,所以只需 4 个稳定视觉族;任何链接兜底 `link`(中性
+  灰),前端永远画得出,不再 fallback 到无意义的 "WEB"。
+- **label** 是精确类型("招聘岗位""代码仓库""餐厅"),但**强制归一化到最泛那层**
+  (不带来源/子类修饰),且 prompt 注入库里**已有的 label 列表**让 LLM 优先复用——
+  类别集合从真实数据里自举收敛,不靠预设枚举。后端再留一张极简 alias 表兜最常见
+  同义(YouTube视频/B站视频→视频、岗位/职位→招聘)。
+- **label 与 topic 正交**:同一招聘链接 label=招聘(是什么种类)、topic=求职
+  (关于什么),互不干扰。
+
+向后兼容:旧字段 `type`(youtube/paper/inspiration/article)保留不删,旧前端/notch
+继续读;新前端优先读 family/label。抓取层按域名给 family 默认(youtube→video、
+arxiv→paper、其余→link),LLM 层精化 + 给 label。
+
 ### Prompt 原文 · 链接类(_LINK_SYSTEM)
+
+`%s` 处运行时注入库里已有 label 列表(去重,上限 40;空则"暂无"):
 
 ```
 你是 Helm 的收藏解析器。根据给出的链接元数据(可能不全)输出 JSON:
-{"type":"youtube|paper|article|inspiration","summary":"2-3 句中文,讲清这是什么、为什么值得看",
-"tags":["≤3个中文短标签"],"topic":"2-6字的主题集合名(如 Transformer 学习/设计灵感),不确定给 null"}。
-UI/UX/设计/作品集类判为 inspiration。只输出 JSON。
+{"family":"video|paper|design|link",
+"label":"2-6字中文规范类别,给最泛化的那层,不带来源/子类修饰(YouTube视频/B站视频→视频;数学论文/AI论文→论文;职位/岗位→招聘)。优先复用已有类别:%s;没有再造一个同样泛的词",
+"summary":"2-3 句中文,讲清这是什么、为什么值得看",
+"tags":["≤3个中文短标签"],
+"topic":"2-6字的主题集合名(如 Transformer 学习/设计灵感),不确定给 null"}。
+family:video=视频,paper=论文/文献,design=UI·UX·设计·作品集,其余一律 link。只输出 JSON。
 ```
 
 user 消息形如:`链接: {url}\n元数据: {抓取层 JSON}\n用户原话: {content}`

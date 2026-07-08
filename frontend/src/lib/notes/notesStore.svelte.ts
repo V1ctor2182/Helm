@@ -9,6 +9,9 @@ import { jsonFetch, jsonList } from '../api'
 /** AI enrichment(速记管线):链接 parse/摘要/预览元数据。 */
 export interface NoteMeta {
   type?: 'youtube' | 'paper' | 'article' | 'inspiration' | 'text'
+  // F1 链接分类三层:family=视觉族(badge),label=规范类别(精确 chip)。
+  family?: 'video' | 'paper' | 'design' | 'link'
+  label?: string
   url?: string
   title?: string
   summary?: string
@@ -31,6 +34,21 @@ export interface TriageReceipt {
   due: string | null
   recurring: boolean
   confident: boolean
+}
+
+// F1 视觉族:family(新)优先,回退老 type 推导(向后兼容旧数据/notch)。
+export type Family = 'video' | 'paper' | 'design' | 'link'
+export function famOf(m: NoteMeta | null | undefined): Family {
+  if (m?.family) return m.family
+  const t = m?.type
+  return t === 'youtube' ? 'video' : t === 'paper' ? 'paper' : t === 'inspiration' ? 'design' : 'link'
+}
+/** family → [badge 短名, 颜色](死枚举,4 个稳定视觉族)。 */
+export const FAM_BADGE: Record<Family, [string, string]> = {
+  video: ['视频', '#ff2d2d'],
+  paper: ['论文', '#8b5a2b'],
+  design: ['设计', '#0a84ff'],
+  link: ['链接', '#6b7280'],
 }
 
 export interface Note {

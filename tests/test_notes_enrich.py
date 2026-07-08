@@ -88,6 +88,63 @@ def test_create_note_background_enrich_wires_up(config, monkeypatch) -> None:
     assert meta and meta["type"] == "youtube" and meta["title"] == "T"
 
 
+def test_norm_label_collapses_aliases() -> None:
+    """F1:label 归一化——来源/子类修饰塌回泛类(prompt 兜底网)。"""
+    from helm.notes.enrich import _norm_label
+
+    assert _norm_label("YouTube视频") == "视频"
+    assert _norm_label("岗位") == "招聘"
+    assert _norm_label("GitHub仓库") == "仓库"
+    assert _norm_label("招聘") == "招聘"  # 已规范的不动
+    assert _norm_label("骑行路线") == "骑行路线"  # 不认识的原样返回
+
+
+def test_fetch_layer_sets_family_default(config, monkeypatch) -> None:
+    """F1:抓取层按 type 给 family 默认(没 provider 也有视觉族)。"""
+    from fastapi.testclient import TestClient
+
+    from helm.app import create_app
+    from helm.notes import enrich as enrich_mod
+
+    async def fake_fetch(url, client=None):
+        return {"url": url, "type": "youtube", "title": "V"}
+
+    monkeypatch.setattr(enrich_mod, "fetch_link_meta", fake_fetch)
+    c = TestClient(create_app(config))
+    nid = c.post("/api/notes", json={"content": "看 https://youtu.be/x"}).json()["id"]
+    meta = next(n for n in c.get("/api/notes").json()["notes"] if n["id"] == nid)["meta"]
+    assert meta["family"] == "video"  # youtube → video 族
+
+
+def test_llm_layer_family_label_and_existing_injection(config, monkeypatch) -> None:
+    """F1:LLM 出 family(白名单)+label(归一化);已有 label 注入 prompt 供复用。"""
+    from fastapi.testclient import TestClient
+
+    from helm.app import create_app
+    from helm.notes import enrich as enrich_mod
+    import helm.ai as ai_mod
+
+    async def fake_fetch(url, client=None):
+        return {"url": url, "type": "article", "title": "某公司后端工程师"}
+
+    captured: dict = {}
+
+    async def fake_llm(session, box, provider, system, user, cwd=None):
+        captured["system"] = system
+        return '{"family":"link","label":"职位","summary":"某公司招后端","tags":["招聘"],"topic":"求职"}'
+
+    monkeypatch.setattr(enrich_mod, "fetch_link_meta", fake_fetch)
+    monkeypatch.setattr(ai_mod, "pick_provider", lambda s, b: object())
+    monkeypatch.setattr(ai_mod, "llm_once", fake_llm)
+    c = TestClient(create_app(config))
+    nid = c.post("/api/notes", json={"content": "招聘 https://linkedin.com/jobs/123"}).json()["id"]
+    meta = next(n for n in c.get("/api/notes").json()["notes"] if n["id"] == nid)["meta"]
+    assert meta["family"] == "link"        # 白名单
+    assert meta["label"] == "招聘"          # 职位 → 招聘(alias 归一化)
+    assert meta["topic"] == "求职"          # label 与 topic 正交
+    assert "暂无" in captured["system"]     # 首条:已有 label 为空
+
+
 def test_all_urls_dedup_and_order() -> None:
     from helm.notes.enrich import all_urls
 
