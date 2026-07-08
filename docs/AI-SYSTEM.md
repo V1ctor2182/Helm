@@ -15,6 +15,12 @@
 
 一条速记的完整旅程:
 
+![Helm AI 架构 · 数据流](ai-system-arch.png)
+
+> 上图是渲染好的 PNG(任何查看器都能看)。下面是它的 mermaid 源码(支持 mermaid
+> 的编辑器会自动渲染成图;不支持的看上面的 PNG 或再下面的 ASCII 版)。改图时改
+> 源码,再重新导出 PNG(见文末「重新生成架构图」)。
+
 ```mermaid
 flowchart TB
   subgraph FE["前端 · 捕获坞 / 派发条 / 记录页"]
@@ -411,3 +417,11 @@ notch 继续读;新前端优先读 family/label,老数据无 family 时按 type 
 | 问大脑 | `helm/chat/routes.py` |
 | 前端捕获坞/徽章 | `frontend/src/lib/CaptureDock.svelte` |
 | 前端 family/label 渲染 | `frontend/src/lib/notes/notesStore.svelte.ts`(famOf/FAM_BADGE)、`JournalView.svelte` |
+
+## 附:重新生成架构图
+
+图片 `ai-system-arch.png` 由 §0 的 mermaid 源码渲染。改了源码后重出 PNG:把
+mermaid 块喂给任意 mermaid 渲染器(mermaid.live、`@mermaid-js/mermaid-cli` 的
+`mmdc -i in.mmd -o ai-system-arch.png -t neutral -w 1200`,或浏览器里
+`mermaid@11` + `theme:'neutral'` 截图),覆盖同名文件即可。PNG 与 mermaid 源码、
+ASCII 三者是同一张图,改动要三处同步。
