@@ -200,3 +200,8 @@
 - 修: ① PNG Pillow 量化 48 色(129KB→46KB)后 base64 内嵌进 md(data URI,不依赖外部文件,任何支持 md 图片的查看器都显示);② mermaid 源码块折叠进 <details>(不支持的查看器不再显示文本墙,支持的展开渲染);ASCII 兜底保留。
 - 验证: 浏览器 marked 渲染 md → IMG_LOADED=true(1376px)+DETAILS=true;截图 shots/md-embed-check.png。
 - 文末「重新生成架构图」补重嵌步骤(渲染→量化→替换 data URI)。
+## 设计探索 · 2026-07-09 · Spec Cockpit(规格驾驶舱)· AI-native spec-driven [用户重定位+5 条精修]
+- 用户重定位:驾驶舱=完整 AI-native spec-driven 编辑器,不再开 Cursor;方向盘=规格(Markdown),一流展示+编辑;html 只展示 UI/UX。
+- 5 条精修:①agent=terminal(右侧真 cc 终端当引擎)②loop=cc 的 /loop(左批次块标 cc /loop)③外层 FleetDesk 卡片点进=本界面(两层)④左边=完整文档库(spec/批次/AI-SYSTEM/LOOP-GUIDE/CONVENTIONS/DESIGN/backlog/reports/设计稿)⑤顶栏项目切换器(helm/买方/notch/odyssey pill,不退回舰队)。
+- 布局:顶栏项目切换器+分支+自动驾驶+仪表;左=文档库(搜索+当前块+cc loop 批次+所有文档);中=规格 Markdown 主场(契约表/验收清单 spec↔loop 联动/prompt/callout,预览⇄编辑+格式工具栏);右竖分=cc 终端(loop 常驻)+审阅改动(diff 采纳/退回/问为什么/让我改就地黑底编辑);底 HUD=tests/localhost/改动/验收+暂停 loop/提交/开 PR。
+- 稿:docs/design/helm-cockpit-spec.html(NOMI 皮)。FleetDesk 俯瞰、点进=本界面。探索候选,点头后进 Svelte。
