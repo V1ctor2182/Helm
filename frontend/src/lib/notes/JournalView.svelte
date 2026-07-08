@@ -98,6 +98,9 @@
   // ⋯ 菜单(2026-07-08 用户拍板):打开的卡 id + 删除确认态;点外面/Esc 关
   let menuId = $state<number | null>(null)
   let menuArmed = $state<number | null>(null)
+  // 日记页 ⋯ 菜单(按天键):编辑整天 / 删整天
+  let dayMenu = $state<string | null>(null)
+  let dayMenuArmed = $state<string | null>(null)
   // 瀑布墙分列:JS 轮转分列 + flex(用户反馈:CSS multicol 在 WebKit 把卡
   // 和绝对定位菜单切进邻列——hover 闪烁/菜单断裂/阴影伪影,一并根治)
   let wallW = $state(0)
@@ -329,8 +332,8 @@
 </script>
 
 <svelte:window
-  onclick={() => { menuId = null; menuArmed = null }}
-  onkeydown={(e) => { if (e.key === 'Escape') { menuId = null; menuArmed = null } }}
+  onclick={() => { menuId = null; menuArmed = null; dayMenu = null; dayMenuArmed = null }}
+  onkeydown={(e) => { if (e.key === 'Escape') { menuId = null; menuArmed = null; dayMenu = null; dayMenuArmed = null } }}
 />
 
 <section class="jnt" aria-label="日记 / 速记">
@@ -541,10 +544,23 @@
               <span class="d">{dayNum(day)}</span><span class="w">{weekdayOf(day)}</span>
               <span class="cnt">{entries.reduce((a, e) => a + e.content.length, 0)} 字</span></button>
             <div class="md">{@html renderMd(entries.map((e) => e.content).join('\n\n'))}</div>
-            <span class="pacts">
-              <button class="act" aria-label="编辑这天日记" onclick={() => editDay(entries)}>编辑</button>
-              <button class="act del" class:armed={del.pending === `jrday-${day}`} aria-label="删除这天日记"
-                onclick={() => del.confirm(`jrday-${day}`) && deleteDay(entries)}>{del.pending === `jrday-${day}` ? '确认删整天' : '×'}</button>
+            <!-- 日级操作收进 ⋯(与速记卡一致):hover 浮现,点开出菜单 -->
+            <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+            <span class="jacts" class:show={dayMenu === day} onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
+              <button class="dots" title="更多操作" aria-label={`这天日记的操作`}
+                aria-haspopup="menu" aria-expanded={dayMenu === day}
+                onclick={() => { dayMenuArmed = null; dayMenu = dayMenu === day ? null : day }}>
+                <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="5" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="19" cy="12" r="1.8" fill="currentColor"/></svg>
+              </button>
+              {#if dayMenu === day}
+                <div class="cmenu" role="menu">
+                  <button role="menuitem" onclick={() => { dayMenu = null; editDay(entries) }}>编辑</button>
+                  <button role="menuitem" class="mdanger"
+                    onclick={() => { if (dayMenuArmed === day) { dayMenu = null; dayMenuArmed = null; void deleteDay(entries) } else dayMenuArmed = day }}>
+                    {dayMenuArmed === day ? '确认删整天' : '删除'}
+                  </button>
+                </div>
+              {/if}
             </span>
           </section>
         {/each}
@@ -1426,14 +1442,18 @@
     font: 400 14px/1.75 var(--sans);
     color: var(--t2);
   }
-  .pacts {
+  /* 日记页 ⋯ 操作:右上角,hover 浮现(与速记卡 .wacts 同语言) */
+  .jacts {
+    position: absolute;
+    top: 18px;
+    right: 22px;
     display: flex;
-    gap: 4px;
-    margin-top: 10px;
     opacity: 0;
     transition: opacity var(--dur-micro) var(--ease);
   }
-  .jpage:hover .pacts {
+  .jpage:hover .jacts,
+  .jpage:focus-within .jacts,
+  .jacts.show {
     opacity: 1;
   }
 
