@@ -195,3 +195,8 @@
 ## 文档细化 · 2026-07-08 · ASCII 图前端徽章子流程展开 [用户要求]
 - ASCII 图把「打字→判类徽章」两行展开:5 类实时判定(收藏/任务+双轨/想法/日记/问大脑/速记)+徽章文案+点击轮换改判/手动接管+专注钮+"只是预告后端为准";发送按判定分三条路(notes 主线 / tasks 人话排期 / ask 问大脑)。
 - 同步:mermaid BADGE 节点补分类概要,重导 ai-system-arch.png(1280 宽,neutral,渲染校验 OK);ASCII 前言注明"前端徽章处更展开"。
+## 文档可移植 · 2026-07-09 · 架构图 base64 内嵌 + mermaid 折叠 [用户反馈]
+- 根因: 用户查看器不支持相对路径图片(显示 ? 破图)也不渲染 mermaid(显示成 flowchart 原始文本墙)。
+- 修: ① PNG Pillow 量化 48 色(129KB→46KB)后 base64 内嵌进 md(data URI,不依赖外部文件,任何支持 md 图片的查看器都显示);② mermaid 源码块折叠进 <details>(不支持的查看器不再显示文本墙,支持的展开渲染);ASCII 兜底保留。
+- 验证: 浏览器 marked 渲染 md → IMG_LOADED=true(1376px)+DETAILS=true;截图 shots/md-embed-check.png。
+- 文末「重新生成架构图」补重嵌步骤(渲染→量化→替换 data URI)。
