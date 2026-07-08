@@ -3,14 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Helm 驾驶舱 · 重新构想(三方向探索)</title>
+<title>Helm 驾驶舱 · 重新构想 v2(控制塔:骑在你所有 Cursor 窗口之上)</title>
 <!--
-  2026-07-09 探索稿(非定稿):用户提出"驾驶舱=文件树+预览+终端,跟 Cursor 一样,为什么还用 Helm?"
-  → 重新回答"驾驶舱应该是什么"。三个方向各押一个差异化赌注。
-  参照:Devin Desktop「Agent Command Center」/ Google Antigravity「Mission Control」/ Vibe Kanban。
-  行业共识:驾驶舱=agent 指挥台,不是编辑器。Helm 的独有赌注=第二大脑(活从想法来,成果回记忆去)。
-  美学:NOMI(白卡/橙紫渐变 #ff8a3d→#a855f7)为主;方向 B 用 ORAGE 黑座舱玻璃罩。禁 emoji,单色 SVG/字形。
-  这是给用户拍板的探索,不进代码。
+  2026-07-09 v2 重写(非定稿)。
+  v1 错在:假设驾驶舱是"在一个仓库里监督 agent"。用户纠正:真实工作模式=同时开多个 Cursor 窗口,
+  每个窗口一个不同项目(helm / 创拾觅深-买方 …),各自跑一个 Claude Code loop(auto mode)。
+  用户喜欢在 Cursor 里干活,痛点是跨窗口 alt-tab 找"谁干完了/谁卡了/谁等我拍板"。刘海「3 live」已在聚合。
+  → 驾驶舱 = 骑在你所有 Cursor+agent 窗口之上的控制塔,不替代 Cursor。刘海是种子,驾驶舱是全屏版。
+  研究参照:LangChain Agent Inbox(人在环收件箱)/ Claude Code Agent Teams(单项目内通知)/
+  MartinLoop(control plane)/ Loop Engineering(2026 方法论,你的 LOOP-GUIDE 属于此)。
+  美学:NOMI 白卡+橙紫渐变(#ff8a3d→#a855f7);方向 A 用 ORAGE 黑控制墙。禁 emoji,单色 SVG/字形。
+  探索稿,待用户拍板赌注后做高保真+进 Svelte。
 -->
 <style>
   :root{
@@ -30,430 +33,412 @@
        padding:56px 32px 96px;display:flex;flex-direction:column;align-items:center;gap:16px}
 
   /* ── 页头战略框架 ── */
-  .lead{max-width:1120px;width:100%}
+  .lead{max-width:1140px;width:100%}
   .kicker{font:700 10.5px/1 var(--mono);letter-spacing:2px;color:var(--ink3);text-transform:uppercase}
-  h1{font:800 34px/1.15 var(--sans);letter-spacing:-.02em;margin:12px 0 14px}
-  .sub{font:400 15px/1.7 var(--sans);color:var(--ink2);max-width:820px}
+  h1{font:800 33px/1.16 var(--sans);letter-spacing:-.02em;margin:12px 0 14px}
+  .sub{font:400 15px/1.72 var(--sans);color:var(--ink2);max-width:860px}
   .sub b{color:var(--ink)}
+  .fleetbar{display:flex;gap:10px;margin:22px 0 4px;flex-wrap:wrap;align-items:center}
+  .fleetbar .lbl{font:700 10px/1 var(--mono);letter-spacing:.5px;color:var(--ink3);text-transform:uppercase}
+  .wtag{font:600 11px/1 var(--mono);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 11px;display:inline-flex;align-items:center;gap:7px;box-shadow:var(--shadow)}
+  .wtag .dot{width:7px;height:7px;border-radius:50%}
   .diag{display:flex;gap:14px;margin:26px 0 8px;flex-wrap:wrap}
-  .dcard{flex:1;min-width:240px;background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:16px 18px}
+  .dcard{flex:1;min-width:250px;background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:16px 18px}
   .dcard .t{font:700 11px/1 var(--mono);letter-spacing:.5px;color:var(--ink3);margin-bottom:9px;text-transform:uppercase}
   .dcard p{font:400 13px/1.65 var(--sans);color:var(--ink2)}
-  .dcard.bad .t{color:var(--red)} .dcard.now .t{color:var(--blue)} .dcard.us .t{color:var(--g2)}
+  .dcard p b{color:var(--ink)}
+  .dcard.you .t{color:var(--g1)} .dcard.pain .t{color:var(--red)} .dcard.us .t{color:var(--g2)}
 
-  /* ── 每个方向的容器 ── */
-  .concept{max-width:1120px;width:100%;margin-top:44px}
+  .concept{max-width:1140px;width:100%;margin-top:44px}
   .chead{display:flex;align-items:baseline;gap:14px;margin-bottom:4px;flex-wrap:wrap}
   .cno{font:800 13px/1 var(--mono);color:#fff;background:var(--ink);border-radius:8px;padding:7px 10px}
   .concept.dark .cno{background:linear-gradient(135deg,var(--g1),var(--g2))}
   .cname{font:800 24px/1.1 var(--sans);letter-spacing:-.01em}
   .cbet{font:600 12px/1 var(--mono);color:var(--g2);background:#f6efff;border-radius:999px;padding:6px 12px}
-  .cthesis{font:400 14.5px/1.7 var(--sans);color:var(--ink2);margin:8px 0 20px;max-width:900px}
+  .cthesis{font:400 14.5px/1.7 var(--sans);color:var(--ink2);margin:8px 0 20px;max-width:920px}
   .cthesis b{color:var(--ink)}
 
-  /* ── mockup 窗口壳 ── */
   .win{border-radius:16px;overflow:hidden;box-shadow:var(--shadow-lg);border:1px solid var(--line)}
   .titlebar{height:38px;display:flex;align-items:center;gap:8px;padding:0 14px;background:var(--panel);border-bottom:1px solid var(--hair)}
   .dots{display:flex;gap:7px}.dots i{width:11px;height:11px;border-radius:50%;background:var(--ink4);display:block}
-  .tbtitle{font:600 11.5px/1 var(--sans);color:var(--ink3);margin-left:6px}
-  .tbtitle b{color:var(--ink2)}
+  .tbtitle{font:600 11.5px/1 var(--sans);color:var(--ink3);margin-left:6px}.tbtitle b{color:var(--ink2)}
   .tbspacer{flex:1}
   .tbmode{font:700 9.5px/1 var(--mono);letter-spacing:1px;color:var(--g2);background:#f6efff;border-radius:6px;padding:5px 9px}
 
-  /* 通用小件 */
   .dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
   .dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)} .dot.red{background:var(--red)}
-  .dot.blue{background:var(--blue)} .dot.run{background:var(--g1)}
+  .dot.blue{background:var(--blue)} .dot.run{background:var(--g1)} .dot.idle{background:var(--ink4)}
   .spark{width:9px;height:9px;border-radius:50%;background:linear-gradient(135deg,var(--g1),var(--g2));display:inline-block;flex:none}
   .chip{font:600 10px/1 var(--mono);color:var(--ink2);background:var(--pill);border-radius:999px;padding:4px 9px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
   .chip.g{background:#f6efff;color:var(--g2)} .chip.o{background:#fff3e8;color:var(--warn)}
   .btn{font:600 11px/1 var(--sans);border:0;border-radius:999px;padding:7px 13px;cursor:pointer}
-  .btn.pri{background:var(--grad);color:#fff} .btn.ghost{background:var(--pill);color:var(--ink2)}
-  .btn.line{background:transparent;border:1px solid var(--line);color:var(--ink2)}
+  .btn.pri{background:var(--grad);color:#fff} .btn.ghost{background:var(--pill);color:var(--ink2)} .btn.line{background:transparent;border:1px solid var(--line);color:var(--ink2)}
 
-  /* ── 设计理念块 ── */
   .why{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:22px 24px;margin-top:16px}
   .why h4{font:800 13px/1 var(--sans);margin-bottom:12px;display:flex;align-items:center;gap:8px}
   .why .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 28px}
   @media(max-width:760px){.why .grid{grid-template-columns:1fr}}
   .why .row .k{font:700 10px/1 var(--mono);letter-spacing:.5px;color:var(--ink3);text-transform:uppercase;margin-bottom:5px}
-  .why .row p{font:400 13px/1.65 var(--sans);color:var(--ink2)}
-  .why .row p b{color:var(--ink)}
+  .why .row p{font:400 13px/1.65 var(--sans);color:var(--ink2)}.why .row p b{color:var(--ink)}
   .vs{display:inline-block;font:700 9.5px/1 var(--mono);color:var(--red);background:#fdece9;border-radius:5px;padding:3px 6px;margin-right:5px}
 
-  /* ===================== 方向 A · 指挥台 ===================== */
-  .deck{display:grid;grid-template-columns:266px 1fr 296px;height:560px;background:var(--bg)}
-  .col{overflow:hidden;display:flex;flex-direction:column}
-  .col.mid{background:var(--bg);padding:16px}
-  .col.side{background:var(--panel);border-left:1px solid var(--hair)}
-  .colh{display:flex;align-items:center;gap:8px;padding:14px 16px 10px}
-  .colh .t{font:800 12px/1 var(--sans)} .colh .n{font:600 10px/1 var(--mono);color:var(--ink3);margin-left:auto}
-  .queue{padding:0 12px;display:flex;flex-direction:column;gap:8px;overflow:auto}
-  .qitem{background:var(--card);border-radius:12px;box-shadow:var(--shadow);padding:11px 12px;cursor:grab}
-  .qitem .src{font:600 9px/1 var(--mono);color:var(--g2);letter-spacing:.4px;text-transform:uppercase;margin-bottom:6px}
-  .qitem .tx{font:500 12.5px/1.4 var(--ink);color:var(--ink)}
-  .qitem .foot{display:flex;gap:6px;margin-top:8px;align-items:center}
-  .qhint{font:400 10px/1.4 var(--ink3);padding:8px 14px}
+  /* ===================== A · 舰队台(黑控制墙) ===================== */
+  .wall{background:#0b0b0e;padding:16px;height:582px;display:flex;flex-direction:column;gap:14px;
+        --wink:#fff;--wink2:rgba(255,255,255,.6);--wink3:rgba(255,255,255,.34);--whair:rgba(255,255,255,.09)}
+  .wallhead{display:flex;align-items:center;gap:12px;color:var(--wink3);font:700 9px/1 var(--mono);letter-spacing:1.5px;text-transform:uppercase}
+  .wallhead .live{color:#ff8a3d}
+  .wallhead .sp{flex:1}
+  .tilegrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;flex:1}
+  .tile{background:#111116;border:1px solid var(--whair);border-radius:14px;padding:15px 16px;display:flex;flex-direction:column;position:relative}
+  .tile.attn{border-color:rgba(255,138,61,.55);box-shadow:0 0 0 1px rgba(255,138,61,.25),0 12px 30px rgba(255,138,61,.08)}
+  .tile .pnm{font:800 15px/1.1 var(--sans);color:var(--wink)}
+  .tile .ppath{font:600 9.5px/1 var(--mono);color:var(--wink3);margin-top:5px;letter-spacing:.3px}
+  .tile .branch{font:600 9.5px/1 var(--mono);color:var(--wink2);margin-top:9px;display:flex;align-items:center;gap:6px}
+  .tile .stpill{position:absolute;top:14px;right:14px;font:700 8.5px/1 var(--mono);letter-spacing:.6px;text-transform:uppercase;padding:5px 8px;border-radius:999px;display:flex;align-items:center;gap:5px}
+  .stpill.run{color:#ff8a3d;background:rgba(255,138,61,.12)} .stpill.wait{color:#ffc53d;background:rgba(255,197,61,.12)}
+  .stpill.gate{color:#5ea0ff;background:rgba(94,160,255,.12)} .stpill.idle{color:var(--wink3);background:rgba(255,255,255,.05)}
+  .tile .act{font:400 11.5px/1.5 var(--wink2);margin-top:13px;flex:1}
+  .tile .act b{color:var(--wink)} .tile .act .amber{color:#ff8a3d;font-weight:600}
+  .batch{margin-top:12px}
+  .batch .bl{font:600 8.5px/1 var(--mono);letter-spacing:.8px;color:var(--wink3);text-transform:uppercase;margin-bottom:6px;display:flex}
+  .batch .bl .r{margin-left:auto;color:var(--wink2)}
+  .segs{display:flex;gap:3px}
+  .segs i{flex:1;height:5px;border-radius:2px;background:rgba(255,255,255,.1)}
+  .segs i.done{background:#3ecb6a} .segs i.now{background:linear-gradient(90deg,#ff8a3d,#ffc53d)} .segs i.blk{background:#ff6f61}
+  .tile .tfoot{display:flex;align-items:center;gap:10px;margin-top:13px;font:600 9px/1 var(--mono);color:var(--wink3)}
+  .tile .jump{margin-left:auto;font:700 9px/1 var(--mono);color:var(--wink2);border:1px solid var(--whair);border-radius:7px;padding:6px 8px;letter-spacing:.4px}
+  .tile.add{border-style:dashed;align-items:center;justify-content:center;color:var(--wink3);font:600 11px/1 var(--mono)}
 
-  .runs{display:flex;flex-direction:column;gap:12px;overflow:auto;padding-right:2px}
-  .run{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:14px 15px;position:relative;border-left:3px solid transparent}
-  .run.running{border-left-color:var(--g1)} .run.review{border-left-color:var(--blue)} .run.blocked{border-left-color:var(--red)}
-  .run .rtop{display:flex;align-items:center;gap:9px;margin-bottom:4px}
-  .run .nm{font:700 13.5px/1.2 var(--ink)}
-  .run .st{font:600 9.5px/1 var(--mono);letter-spacing:.5px;text-transform:uppercase;margin-left:auto}
-  .run.running .st{color:var(--g1)} .run.review .st{color:var(--blue)} .run.blocked .st{color:var(--red)}
-  .run .meta{display:flex;gap:6px;flex-wrap:wrap;margin:9px 0 2px}
-  .run .flow{display:flex;align-items:center;gap:7px;font:400 10.5px/1 var(--mono);color:var(--ink3);margin-top:10px}
-  .run .flow b{color:var(--ink2)}
-  .arw{color:var(--ink4)}
-  .prog{height:4px;background:var(--pill);border-radius:99px;margin-top:11px;overflow:hidden}
-  .prog i{display:block;height:100%;background:var(--grad);border-radius:99px}
+  /* ===================== B · 收件箱 ===================== */
+  .inbox{display:grid;grid-template-columns:186px 1fr;height:582px;background:var(--bg)}
+  .ibnav{background:var(--panel);border-right:1px solid var(--hair);padding:16px 12px}
+  .ibnav .nh{font:800 12px/1;padding:0 6px 12px;display:flex;align-items:center;gap:8px}
+  .ibnav .nitem{font:600 12px/1 var(--ink2);padding:9px 10px;border-radius:9px;display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:3px}
+  .ibnav .nitem.on{background:var(--card);box-shadow:var(--shadow);color:var(--ink)}
+  .ibnav .nitem .c{margin-left:auto;font:700 10px/1 var(--mono);color:var(--ink3)}
+  .ibnav .nitem.on .c{color:var(--g2)}
+  .iblist{overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+  .ibtop{font:400 11.5px/1 var(--ink3);display:flex;align-items:center;gap:8px;margin-bottom:2px}
+  .ibtop b{color:var(--ink);font-weight:700}
+  .ib{background:var(--card);border-radius:13px;box-shadow:var(--shadow);padding:13px 15px;border-left:3px solid transparent}
+  .ib.perm{border-left-color:var(--red)} .ib.gate{border-left-color:var(--blue)} .ib.ask{border-left-color:var(--g2)} .ib.done{border-left-color:var(--ok)} .ib.blk{border-left-color:var(--warn)}
+  .ib .ih{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .ib .src{font:700 9px/1 var(--mono);letter-spacing:.4px;text-transform:uppercase;color:#fff;border-radius:5px;padding:4px 7px}
+  .src.helm{background:#111114} .src.buyer{background:#7b61ff} .src.notch{background:#0e9c8d}
+  .ib .ty{font:700 9.5px/1 var(--mono);letter-spacing:.5px;text-transform:uppercase}
+  .ib.perm .ty{color:var(--red)} .ib.gate .ty{color:var(--blue)} .ib.ask .ty{color:var(--g2)} .ib.blk .ty{color:var(--warn)}
+  .ib .age{margin-left:auto;font:600 9.5px/1 var(--mono);color:var(--ink4)}
+  .ib .ibx{font:400 13px/1.55 var(--ink2)} .ib .ibx b{color:var(--ink)}
+  .ib .idiff{font:500 10.5px/1.7 var(--mono);white-space:pre;margin-top:6px}
+  .ib .idiff .add{color:var(--ok)} .ib .idiff .del{color:var(--red)}
+  .ib .iacts{display:flex;gap:7px;margin-top:11px;align-items:center}
+  .ib .iacts .rt{margin-left:auto;font:600 9.5px/1 var(--mono);color:var(--ink4)}
 
-  .need{padding:10px 14px;display:flex;flex-direction:column;gap:10px;overflow:auto}
-  .ncard{background:var(--card);border-radius:12px;box-shadow:var(--shadow);padding:12px 13px}
-  .ncard .nt{font:700 10px/1 var(--mono);letter-spacing:.4px;text-transform:uppercase;color:var(--warn);margin-bottom:8px;display:flex;align-items:center;gap:6px}
-  .ncard .nb{font:400 12.5px/1.5 var(--ink2)} .ncard .nb b{color:var(--ink)}
-  .ncard .nacts{display:flex;gap:7px;margin-top:11px}
-  .difline{font:500 11px/1.7 var(--mono);white-space:pre}
-  .difline .add{color:var(--ok)} .difline .del{color:var(--red)}
+  /* ===================== C · 总谱/大脑 ===================== */
+  .brain{display:grid;grid-template-columns:1fr 1.1fr 1fr;height:540px;background:var(--bg);position:relative}
+  .flowline{position:absolute;top:56px;left:32%;width:36%;height:3px;background:linear-gradient(90deg,var(--g1),var(--g2));opacity:.45;border-radius:2px}
+  .bpane{padding:17px 17px;overflow:auto}
+  .bpane.src{background:linear-gradient(180deg,#fff6ef,#fbfbfc)}
+  .bpane.out{background:linear-gradient(180deg,#f7f0ff,#fbfbfc)}
+  .bpane .ph{font:700 9.5px/1 var(--mono);letter-spacing:1.4px;text-transform:uppercase;margin-bottom:4px}
+  .bpane.src .ph{color:var(--g1)} .bpane.out .ph{color:var(--g2)} .bpane.mid .ph{color:var(--ink3)}
+  .bpane .psub{font:400 11px/1.5 var(--ink3);margin-bottom:15px}
+  .bpane.mid{background:var(--card)}
+  .bcard{background:var(--card);border-radius:12px;box-shadow:var(--shadow);padding:11px 13px;margin-bottom:9px}
+  .bcard .bk{font:700 9px/1 var(--mono);letter-spacing:.4px;text-transform:uppercase;color:var(--ink3);margin-bottom:7px;display:flex;gap:6px;align-items:center}
+  .bcard .bt{font:400 12px/1.5 var(--ink2)} .bcard .bt b{color:var(--ink)}
+  .bproj{background:#0e0e12;border-radius:12px;padding:12px 13px;color:#fff;margin-bottom:10px}
+  .bproj .bn{font:800 13px/1.1;display:flex;align-items:center;gap:8px}
+  .bproj .buse{font:400 10.5px/1.5 rgba(255,255,255,.62);margin-top:8px}
+  .bproj .buse b{color:#ffc53d}
+  .bproj .bmeta{font:600 9px/1 var(--mono);color:rgba(255,255,255,.4);margin-top:8px;letter-spacing:.4px}
+  .metastrip{background:var(--card);border-radius:10px;box-shadow:var(--shadow);padding:10px 12px;margin-top:4px}
+  .metastrip .ml{font:700 8.5px/1 var(--mono);letter-spacing:1px;text-transform:uppercase;color:var(--ink3);margin-bottom:8px}
+  .metastrip .mr{display:flex;align-items:center;gap:8px;font:600 10px/1 var(--mono);color:var(--ink2);margin-bottom:6px}
+  .metastrip .mr .segs{flex:1;max-width:120px}
+  .moat{font:400 11px/1.55 var(--g2);background:#faf5ff;border-radius:10px;padding:11px 13px;margin-top:4px}
 
-  /* ===================== 方向 B · 观测台(黑座舱) ===================== */
-  .glass{--gink:#fff;--gink2:rgba(255,255,255,.62);--gink3:rgba(255,255,255,.36);--ghair:rgba(255,255,255,.09);
-    background:#0b0b0e;color:var(--gink);height:560px;display:grid;grid-template-columns:1fr 340px;grid-template-rows:auto 1fr auto}
-  .ginstr{grid-column:1/3;display:flex;gap:0;border-bottom:1px solid var(--ghair);background:#0e0e12}
-  .gauge{flex:1;padding:13px 16px;border-right:1px solid var(--ghair)}
-  .gauge .gl{font:700 8.5px/1 var(--mono);letter-spacing:1.4px;color:var(--gink3);text-transform:uppercase}
-  .gauge .gv{font:800 22px/1.1 var(--mono);margin-top:7px;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
-  .gauge .gv.amber{color:#ffc53d} .gauge .gv small{font:600 11px/1 var(--mono);color:var(--gink3)}
-  .gauge .gv .up{color:#3ecb6a}
-  .gtrace{overflow:auto;padding:16px 20px}
-  .gtrace .th{font:700 9px/1 var(--mono);letter-spacing:1.5px;color:var(--gink3);text-transform:uppercase;margin-bottom:14px}
-  .step{display:grid;grid-template-columns:52px 14px 1fr;gap:0;padding:7px 0;align-items:start}
-  .step .ts{font:600 9.5px/1.5 var(--mono);color:var(--gink3);font-variant-numeric:tabular-nums}
-  .step .rail{display:flex;justify-content:center;position:relative}
-  .step .rail .d{width:8px;height:8px;border-radius:50%;background:#3ecb6a;margin-top:3px;z-index:2}
-  .step .rail .d.warn{background:#ffc53d} .step .rail .d.now{background:#ff8a3d;box-shadow:0 0 0 4px rgba(255,138,61,.18)}
-  .step .rail::before{content:"";position:absolute;top:0;bottom:-14px;width:1px;background:var(--ghair)}
-  .step .sx{font:400 12.5px/1.5 var(--sans);color:var(--gink2)}
-  .step .sx b{color:var(--gink)} .step.cur .sx b{color:#ff8a3d}
-  .step .sx .code{font:600 11px/1 var(--mono);color:var(--gink);background:rgba(255,255,255,.06);border-radius:5px;padding:2px 6px}
-  .gside{border-left:1px solid var(--ghair);background:#0e0e12;overflow:auto;padding:16px 16px}
-  .gside .th{font:700 9px/1 var(--mono);letter-spacing:1.5px;color:var(--gink3);text-transform:uppercase;margin-bottom:12px}
-  .dfile{font:600 10.5px/1 var(--mono);color:var(--gink2);margin:14px 0 7px}
-  .dcode{font:500 11px/1.75 var(--mono);white-space:pre;overflow:auto}
-  .dcode .add{color:#3ecb6a} .dcode .del{color:#ff6f61} .dcode .ctx{color:var(--gink3)}
-  .gbar{grid-column:1/3;border-top:1px solid var(--ghair);background:#0e0e12;display:flex;align-items:center;gap:12px;padding:11px 18px}
-  .gbar .lbl{font:600 10px/1 var(--mono);color:var(--gink3);letter-spacing:.5px}
-  .gbar .take{font:700 11px/1 var(--sans);color:#0b0b0e;background:linear-gradient(90deg,#ff8a3d,#ffc53d);border:0;border-radius:999px;padding:9px 16px;cursor:pointer;margin-left:auto}
-  .gbar .peek{font:600 10.5px/1 var(--mono);color:var(--gink2);background:rgba(255,255,255,.06);border:0;border-radius:999px;padding:9px 13px;cursor:pointer}
-
-  /* ===================== 方向 C · 回路 ===================== */
-  .loop{display:grid;grid-template-columns:1fr 1.15fr 1fr;height:560px;background:var(--bg);position:relative}
-  .lpane{padding:18px 18px;overflow:auto}
-  .lpane.from{background:linear-gradient(180deg,#fff6ef,#fbfbfc)}
-  .lpane.to{background:linear-gradient(180deg,#f7f0ff,#fbfbfc)}
-  .lpane .ph{font:700 9.5px/1 var(--mono);letter-spacing:1.4px;text-transform:uppercase;margin-bottom:4px}
-  .lpane.from .ph{color:var(--g1)} .lpane.to .ph{color:var(--g2)} .lpane.mid .ph{color:var(--ink3)}
-  .lpane .psub{font:400 11px/1.5 var(--ink3);margin-bottom:16px}
-  .lpane.mid{background:var(--card)}
-  .feed{background:var(--card);border-radius:12px;box-shadow:var(--shadow);padding:12px 13px;margin-bottom:10px}
-  .feed .fk{font:600 9px/1 var(--mono);letter-spacing:.4px;text-transform:uppercase;color:var(--ink3);margin-bottom:7px;display:flex;gap:6px;align-items:center}
-  .feed .ftx{font:400 12.5px/1.5 var(--ink2)} .feed .ftx b{color:var(--ink)}
-  .feed .fm{font:400 10px/1.4 var(--ink3);margin-top:7px}
-  .runbig{background:#0e0e12;border-radius:14px;padding:15px 16px;color:#fff;box-shadow:var(--shadow-lg)}
-  .runbig .rn{font:800 15px/1.2}
-  .runbig .rmeta{font:600 10px/1 var(--mono);color:rgba(255,255,255,.5);margin-top:6px;letter-spacing:.4px}
-  .runbig .rstep{font:400 12px/1.6 rgba(255,255,255,.7);color:rgba(255,255,255,.72);margin-top:12px}
-  .runbig .rstep .cur{color:#ff8a3d;font-weight:600}
-  .runbig .rprog{height:4px;background:rgba(255,255,255,.12);border-radius:99px;margin-top:13px;overflow:hidden}
-  .runbig .rprog i{display:block;height:100%;width:62%;background:linear-gradient(90deg,#ff8a3d,#a855f7);border-radius:99px}
-  .land{background:var(--card);border-radius:12px;box-shadow:var(--shadow);padding:12px 13px;margin-bottom:10px}
-  .land .lk{font:700 9.5px/1 var(--mono);letter-spacing:.4px;text-transform:uppercase;color:var(--g2);margin-bottom:7px;display:flex;gap:6px;align-items:center}
-  .land .ltx{font:400 12.5px/1.5 var(--ink2)} .land .ltx b{color:var(--ink)}
-  .land .lfix{font:600 10px/1 var(--mono);color:var(--ink3);background:var(--pill);border-radius:999px;padding:4px 9px;display:inline-block;margin-top:9px}
-  .fromto{position:absolute;top:0;left:33.3%;width:33.6%;height:3px;background:linear-gradient(90deg,var(--g1),var(--g2));opacity:.5}
-
-  .foot{max-width:1120px;width:100%;margin-top:56px;background:var(--card);border-radius:18px;box-shadow:var(--shadow);padding:26px 28px}
+  .foot{max-width:1140px;width:100%;margin-top:56px;background:var(--card);border-radius:18px;box-shadow:var(--shadow);padding:26px 28px}
   .foot h3{font:800 16px/1.2;margin-bottom:12px}
-  .foot p{font:400 13.5px/1.75 var(--ink2);max-width:900px}
-  .foot p b{color:var(--ink)}
+  .foot p{font:400 13.5px/1.75 var(--ink2);max-width:940px}.foot p b{color:var(--ink)}
   .foot .rec{display:flex;gap:12px;margin-top:18px;flex-wrap:wrap}
-  .reccard{flex:1;min-width:220px;border:1px solid var(--line);border-radius:12px;padding:14px 16px}
-  .reccard .rt{font:800 12px/1;margin-bottom:7px} .reccard p{font:400 12px/1.55 var(--ink3)}
+  .reccard{flex:1;min-width:230px;border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .reccard .rt{font:800 12px/1;margin-bottom:7px}.reccard p{font:400 12px/1.55 var(--ink3)}
 </style>
 </head>
 <body>
 
 <!-- ═══════════════ 战略框架 ═══════════════ -->
 <div class="lead">
-  <div class="kicker">Helm · Cockpit Rethink · 2026-07-09 探索稿</div>
-  <h1>驾驶舱不该是编辑器,该是 agent 指挥台</h1>
+  <div class="kicker">Helm · Cockpit Rethink v2 · 2026-07-09 · 基于真实工作模式重写</div>
+  <h1>驾驶舱 = 骑在你所有 Cursor 窗口之上的控制塔</h1>
   <p class="sub">
-    你说得对:「文件树 + 预览 + 终端」就是 Cursor,Helm 没有理由做一个更弱的 Cursor。
-    2026 年行业已经给了答案——Devin Desktop 把编辑器降级成 <b>Agent Command Center</b>
-    (「工程师的活从写代码变成指挥工作」),Google Antigravity 的 <b>Mission Control</b>
-    让你派发多个并行 agent、只做 diff 审查和合并。<b>驾驶舱 = 你盯着 agent 干活、随时接管的地方,不是你自己敲字的地方。</b>
-    但只抄「多 agent 看板」会变成更弱的 Devin。Helm 的独家赌注是别人都没有的东西:<b>你的第二大脑</b>——活从你的速记/待办/想法来,agent 带着你的记忆干,成果回你的日记/记忆去。
+    上一版我错了——我以为驾驶舱是「在一个仓库里监督 agent」。你的真实模式是:
+    <b>同时开着好几个 Cursor 窗口,每个是一个不同的项目</b>(helm 一个、创拾觅深-买方一个…),
+    每个窗口里跑着一个 Claude Code loop(auto mode),各有各的 backlog、批次、绿门。
+    你<b>喜欢在 Cursor 里干活</b>——问题不是缺个 agent,而是:开着 3+ 个窗口时,你成了瓶颈,
+    得挨个 alt-tab 去看谁干完了、谁卡住了、谁在等你拍板/批权限/过绿门。
+    刘海上那个「<b>3 live</b>」已经在跨窗口聚合了——<b>驾驶舱就是它的全屏版:骑在你所有 Cursor+agent 窗口之上的控制塔,不替代 Cursor,而是你缺的那一层。</b>
   </p>
+  <div class="fleetbar">
+    <span class="lbl">你现在的舰队</span>
+    <span class="wtag"><span class="dot" style="background:#ff8a3d"></span>helm · feat/nomi-kinds · 干活中</span>
+    <span class="wtag"><span class="dot" style="background:#ffc53d"></span>创拾觅深-买方 · feat/ai-system · 等你验 key</span>
+    <span class="wtag"><span class="dot" style="background:#28a745"></span>notch · Swift 线 · 绿门待审</span>
+    <span class="wtag" style="border-style:dashed;color:var(--ink3)">+ 随时再开一个窗口</span>
+  </div>
   <div class="diag">
-    <div class="dcard bad"><div class="t">现在的问题</div><p>文件树 + 预览 + 终端 = Cursor 的布局。你在「读文件、自己改」,agent 只是躲在终端里。差异化归零。</p></div>
-    <div class="dcard now"><div class="t">行业共识(2026)</div><p>Devin Desktop / Antigravity Mission Control / Vibe Kanban:驾驶舱=agent 看板 + diff 审查 + 一键合。编辑器降级成抽屉。</p></div>
-    <div class="dcard us"><div class="t">Helm 独家赌注</div><p>别人管团队的代码工厂。Helm 是单人的、活会回家的驾驶舱:想法→派活→agent 干→成果回记忆。越用越懂你。</p></div>
+    <div class="dcard you"><div class="t">你的真实工作模式</div><p><b>多 Cursor 窗口 × 多项目 × 各跑一个 agent loop。</b>你在窗口间跳,人是编排者,不是纯用 agent——干活还是在 Cursor 里。</p></div>
+    <div class="dcard pain"><div class="t">真正的痛点</div><p>不是缺 agent,是<b>跨窗口失去总览</b>:谁干完了?谁卡了?谁在等我拍板/批权限?你在 alt-tab 里当人肉轮询器。</p></div>
+    <div class="dcard us"><div class="t">Helm 该做的</div><p>不替代 Cursor。做<b>骑在所有窗口之上的控制塔</b>:一屏看全舰队 + 谁需要我主动找上门 + 你的大脑喂给每个项目。刘海「3 live」是种子。</p></div>
   </div>
 </div>
 
-<!-- ═══════════════ 方向 A · 指挥台 ═══════════════ -->
-<section class="concept">
-  <div class="chead">
-    <span class="cno">A</span><span class="cname">指挥台 · Command Deck</span>
-    <span class="cbet">赌注:广度 — 你派活/盯活/收活,不写代码</span>
-  </div>
-  <p class="cthesis">
-    编辑器彻底退场(只在「接管」时作为抽屉滑出)。三栏:<b>左=意图队列</b>(你的速记/待办/想法排队等派给 agent)、
-    <b>中=活跃 run 看板</b>(每条 run 都挂着「来自哪条想法 → 去向哪里」)、<b>右=要你处理</b>(diff 待审、权限请求、agent 的选择题)。
-    最像 Devin,但每条活都长在你的意图上,不是抽象的 repo 任务。
-  </p>
-
-  <div class="win">
-    <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span>
-      <span class="tbtitle">Helm · <b>驾驶舱</b> · 指挥台</span>
-      <span class="tbspacer"></span><span class="tbmode">3 干活 · 1 待审 · 1 卡住</span>
-    </div>
-    <div class="deck">
-      <!-- 左:意图队列 -->
-      <div class="col">
-        <div class="colh"><span class="spark"></span><span class="t">意图队列</span><span class="n">派给 agent</span></div>
-        <div class="queue">
-          <div class="qitem"><div class="src">来自 · 速记分诊</div><div class="tx">把 nomi-reference 截图整理进仓库</div>
-            <div class="foot"><span class="chip">任务</span><span class="chip">昨天</span></div></div>
-          <div class="qitem"><div class="src">来自 · backlog T2+</div><div class="tx">next_run 时区漂移修复(存 UTC)</div>
-            <div class="foot"><span class="chip o">P2</span></div></div>
-          <div class="qitem"><div class="src">来自 · 想法</div><div class="tx">给 notch 加入场动效,像仪表暖机</div>
-            <div class="foot"><span class="chip g"><span class="spark" style="width:7px;height:7px"></span>点子</span></div></div>
-        </div>
-        <div class="qhint">拖到中间 = 派一个 agent 去干。<br>队列来自记录页的待办/想法,不用另建任务。</div>
-      </div>
-
-      <!-- 中:活跃 run 看板 -->
-      <div class="col mid">
-        <div class="runs">
-          <div class="run running">
-            <div class="rtop"><span class="dot run"></span><span class="nm">修复 next_run 时区漂移</span><span class="st">干活中 · 68%</span></div>
-            <div class="meta"><span class="chip">摸 helm/tasks/service.py</span><span class="chip">+14 −6</span><span class="chip">3 分钟</span></div>
-            <div class="flow"><b>来自</b> backlog T2+ <span class="arw">→</span> <b>去</b> 分支 fix/tz · 记忆</div>
-            <div class="prog"><i style="width:68%"></i></div>
-          </div>
-          <div class="run review">
-            <div class="rtop"><span class="dot blue"></span><span class="nm">写 F1 family/label 测试</span><span class="st">要你审 · diff 就绪</span></div>
-            <div class="meta"><span class="chip">+2 文件</span><span class="chip">pytest 257 绿</span><span class="chip">1 分钟前</span></div>
-            <div class="difline"><span class="add">+ def test_llm_layer_family_label(...):</span>
-<span class="add">+     assert meta["family"] == "link"</span></div>
-            <div class="flow"><b>来自</b> F1 块 <span class="arw">→</span> <b>去</b> PR #56</div>
-          </div>
-          <div class="run blocked">
-            <div class="rtop"><span class="dot red"></span><span class="nm">整理 nomi-reference 截图</span><span class="st">卡住 · 缺权限</span></div>
-            <div class="meta"><span class="chip o">要写 nomi-reference/</span><span class="chip">等你 40s</span></div>
-            <div class="flow"><b>来自</b> 速记 <span class="arw">→</span> <b>去</b> 仓库 assets</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 右:要你处理 -->
-      <div class="col side">
-        <div class="colh"><span class="dot warn"></span><span class="t">要你处理</span><span class="n">3</span></div>
-        <div class="need">
-          <div class="ncard">
-            <div class="nt"><span class="dot blue"></span>DIFF 待审 · F1 测试</div>
-            <div class="nb"><b>+2 文件 · pytest 全绿</b>。agent 已自测,等你过目合入 PR #56。</div>
-            <div class="nacts"><button class="btn pri">看 diff</button><button class="btn line">合入</button></div>
-          </div>
-          <div class="ncard">
-            <div class="nt"><span class="dot red"></span>权限请求 · 来自刘海 hook</div>
-            <div class="nb">整理截图的 agent 想<b>写入 nomi-reference/</b>。允许一次 / 永远允许 / 拒绝?</div>
-            <div class="nacts"><button class="btn pri">允许</button><button class="btn ghost">拒绝</button></div>
-          </div>
-          <div class="ncard">
-            <div class="nt"><span class="spark"></span>AGENT 的选择题</div>
-            <div class="nb">时区修复:<b>后端统一存 UTC</b>,还是前端识别 naive=本地?</div>
-            <div class="nacts"><button class="btn line">存 UTC</button><button class="btn line">前端识别</button></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="why">
-    <h4><span class="spark"></span>设计理念 · 指挥台</h4>
-    <div class="grid">
-      <div class="row"><div class="k">它是什么</div><p>一块「谁在干什么、谁需要我」的作战面板。你的角色从「打字的人」变成「派活、盯活、拍板的人」。编辑器只在你主动接管一条 run 时,作为抽屉滑出——默认根本看不到文件树。</p></div>
-      <div class="row"><div class="k">为什么不是 Cursor</div><p><span class="vs">VS</span>Cursor 一次一个编辑器、一个你在敲。这里同时有 N 条 agent 在跑,你在做的是审 diff、答问题、批权限——单人版的空管塔。</p></div>
-      <div class="row"><div class="k">为什么不是 Devin</div><p><span class="vs">VS</span>Devin 是团队的代码工厂,活是抽象的工单。这里每条 run 都标着「来自哪条速记/想法 → 去哪」,活从你的第二大脑来、成果回你的记忆去。</p></div>
-      <div class="row"><div class="k">代价 / 风险</div><p>最贴近行业主流,也最容易被读成「抄 Devin」。差异化全压在「意图队列 + 成果回家」这条大脑动线上——如果这条线做浅了,就真成了更弱的 Devin。</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════════ 方向 B · 观测台 ═══════════════ -->
+<!-- ═══════════════ 方向 A · 舰队台 ═══════════════ -->
 <section class="concept dark">
   <div class="chead">
-    <span class="cno">B</span><span class="cname">观测台 · Glass Cockpit</span>
-    <span class="cbet">赌注:深度 — 读 agent 的意图和轨迹,不读代码</span>
+    <span class="cno">A</span><span class="cname">舰队台 · Fleet Deck</span>
+    <span class="cbet">赌注:总览 — 一屏看全你所有窗口的 loop</span>
   </div>
   <p class="cthesis">
-    盯住<b>一条</b> agent,把它做成一块<b>飞机仪表盘</b>:顶排是读数(用时/token/测试绿红/摸的文件/当前动作),
-    中间是<b>可读的行动轨迹</b>(读了 X → 定位 Y → 改 3 行 → 跑测试 → 47/47 绿),右侧是 diff 读数。
-    仪表变红你才「抓方向盘」接管。这是 ORAGE 黑座舱北极星真正落地的样子——你读的是 agent 的<b>心智和轨迹</b>,不是一行行代码。
+    默认页 = 一面<b>控制墙</b>,你每个 Cursor 窗口/项目是墙上一块活监视器:项目名、分支、
+    <b>它的 loop 跑到第几批</b>、agent 状态(干活中/等你/绿门待审/卡住/idle)、正在做什么、绿门进度。
+    一眼扫过去谁在动谁在等,点一块 = <b>跳到那个 Cursor 窗口</b>。这是把刘海「3 live」摊开成一面 NASA 控制墙。
   </p>
 
   <div class="win">
     <div class="titlebar" style="background:#0e0e12;border-bottom:1px solid rgba(255,255,255,.08)">
       <span class="dots"><i></i><i></i><i></i></span>
-      <span class="tbtitle" style="color:rgba(255,255,255,.4)">Helm · <b style="color:rgba(255,255,255,.7)">驾驶舱</b> · 观测台 · 修复 next_run 时区漂移</span>
-      <span class="tbspacer"></span><span class="tbmode">自动驾驶中 · 可接管</span>
+      <span class="tbtitle" style="color:rgba(255,255,255,.4)">Helm · <b style="color:rgba(255,255,255,.7)">驾驶舱</b> · 舰队台</span>
+      <span class="tbspacer"></span><span class="tbmode">3 live · 1 等你 · 1 绿门</span>
     </div>
-    <div class="glass">
-      <!-- 顶排仪表 -->
-      <div class="ginstr">
-        <div class="gauge"><div class="gl">当前动作</div><div class="gv amber" style="font-size:14px;line-height:1.3">跑 pytest<br>tasks/</div></div>
-        <div class="gauge"><div class="gl">用时</div><div class="gv">03:42</div></div>
-        <div class="gauge"><div class="gl">Token</div><div class="gv">14.2<small>k</small></div></div>
-        <div class="gauge"><div class="gl">测试</div><div class="gv"><span class="up">47</span><small> / 47 绿</small></div></div>
-        <div class="gauge"><div class="gl">摸的文件</div><div class="gv">3</div></div>
-        <div class="gauge" style="border-right:0"><div class="gl">改动</div><div class="gv">+14<small> −6</small></div></div>
-      </div>
-      <!-- 中:行动轨迹 -->
-      <div class="gtrace">
-        <div class="th">行动轨迹 · Trajectory</div>
-        <div class="step"><span class="ts">00:00</span><span class="rail"><span class="d"></span></span><span class="sx">接到活:<b>next_run 时区漂移</b>(来自 backlog T2+)</span></div>
-        <div class="step"><span class="ts">00:14</span><span class="rail"><span class="d"></span></span><span class="sx">读 <span class="code">helm/tasks/schedule.py</span> — 找到 compute_next_run</span></div>
-        <div class="step"><span class="ts">00:48</span><span class="rail"><span class="d warn"></span></span><span class="sx">诊断:cron 本地墙钟算出的时刻落 SQLite 丢了 offset,前端按 UTC 读 → 9 点显示 17:00</span></div>
-        <div class="step"><span class="ts">01:31</span><span class="rail"><span class="d"></span></span><span class="sx">改 <span class="code">service.py</span> 3 处:存前统一转 UTC、isoformat 带 Z</span></div>
-        <div class="step"><span class="ts">02:20</span><span class="rail"><span class="d"></span></span><span class="sx">补测试 <span class="code">test_tasks_tz.py</span> — 9 点本地存进读出仍 9 点</span></div>
-        <div class="step cur"><span class="ts">03:42</span><span class="rail"><span class="d now"></span></span><span class="sx">跑 <b>pytest tasks/</b> — 47/47 绿,准备提交 diff 等你审 …</span></div>
-      </div>
-      <!-- 右:diff 读数 -->
-      <div class="gside">
-        <div class="th">改了什么 · Diff 读数</div>
-        <div class="dfile">helm/tasks/service.py</div>
-        <div class="dcode"><span class="ctx">  def record_run(...):</span>
-<span class="del">-     task.next_run = compute_next(...)</span>
-<span class="add">+     nxt = compute_next(...)</span>
-<span class="add">+     task.next_run = to_utc(nxt)</span>
-<span class="ctx">      self.session.flush()</span></div>
-        <div class="dfile" style="margin-top:18px">tests/test_tasks_tz.py <span style="color:#3ecb6a">新增</span></div>
-        <div class="dcode"><span class="add">+ def test_local_9am_roundtrips():</span>
-<span class="add">+     ... assert read.hour == 9</span></div>
-      </div>
-      <!-- 底:接管条 -->
-      <div class="gbar">
-        <span class="dot run"></span><span class="lbl">agent 在开,一切正常 · 撞红你会被叫</span>
-        <button class="peek">终端 peek ⌄</button>
-        <button class="take">抓方向盘 · 接管</button>
+    <div class="wall">
+      <div class="wallhead"><span class="live">● 3 LIVE</span><span>跨 3 个窗口 · 聚合自刘海 hook 桥</span><span class="sp"></span><span>按需要我排序 ⌄</span></div>
+      <div class="tilegrid">
+        <!-- helm -->
+        <div class="tile">
+          <div class="stpill run"><span class="dot run"></span>干活中</div>
+          <div class="pnm">helm</div><div class="ppath">~/work/AI-workspace/helm</div>
+          <div class="branch"><span style="opacity:.5">⎇</span> feat/nomi-kinds</div>
+          <div class="act">nomi loop · <b>F1 链接分类</b><br><span class="amber">跑 pytest 257 绿,写回执…</span></div>
+          <div class="batch"><div class="bl">批次 T1–T5 · F 系列<span class="r">5/6</span></div>
+            <div class="segs"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="now"></i></div></div>
+          <div class="tfoot"><span>+14 −6</span><span>14.2k tok</span><span class="jump">跳到窗口 →</span></div>
+        </div>
+        <!-- 买方 · 等你 -->
+        <div class="tile attn">
+          <div class="stpill wait"><span class="dot warn"></span>等你</div>
+          <div class="pnm">创拾觅深-买方</div><div class="ppath">~/work/创拾觅深-买方</div>
+          <div class="branch"><span style="opacity:.5">⎇</span> feat/ai-system</div>
+          <div class="act"><b>A1 适配层</b>拿你的 key 实调了一次 MiniMax M3<br><span class="amber">通了 · 等你确认放行下一批</span></div>
+          <div class="batch"><div class="bl">批次 A1→A3→B→C<span class="r">卡在 A1</span></div>
+            <div class="segs"><i class="now"></i><i></i><i></i><i></i><i></i></div></div>
+          <div class="tfoot"><span>MiniMax M3</span><span>2m 20s</span><span class="jump">跳到窗口 →</span></div>
+        </div>
+        <!-- notch · 绿门 -->
+        <div class="tile">
+          <div class="stpill gate"><span class="dot blue"></span>绿门待审</div>
+          <div class="pnm">notch</div><div class="ppath">~/work/AI-workspace/helm/notch</div>
+          <div class="branch"><span style="opacity:.5">⎇</span> feat/notch-nomi</div>
+          <div class="act">Swift 线 · <b>接分诊回执 UI</b><br>swift test 47/47 绿 · 等你合</div>
+          <div class="batch"><div class="bl">批次 B1–B11<span class="r">9/11</span></div>
+            <div class="segs"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="now"></i><i></i></div></div>
+          <div class="tfoot"><span>Swift</span><span>刚绿</span><span class="jump">跳到窗口 →</span></div>
+        </div>
+        <!-- idle -->
+        <div class="tile">
+          <div class="stpill idle"><span class="dot idle"></span>idle</div>
+          <div class="pnm">odyssey-api</div><div class="ppath">~/work/odyssey-api</div>
+          <div class="branch"><span style="opacity:.5">⎇</span> main</div>
+          <div class="act" style="color:var(--wink3)">没有 loop 在跑 · 上次 3 小时前<br>手上有 2 个待办想法</div>
+          <div class="tfoot"><span>Python</span><span class="jump">派一个 agent →</span></div>
+        </div>
+        <div class="tile add">+ 挂上一个窗口</div>
+        <div class="tile" style="justify-content:center;align-items:center;border-style:dashed;color:var(--wink3);font:400 10.5px/1.6 var(--mono);text-align:center">
+          墙上每块 = 一个真实 Cursor 窗口<br>状态来自 Claude Code hook + loop-state
+        </div>
       </div>
     </div>
   </div>
 
   <div class="why">
-    <h4><span class="spark"></span>设计理念 · 观测台</h4>
+    <h4><span class="spark"></span>设计理念 · 舰队台</h4>
     <div class="grid">
-      <div class="row"><div class="k">它是什么</div><p>一台仪表盘,不是编辑器。中间是 agent 的「可读心智」——它读了什么、诊断出什么、改了什么、测试过没有,一条时间轴讲清楚。文件和终端退成周边仪表。你靠读仪表建立信任,不靠逐行读代码。</p></div>
-      <div class="row"><div class="k">为什么不是 Cursor</div><p><span class="vs">VS</span>Cursor 给你看代码,你得自己读懂 agent 干了啥。这里给你看 agent 的<b>意图和轨迹</b>——「它为什么这么改」比「它改了哪一行」更重要,监督成本低一个数量级。</p></div>
-      <div class="row"><div class="k">最忠于北极星</div><p>DESIGN.md 的北极星是「黑座舱玻璃罩、静默仪表、掌控感&gt;装饰」。这个方向把它真正落地:界面即仪器,accent 只给「活的当下的」(当前动作那格琥珀火苗)。ORAGE 语汇终于名副其实。</p></div>
-      <div class="row"><div class="k">代价 / 风险</div><p>一次只深看一条 run,广度弱(要配 A 式的 run 列表做入口)。轨迹的可读性全靠后端把 agent 动作结构化上报——ACP 事件流要够细,否则轨迹变成干巴巴的日志。</p></div>
+      <div class="row"><div class="k">它是什么</div><p>一面控制墙,一块监视器=一个真实的 Cursor+agent 窗口。状态实时来自 Claude Code 的 hook(刘海已在收)+ 每个项目的 loop-state(批次/绿门)。你不在这里写代码——你在这里<b>扫一眼就知道谁在动、谁在等我</b>,点一块跳过去。</p></div>
+      <div class="row"><div class="k">为什么不是 Cursor</div><p><span class="vs">VS</span>Cursor 一个窗口只看得见自己那个项目。这一屏<b>横跨你所有窗口所有项目</b>——Cursor 结构上做不到跨窗口聚合,这正是它的盲区。</p></div>
+      <div class="row"><div class="k">为什么不是 Claude Code Agent Teams</div><p><span class="vs">VS</span>Agent Teams 只在<b>一个项目内</b>协调 agent、发桌面通知。它不知道你另一个 Cursor 窗口里买方项目的 loop 卡在 A1。舰队台跨项目,这是它的上一层。</p></div>
+      <div class="row"><div class="k">代价 / 风险</div><p>要能真读到每个窗口的状态——依赖 hook 桥覆盖所有会话 + 能解析各项目的 loop-state 文件(你的 backlog/LOOP-STATE 格式)。窗口很多时,墙的密度和排序(「谁最该被我看」)是设计难点。</p></div>
     </div>
   </div>
 </section>
 
-<!-- ═══════════════ 方向 C · 回路 ═══════════════ -->
+<!-- ═══════════════ 方向 B · 收件箱 ═══════════════ -->
 <section class="concept">
   <div class="chead">
-    <span class="cno">C</span><span class="cname">回路 · The Loop</span>
-    <span class="cbet">赌注:整合 — agent 长在你的第二大脑里(只有 Helm 能做)</span>
+    <span class="cno">B</span><span class="cname">收件箱 · Agent Inbox</span>
+    <span class="cbet">赌注:路由 — 谁需要我,主动排队找上门</span>
   </div>
   <p class="cthesis">
-    把驾驶舱做成一个<b>闭环</b>的可视化:<b>左=来处</b>(这条 run 被什么喂大——哪条速记、命中了哪几条记忆、翻了哪篇 RAG 文档)、
-    <b>中=agent 在干</b>、<b>右=去处</b>(成果自动落到哪——今日日记、记忆、PR,回执可纠)。
-    这是 Cursor 和 Devin <b>都做不到</b>的:它们不知道你的个人大脑。活从你的想法来、带着你的记忆干、成果回你的知识里——越用越懂你。
+    别让你去 alt-tab 找活——把<b>所有窗口里「需要你拍板的事」汇成一条优先队列</b>推给你:
+    权限请求(刘海 hook)、agent 的选择题、绿门待审(build/test 绿了等你合)、loop 卡住。
+    你像处理邮件一样一条条过——批准 / 回答 / 稍后,每个回答<b>自动路由回对应的窗口和 agent</b>。
+    这是 LangChain 那套 Agent Inbox,但架在你<b>整支舰队</b>之上,不是单个 agent。
   </p>
 
   <div class="win">
     <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span>
-      <span class="tbtitle">Helm · <b>驾驶舱</b> · 回路 · 修复 next_run 时区漂移</span>
-      <span class="tbspacer"></span><span class="tbmode">大脑在环 · 成果回家</span>
+      <span class="tbtitle">Helm · <b>驾驶舱</b> · 收件箱</span>
+      <span class="tbspacer"></span><span class="tbmode">5 件事等你 · 跨 3 个项目</span>
     </div>
-    <div class="loop">
-      <div class="fromto"></div>
-      <!-- 左:来处 -->
-      <div class="lpane from">
-        <div class="ph">来处 · 什么喂大了这条活</div>
-        <div class="psub">agent 不是空手干,它带着你的大脑上路。</div>
-        <div class="feed"><div class="fk"><span class="spark"></span>种子速记</div>
-          <div class="ftx"><b>「next_run 9 点却显示 17:00」</b>——你 T2 那轮记下的 bug。</div>
-          <div class="fm">2026-07-08 · 记录页 backlog</div></div>
-        <div class="feed"><div class="fk"><span class="dot blue"></span>记忆命中 · 3 条</div>
-          <div class="ftx">· cron 按<b>本地墙钟</b>解释(decision 8d6ac767)<br>· SQLite 存 naive datetime 丢 offset<br>· 前端 localDateTime 按 UTC 解析</div></div>
-        <div class="feed"><div class="fk"><span class="dot ok"></span>RAG · 2 篇</div>
-          <div class="ftx">helm/tasks/schedule.py 注释 · croniter tz 文档</div></div>
+    <div class="inbox">
+      <div class="ibnav">
+        <div class="nh"><span class="spark"></span>收件箱</div>
+        <div class="nitem on">等我拍板<span class="c">5</span></div>
+        <div class="nitem">权限请求<span class="c">1</span></div>
+        <div class="nitem">绿门待审<span class="c">2</span></div>
+        <div class="nitem">agent 选择题<span class="c">1</span></div>
+        <div class="nitem">卡住<span class="c">1</span></div>
+        <div class="nitem" style="margin-top:10px;color:var(--ink4)">干完的<span class="c">8</span></div>
       </div>
-      <!-- 中:agent 在干 -->
-      <div class="lpane mid">
-        <div class="ph">agent 在干</div>
-        <div class="psub">带着上面这些上下文,现在正在做的:</div>
-        <div class="runbig">
-          <div class="rn">修复 next_run 时区漂移</div>
-          <div class="rmeta">干活中 · 03:42 · 摸 3 文件 · +14 −6</div>
-          <div class="rstep">读 schedule.py → 诊断 offset 丢失 → 改 service.py 3 处 → 补测试 → <span class="cur">跑 pytest 47/47 绿…</span></div>
-          <div class="rprog"><i></i></div>
+      <div class="iblist">
+        <div class="ibtop"><span class="spark"></span>按<b>紧急度 × 谁被堵住</b>排序 · 处理完自动回到那个窗口</div>
+
+        <div class="ib perm">
+          <div class="ih"><span class="src helm">HELM</span><span class="ty">权限请求 · 刘海 hook</span><span class="age">刚刚 · 堵住 40s</span></div>
+          <div class="ibx">整理截图的 agent 想<b>写入 nomi-reference/</b>。允许一次 / 永远允许 / 拒绝?</div>
+          <div class="iacts"><button class="btn pri">允许一次</button><button class="btn line">永远允许</button><button class="btn ghost">拒绝</button></div>
         </div>
-        <div style="font:400 11px/1.6 var(--ink3);margin-top:14px">
-          它用了你记忆里「cron 按本地墙钟」那条决策,所以直接改对了方向,没有走弯路。
-          <br>这就是差别:同一个 Claude,喂了你的大脑,少绕三圈。
+
+        <div class="ib ask">
+          <div class="ih"><span class="src buyer">买方</span><span class="ty">agent 选择题</span><span class="age">1 分钟 · 堵住</span></div>
+          <div class="ibx"><b>A1 通了</b>——报告要<b>纯框架英文</b>,还是带样式排版?你 backlog 记的是纯框架,确认?</div>
+          <div class="iacts"><button class="btn pri">纯框架(按 backlog)</button><button class="btn line">带样式</button><span class="rt">→ 回到 买方 窗口</span></div>
         </div>
-        <div style="display:flex;gap:8px;margin-top:16px"><button class="btn line">看轨迹</button><button class="btn line">接管</button><button class="btn ghost">暂停</button></div>
-      </div>
-      <!-- 右:去处 -->
-      <div class="lpane to">
-        <div class="ph">去处 · 成果回到哪</div>
-        <div class="psub">干完不是丢个 PR 就散场——回到你的大脑。</div>
-        <div class="land"><div class="lk"><span class="dot ok"></span>写进 · 今日日记</div>
-          <div class="ltx"><b>「修了定时任务时区 bug」</b>自动记一段,连着这条 run 的轨迹。</div>
-          <div class="lfix">回执可纠</div></div>
-        <div class="land"><div class="lk"><span class="spark"></span>沉淀 · 记忆</div>
-          <div class="ltx">新记忆:<b>「时区统一存 UTC,前端本地化」</b>——下次相关活直接命中。</div></div>
-        <div class="land"><div class="lk"><span class="dot blue"></span>提交 · PR #56</div>
-          <div class="ltx">分支 fix/tz · 等你在<b>指挥台</b>审 diff 合入。</div></div>
-        <div style="font:400 10.5px/1.5 var(--g2);margin-top:6px;padding:0 2px">闭环:想法 → 派活 → agent 带记忆干 → 成果回记忆 → 喂下一次。</div>
+
+        <div class="ib gate">
+          <div class="ih"><span class="src notch">NOTCH</span><span class="ty">绿门待审</span><span class="age">2 分钟</span></div>
+          <div class="ibx"><b>swift test 47/47 绿</b> · 接分诊回执 UI 完成。看 diff 合入?</div>
+          <div class="iacts"><button class="btn pri">看 diff</button><button class="btn line">合入</button></div>
+        </div>
+
+        <div class="ib gate">
+          <div class="ih"><span class="src helm">HELM</span><span class="ty">绿门待审</span><span class="age">3 分钟</span></div>
+          <div class="ibx"><b>pytest 257 绿</b> · F1 链接分类三层。合入 PR #56?</div>
+          <div class="idiff"><span class="add">+ meta["family"] = "link"</span>
+<span class="add">+ meta["label"] = "仓库"</span></div>
+          <div class="iacts"><button class="btn pri">看 diff</button><button class="btn line">合入</button></div>
+        </div>
+
+        <div class="ib blk">
+          <div class="ih"><span class="src buyer">买方</span><span class="ty">卡住 · CI 红</span><span class="age">5 分钟</span></div>
+          <div class="ibx">report-generation 页 e2e 挂了 3 次,agent 在等你决定:<b>回滚还是让它继续试</b>。</div>
+          <div class="iacts"><button class="btn line">看日志</button><button class="btn ghost">让它继续</button><button class="btn ghost">回滚</button></div>
+        </div>
       </div>
     </div>
   </div>
 
   <div class="why">
-    <h4><span class="spark"></span>设计理念 · 回路</h4>
+    <h4><span class="spark"></span>设计理念 · 收件箱</h4>
     <div class="grid">
-      <div class="row"><div class="k">它是什么</div><p>把一条 agent run 放进它的<b>上下文血脉</b>里看:左边是喂大它的东西(你的速记、记忆、RAG),右边是它的产出落回哪里(日记/记忆/PR)。驾驶舱不是孤立的执行器,是你第二大脑的<b>执行面</b>。</p></div>
-      <div class="row"><div class="k">为什么只有 Helm 能做</div><p><span class="vs">VS</span>Cursor / Devin 不认识你的个人大脑,它们的 agent 只看得到 repo。Helm 的 agent 看得到你的记忆、速记、日记——<b>这是护城河,别人抄不走,因为他们没有你的大脑</b>。</p></div>
-      <div class="row"><div class="k">复利效应</div><p>每干完一条活,记忆 +1、日记 +1。下一条活命中更多记忆、绕更少弯路。<b>越用越懂你</b>——这是订阅制 Cursor 给不了的个人复利。</p></div>
-      <div class="row"><div class="k">代价 / 风险</div><p>最激进、最依赖 Helm 其它系统(记忆/RAG/记录都要够强够准)。如果记忆命中是噪音、回执落点不准,「大脑在环」会变成「大脑添乱」。需要 A 或 B 提供实操的干活界面,C 更像是套在外面的语境层。</p></div>
+      <div class="row"><div class="k">它是什么</div><p>把「需要人的时刻」从各个窗口里抽出来,汇成一条按紧急度排好的队列送到你面前。你不再<b>主动去找</b>谁需要你,而是需要你的事<b>主动来找你</b>——像邮件收件箱,但收的是全舰队 agent 的求助。</p></div>
+      <div class="row"><div class="k">为什么不是原生通知</div><p><span class="vs">VS</span>Claude Code 的桌面通知只告诉你「某个 session 好了」,散、无优先级、点开还得找窗口。收件箱把它们<b>聚合 + 排序 + 就地可操作</b>——批准/回答直接在这里做,自动回到对应 agent。</p></div>
+      <div class="row"><div class="k">直接落在 Helm 已有能力</div><p>刘海的 hook 桥<b>已经在接</b> Claude Code 的权限请求(BridgeServer 那套)。收件箱就是把它从刘海的小卡片,升级成全屏、跨项目、带绿门/选择题/卡住的完整人在环队列。落地成本低。</p></div>
+      <div class="row"><div class="k">代价 / 风险</div><p>只解决「谁需要我」,不给总览(要配 A 的墙做全局态)。排序策略是命门:排错了你还是得自己翻。绿门/选择题这些非权限事件,需要 loop 侧和 agent 侧主动上报,不只是 hook。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 方向 C · 总谱/大脑 ═══════════════ -->
+<section class="concept">
+  <div class="chead">
+    <span class="cno">C</span><span class="cname">总谱 · Conductor + 大脑</span>
+    <span class="cbet">赌注:护城河 — 一个大脑喂所有项目,成果回一处</span>
+  </div>
+  <p class="cthesis">
+    每个 Cursor 窗口的 agent 现在是<b>孤儿</b>:只看得见自己那个 repo,不认识你、不认识你别的项目。
+    Helm 的独家位置是——它<b>横跨你所有项目 + 拥有你的个人大脑</b>。总谱把你的<b>约定/记忆/决策喂进每个项目的 agent</b>
+    (helm 用「cron 本地墙钟」那条决策、买方用「不编造数字」那条约束),再把<b>每个项目的成果收回你一处的日记/记忆</b>,
+    并总览每个项目的 loop 进度。Cursor / Devin / Agent Teams 都被锁在单项目里——<b>只有 Helm 能同时看见你所有的活和你这个人。</b>
+  </p>
+
+  <div class="win">
+    <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span>
+      <span class="tbtitle">Helm · <b>驾驶舱</b> · 总谱</span>
+      <span class="tbspacer"></span><span class="tbmode">一个大脑 · 3 个项目 · 成果回家</span>
+    </div>
+    <div class="brain">
+      <div class="flowline"></div>
+      <!-- 左:你的共享大脑 -->
+      <div class="bpane src">
+        <div class="ph">你的共享大脑 · 喂给每个项目</div>
+        <div class="psub">同一个 Claude,带上你这个人的上下文再上路。</div>
+        <div class="bcard"><div class="bk"><span class="dot blue"></span>约定 · Conventions</div>
+          <div class="bt">禁 emoji · 不编造数字 · 绿门才提交 · 契约只加不减</div></div>
+        <div class="bcard"><div class="bk"><span class="spark"></span>记忆 · 跨项目复用</div>
+          <div class="bt">· cron 按<b>本地墙钟</b>(helm decision)<br>· 报告<b>纯框架英文</b>(买方拍板)<br>· SQLite 存 UTC 免时区漂移</div></div>
+        <div class="bcard"><div class="bk"><span class="dot ok"></span>方法论 · LOOP-GUIDE</div>
+          <div class="bt">批次制 + 绿门 + 契约归属——喂给每个项目的 loop</div></div>
+      </div>
+      <!-- 中:项目在用 -->
+      <div class="bpane mid">
+        <div class="ph">每个项目 · 正在用你的大脑</div>
+        <div class="psub">不是空手干,是带着你的约定和记忆干。</div>
+        <div class="bproj"><div class="bn"><span class="dot run"></span>helm</div>
+          <div class="buse">修时区 bug · 命中记忆<b>「cron 本地墙钟」</b>→ 直接改对方向,没走弯路</div>
+          <div class="bmeta">feat/nomi-kinds · F1 · 干活中</div></div>
+        <div class="bproj"><div class="bn"><span class="dot warn"></span>创拾觅深-买方</div>
+          <div class="buse">接 MiniMax · 吃约束<b>「不编造数字」「纯框架英文」</b>→ 报告不注水</div>
+          <div class="bmeta">feat/ai-system · A1 · 等你</div></div>
+        <div class="metastrip"><div class="ml">全局 LOOP 进度</div>
+          <div class="mr">helm <div class="segs"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="now"></i></div> T5/F</div>
+          <div class="mr">买方 <div class="segs"><i class="now"></i><i></i><i></i><i></i></div> A1</div>
+          <div class="mr">notch <div class="segs"><i class="done"></i><i class="done"></i><i class="done"></i><i class="now"></i></div> B10</div></div>
+      </div>
+      <!-- 右:成果回一处 -->
+      <div class="bpane out">
+        <div class="ph">成果 · 全回你一处</div>
+        <div class="psub">三个项目干的活,收进你一个大脑,不散在三个 repo。</div>
+        <div class="bcard"><div class="bk"><span class="dot ok"></span>今日日记 · 自动聚合</div>
+          <div class="bt"><b>「helm 修了时区 · 买方接通 MiniMax · notch 接了回执 UI」</b>——一天三项目一篇。</div></div>
+        <div class="bcard"><div class="bk"><span class="spark"></span>记忆 +2 · 复利</div>
+          <div class="bt">新增「时区统一存 UTC」「MiniMax baseURL 接法」——<b>下个项目直接命中</b>。</div></div>
+        <div class="bcard"><div class="bk"><span class="dot blue"></span>回执可纠</div>
+          <div class="bt">落点判错了?一键改,大脑记住你的纠正。</div></div>
+        <div class="moat">护城河:Cursor/Devin/Agent Teams 都锁在单项目里,看不见你别的活、更不认识你这个人。<b>只有 Helm 骑在你所有项目 + 你的个人大脑之上——越用越懂你,别人抄不走。</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="why">
+    <h4><span class="spark"></span>设计理念 · 总谱</h4>
+    <div class="grid">
+      <div class="row"><div class="k">它是什么</div><p>驾驶舱作为你整套实践的<b>总谱</b>:你的约定/记忆/方法论从这里流进每个项目的 agent,每个项目的产出从这里收回你一处的日记和记忆,顺带总览每个项目的 loop 进度。它是把「你这个人」注入你所有活的那一层。</p></div>
+      <div class="row"><div class="k">为什么只有 Helm 能做</div><p><span class="vs">VS</span>Cursor/Devin/Agent Teams 结构上都锁在单项目/单仓库。<b>没有任何工具同时坐在你所有项目之上、又拥有你的个人大脑</b>——因为它们没有你的记忆、日记、跨项目视野。这是抄不走的护城河。</p></div>
+      <div class="row"><div class="k">复利效应</div><p>项目 A 沉淀的记忆,项目 B 直接命中、少走弯路。做的项目越多、用得越久,你的大脑越厚、每个 agent 越懂你。这是订阅制单项目工具给不了的<b>个人复利</b>。</p></div>
+      <div class="row"><div class="k">代价 / 风险</div><p>最激进、最依赖 Helm 记忆/RAG/记录够强够准。喂错约定或命中噪音,会变成「大脑添乱」。它是<b>语境层</b>,要架在 A(总览)/B(路由)提供的实操界面之上,单独存在会太抽象。</p></div>
     </div>
   </div>
 </section>
 
 <!-- ═══════════════ 收尾建议 ═══════════════ -->
 <div class="foot">
-  <h3>我的建议:不是三选一,是分层合一</h3>
+  <h3>建议:三层合一,但底座是「不替代 Cursor」</h3>
   <p>
-    三个方向不冲突,是同一座驾驶舱的三个视角。最强的组合是:<b>A 做骨架</b>(指挥台=默认落地页,多 run 看板 + 要你处理,解决「不是 Cursor」)、
-    <b>B 做深看</b>(点开任一条 run = 观测台,读轨迹/仪表/diff,解决「读意图不读代码」)、<b>C 做语境层</b>(每条 run 都带「来处→去处」的大脑血脉,解决「只有 Helm 能做」)。
-    编辑器/文件树/终端全部降级成<b>接管时才滑出的抽屉</b>——它们还在,但不再是门面。
+    大前提变了:<b>Helm 驾驶舱不碰编辑器、不抢 Cursor 的活</b>。你继续在 N 个 Cursor 窗口里干活;Helm 只做你缺的那一层——控制塔。
+    三个方向是这层的三个面:<b>A 舰队台</b>=一屏看全所有窗口的 loop(解决「失去总览」)、
+    <b>B 收件箱</b>=谁需要我主动排队找上门(解决「alt-tab 当轮询器」)、
+    <b>C 总谱</b>=你的大脑喂所有项目、成果回一处(解决「凭什么只有 Helm」——护城河)。
+    「接管」不再是打开 Helm 里的编辑器,而是<b>一键跳到那个 Cursor 窗口</b>。刘海的「3 live」就是这套东西已经跑起来的证据。
   </p>
   <div class="rec">
-    <div class="reccard"><div class="rt">A · 指挥台(骨架)</div><p>默认页。回答「凭什么不是 Cursor」——你在指挥一支 agent 舰队,不是编辑一个文件。风险:最像 Devin。</p></div>
-    <div class="reccard"><div class="rt">B · 观测台(深看)</div><p>单 run 详情。回答「凭什么信任 agent」——读它的心智轨迹而非代码。最忠 ORAGE 北极星。</p></div>
-    <div class="reccard"><div class="rt">C · 回路(护城河)</div><p>贯穿 A/B 的语境层。回答「凭什么只有 Helm」——agent 长在你的大脑里,越用越懂你。别人抄不走。</p></div>
+    <div class="reccard"><div class="rt">A · 舰队台(骨架)</div><p>默认页。跨窗口跨项目的控制墙。回答「失去总览」。风险:读全窗口状态依赖 hook 覆盖 + loop-state 解析。</p></div>
+    <div class="reccard"><div class="rt">B · 收件箱(高频入口)</div><p>谁需要我 → 排队送来,就地处理回路由。直接接 Helm 已有的刘海 hook 桥,落地最快、日常最高频。</p></div>
+    <div class="reccard"><div class="rt">C · 总谱(护城河)</div><p>贯穿 A/B 的语境层。一个大脑喂所有项目、成果回一处。回答「凭什么只有 Helm」,别人结构上抄不走。</p></div>
   </div>
   <p style="margin-top:18px;color:var(--ink3);font-size:12px">
-    探索稿,非定稿。想清哪个赌注最对你的胃口(或要不要 A+B+C 合一),我再把选中的方向做成高保真定稿 + 进 Svelte。
-    参照:Devin Desktop Agent Command Center · Google Antigravity Mission Control · Vibe Kanban。
+    探索稿 v2,非定稿。若这版对上了你的真实工作模式,告诉我先做哪个(我建议 <b>B 收件箱</b> 起步——最高频、直接接现成的刘海 hook 桥),我再做高保真定稿 + 进 Svelte。
+    研究参照:LangChain Agent Inbox · Claude Code Agent Teams(单项目通知)· MartinLoop(control plane)· Loop Engineering(2026)。
   </p>
 </div>
 
