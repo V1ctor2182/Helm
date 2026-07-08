@@ -187,3 +187,8 @@
 - 门: pytest 257 全绿(+3:norm_label/family 默认/family+label+注入)/前端 build ✓ check 0/0 ✓ test 233 全绿(+2:family badge+label chip/老数据 type 兼容)
 - e2e(真 LLM claude-cli): GitHub repo → family=link·label=仓库·topic=前端框架 ✓;arXiv → 论文族;badge「WEB」→「链接/论文/视频/设计」。测试速记已删,保留用户真实记录。
 - 视觉: shots/f1-labelchip.png(GitHub 卡:链接 badge+仓库 chip;arXiv 卡:论文 badge)
+## 文档增强 · 2026-07-08 · AI-SYSTEM.md 人话化+架构图 [用户要求]
+- 每节加「人话」引子(生活化比喻:邮件分文件夹/给收藏做卡片/cron 天书…),技术细节+全部 prompt 原文保留。
+- 开头加架构图:mermaid 数据流图(经浏览器 mermaid@11 渲染校验通过 OK)+ 纯文本 ASCII 兜底版(终端可读);新增文件地图表(功能→文件)。
+- 图内容:捕获坞→前端徽章/发送→分诊规则层→落库(确定/不确定)→异步 enrich(抓取层→LLM 链接解析 family/label/topic / LLM 文本整理兜底改类)→回写;所有 LLM 汇入 pick_provider→llm_once→claude-cli;其它入口(人话排期纯规则/小结/问大脑)旁挂。
+- 视觉: shots/ai-arch.png(渲染图)
