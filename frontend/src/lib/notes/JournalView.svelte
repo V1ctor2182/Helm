@@ -261,6 +261,10 @@
 
   // K4 日记纸页:今日字数 + 连续天数(与 Today 同口径)
   const jToday = $derived(journalItems.filter((n) => n.journal_date === today()))
+  // 只 journal-kind(不含 focus 自动记录)——续写/合并的对象
+  const jTodayJournals = $derived(
+    jToday.filter((n) => n.kind === 'journal').sort((a, b) => (a.created_at ?? '').localeCompare(b.created_at ?? '')),
+  )
   const jTodayChars = $derived(jToday.reduce((a, e) => a + e.content.length, 0))
   const jStreak = $derived.by(() => {
     const dates = new Set(journalItems.filter((n) => n.journal_date).map((n) => n.journal_date as string))
@@ -291,11 +295,36 @@
 
   async function add() {
     if (!draft.trim()) return
-    const ok =
-      layout.journalFilter === 'journal'
-        ? await notes.create(draft, 'journal', today())
-        : await notes.create(draft, 'note')
-    if (ok) draft = ''
+    if (layout.journalFilter !== 'journal') {
+      if (await notes.create(draft, 'note')) draft = ''
+      return
+    }
+    // 日记每天一篇:今天已有日记 → 续写进那一条(\n\n 段落);否则新建。
+    const mine = jTodayJournals
+    if (mine.length > 0) {
+      const merged = mine.map((e) => e.content).join('\n\n') + '\n\n' + draft.trim()
+      if (await notes.consolidateJournal(mine.map((e) => e.id), merged)) draft = ''
+    } else if (await notes.create(draft, 'journal', today())) {
+      draft = ''
+    }
+  }
+
+  // 编辑「一天一页」:合并当天日记文进弹层;保存时合并回单条(消解历史碎片)。
+  let editingDay = $state<{ ids: number[]; seed: Note } | null>(null)
+  function editDay(entries: Note[]) {
+    const js = entries.filter((e) => e.kind === 'journal')
+    const base = js[0] ?? entries[0]
+    if (!base) return
+    editingDay = { ids: js.map((e) => e.id), seed: { ...base, content: js.map((e) => e.content).join('\n\n') } }
+  }
+  async function saveDay(md: string) {
+    if (!editingDay) return
+    const ids = editingDay.ids
+    const ok = ids.length > 0 ? await notes.consolidateJournal(ids, md) : await notes.update(editingDay.seed.id, md)
+    if (ok) editingDay = null
+  }
+  async function deleteDay(entries: Note[]) {
+    for (const e of entries) await notes.remove(e.id)
   }
 </script>
 
@@ -506,20 +535,17 @@
         <p class="empty">还没有日记 — 上面写下今天的第一条。</p>
       {:else}
         {#each journalByDate as [day, entries] (day)}
+          <!-- T4 每天一篇:当天所有条目合成一大篇(\n\n 段落),不再一条条散着 -->
           <section class="jpage">
             <button class="dh openbtn" title="查看这一天" onclick={() => (detailDay = day)}>
               <span class="d">{dayNum(day)}</span><span class="w">{weekdayOf(day)}</span>
               <span class="cnt">{entries.reduce((a, e) => a + e.content.length, 0)} 字</span></button>
-            {#each entries as e (e.id)}
-              {#if true}
-                <div class="md">{@html renderMd(e.content)}</div>
-                <span class="pacts">
-                  <button class="act" aria-label="编辑日记" onclick={() => startEdit(e)}>编辑</button>
-                  <button class="act del" class:armed={del.pending === `jr-${e.id}`} aria-label="删除日记"
-                    onclick={() => del.confirm(`jr-${e.id}`) && notes.remove(e.id)}>{del.pending === `jr-${e.id}` ? '确认' : '×'}</button>
-                </span>
-              {/if}
-            {/each}
+            <div class="md">{@html renderMd(entries.map((e) => e.content).join('\n\n'))}</div>
+            <span class="pacts">
+              <button class="act" aria-label="编辑这天日记" onclick={() => editDay(entries)}>编辑</button>
+              <button class="act del" class:armed={del.pending === `jrday-${day}`} aria-label="删除这天日记"
+                onclick={() => del.confirm(`jrday-${day}`) && deleteDay(entries)}>{del.pending === `jrday-${day}` ? '确认删整天' : '×'}</button>
+            </span>
           </section>
         {/each}
       {/if}
@@ -680,6 +706,10 @@
 
   {#if editingNote}
     <NoteEditSheet note={editingNote} onsave={saveSheet} onclose={() => (editingNote = null)} />
+  {/if}
+
+  {#if editingDay}
+    <NoteEditSheet note={editingDay.seed} onsave={saveDay} onclose={() => (editingDay = null)} />
   {/if}
 </section>
 

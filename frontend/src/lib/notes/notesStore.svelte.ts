@@ -204,6 +204,24 @@ export class NotesStore {
     return ok !== null
   }
 
+  /** 每天一篇:把当天多条日记合并成一条(第一条更新为合并文,删其余)。
+   *  T4 用户拍板:日记一天一大篇,续写进同一条,不再一条条散着。 */
+  async consolidateJournal(ids: number[], content: string): Promise<boolean> {
+    if (ids.length === 0 || !content.trim()) return false
+    this.error = null
+    const ok = await this.#json(`/api/notes/${ids[0]}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ content }),
+    })
+    if (ok == null) { this.error = '保存失败'; return false }
+    for (const id of ids.slice(1)) {
+      await this.#json(`/api/notes/${id}`, { method: 'DELETE' })
+    }
+    await this.load()
+    return true
+  }
+
   /** AI 归类纠错:整份 meta 回写(如移出集合=拿掉 topic) */
   async updateMeta(id: number, meta: NoteMeta): Promise<boolean> {
     const ok = await this.#json(`/api/notes/${id}`, {

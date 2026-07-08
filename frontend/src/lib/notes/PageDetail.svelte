@@ -70,9 +70,8 @@
 
     <div class="body">
       <h2 class="ti">{dayLabel}</h2>
-      {#each entries as e (e.id)}
-        <div class="md">{@html renderMd(e.content)}</div>
-      {/each}
+      <!-- T4 每天一篇:合成一大篇阅读,不再一条条 -->
+      <div class="md">{@html renderMd(entries.map((e) => e.content).join('\n\n'))}</div>
 
       {#if focus.length > 0}
         <div class="focusblock">
