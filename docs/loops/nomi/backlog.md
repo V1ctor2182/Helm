@@ -24,4 +24,4 @@
 - [ ] [T3+][P2][enhancement] 待办「已完成」分区(donebar+沉底)——被 K6 done 列 schema 拍板阻塞;拍板后一并做。
 - [x] [T4][P2](本轮清) 日记每天一篇:今日聚合(多段按时间拼一篇)+连续天数+字数;TODAY 卡预览/续写→;与 notch journalToday 口径一致。→ 落地:天内段落升序拼一篇(纸页/PageDetail 同序);Today 卡全文预览(clamp 5 行)+段数+续写→落日记 tab;顺带修 JournalView.today() UTC 错一天 bug。注:notch journalToday 按 createdAt 日过滤,主 app 按 journal_date——跨日补写会有口径差,记 T5 一并通知。
 - [x] [T5][P2][跨线](本轮清) 分诊契约发布后通知 notch 线接回执 UI(nomi-notch backlog 已备位);契约变更只在本 loop 做,notch 只消费(前科:task kind 收紧 422 炸了 notch)。→ 通知单已写进 docs/loops/nomi-notch/backlog.md「契约通知」节:KINDS+task/idea、triage 回执块、PATCH 改类、/api/tasks {prompt} 人话排期、/parse 徽章、journalToday 口径差建议(改吃 journal_date)。
-- [ ] [Q-EDIT][question] 编辑弹层方案拍板:A 双栏实时预览 / B 单栏写-预览切换(提案稿 docs/design/helm-note-edit.html,截图 shots/edit-proposal.png;建议 A)。拍板后进代码,行内 textarea 编辑退场。
+- [x] ~~Q-EDIT~~ 已拍板(2026-07-08 用户):A/B 都不要——用户不写 markdown。定稿=所见即所得弹层+三钮(粗体/斜体/高亮),⋯ 挪卡片右上角。→ 落地:NoteEditSheet(contenteditable+md 兼容序列化 inlineMd.ts);行内 textarea 退场;卡片/待办/详情轻渲染 **/*/<mark>;稿 helm-note-edit.html 已改定稿。

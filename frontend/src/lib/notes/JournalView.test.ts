@@ -249,3 +249,43 @@ it('反馈修复:「全部」chip 退场,详情页有删除(两击确认)', asyn
   await fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
   expect(spy).toHaveBeenCalledWith(41)
 })
+
+it('编辑弹层(用户拍板):⋯→编辑打开所见即所得弹层,保存回写 md', async () => {
+  const rows = [N({ id: 51, content: '改我这条' })]
+  vi.stubGlobal('fetch', vi.fn((url: string, init?: RequestInit) =>
+    Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(
+        (init?.method ?? 'GET') !== 'GET' ? {}
+        : String(url).includes('/api/notes') ? { notes: rows } : { notes: [], tasks: [], links: [], events: [] }),
+    }),
+  ))
+  const spy = vi.spyOn(notes, 'update').mockResolvedValue(true)
+  render(JournalView)
+  await fireEvent.click(await screen.findByRole('button', { name: '更多操作 改我这条' }))
+  await fireEvent.click(screen.getByRole('menuitem', { name: '编辑' }))
+  const dialog = await screen.findByRole('dialog', { name: '编辑记录' })
+  expect(dialog).toBeInTheDocument()
+  // 工具栏三钮在
+  for (const b of ['粗体', '斜体', '高亮']) expect(screen.getByRole('button', { name: b })).toBeInTheDocument()
+  // 编辑内容(所见即所得:DOM 里是 <b>,存储回 md)
+  const editor = screen.getByRole('textbox', { name: '内容' })
+  editor.innerHTML = '改成<b>加粗</b>的'
+  await fireEvent.input(editor)
+  await fireEvent.click(screen.getByRole('button', { name: '保存' }))
+  expect(spy).toHaveBeenCalledWith(51, '改成**加粗**的')
+})
+
+it('卡片轻渲染:**粗** 显示为加粗而不是星号', async () => {
+  const rows = [N({ id: 52, content: '有**重点**的速记' })]
+  vi.stubGlobal('fetch', vi.fn((url: string) =>
+    Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(String(url).includes('/api/notes') ? { notes: rows } : { notes: [], tasks: [], links: [], events: [] }),
+    }),
+  ))
+  render(JournalView)
+  const strong = await screen.findByText('重点')
+  expect(strong.tagName).toBe('B')
+  expect(screen.queryByText(/\*\*/)).toBeNull()
+})

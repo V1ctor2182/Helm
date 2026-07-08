@@ -3,6 +3,7 @@
   // 层级:原文大字(链接内联高亮) → 提到的内容附件卡 → 标签+线索胶囊 →
   // AI 注脚(hover 展开) → 操作(AI 读出时间线索时主钮=「→任务 · 线索」)。
   import type { Note } from './notesStore.svelte'
+  import { renderInline } from './inlineMd'
   import { localDateTime } from '../time'
 
   let {
@@ -95,7 +96,8 @@
         <!-- 原文主角:大字排版,链接内联高亮 -->
         <p class="prose">
           {#each parts as p, i (i)}
-            {#if isUrl(p)}<a class="inlink" href={p} target="_blank" rel="noreferrer">{shortUrl(p)}</a>{:else}{p}{/if}
+            <!-- 轻格式渲染(粗体/斜体/高亮,renderInline 先转义,安全) -->
+            {#if isUrl(p)}<a class="inlink" href={p} target="_blank" rel="noreferrer">{shortUrl(p)}</a>{:else}{@html renderInline(p)}{/if}
           {/each}
         </p>
         {#if attachments.length > 0}
@@ -152,6 +154,11 @@
 </div>
 
 <style>
+  .prose :global(mark) {
+    background: #fff3bf;
+    border-radius: 3px;
+    padding: 0 2px;
+  }
   .scrim {
     position: fixed;
     inset: 0;

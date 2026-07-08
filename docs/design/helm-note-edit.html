@@ -3,11 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Helm · 记录卡编辑体验 · 提案稿</title>
+<title>Helm · 记录卡编辑体验 · 定稿(轻格式)</title>
 <!--
-  2026-07-08 用户反馈:「优化一下编辑,给我 html 视图;编辑和删除用三个点点开显示」
-  ⋯ 菜单已拍板并进代码(JournalView 墙卡)。本稿是【编辑弹层】提案,A/B 二选一,
-  拍板后进 Svelte;此前墙卡行内 textarea 编辑保持现状。
+  2026-07-08 用户拍板(定稿):
+  · ⋯ 菜单在卡片右上角,点开显示 编辑/→日记/→记忆/→任务/删除。
+  · 编辑弹层=所见即所得(用户不写 markdown):工具栏只三个钮——粗体/斜体/高亮,
+    选中文字点按钮;存储序列化为 md 兼容标记(**/*/<mark>),卡片与详情轻渲染。
+  · 原 A(双栏 md+预览)/B(写-预览切换)两案废弃——用户:记录不会手写 markdown。
+  已进代码:JournalView(⋯ 右上角/NoteEditSheet 弹层/inlineMd 转换)。
   NOMI 语言:白卡/胶囊/橙紫渐变/无 emoji。
 -->
 <style>
@@ -33,8 +36,8 @@
   .wtx{font:500 13px/1.55 var(--sans);color:var(--ink2)}
   .wfoot{display:flex;gap:7px;margin-top:9px;font:400 10.5px/1 var(--sans);color:var(--ink3);align-items:center}
   .wtag{color:#0e9c8d}
-  .dots{margin-top:8px;width:26px;height:22px;border:0;border-radius:999px;background:var(--pill);color:var(--ink2);display:inline-flex;align-items:center;justify-content:center}
-  .cmenu{position:absolute;left:14px;bottom:-128px;z-index:5;min-width:128px;background:var(--card);border-radius:12px;box-shadow:var(--shadow-lg);padding:5px;display:flex;flex-direction:column}
+  .dots{position:absolute;top:10px;right:10px;width:26px;height:22px;border:0;border-radius:999px;background:var(--pill);color:var(--ink2);display:inline-flex;align-items:center;justify-content:center}
+  .cmenu{position:absolute;right:10px;top:36px;z-index:5;min-width:128px;background:var(--card);border-radius:12px;box-shadow:var(--shadow-lg);padding:5px;display:flex;flex-direction:column}
   .cmenu b{font:500 12px/1 var(--sans);color:var(--ink2);padding:8px 10px;border-radius:8px;font-weight:500}
   .cmenu b.on{background:var(--pill);color:var(--ink)}
   .cmenu b.danger{color:#d3382f}
@@ -73,8 +76,8 @@
 <body>
 
 <div class="col">
-  <h2>已拍板 · 卡片操作 = ⋯ 菜单(已进代码,供对照)</h2>
-  <p class="cap">hover 卡片出 ⋯,点开菜单:编辑 / →日记 / →记忆 / →任务 / 删除(两击确认)。点外面或 Esc 关闭。</p>
+  <h2>定稿 · ⋯ 菜单在卡片右上角</h2>
+  <p class="cap">hover 卡片右上角出 ⋯,点开菜单:编辑 / →日记 / →记忆 / →任务 / 删除(两击确认)。点外面或 Esc 关闭。</p>
   <div class="wcard" style="margin-bottom:140px">
     <span class="wbadge">N</span>
     <div class="wtx">需要理解一下那个清算系统的代码</div>
@@ -86,51 +89,26 @@
 
 <div class="row">
   <div class="col">
-    <h2>方案 A · 双栏实时预览</h2>
-    <p class="cap">⋯ → 编辑打开弹层:左边写 Markdown,右边实时渲染 HTML。写长内容/带格式的速记与日记最顺手。</p>
-    <div class="sheet">
-      <div class="shd"><span class="kbadge">速记 · 编辑</span><span class="tm">2026-07-08 00:13</span><button class="x">×</button></div>
-      <div class="duo">
-        <div class="pane">
-          <div class="plab">MARKDOWN</div>
-          <textarea rows="9">需要理解一下那个**清算系统**的代码
-
-重点看:
-- `settle_engine.py` 的对账循环
-- 和风控的边界</textarea>
-        </div>
-        <div class="pane prev">
-          <div class="plab"><span class="spark"></span>预览 · 实时</div>
-          <p>需要理解一下那个<b>清算系统</b>的代码</p>
-          <p>重点看:</p>
-          <li><code>settle_engine.py</code> 的对账循环</li>
-          <li>和风控的边界</li>
-        </div>
-      </div>
-      <div class="foot"><span class="cnt">54 字</span><span class="hintk">⌘⏎ 保存 · Esc 取消</span><button class="ghostb">取消</button><button class="save">保存</button></div>
-    </div>
-  </div>
-
-  <div class="col">
-    <h2>方案 B · 单栏 + 写/预览切换</h2>
-    <p class="cap">同一弹层,顶部胶囊在「写 / 预览」间切换。界面更简单,大部分速记不用预览,想看再切。</p>
+    <h2>定稿 · 编辑弹层 = 所见即所得 + 三钮</h2>
+    <p class="cap">⋯ → 编辑:居中弹层,选中文字点 <b>B</b>/<i>I</i>/<span style="background:#fff3bf;border-radius:3px;padding:0 3px">H</span> 就是粗体/斜体/高亮——不用写 markdown。存储仍是 md 兼容标记,日记渲染/notch/AI 管线不受影响。</p>
     <div class="sheet">
       <div class="shd"><span class="kbadge">速记 · 编辑</span>
-        <span class="segs"><button class="seg on">写</button><button class="seg">预览</button></span>
-        <span class="tm" style="margin-left:8px">2026-07-08 00:13</span><button class="x">×</button></div>
-      <div class="mono1">
-        <textarea rows="8">需要理解一下那个**清算系统**的代码
-
-重点看:
-- `settle_engine.py` 的对账循环
-- 和风控的边界</textarea>
+        <span class="segs" style="background:transparent;display:flex;gap:3px">
+          <button class="seg on" style="width:27px"><b>B</b></button>
+          <button class="seg" style="width:27px"><i>I</i></button>
+          <button class="seg" style="width:27px"><span style="background:#fff3bf;border-radius:3px;padding:0 3px;color:#7a5b00">H</span></button>
+        </span>
+        <span class="tm" style="margin-left:auto">2026-07-08 00:13</span><button class="x">×</button></div>
+      <div class="mono1" style="font:400 14px/1.75 var(--sans)">
+        需要理解一下那个<b>清算系统</b>的代码<br><br>
+        重点看 <mark style="background:#fff3bf;border-radius:3px;padding:0 2px">settle_engine.py 的对账循环</mark>,还有<i>和风控的边界</i>
       </div>
-      <div class="foot"><span class="cnt">54 字</span><span class="hintk">⌘⏎ 保存 · Esc 取消</span><button class="ghostb">取消</button><button class="save">保存</button></div>
+      <div class="foot"><span class="cnt">54 字</span><span class="hintk">选中文字点上方按钮 · ⌘⏎ 保存 · Esc 取消</span><button class="ghostb">取消</button><button class="save">保存</button></div>
     </div>
   </div>
 </div>
 
-<p class="cap">两案共同点:编辑从卡上行内 textarea 升级为居中弹层(空间大、不挤乱瀑布墙);保留 ⌘⏎ 保存;字数实时;日记页/详情页「编辑」走同一弹层。<br>待拍板:A 还是 B?(默认建议 A——日记本来就是 Markdown 渲染,所见即所得更配「每天一篇」)</p>
+<p class="cap">编辑从卡上行内 textarea 升级为居中弹层;⌘⏎ 保存/Esc 取消;字数实时;墙卡/待办/详情/日记段「编辑」同一弹层;卡片与详情对 **粗**/*斜*/&lt;mark&gt; 轻渲染。</p>
 
 </body>
 </html>

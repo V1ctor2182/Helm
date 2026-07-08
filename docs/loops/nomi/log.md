@@ -166,3 +166,9 @@
 - 编辑提案稿: docs/design/helm-note-edit.html——A 双栏 md+实时 HTML 预览 / B 单栏写-预览切换,共同点=行内编辑升级居中弹层。待拍板(Q-EDIT,建议 A),拍板前不进代码。
 - 门: pytest 254 全绿 / 前端 build ✓ check 0/0 ✓ test 224 全绿(菜单交互 4 例改写+竞态 mock 修正)
 - 视觉: shots/fb-menu.png(实况菜单+断带消失)/ edit-proposal.png(提案稿)
+## 反馈修复 3 · 2026-07-08 · ⋯ 右上角 + 所见即所得编辑(拍板落地)[用户拍板]
+- 拍板: 编辑不做 md 双栏/预览(用户不写 markdown)——弹层内 contenteditable 所见即所得,工具栏三钮:粗体/斜体/高亮;⋯ 菜单挪卡片右上角(菜单右对齐)。
+- 实现: inlineMd.ts(md↔HTML 双向,存储保持 **/*/<mark> 兼容标记——日记 marked 渲染/notch/AI 管线不受影响;高亮兼容 execCommand 背景 span);NoteEditSheet.svelte(B/I/H+字数+⌘⏎/Esc+纯文本粘贴);墙卡/待办/日记段/详情「编辑」统一走弹层,行内 textarea 全退场(孤儿样式清零);墙卡 wtx/待办 tx/详情 prose 轻渲染。
+- 稿: helm-note-edit.html 改定稿(A/B 提案废弃,注明拍板)。
+- 门: pytest 254 全绿 / 前端 build ✓ check 0/0 ✓ test 231 全绿(+7:inlineMd 5 例 roundtrip/防注入+弹层保存+卡片轻渲染)
+- 视觉: shots/fb2-sheet.png(实况弹层:B/I/H+字数+渐变保存)

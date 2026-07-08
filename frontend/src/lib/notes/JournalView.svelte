@@ -13,6 +13,8 @@
   import JournalCanvas from './JournalCanvas.svelte'
   import NoteDetail from './NoteDetail.svelte'
   import PageDetail from './PageDetail.svelte'
+  import NoteEditSheet from './NoteEditSheet.svelte'
+  import { renderInline } from './inlineMd'
   import { focus } from '../focus.svelte'
   import CaptureDock from '../CaptureDock.svelte'
 
@@ -83,8 +85,8 @@
   // /to-task so linked_note_id survives (server takes the note's content).
   // The prompt shown is derived — cancelling the pin restores the typed draft.
   let fromNote = $state<Note | null>(null)
-  // 行内编辑:editingId + 草稿
-  let editingId = $state<number | null>(null)
+  // 编辑弹层(2026-07-08 用户拍板:行内 textarea 退场,所见即所得轻格式)
+  let editingNote = $state<Note | null>(null)
   let detailNote = $state<Note | null>(null)
   let detailDay = $state<string | null>(null)
   // K6 待办勾选:乐观划线,800ms 后删除(完成即清)
@@ -93,7 +95,6 @@
     doneIds = new Set([...doneIds, n.id])
     setTimeout(() => void notes.remove(n.id), 800)
   }
-  let editDraft = $state('')
   // ⋯ 菜单(2026-07-08 用户拍板):打开的卡 id + 删除确认态;点外面/Esc 关
   let menuId = $state<number | null>(null)
   let menuArmed = $state<number | null>(null)
@@ -160,16 +161,12 @@
   }
 
   function startEdit(n: Note) {
-    editingId = n.id
-    editDraft = n.content
+    editingNote = n
   }
 
-  async function saveEdit() {
-    if (editingId == null) return
-    if (await notes.update(editingId, editDraft)) {
-      editingId = null
-      editDraft = ''
-    }
+  async function saveSheet(md: string) {
+    if (editingNote == null) return
+    if (await notes.update(editingNote.id, md)) editingNote = null
   }
 
   function noteToTask(n: Note) {
@@ -337,16 +334,7 @@
                 onclick={() => (detailNote = n)}
                 onkeydown={(e) => e.key === 'Enter' && (detailNote = n)}
               >
-                {#if editingId === n.id}
-                  <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-                  <div class="wpad" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
-                    <textarea class="editbox" bind:value={editDraft} aria-label="编辑内容" rows="3"></textarea>
-                    <span class="wacts show">
-                      <button class="act pri" onclick={saveEdit} disabled={!editDraft.trim()}>保存</button>
-                      <button class="act" onclick={() => (editingId = null)}>取消</button>
-                    </span>
-                  </div>
-                {:else}
+                {#if true}
                   {#if n.meta?.url && n.meta.image}
                     <img class="wcover" src={n.meta.image} alt="" loading="lazy" onerror={(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')} />
                   {/if}
@@ -369,7 +357,7 @@
                           {#if n.meta?.where}<span class="ntag xc">@{n.meta.where}</span>{/if}
                         </div>
                       {/if}
-                      <span class="wtx">{n.content}</span>
+                      <span class="wtx">{@html renderInline(n.content)}</span>
                     {/if}
                     <div class="wfoot">
                       {#if showTopic && n.meta?.topic && groupBy === 'topic'}
@@ -506,11 +494,7 @@
               <span class="d">{dayNum(day)}</span><span class="w">{weekdayOf(day)}</span>
               <span class="cnt">{entries.reduce((a, e) => a + e.content.length, 0)} 字</span></button>
             {#each entries as e (e.id)}
-              {#if editingId === e.id}
-                <textarea class="editbox" bind:value={editDraft} aria-label="编辑日记" rows="4"></textarea>
-                <span class="acts"><button class="act pri" onclick={saveEdit} disabled={!editDraft.trim()}>保存</button>
-                  <button class="act" onclick={() => (editingId = null)}>取消</button></span>
-              {:else}
+              {#if true}
                 <div class="md">{@html renderMd(e.content)}</div>
                 <span class="pacts">
                   <button class="act" aria-label="编辑日记" onclick={() => startEdit(e)}>编辑</button>
@@ -568,7 +552,7 @@
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4 10-10"/></svg>
                 </button>
                 <div class="mid">
-                  <button class="tx openable2" title="查看详情" onclick={() => (detailNote = n)}>{n.content}</button>
+                  <button class="tx openable2" title="查看详情" onclick={() => (detailNote = n)}>{@html renderInline(n.content)}</button>
                   {#if n.meta?.when || n.meta?.where || n.meta?.triage}
                     <div class="tmeta">
                       {#if n.meta?.when}<span class="tchip" class:duesoon={dueSoon(n)}>{n.meta.when}</span>{/if}
@@ -675,6 +659,10 @@
       totask={(n) => noteToTask(n)}
       ondelete={(n) => notes.remove(n.id)}
     />
+  {/if}
+
+  {#if editingNote}
+    <NoteEditSheet note={editingNote} onsave={saveSheet} onclose={() => (editingNote = null)} />
   {/if}
 </section>
 
@@ -824,21 +812,6 @@
   .act.del:hover,
   .act.del.armed {
     color: var(--red);
-  }
-  .editbox {
-    flex: 1;
-    background: transparent;
-    border: 0;
-    border-bottom: 1px solid var(--acc-ink);
-    color: var(--t1);
-    font-family: var(--sans);
-    font-size: 13px;
-    padding: 3px 0 6px;
-    resize: vertical;
-    min-width: 0;
-  }
-  .editbox:focus {
-    outline: none;
   }
   .linked {
     font-family: var(--mono);
@@ -1440,6 +1413,12 @@
   .wcard .wcover {
     border-radius: var(--radius) var(--radius) 0 0; /* overflow:visible 后自己圆角 */
   }
+  /* 轻格式高亮(编辑弹层写入的 <mark>) */
+  .jnt :global(mark) {
+    background: #fff3bf;
+    border-radius: 3px;
+    padding: 0 2px;
+  }
   .wcard:hover {
     box-shadow: var(--shadow-lg);
   }
@@ -1546,13 +1525,14 @@
   .wtm {
     margin-left: auto;
   }
+  /* ⋯ 在卡片右上角(2026-07-08 用户拍板) */
   .wacts {
+    position: absolute;
+    top: 10px;
+    right: 10px;
     display: flex;
-    gap: 2px;
-    margin-top: 8px;
     opacity: 0;
     transition: opacity var(--dur-micro) var(--ease);
-    position: relative;
   }
   .wcard:hover .wacts,
   .wcard:focus-within .wacts,
@@ -1577,7 +1557,7 @@
   .cmenu {
     position: absolute;
     top: 26px;
-    left: 0;
+    right: 0;
     z-index: 40;
     min-width: 128px;
     background: var(--card);
