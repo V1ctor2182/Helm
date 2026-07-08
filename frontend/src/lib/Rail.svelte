@@ -52,7 +52,8 @@
   {#if layout.mode === 'journal'}
     <div class="cats" aria-label="记录分类">
       <div class="subhead">记录</div>
-      {#each [['all', '全部'], ['note', '速记'], ['journal', '日记'], ['task', '任务']] as [f, label] (f)}
+      <!-- 「全部」退场(2026-07-08 用户反馈),速记为默认落地 -->
+      {#each [['note', '速记'], ['journal', '日记'], ['task', '任务']] as [f, label] (f)}
         <button class="cat" class:on={layout.journalFilter === f} onclick={() => (layout.journalFilter = f as typeof layout.journalFilter)}>{label}</button>
       {/each}
       <div class="subhead">收藏</div>

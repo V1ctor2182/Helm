@@ -260,10 +260,12 @@ async def enrich_note(db: Any, box: Any, note_id: int, cwd: Any = None) -> None:
                         meta["topic"] = str(d["topic"])[:24]
                     # T1 LLM 兜底改判:仅当规则分诊拿不准(confident=False)。
                     lk = str(d.get("kind") or "")
-                    if ((meta0.get("triage") or {}).get("confident") is False
-                            and lk in ("idea", "task", "journal")):
-                        new_kind = lk
-                        meta["triage"] = {"by": "llm", "confident": True}
+                    if (meta0.get("triage") or {}).get("confident") is False:
+                        if lk in ("idea", "task", "journal"):
+                            new_kind = lk
+                            meta["triage"] = {"by": "llm", "confident": True}
+                        elif lk == "note":  # LLM 确认速记=也算定了,别留 pending
+                            meta["triage"] = {"by": "llm", "confident": True}
         except Exception as exc:  # LLM 失败/超时 → 保留第一段结果
             log.info("llm enrich failed for note %s: %s", note_id, exc)
             return

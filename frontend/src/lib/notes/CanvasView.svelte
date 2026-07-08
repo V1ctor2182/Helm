@@ -4,7 +4,15 @@
   // 最小可用版:白卡(速记文本/收藏卡)+pointer 拖拽;连线/cluster 待后端关系数据(backlog)。
   import type { Note } from './notesStore.svelte'
 
-  let { notes }: { notes: Note[] } = $props()
+  let {
+    notes,
+    onopen,
+    ondelete,
+  }: {
+    notes: Note[]
+    onopen?: (n: Note) => void
+    ondelete?: (n: Note) => void
+  } = $props()
 
   const KEY = 'helm.canvas.pos'
   type Pos = Record<string, { x: number; y: number }>
@@ -25,23 +33,41 @@
     return pos[id] ?? { x: 24 + (i % 3) * 272, y: 16 + Math.floor(i / 3) * 235 }
   }
 
+  // 画布高度跟着最低的卡长(反馈修复:overflow hidden + 固定高会裁掉下方卡片)
+  const canvasH = $derived(Math.max(480, ...notes.map((n, i) => at(n.id, i).y + 340)))
+
   let dragging = $state<number | null>(null)
   let off = { x: 0, y: 0 }
+  let start = { x: 0, y: 0 }
+  let moved = false
   function down(e: PointerEvent, id: number, i: number) {
     const p = at(id, i)
     dragging = id
+    moved = false
+    start = { x: e.clientX, y: e.clientY }
     off = { x: e.clientX - p.x, y: e.clientY - p.y }
-    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+    ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
   }
   function move(e: PointerEvent, id: number) {
     if (dragging !== id) return
-    pos[id] = { x: Math.max(0, e.clientX - off.x), y: Math.max(0, e.clientY - off.y) }
+    if (Math.abs(e.clientX - start.x) + Math.abs(e.clientY - start.y) > 4) moved = true
+    if (moved) pos[id] = { x: Math.max(0, e.clientX - off.x), y: Math.max(0, e.clientY - off.y) }
   }
-  function up(id: number) {
-    if (dragging === id) {
-      dragging = null
-      save()
-    }
+  function up(n: Note) {
+    if (dragging !== n.id) return
+    dragging = null
+    if (moved) save()
+    else onopen?.(n) // 没拖=点击 → 开详情(反馈修复:canvas 点不开详情)
+  }
+
+  // 删除两击确认(反馈修复:canvas 速记没有删除入口)
+  let armed = $state<number | null>(null)
+  function del(e: Event, n: Note) {
+    e.stopPropagation()
+    if (armed === n.id) {
+      armed = null
+      ondelete?.(n)
+    } else armed = n.id
   }
 
   const TYPE_LABEL: Record<string, string> = {
@@ -52,7 +78,7 @@
   }
 </script>
 
-<div class="canvas" aria-label="画布">
+<div class="canvas" aria-label="画布" style="min-height:{canvasH}px">
   {#if notes.length === 0}
     <p class="empty">画布空空 — 记几条速记/收藏,回来自由摆放。</p>
   {/if}
@@ -64,10 +90,17 @@
       style="left:{p.x}px;top:{p.y}px"
       onpointerdown={(e) => down(e, n.id, i)}
       onpointermove={(e) => move(e, n.id)}
-      onpointerup={() => up(n.id)}
+      onpointerup={() => up(n)}
+      onkeydown={(e) => e.key === 'Enter' && onopen?.(n)}
       role="button"
       tabindex="0"
     >
+      {#if ondelete}
+        <button class="cx" class:armed={armed === n.id} title="删除"
+          aria-label={`删除 ${n.meta?.title ?? n.content}`}
+          onpointerdown={(e) => e.stopPropagation()}
+          onclick={(e) => del(e, n)}>{armed === n.id ? '确认' : '×'}</button>
+      {/if}
       {#if n.meta?.url}
         <div class="card link">
           {#if n.meta.image}<img class="cover" src={n.meta.image} alt="" loading="lazy" />{/if}
@@ -92,8 +125,7 @@
 <style>
   .canvas {
     position: relative;
-    min-height: 480px;
-    overflow: hidden;
+    overflow: hidden; /* 高度由 canvasH 跟卡走,不再裁内容 */
   }
   .empty {
     color: var(--t4);
@@ -165,5 +197,32 @@
     font: 500 12.5px/1.5 var(--sans);
     color: var(--t2);
     word-break: break-word;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 8;
+    line-clamp: 8;
+    -webkit-box-orient: vertical; /* 超长速记收 8 行,全文进详情看 */
   }
+  .cx {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 2;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--pill);
+    color: var(--t3);
+    font: 600 11px/1 var(--sans);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.12s;
+  }
+  .cnode:hover .cx,
+  .cnode:focus-within .cx,
+  .cx.armed { opacity: 1; }
+  .cx:hover,
+  .cx.armed { color: #d3382f; }
 </style>

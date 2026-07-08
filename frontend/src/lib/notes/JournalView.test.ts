@@ -183,3 +183,28 @@ it('T4 每天一篇:天内段落按时间升序渲染(拼一篇)', async () => {
   // DOM 顺序:早上段在下午段之前
   expect(morning.compareDocumentPosition(afternoon) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 })
+
+it('反馈修复:「全部」chip 退场,详情页有删除(两击确认)', async () => {
+  const rows = [N({ id: 41, content: '点我看详情' })]
+  vi.stubGlobal('fetch', vi.fn((url: string, init?: RequestInit) =>
+    Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(
+        (init?.method ?? 'GET') !== 'GET' ? {}
+        : String(url).includes('/api/notes') ? { notes: rows } : { notes: [], tasks: [], links: [], events: [] }),
+    }),
+  ))
+  layout.journalFilter = 'note'
+  render(JournalView)
+  // 全部 chip 没了,四分类在
+  expect(screen.queryByRole('tab', { name: '全部' })).toBeNull()
+  for (const t of ['速记', '日记', '任务', '日历']) expect(screen.getByRole('tab', { name: t })).toBeInTheDocument()
+  // 打开详情 → 删除两击确认
+  const spy = vi.spyOn(notes, 'remove').mockResolvedValue(undefined as never)
+  await fireEvent.click(await screen.findByText('点我看详情'))
+  const del = await screen.findByRole('button', { name: '删除' })
+  await fireEvent.click(del)
+  expect(screen.getByRole('button', { name: '确认删除' })).toBeInTheDocument()
+  await fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
+  expect(spy).toHaveBeenCalledWith(41)
+})

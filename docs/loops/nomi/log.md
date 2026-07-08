@@ -152,3 +152,11 @@
 ## T5 · 2026-07-08 · 跨线契约通知(批次 3 收尾块)
 - 通知单落 docs/loops/nomi-notch/backlog.md「契约通知」节:KINDS 收编 task/idea(422 平账)/POST triage:true+响应 triage 块/PATCH 改类回流/POST /api/tasks {prompt} 人话排期+/parse 徽章/journalToday 口径差(notch createdAt vs 主 app journal_date,建议 notch 改吃 journal_date)。
 - 契约全部只加不减,notch 现有调用零破坏;notch 侧工作(回执 UI/待办两层行/口径切换)由 notch 线自排批次。
+## 反馈修复 · 2026-07-08 · canvas 遮挡/删除/详情 + 去「全部」+ AI 真测 [用户反馈]
+- canvas 遮挡: .canvas overflow:hidden+固定 min-height 裁掉下方卡 → 高度改跟最低卡走(canvasH=max(480, y+340));长速记卡 clamp 8 行,全文进详情。
+- canvas 交互: 点击(位移≤4px)=开 NoteDetail,拖动照旧;hover ×(两击确认)删除;setPointerCapture 加 ?. 兼容 jsdom。
+- 删除入口: NoteDetail 详情页新增「删除/确认删除」(canvas/墙/待办任何入口点开都能删)。
+- 去「全部」: 页头 chips 与侧栏「记录」组同步撤掉,默认落速记('all' 仍是合法值,兼容旧状态)。
+- AI 真测(claude-cli 订阅 provider): ① 不确定速记→15s 内 LLM 补 title/where/tags,判 note 不升格 ✓;② 「把 nomi-reference 的截图整理进仓库」→ LLM 判 task,kind 升格+triage{by:llm,confident:true},自动进待办 ✓。顺手补:LLM 确认 note 也标 by:llm(不再留 pending)。测试速记已删,后端已重启。
+- 门: pytest 254 全绿 / 前端 build ✓ check 0/0 ✓ test 224 全绿(+5:canvas 点击/拖拽/删除/高度+详情删除/无全部)
+- 视觉: shots/fb-canvas.png(画布不遮挡+无全部 chip)

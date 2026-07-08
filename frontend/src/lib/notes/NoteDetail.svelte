@@ -10,15 +10,20 @@
     onclose,
     onedit,
     totask,
+    ondelete,
   }: {
     note: Note
     onclose: () => void
     onedit?: (n: Note) => void
     totask?: (n: Note) => void
+    ondelete?: (n: Note) => void
   } = $props()
 
+  // 删除两击确认(用户反馈:速记要有删除入口——详情页统一给)
+  let delArmed = $state(false)
+
   const KIND_ZH: Record<string, string> = {
-    note: '速记', journal: '日记', task: '待办', focus: '专注',
+    note: '速记', journal: '日记', task: '待办', focus: '专注', idea: '想法',
   }
   const TYPE_ZH: Record<string, string> = {
     youtube: '视频', paper: '论文', article: '网页', inspiration: '灵感', text: '速记',
@@ -135,6 +140,12 @@
       {/if}
       {#if onedit}<button onclick={() => { onedit?.(note); onclose() }}>编辑</button>{/if}
       {#if totask && note.kind !== 'journal' && !note.meta?.when}<button onclick={() => { totask?.(note); onclose() }}>→任务</button>{/if}
+      {#if ondelete}
+        <button class="danger" class:armed={delArmed}
+          onclick={() => { if (delArmed) { ondelete?.(note); onclose() } else delArmed = true }}>
+          {delArmed ? '确认删除' : '删除'}
+        </button>
+      {/if}
       <button onclick={onclose}>关闭</button>
     </footer>
   </div>
@@ -333,6 +344,10 @@
     padding: 14px 20px 18px;
     align-items: center;
     flex-wrap: wrap;
+  }
+  .acts button.danger:hover,
+  .acts button.danger.armed {
+    color: #d3382f;
   }
   .acts button,
   .acts a {

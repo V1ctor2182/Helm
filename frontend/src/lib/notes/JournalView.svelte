@@ -57,7 +57,7 @@
       if (i === 'calendar') view = 'calendar'
       else {
         view = 'timeline'
-        layout.journalFilter = i === 'tasks' ? 'task' : i === 'journal' ? 'journal' : 'all'
+        layout.journalFilter = i === 'tasks' ? 'task' : i === 'journal' ? 'journal' : 'note'
       }
       layout.journalIntent = null
     }
@@ -298,8 +298,8 @@
        的展示方式,右侧两枚小 icon 切换(用户拍板 2026-07-08) -->
   <div class="viewrow">
     <div class="chips2" role="tablist" aria-label="分类">
-      <button role="tab" aria-selected={view !== 'calendar' && layout.journalFilter === 'all'} class:on={view !== 'calendar' && layout.journalFilter === 'all'} onclick={() => { view = display; layout.journalFilter = 'all' }}>全部</button>
-      <button role="tab" aria-selected={view !== 'calendar' && layout.journalFilter === 'note'} class:on={view !== 'calendar' && layout.journalFilter === 'note'} onclick={() => { view = display; layout.journalFilter = 'note' }}>速记</button>
+      <!-- 「全部」chip 退场(2026-07-08 用户反馈):速记为落地默认 -->
+      <button role="tab" aria-selected={view !== 'calendar' && (layout.journalFilter === 'note' || layout.journalFilter === 'all')} class:on={view !== 'calendar' && (layout.journalFilter === 'note' || layout.journalFilter === 'all')} onclick={() => { view = display; layout.journalFilter = 'note' }}>速记</button>
       <button role="tab" aria-selected={view !== 'calendar' && layout.journalFilter === 'journal'} class:on={view !== 'calendar' && layout.journalFilter === 'journal'} onclick={() => { view = display; layout.journalFilter = 'journal' }}>日记</button>
       <button role="tab" aria-selected={view !== 'calendar' && layout.journalFilter === 'task'} class:on={view !== 'calendar' && layout.journalFilter === 'task'} onclick={() => { view = 'timeline'; layout.journalFilter = 'task' }}>任务</button>
       <button role="tab" aria-selected={view === 'calendar'} class:on={view === 'calendar'} onclick={() => (view = 'calendar')}>日历</button>
@@ -626,7 +626,11 @@
         onopen={(day) => (detailDay = day)}
       />
     {:else}
-      <CanvasView notes={notes.notes.filter((n) => n.kind !== 'journal')} />
+      <CanvasView
+        notes={notes.notes.filter((n) => n.kind !== 'journal')}
+        onopen={(n) => (detailNote = n)}
+        ondelete={(n) => notes.remove(n.id)}
+      />
     {/if}
   {:else}
     <!-- TODO(F7 日历轮): Calendar.svelte 仍旧样式,周视图轮重设计 -->
@@ -653,6 +657,7 @@
       onclose={() => (detailNote = null)}
       onedit={(n) => startEdit(n)}
       totask={(n) => noteToTask(n)}
+      ondelete={(n) => notes.remove(n.id)}
     />
   {/if}
 </section>
