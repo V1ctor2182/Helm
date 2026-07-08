@@ -226,10 +226,9 @@ public final class NotchModel {
     public private(set) var journalToday: String?
 
     public func loadJournalToday(now: Date = Date()) async {
-        let notes = (try? await backend.recentNotes(kind: "journal", limit: 10)) ?? []
-        let today = Self.dayString(now)
-        let todays = notes.filter { $0.createdAt.hasPrefix(today) }.reversed()
-        let joined = todays.map(\.content).joined(separator: "\n\n")
+        // T5 契约:按 journal_date 查(凌晨补写昨天不再错归今天;口径与主 app 一致)。
+        let notes = (try? await backend.journalNotes(date: Self.dayString(now))) ?? []
+        let joined = notes.map(\.content).joined(separator: "\n\n")
         journalToday = joined.isEmpty ? nil : joined
     }
 

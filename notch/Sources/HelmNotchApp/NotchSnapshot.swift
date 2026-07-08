@@ -74,6 +74,7 @@ enum NotchSnapshot {
             }),
             // NOMI 浅色变体(深浅=整套色板切换)
             ("light-dash", { $0.module = .dashboard; $0.nomiDark = false }),
+            ("light-collapsed", { $0.expanded = false; $0.nomiDark = false }),
             ("light-cap", { $0.module = .capture; $0.captureKind = .note; $0.nomiDark = false }),
             ("light-agents", { $0.module = .agents; $0.agentPage = .prs; $0.nomiDark = false }),
             ("light-banner", {

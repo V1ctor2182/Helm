@@ -11,6 +11,7 @@ final class FakeBackend: HelmBackend, @unchecked Sendable {
     var runs: [AgentRun] = []
     var events: [CalEvent] = []
     var recents: [RecentNote] = []
+    var journals: [RecentNote] = []
     private(set) var notes: [(content: String, kind: String, journalDate: String?)] = []
     private(set) var tasks: [String] = []
 
@@ -28,6 +29,10 @@ final class FakeBackend: HelmBackend, @unchecked Sendable {
 
     func recentNotes(kind: String, limit: Int) async throws -> [RecentNote] {
         recents
+    }
+
+    func journalNotes(date: String) async throws -> [RecentNote] {
+        journals  // 服务端已按 journal_date 过滤,fake 直接回填
     }
 
     func listEvents(start: Date, end: Date) async throws -> [CalEvent] {
@@ -699,17 +704,19 @@ final class HealthDecodingTests: XCTestCase {
     }
 
     @MainActor
-    func testJournalTodayJoinsOnlyTodaysEntries() async {
+    func testJournalTodayJoinsServerFilteredEntries() async {
+        // T5 契约:journal_date 由服务端过滤,notch 只按返回顺序拼接。
         let backend = FakeBackend()
-        let today = NotchModel.dayString(Date())
-        backend.recents = [
-            RecentNote(id: 3, content: "晚上收尾", kind: "journal", createdAt: "\(today)T22:10:00"),
-            RecentNote(id: 2, content: "早上开工", kind: "journal", createdAt: "\(today)T09:00:00"),
-            RecentNote(id: 1, content: "昨天的", kind: "journal", createdAt: "2020-01-01T20:00:00"),
+        backend.journals = [
+            RecentNote(id: 2, content: "早上开工", kind: "journal", createdAt: "09:00"),
+            RecentNote(id: 3, content: "晚上收尾", kind: "journal", createdAt: "22:10"),
         ]
         let model = NotchModel(backend: backend)
         await model.loadJournalToday()
-        XCTAssertEqual(model.journalToday, "早上开工\n\n晚上收尾")  // 只今天,正序拼接
+        XCTAssertEqual(model.journalToday, "早上开工\n\n晚上收尾")
+        backend.journals = []
+        await model.loadJournalToday()
+        XCTAssertNil(model.journalToday)  // 空日诚实为 nil(显示「还没动笔」)
     }
 
 }

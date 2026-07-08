@@ -18,6 +18,8 @@ public protocol HelmBackend: Sendable {
     func ask(_ q: String) async throws -> String
     /// 最近的速记/日记(GET /api/notes?kind=),给「最近」条用。
     func recentNotes(kind: String, limit: Int) async throws -> [RecentNote]
+    /// 某天的日记原文列表(kind=journal&journal_date=YYYY-MM-DD;T5 契约)。
+    func journalNotes(date: String) async throws -> [RecentNote]
 }
 
 /// 「最近」条一行(速记/日记摘要)。
@@ -40,6 +42,7 @@ public extension HelmBackend {
     func listEvents(start: Date, end: Date) async throws -> [CalEvent] { [] }
     func ask(_ q: String) async throws -> String { throw URLError(.unsupportedURL) }
     func recentNotes(kind: String, limit: Int) async throws -> [RecentNote] { [] }
+    func journalNotes(date: String) async throws -> [RecentNote] { [] }
 }
 
 /// Talks to the local Helm FastAPI backend over HTTP (default loopback:8769).
@@ -135,6 +138,25 @@ public struct HelmClient: HelmBackend {
         return notes.map {
             RecentNote(id: $0.id, content: $0.content, kind: $0.kind,
                        createdAt: Self.clockTime($0.created_at) ?? "")
+        }
+    }
+
+    public func journalNotes(date: String) async throws -> [RecentNote] {
+        struct Note: Decodable {
+            let id: Int
+            let content: String
+            let kind: String
+            let created_at: String?
+        }
+        struct Reply: Decodable { let notes: [Note] }
+        var comps = URLComponents(
+            url: baseURL.appendingPathComponent("api/notes"), resolvingAgainstBaseURL: false)!
+        comps.queryItems = [URLQueryItem(name: "kind", value: "journal"),
+                            URLQueryItem(name: "journal_date", value: date)]
+        let (data, _) = try await session.data(from: comps.url!)
+        return try JSONDecoder().decode(Reply.self, from: data).notes.map {
+            RecentNote(id: $0.id, content: $0.content, kind: $0.kind,
+                       createdAt: $0.created_at ?? "")
         }
     }
 

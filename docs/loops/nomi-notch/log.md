@@ -132,3 +132,10 @@
 - 日记=每天一篇:journalTodayCard(日期头+字数 chip+今天全文可滚 104px+空态"还没动笔");数据 loadJournalToday(recentNotes kind=journal 过滤今天正序拼接,真数据);输入即续写(placeholder/按钮/hint 改),提交后今天卡即刷;日记预算 232→300。
 - 新测试:journalToday 只拼今天+正序;全套绿。已重打包重启预览。
 - 设计侧同轮:kinds 稿任务两列恢复+两层任务行+人话排期+分诊落待办;两稿 emoji 清零;已并 de71b0b 入 feat/nomi-reskin。
+
+## 2026-07-08 迭代 23 — 浅色折叠态+凹槽收窄+journal_date 口径 [用户反馈+T5 契约]
+- 浅色折叠态=白条(深色仍纯黑贴刘海);中央常驻黑凹槽条(深色隐形/浅色即 hw 黑条);两翼内容全 palette 化(logo 棕/文字 ink 系)。
+- 顶行凹槽 310→max(240, 物理刘海+20):两翼从 65pt 放宽到 ~100pt,浅色下 Helm 字不再撞进黑条隐形。
+- 吸收 T5 契约:journalToday 改吃 GET /api/notes?kind=journal&journal_date=(凌晨补写归属与主 app 一致);合并 origin/feat/nomi-kinds(冲突仅 backlog 契约通知,保留)。
+- 新增 light-collapsed 快照位;全测试绿;已重打包重启(worktree 承重路径)。
+- 待接:分诊回执 UI(triage:true + PATCH 改类,契约已上线)——下一个反馈间隙做。

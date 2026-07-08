@@ -90,7 +90,9 @@ struct NotchView: View {
         .frame(width: width, height: height, alignment: .top)
         // NOMI 单体生长:折叠=纯黑条;展开=面板底色(深 #0f0f11/浅 #fff)。
         // 玻璃材质暂退役(B11 设置页收尾时再定去留)。
-        .background((model.expanded || banner != nil || reminder != nil || dragOver) ? Color(model.nomi.shellBG) : .black)
+        .background((model.expanded || banner != nil || reminder != nil || dragOver)
+            ? Color(model.nomi.shellBG)
+            : (model.nomiDark ? .black : Color(model.nomi.shellBG)))  // 浅色折叠态=白(2026-07-08 用户)
         .clipShape(NotchShape(bottomRadius: (model.expanded || banner != nil || reminder != nil || dragOver)
             ? CGFloat(NomiTheme.openRadius) : CGFloat(NomiTheme.foldedRadius)))
         .animation(Nomi.ease(0.46), value: dragOver)  // drop 态生长/收回同 hover 手感
@@ -200,8 +202,12 @@ struct NotchView: View {
             collapsedLeft
                 .padding(.leading, 13)
                 .padding(.trailing, 11)
-            // Physical notch / camera gap, with the HTML camera lens dot.
-            Color.clear.frame(width: CGFloat(model.notchWidth))
+            // 摄像头区:常驻黑凹槽条(深色下与条同色隐形;浅色下即设计稿 hw 黑条)。
+            UnevenRoundedRectangle(
+                bottomLeadingRadius: CGFloat(NomiTheme.foldedRadius),
+                bottomTrailingRadius: CGFloat(NomiTheme.foldedRadius), style: .continuous)
+                .fill(.black)
+                .frame(width: CGFloat(model.notchWidth))
                 .overlay(alignment: .top) {
                     Circle().fill(Color(white: 0.05))
                         .overlay(Circle().stroke(Color(white: 0.17), lineWidth: 1))
@@ -229,18 +235,18 @@ struct NotchView: View {
     @ViewBuilder private var collapsedLeft: some View {
         if model.focusOn {
             HStack(spacing: 6) {
-                Image(systemName: "timer").font(.system(size: 11)).foregroundStyle(accent)
-                Text(model.focusWhat).font(.system(size: 10, weight: .medium)).foregroundStyle(.white).lineLimit(1)
+                Image(systemName: "timer").font(.system(size: 11)).foregroundStyle(Color(NomiTheme.g1))
+                Text(model.focusWhat).font(.system(size: 10, weight: .medium)).foregroundStyle(Color(model.nomi.ink)).lineLimit(1)
             }
         } else {
             HStack(spacing: 9) {
-                HelmLogoView(color: .white.opacity(0.92), size: 19)
+                HelmLogoView(color: Color(model.nomi.logo), size: 19)
                 if let np = model.nowPlaying {
                     MiniCover(artwork: nsArtwork(np))
                     if np.isPlaying {
                         WaveBars()
                     } else {
-                        Image(systemName: "pause.fill").font(.system(size: 9)).foregroundStyle(.white.opacity(0.5))
+                        Image(systemName: "pause.fill").font(.system(size: 9)).foregroundStyle(Color(model.nomi.ink3))
                     }
                 }
             }
@@ -288,17 +294,17 @@ struct NotchView: View {
             HStack(spacing: 5) {
                 Circle().fill(Nomi.ok).frame(width: 6, height: 6)
                 Text("\(running) live").font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.75))
+                    .foregroundStyle(Color(model.nomi.ink2))
             }
         } else if let ev = model.events.first {
             // HTML cev: next event "10:00 站会" (accent time + name).
             HStack(spacing: 5) {
-                Text(ev.when).font(.system(size: 10, weight: .bold)).foregroundStyle(accent).monospacedDigit()
-                Text(ev.summary).font(.system(size: 10)).foregroundStyle(.white.opacity(0.56))
+                Text(ev.when).font(.system(size: 10, weight: .bold)).foregroundStyle(Color(NomiTheme.g1)).monospacedDigit()
+                Text(ev.summary).font(.system(size: 10)).foregroundStyle(Color(model.nomi.ink2))
                     .lineLimit(1).frame(maxWidth: 80, alignment: .leading)
             }
         } else {
-            Circle().fill(.white.opacity(0.22)).frame(width: 8, height: 8)
+            Circle().fill(Color(model.nomi.hair)).frame(width: 8, height: 8)
         }
     }
 
@@ -345,8 +351,9 @@ struct NotchView: View {
     /// 右 tr(锁态 X+齿轮)。天气位暂空——无真实数据源,不放假灯(backlog Q3)。
     private var topBar: some View {
         let p = model.nomi
-        // 凹槽必须盖住物理摄像头;设计值 310,窄刘海机器也不低于物理宽+呼吸。
-        let stripW = max(CGFloat(NomiTheme.foldedWidth), CGFloat(model.notchWidth) + 20)
+        // 凹槽只需盖住物理摄像头+呼吸(240 下限);之前取设计值 310 会把
+        // 两翼挤到 65pt,浅色下 Helm 字撞进黑条隐形(2026-07-08 用户截图)。
+        let stripW = max(240, CGFloat(model.notchWidth) + 20)
         return ZStack {
             UnevenRoundedRectangle(
                 bottomLeadingRadius: CGFloat(NomiTheme.foldedRadius),
