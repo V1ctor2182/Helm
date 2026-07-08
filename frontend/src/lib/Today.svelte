@@ -9,12 +9,11 @@
   import { calendar } from './mail/calendarStore.svelte'
   import { toLocal, localHHMM } from './time'
 
-  // Today · A×C v3(DESIGN.md 层级三层制+左内右外,2026-07-05 用户定稿):
-  // 锚=72px 恒亮时钟;左列=我的一天(区块聚光,数字挂区块头右端,22px 大而暗);
-  // 右柱=世界输入(HN 简报+未来源占位)。参照稿 docs/design/explore-hier-ac.html。
+  // Today · NOMI 六卡仪表(阶段 4 R03,source: helm-journal-pro.html 今日板块):
+  // 问候+日期摘要 → 捕获坞 → 卡网格(任务/日程/日记/智能体/最近项目/今日收藏/简报)。
+  // 真数据全保留(A×C v3 的 derived 原样移植);ORAGE 时钟锚/聚光/右柱退场。
 
   let now = $state(new Date())
-  let focus = $state<'tasks' | 'journal' | 'agent' | 'recent' | 'schedule'>('tasks')
 
   interface BriefItem {
     title: string
@@ -35,7 +34,7 @@
         const r = await fetch('/api/briefing')
         if (r.ok) brief = ((await r.json()) as { items?: BriefItem[] }).items ?? []
       } catch {
-        /* 离线:简报柱显示占位 */
+        /* 离线:简报卡显示占位 */
       }
     })()
     const t = setInterval(() => (now = new Date()), 1000)
@@ -51,6 +50,14 @@
     const y0 = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
     return Math.ceil(((d.getTime() - y0.getTime()) / 86400000 + 1) / 7)
   })
+  const greeting = $derived.by(() => {
+    const h = now.getHours()
+    if (h < 6) return '夜深了'
+    if (h < 12) return '早上好'
+    if (h < 18) return '下午好'
+    return '晚上好'
+  })
+  const WD = ['日', '一', '二', '三', '四', '五', '六']
 
   // 任务:启用在前、按下次触发升序,取 3
   const topTasks = $derived(
@@ -64,16 +71,27 @@
     return toLocal(iso).getTime() - now.getTime() < 3_600_000
   }
 
-  // 日记:今日条目 + 字数 + 连续天数(journal_date 去重回溯)
+  // 日记:今日条目 + 字数 + 连续天数
   const todayEntries = $derived(notes.notes.filter((n) => n.kind === 'journal' && n.journal_date === todayStr))
   const todayChars = $derived(todayEntries.reduce((n, e) => n + e.content.length, 0))
+  // T4 每天一篇:今日多段按时间升序拼一篇(与 notch journalToday 同口径 \n\n)
+  const todayText = $derived(
+    [...todayEntries]
+      .sort((a, b) => (a.created_at ?? '').localeCompare(b.created_at ?? ''))
+      .map((e) => e.content)
+      .join('\n\n'),
+  )
+  function goJournal() {
+    layout.journalIntent = 'journal' // 落在记录页·日记 tab(今天的页可续写)
+    layout.setMode('journal')
+  }
   const streak = $derived.by(() => {
     const dates = new Set(
       notes.notes.filter((n) => n.kind === 'journal' && n.journal_date).map((n) => n.journal_date as string),
     )
     let count = 0
     const d = new Date(now)
-    if (!dates.has(todayStr)) d.setDate(d.getDate() - 1) // 今天还没写,从昨天数
+    if (!dates.has(todayStr)) d.setDate(d.getDate() - 1)
     for (;;) {
       const key = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
       if (!dates.has(key)) break
@@ -98,541 +116,382 @@
   const nextIn = $derived.by(() => {
     if (!nextEvent?.start) return ''
     const m = Math.max(0, Math.round((toLocal(nextEvent.start).getTime() - now.getTime()) / 60000))
-    return m < 60 ? `还有 ${m}M` : `还有 ${Math.floor(m / 60)}H ${m % 60}M`
+    return m < 60 ? `还有 ${m} 分钟` : `还有 ${Math.floor(m / 60)} 小时 ${m % 60} 分`
   })
 
-  // 快速动作行已删(2026-07-06 用户:与 Rail 导航/捕获坞重复,一个入口一件事)。
+  // 今日收藏:今天记的非日记条目,取 3(AI 收藏管线的产出)
+  const KIND_COLOR: Record<string, string> = {
+    youtube: '#ff2d2d', paper: '#8b5a2b', inspiration: '#0a84ff',
+    article: '#0a84ff', text: '#111114', task: 'var(--green)',
+  }
+  const todayCaptures = $derived(
+    notes.notes
+      .filter((n) => n.kind !== 'journal' && (n.created_at ?? '').slice(0, 10) === todayStr)
+      .slice(0, 3),
+  )
+  const capColor = (n: (typeof notes.notes)[number]) => KIND_COLOR[n.meta?.type ?? n.kind] ?? 'var(--t4)'
+  const capLabel = (n: (typeof notes.notes)[number]) => {
+    const t = n.meta?.type
+    return t === 'youtube' ? '视频' : t === 'paper' ? '论文' : t === 'article' || t === 'inspiration' ? '收藏' : n.kind === 'task' ? '任务' : '速记'
+  }
+
   function openProject(path: string) {
     void cockpit.openProject(path)
     layout.setMode('cockpit')
   }
 </script>
 
-<div class="rd3">
-  <!-- 屏锚:72px 重磅时钟,恒亮,不参与聚光 -->
-  <header class="dial">
-    <span class="clock">{pad2(now.getHours())}:{pad2(now.getMinutes())}<span class="sec">:{pad2(now.getSeconds())}</span></span>
-    <span class="datecol">
-      <span class="d1">{pad2(now.getMonth() + 1)}·{pad2(now.getDate())}</span>
-      <span class="d2">周{'日一二三四五六'[now.getDay()]} · W{weekNo}</span>
-    </span>
-    <span class="dmeta">
-      <span>{tasks.tasks.length} TASKS · {agent.runs.length} RUNS</span>
-      {#if runningCount > 0}<span class="acc">{runningCount} RUNNING</span>{/if}
-    </span>
+<div class="v-today">
+  <header class="greet">
+    <h1 class="hi">{greeting},Victor</h1>
+    <p class="sub">
+      {now.getMonth() + 1}月{now.getDate()}日 周{WD[now.getDay()]} · 第 {weekNo} 周
+      · 今天 {calendar.events.length} 个日程、{enabledCount} 个定时任务在跑
+      · {pad2(now.getHours())}:{pad2(now.getMinutes())}
+    </p>
   </header>
 
-  <div class="body3">
-    <!-- 左列:我的一天(聚光系统) -->
-    <div class="ledger" role="list">
-      <!-- 捕获坞:notch 5-kind 同款(2026-07-05 用户:这几个放在一起) -->
-      <CaptureDock />
-      <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
-      <section role="listitem" class="blk" class:focus={focus === 'tasks'} onclick={() => (focus = 'tasks')}>
-        <div class="bh">
-          <span class="bt">任务</span><span class="bl">TASKS · 今日</span>
-          <span class="rule"></span>
-          <span class="key">{enabledCount}<span class="ks">/{tasks.tasks.length} 启用</span></span>
-        </div>
-        {#if topTasks.length === 0}
-          <div class="emptyline">没有定时任务 — 记录 → 任务 里建一个。</div>
-        {:else}
-          {#each topTasks as t (t.id)}
-            <div class="task">
-              <button
-                class="cbx"
-                class:done={t.enabled}
-                aria-pressed={t.enabled}
-                aria-label={`启用 ${t.name}`}
-                onclick={(e) => {
-                  e.stopPropagation()
-                  void tasks.toggle(t)
-                }}
-              ></button>
-              <span class:strk={!t.enabled}>{t.name}</span>
-              <span class="due" class:hot={t.enabled && dueSoon(t.next_run)}>{t.enabled ? localHHMM(t.next_run) || '—' : '停用'}</span>
-            </div>
-          {/each}
-        {/if}
-      </section>
+  <CaptureDock />
 
-      <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
-      <section role="listitem" class="blk" class:focus={focus === 'journal'} onclick={() => (focus = 'journal')}>
-        <div class="bh">
-          <span class="bt">日记</span><span class="bl">JOURNAL · {pad2(now.getHours())}:{pad2(now.getMinutes())}</span>
-          <span class="rule"></span>
-          <span class="key">{todayChars}<span class="ks"> 字{streak > 0 ? ` · 连 ${streak} 天` : ''}</span></span>
-        </div>
-        <div class="jr">
-          <span class="car" aria-hidden="true"></span>
-          {#if todayEntries.length === 0}
-            写两行今天…
+  <div class="tgrid">
+    <!-- 任务 · 今日 -->
+    <section class="card">
+      <div class="pad">
+        <span class="appic" style="background:var(--green)">T</span>
+        <div class="ti">任务 · 今日</div>
+        <div class="rows">
+          {#if topTasks.length === 0}
+            <p class="ghost">没有定时任务 — 记录 → 任务 里建一个。</p>
           {:else}
-            {todayEntries[todayEntries.length - 1].content.slice(0, 42)}
-          {/if}
-          <button
-            class="aibtn"
-            onclick={(e) => {
-              e.stopPropagation()
-              layout.setMode('journal')
-            }}>AI 今日小结</button
-          >
-        </div>
-      </section>
-
-      <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
-      <section role="listitem" class="blk" class:focus={focus === 'agent'} onclick={() => (focus = 'agent')}>
-        <div class="bh">
-          <span class="bt">智能体</span><span class="bl">AGENT · {runningCount > 0 ? 'RUNNING' : 'IDLE'}</span>
-          <span class="rule"></span>
-          <span class="key">{lastRunTime ?? '—'}<span class="ks"> 上次运行</span></span>
-        </div>
-        {#if latestRuns.length === 0}
-          <div class="emptyline">没有 agent 运行 — 驾驶舱里跑一条。</div>
-        {:else}
-          {#each latestRuns as r (r.id)}
-            <div class="agl">
-              <span
-                class="sdot"
-                class:run={r.status === 'running'}
-                class:ok={r.status === 'completed' || r.status === 'done'}
-                class:err={r.status === 'failed' || r.status === 'error'}
-                aria-hidden="true"
-              ></span>
-              <span class="nm">{r.agent}</span>
-              <span class="ac">{(r.prompt ?? '').slice(0, 44) || r.status}</span>
-              <span class="st">{r.started_at ? localHHMM(r.started_at) : r.status.toUpperCase()}</span>
-            </div>
-          {/each}
-        {/if}
-      </section>
-
-      <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
-      <section role="listitem" class="blk" class:focus={focus === 'recent'} onclick={() => (focus = 'recent')}>
-        <div class="bh">
-          <span class="bt">最近</span><span class="bl">RECENT · 项目</span>
-          <span class="rule"></span>
-          <span class="key">{cockpit.projects.length}<span class="ks"> 项目</span></span>
-        </div>
-        {#if recent.length === 0}
-          <div class="emptyline">还没有项目 — 驾驶舱里打开一个文件夹。</div>
-        {:else}
-          <div class="chips">
-            {#each recent as p (p.path)}
-              <button
-                class="chip"
-                onclick={(e) => {
-                  e.stopPropagation()
-                  openProject(p.path)
-                }}
-              >
-                <b>{p.name}</b>
-              </button>
+            {#each topTasks as t (t.id)}
+              <div class="rowline">
+                <span class="dotc" style="background:{t.enabled ? 'var(--green)' : 'var(--t4)'}"></span>
+                <span class="rt">{t.name}</span>
+                <span class="r" class:soon={dueSoon(t.next_run)}>{t.next_run ? localHHMM(t.next_run) : t.schedule_kind}</span>
+              </div>
             {/each}
-          </div>
-        {/if}
-      </section>
-
-      <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
-      <section role="listitem" class="blk last" class:focus={focus === 'schedule'} onclick={() => (focus = 'schedule')}>
-        <div class="bh">
-          <span class="bt">日程</span><span class="bl">SCHEDULE · 下一项</span>
-          <span class="rule"></span>
-          <span class="key">{nextEvent?.start ? localHHMM(nextEvent.start) : '—'}<span class="ks"> {nextIn}</span></span>
+          {/if}
         </div>
-        {#if !nextEvent}
-          <div class="emptyline">没有即将到来的日程。</div>
-        {:else}
-          <div class="evline">
-            <span class="from">{nextEvent.summary}</span>
-            {#if nextEvent.location}<span class="sj">— {nextEvent.location}</span>{/if}
-          </div>
-        {/if}
-      </section>
+      </div>
+      <div class="foot"><span class="tm">{enabledCount} 项启用</span></div>
+    </section>
 
-    </div>
-
-    <!-- 右柱:世界输入(常亮 chrome,不参与聚光) -->
-    <aside class="brief" aria-label="世界输入">
-      <div class="bhh"><span>BRIEFING</span><span class="r">世界输入</span></div>
-      <div class="bsec">
-        <div class="blab"><span>NEWS</span><span class="r">Hacker News{brief.length ? ` · ${brief.length} 条` : ''}</span></div>
-        {#if brief.length === 0}
-          <p class="bempty">拿不到头条 — 离线或源超时。</p>
+    <!-- 日程 · 下一项 -->
+    <section class="card">
+      <div class="pad">
+        <span class="appic grad">E</span>
+        <div class="ti">日程 · 下一项</div>
+        {#if nextEvent}
+          <div class="stat"><span class="big">{nextEvent.start ? localHHMM(nextEvent.start) : '—'}</span>
+            <span class="u">{nextEvent.summary} · {nextIn}</span></div>
         {:else}
-          {#each brief as b (b.url)}
-            <button class="news" onclick={() => window.open(b.url, '_blank')}>
-              <span class="nt">{b.title}</span>
-              <span class="nm2">{b.source} · {b.ago}</span>
-            </button>
-          {/each}
+          <p class="ghost">没有即将到来的日程。</p>
         {/if}
       </div>
-      <div class="ghost">+ 接入更多源 — RSS · 行情 · Newsletter</div>
-    </aside>
+      <div class="foot"><span class="tm">今天 {calendar.events.length} 项</span></div>
+    </section>
+
+    <!-- 日记 · 今天(T4 每天一篇:全文预览 + 续写 →) -->
+    <section class="card">
+      <div class="pad">
+        <span class="appic" style="background:#c9a227">J</span>
+        <div class="ti">日记 · 今天</div>
+        <div class="stat"><span class="big">{todayChars}</span><span class="u">字 · 连续 {streak} 天</span></div>
+        {#if todayText}
+          <p class="jprev">{todayText}</p>
+        {:else}
+          <p class="ghost">今天还没写 — 从一句话开始。</p>
+        {/if}
+        <button class="aibtn" onclick={goJournal}>
+          <span class="spark" aria-hidden="true"></span>AI 今日小结
+        </button>
+      </div>
+      <div class="foot"><span class="tm">{todayEntries.length} 段</span>
+        <button class="linkish" onclick={goJournal}>续写 →</button></div>
+    </section>
+
+    <!-- 智能体 -->
+    <section class="card">
+      <div class="pad">
+        <span class="appic" style="background:linear-gradient(135deg,#34d6c0,#0a84ff)">A</span>
+        <div class="ti">智能体</div>
+        <div class="rows">
+          {#if latestRuns.length === 0}
+            <p class="ghost">没有 agent 运行 — 驾驶舱里跑一条。</p>
+          {:else}
+            {#each latestRuns as r (r.id)}
+              <div class="rowline">
+                <span class="dotc" style="background:{r.status === 'running' ? 'var(--green)' : 'var(--t4)'}"></span>
+                <span class="rt">{(r.prompt ?? '').slice(0, 26)}</span>
+                <span class="r">{r.status}</span>
+              </div>
+            {/each}
+          {/if}
+        </div>
+      </div>
+      <div class="foot"><span class="tm">{runningCount} live{lastRunTime ? ` · 上次 ${lastRunTime}` : ''}</span></div>
+    </section>
+
+    <!-- 最近项目 -->
+    <section class="card">
+      <div class="pad">
+        <span class="appic" style="background:linear-gradient(135deg,#34d6c0,#0a84ff)">P</span>
+        <div class="ti">最近项目</div>
+        <div class="pills">
+          {#if recent.length === 0}
+            <p class="ghost">还没有项目 — 驾驶舱里打开一个。</p>
+          {:else}
+            {#each recent as p (p.path)}
+              <button class="minipill" onclick={() => openProject(p.path)}>{p.name}</button>
+            {/each}
+          {/if}
+        </div>
+      </div>
+      <div class="foot"><span class="tm">{cockpit.projects.length} 个</span></div>
+    </section>
+
+    <!-- 今日收藏 -->
+    <section class="card">
+      <div class="pad">
+        <span class="appic" style="background:#ff2d2d">R</span>
+        <div class="ti">今日收藏</div>
+        <div class="rows">
+          {#if todayCaptures.length === 0}
+            <p class="ghost">今天还没记 — 上面随手记一笔。</p>
+          {:else}
+            {#each todayCaptures as n (n.id)}
+              <div class="rowline">
+                <span class="dotc" style="background:{capColor(n)}"></span>
+                <span class="rt">{n.meta?.title ?? n.title ?? n.content.slice(0, 24)}</span>
+                <span class="r">{capLabel(n)}</span>
+              </div>
+            {/each}
+          {/if}
+        </div>
+      </div>
+      <div class="foot"><button class="linkish" onclick={() => layout.setMode('journal')}>记录 →</button></div>
+    </section>
+
+    <!-- 简报 · 世界输入(功能保留,设计稿未画:以同款卡呈现) -->
+    <section class="card" aria-label="世界输入">
+      <div class="pad">
+        <span class="appic" style="background:var(--t1);color:var(--onink)">B</span>
+        <div class="ti">简报 · 世界输入</div>
+        <div class="rows">
+          {#if brief.length === 0}
+            <p class="ghost">暂无简报 — 接入更多源(RSS · 行情 · Newsletter)。</p>
+          {:else}
+            {#each brief.slice(0, 3) as b (b.url)}
+              <div class="rowline">
+                <span class="dotc" style="background:var(--g1)"></span>
+                <a class="rt" href={b.url} target="_blank" rel="noreferrer">{b.title}</a>
+                <span class="r">{b.ago}</span>
+              </div>
+            {/each}
+          {/if}
+        </div>
+      </div>
+      <div class="foot"><span class="tm">{brief.length ? `Hacker News · ${brief.length} 条` : 'BRIEFING'}</span></div>
+    </section>
   </div>
 </div>
 
 <style>
-  .rd3 {
+  .v-today {
     height: 100%;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    font-family: var(--sans);
-  }
-
-  /* —— 屏锚(恒亮) —— */
-  .dial {
-    display: flex;
-    align-items: flex-end;
-    gap: 26px;
-    flex: none;
-    padding: 22px 42px 16px;
-    border-bottom: 1px solid var(--line);
-    max-width: 100%;
-  }
-  .clock {
-    font: 800 72px/0.94 var(--mono);
-    letter-spacing: -2px;
-    color: var(--t1);
-    font-variant-numeric: tabular-nums;
-  }
-  .clock .sec {
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--t4);
-    letter-spacing: 0;
-  }
-  .datecol {
-    display: flex;
-    flex-direction: column;
-    padding-bottom: 6px;
-  }
-  .datecol .d1 {
-    font: 800 22px/1.1 var(--mono);
-    color: var(--t1);
-    letter-spacing: 1px;
-    font-variant-numeric: tabular-nums;
-  }
-  .datecol .d2 {
-    font: 400 12px/1.6 var(--mono);
-    color: var(--t3);
-    letter-spacing: 2px;
-  }
-  .dmeta {
-    margin-left: auto;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 2px;
-    padding-bottom: 6px;
-    font: 700 9px/1.6 var(--mono);
-    letter-spacing: 1.5px;
-    color: var(--t4);
-    text-transform: uppercase;
-    font-variant-numeric: tabular-nums;
-  }
-  .dmeta .acc {
-    color: var(--acc-ink);
-  }
-
-  /* —— 两区 —— */
-  .body3 {
-    flex: 1;
-    min-height: 0;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 300px;
-  }
-  .ledger {
-    min-width: 0;
     overflow-y: auto;
+    padding: 10px 28px 30px;
+  }
+  .greet {
+    margin: 8px 4px 18px;
+  }
+  .hi {
+    font: 800 26px/1.2 var(--sans);
+    letter-spacing: -0.3px;
+    color: var(--t1);
+    margin: 0;
+  }
+  .sub {
+    font: 400 13.5px/1.5 var(--sans);
+    color: var(--t4);
+    margin: 4px 0 0;
+  }
+
+  .tgrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-top: 18px;
+  }
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
     display: flex;
     flex-direction: column;
+    transition: box-shadow var(--dur-micro) var(--ease);
   }
-
-  /* —— 区块聚光制 —— */
-  .blk {
-    padding: 13px 30px 12px 40px;
-    cursor: default;
-    box-shadow: inset 2px 0 0 transparent;
-    transition:
-      background 0.28s cubic-bezier(0.32, 0.72, 0, 1),
-      box-shadow 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  .card:hover {
+    box-shadow: var(--shadow-lg);
   }
-  .blk + .blk {
-    border-top: 1px solid var(--hair);
-  }
-  .blk.focus {
-    background: var(--tile);
-    box-shadow: inset 2px 0 0 var(--acc);
-  }
-  /* 区块头:名 15/700 + 9 标签 + 发丝撑开 + 22px key 挂右端 */
-  .bh {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-    margin-bottom: 8px;
-  }
-  .bt {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--t3);
-  }
-  .bl {
-    font: 700 9px/1 var(--mono);
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: var(--t4);
-  }
-  .rule {
+  .pad {
+    padding: 14px 16px 10px;
     flex: 1;
-    height: 1px;
-    background: var(--hair);
-    align-self: center;
   }
-  .key {
-    font: 700 22px/1 var(--mono);
-    color: var(--t4);
-    font-variant-numeric: tabular-nums;
-    letter-spacing: -0.5px;
-    white-space: nowrap;
+  .appic {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font: 800 11px/1 var(--sans);
+    margin-bottom: 9px;
   }
-  .key .ks {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    color: var(--t4);
+  .appic.grad {
+    background: linear-gradient(135deg, var(--g1), var(--g2));
   }
-  .blk.focus .bt {
+  .ti {
+    font: 600 14px/1.35 var(--sans);
     color: var(--t1);
   }
-  .blk.focus .key {
-    color: var(--acc-ink);
+  .rows {
+    margin-top: 10px;
   }
-  .blk.focus .key .ks {
-    color: var(--t3);
-  }
-
-  /* 区块内容(焦点亮/非焦点暗) */
-  .blk {
-    color: var(--t4);
-  }
-  .blk.focus {
-    color: var(--t2);
-  }
-  .task {
+  .rowline {
     display: flex;
     align-items: center;
     gap: 9px;
-    font-size: 15px;
-    padding: 3px 0;
+    font: 400 12.5px/1.4 var(--sans);
+    color: var(--t3);
+    padding: 7px 0;
+    border-top: 1px solid var(--hair);
+    min-width: 0;
   }
-  .blk.focus .task {
+  .rowline:first-child {
+    border-top: none;
+  }
+  .dotc {
+    width: 8px;
+    height: 8px;
+    border-radius: 3px;
+    flex: none;
+  }
+  .rt {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--t2);
+    text-decoration: none;
+  }
+  a.rt:hover {
     color: var(--t1);
   }
-  .cbx {
-    width: 13px;
-    height: 13px;
-    border: 1px solid var(--t4);
-    background: transparent;
-    cursor: pointer;
-    flex: none;
-    padding: 0;
-  }
-  .cbx.done {
-    background: var(--t4);
-  }
-  .blk.focus .cbx {
-    border-color: var(--t3);
-  }
-  .strk {
-    text-decoration: line-through;
-    opacity: 0.6;
-  }
-  .due {
+  .r {
     margin-left: auto;
-    font: 400 12px/1 var(--mono);
-    font-variant-numeric: tabular-nums;
+    font: 400 11px/1 var(--sans);
+    color: var(--t4);
+    flex: none;
   }
-  .due.hot {
-    color: var(--acc-ink);
+  .r.soon {
+    color: var(--orange);
   }
-  .emptyline {
-    font-size: 13px;
-    padding: 2px 0;
-  }
-  .jr {
+  .stat {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 15px;
+    align-items: baseline;
+    gap: 6px;
+    margin-top: 10px;
   }
-  .car {
-    width: 2px;
-    height: 16px;
-    background: var(--acc);
-    animation: blink 1.1s steps(1) infinite;
+  .big {
+    font: 800 30px/1 var(--sans);
+    letter-spacing: -0.5px;
+    color: var(--t1);
   }
-  @keyframes blink {
-    50% {
-      opacity: 0;
-    }
+  .u {
+    font: 400 12px/1.4 var(--sans);
+    color: var(--t4);
+  }
+  .ghost {
+    font: 400 12px/1.5 var(--sans);
+    color: var(--t4);
+    margin: 8px 0;
+  }
+  /* T4 每天一篇:今日聚合全文预览(clamp 5 行,续写 → 看全文) */
+  .jprev {
+    font: 400 12.5px/1.65 var(--sans);
+    color: var(--t2);
+    margin: 8px 0 2px;
+    white-space: pre-line;
+    display: -webkit-box;
+    -webkit-line-clamp: 5;
+    line-clamp: 5;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .pills {
+    margin-top: 12px;
+  }
+  .minipill {
+    display: inline-block;
+    font: 500 11.5px/1 var(--sans);
+    background: var(--pill);
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 6px 12px;
+    color: var(--t3);
+    cursor: pointer;
+    margin: 0 6px 6px 0;
+  }
+  .minipill:hover {
+    color: var(--t1);
+    background: color-mix(in srgb, var(--pill) 80%, var(--t4) 20%);
   }
   .aibtn {
-    margin-left: auto;
-    font: 700 10px/1 var(--mono);
-    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--card);
+    border: 1px solid var(--hair);
+    border-radius: var(--radius-pill);
+    padding: 7px 14px;
+    font: 400 12px/1 var(--sans);
     color: var(--t3);
-    background: transparent;
-    border: 1px solid var(--line);
-    padding: 5px 10px;
     cursor: pointer;
+    margin-top: 10px;
   }
   .aibtn:hover {
     color: var(--t1);
-    border-color: var(--acc);
+    border-color: var(--t4);
   }
-  .agl {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    font-size: 13px;
-    padding: 2px 0;
-  }
-  .sdot {
-    width: 7px;
-    height: 7px;
+  .spark {
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
-    background: var(--t4);
-    align-self: center;
+    background: conic-gradient(from 210deg, var(--g1), var(--g2), var(--g1));
   }
-  .sdot.run {
-    background: var(--acc);
+  .foot {
+    display: flex;
+    align-items: center;
+    padding: 6px 16px 12px;
+    color: var(--t4);
   }
-  .sdot.ok {
-    background: var(--green);
-  }
-  .sdot.err {
-    background: var(--red, #d33);
-  }
-  .agl .nm {
-    font-weight: 600;
-  }
-  .agl .ac {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .agl .st {
+  .tm {
     margin-left: auto;
-    font: 400 11px/1 var(--mono);
-    font-variant-numeric: tabular-nums;
+    font: 400 10.5px/1 var(--sans);
   }
-  .chips {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .chip {
-    font: 400 12px/1 var(--mono);
-    color: inherit;
-    background: transparent;
-    border: 1px solid var(--line);
-    padding: 6px 12px;
-    cursor: pointer;
-  }
-  .chip b {
-    font-weight: 700;
-  }
-  .blk.focus .chip:hover {
-    border-color: var(--acc);
-    color: var(--t1);
-  }
-  .evline {
-    font-size: 15px;
-  }
-  .evline .sj {
-    color: var(--t4);
-  }
-  .blk.last {
-    flex: none;
-  }
-  /* —— 右柱:世界输入(常亮) —— */
-  .brief {
-    border-left: 1px solid var(--line);
-    background: var(--chrome);
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    overflow-y: auto;
-  }
-  .bhh {
-    display: flex;
-    justify-content: space-between;
-    padding: 12px 16px 10px;
-    font: 700 9px/1 var(--mono);
-    letter-spacing: 2px;
+  .linkish {
+    margin-left: auto;
+    font: 500 10.5px/1 var(--sans);
     color: var(--t3);
-    border-bottom: 1px solid var(--hair);
-  }
-  .bhh .r {
-    color: var(--t4);
-    letter-spacing: 1px;
-  }
-  .bsec {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--hair);
-  }
-  .blab {
-    display: flex;
-    justify-content: space-between;
-    font: 700 9px/1 var(--mono);
-    letter-spacing: 1.5px;
-    color: var(--t4);
-    margin-bottom: 10px;
-  }
-  .news {
-    display: block;
-    width: 100%;
-    text-align: left;
-    background: transparent;
+    background: none;
     border: 0;
-    padding: 5px 0;
     cursor: pointer;
+    padding: 0;
   }
-  .news .nt {
-    display: block;
-    font-size: 12.5px;
-    color: var(--t2);
-    line-height: 1.45;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-  }
-  .news:hover .nt {
+  .linkish:hover {
     color: var(--t1);
-  }
-  .news .nm2 {
-    display: block;
-    font: 400 9px/1.8 var(--mono);
-    letter-spacing: 0.5px;
-    color: var(--t4);
-  }
-  .bempty {
-    font-size: 12px;
-    color: var(--t4);
-    margin: 0;
-  }
-  .ghost {
-    margin: 12px 16px;
-    border: 1px dashed var(--line);
-    padding: 12px;
-    font: 400 10px/1.7 var(--mono);
-    letter-spacing: 0.5px;
-    color: var(--t4);
   }
 </style>

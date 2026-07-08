@@ -33,3 +33,12 @@
 ## 新需求(2026-07-07 用户提出,设计已入两稿待过目)
 - **日记=每天一篇**:notch 日记 kind 加「今天卡」(日期/连续天数/今日预览)+续写语义;主 app TODAY 日记卡加预览+续写→。落地:notch 侧纯 UI 可先做(读今日 journal notes 汇一篇);"连续 N 天"需后端算或本地推。
 - **速记 AI 分诊**:记录/想法/任务三分+时间地点抽取+结构化入库(任务自动建 task)+可纠正回执(对✓/改成记录/想法)。**依赖后端新契约**:notes 创建返回分诊结果(kind/时间/地点/task_id)或异步回执接口——notch 侧只做回执 UI,分诊管线在主 app/后端(转交主 app线)。
+
+## 契约通知 · 分诊/人话排期已发布(2026-07-08,主 app loop T5;只加不减,notch 现有调用不破)
+主 app 线批次 3 已上线以下契约(分支 feat/nomi-kinds,commit de9d806/ef5e76a),notch 可接回执 UI:
+- **notes KINDS 收编 `task`/`idea`**:POST /api/notes 的 kind 现接受 note|journal|focus|task|idea——notch「任务·给自己」落 kind:task 的 422 已修(前科平账)。
+- **分诊**:POST /api/notes 带 `"triage": true`(不传 kind)→ 后端规则判类+时间/地点双抽取;响应多一个 `triage` 块 `{kind, when, where, due, recurring, confident}`,note.meta 带 `when/where/due/triage{by,confident}`。规则拿不准(confident:false)时 enrich 的 LLM 会异步升格 kind(只从 note 升,不覆盖手动改类)。
+- **回执可纠**:PATCH /api/notes/{id} `{"kind": "..."}` 即改类回流;改成 journal 会自动补 journal_date。
+- **人话排期**:POST /api/tasks 只发 `{prompt}` 整句即可(「每天早上9点汇总未读邮件」),排期从句子解析,人话标签在 `schedule_value.nl`;GET /api/tasks/parse?q=… 可做输入实时徽章;没听出时间→422(detail 带提示)。notch「交给 agent」的 {prompt} 契约由 422 变为可用。
+- **口径差提醒(journalToday)**:notch 现按 createdAt 日过滤今天的日记,主 app 按 journal_date——凌晨补写昨天会两边归属不同。建议 notch 改吃 journal_date(GET /api/notes?kind=journal&journal_date=YYYY-MM-DD 已支持)。
+- 待办 UI 参考主 app T3:两层任务行(when 24h 内橙 chip/@where/速记分诊来源),稿 docs/design/helm-journal-kinds.html。

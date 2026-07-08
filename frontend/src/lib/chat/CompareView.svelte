@@ -150,7 +150,7 @@
   .pick input {
     background: transparent;
     border: 0;
-    border-bottom: 1px solid var(--hair);
+    border-radius: var(--radius-sm); background: var(--pill);
     color: var(--t1);
     font-family: var(--mono);
     font-size: 11px;
@@ -192,25 +192,26 @@
     background: var(--acc);
   }
   .act {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--t4);
-    background: transparent;
-    border: 1px solid var(--line);
-    padding: 4px 10px;
+    font: 500 11.5px/1 var(--sans);
+    color: var(--t3);
+    background: var(--pill);
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 7px 13px;
     cursor: pointer;
-    transition: color .12s var(--ease);
+    transition: all .12s var(--ease);
   }
   .act:hover:not(:disabled) {
     color: var(--t1);
   }
   .act.pri {
-    color: var(--acc-ink);
-    border-color: var(--acc-ink);
+    color: #fff;
+    background: var(--grad);
+    font-weight: 600;
   }
   .act.pri:disabled {
+    background: var(--pill);
     color: var(--t4);
-    border-color: var(--line);
     cursor: default;
   }
   .act.stop {
@@ -245,7 +246,7 @@
     flex: 1;
     background: transparent;
     border: 0;
-    border-bottom: 1px solid var(--hair);
+    border-radius: var(--radius-sm); background: var(--pill);
     color: var(--t1);
     font-size: 13px;
     padding: 4px 0 7px;

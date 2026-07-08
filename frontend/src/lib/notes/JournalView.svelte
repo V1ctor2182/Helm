@@ -9,22 +9,75 @@
   import { localHHMM, localDate, localDateTime } from '../time'
   import { ConfirmGate } from '../confirm.svelte'
   import Calendar from './Calendar.svelte'
+  import CanvasView from './CanvasView.svelte'
+  import JournalCanvas from './JournalCanvas.svelte'
+  import NoteDetail from './NoteDetail.svelte'
+  import PageDetail from './PageDetail.svelte'
+  import { focus } from '../focus.svelte'
+  import CaptureDock from '../CaptureDock.svelte'
 
-  let view = $state<'notes' | 'journal' | 'tasks' | 'calendar'>('notes')
+  // 三视图(阶段 4 R08,source: helm-journal-pro.html 记录板块)+kind 过滤。
+  let view = $state<'timeline' | 'canvas' | 'calendar'>('timeline')
+  let display = $state<'timeline' | 'canvas'>('timeline') // 速记/日记内部的展示偏好
+  // AI 归类(2026-07-08 用户确认):随便记,AI 静默归集合;墙可切按主题,胶囊可纠错,集合涌现
+  let groupBy = $state<'time' | 'topic'>('time')
+  const TKEY = 'helm.topics.ack' // {confirmed:[],dismissed:[]}
+  function tAck(): { confirmed: string[]; dismissed: string[] } {
+    try { return JSON.parse(localStorage.getItem(TKEY) ?? '') } catch { return { confirmed: [], dismissed: [] } }
+  }
+  function tSave(a: { confirmed: string[]; dismissed: string[] }) {
+    try { localStorage.setItem(TKEY, JSON.stringify(a)) } catch { /* test env */ }
+  }
+  let topicAck = $state(tAck())
+  const byTopic = $derived.by(() => {
+    const m = new Map<string, Note[]>()
+    const loose: Note[] = []
+    for (const n of noteItems) {
+      const t = n.meta?.topic
+      if (t && !topicAck.dismissed.includes(t)) (m.get(t) ?? m.set(t, []).get(t)!).push(n)
+      else loose.push(n)
+    }
+    return { topics: [...m.entries()].sort((a, b) => b[1].length - a[1].length), loose }
+  })
+  // 涌现:≥3 条且未确认过 → 建议卡
+  const suggestion = $derived(byTopic.topics.find(([t, xs]) => xs.length >= 3 && !topicAck.confirmed.includes(t)) ?? null)
+  async function unTopic(n: Note) {
+    const meta = { ...(n.meta ?? {}) }
+    delete meta.topic
+    await notes.updateMeta(n.id, meta)
+  }
+  // filter 共享自 layout(侧栏分类与页内 chips 同源)
+  const filterOf = () => layout.journalFilter
 
-  // 深链:侧栏「任务」等入口带着 tab 意图跳进来
+
+  // 深链兼容:旧四 tab 意图 → 三视图+过滤
   $effect(() => {
     if (layout.journalIntent) {
-      view = layout.journalIntent
+      const i = layout.journalIntent as string
+      if (i === 'calendar') view = 'calendar'
+      else {
+        view = 'timeline'
+        layout.journalFilter = i === 'tasks' ? 'task' : i === 'journal' ? 'journal' : 'all'
+      }
       layout.journalIntent = null
     }
   })
   let draft = $state('')
   let taskPrompt = $state('')
-  let taskKind = $state<'cron' | 'every' | 'at'>('cron')
-  let taskCron = $state('0 9 * * *')
-  let taskEvery = $state('3600')
-  let taskAt = $state('')
+  // T2 人话排期:边打字出排期徽章(后端 /api/tasks/parse,与提交同一解析器);
+  // cron/every/at 三模式表单退场,时间在句子里。
+  let parsedLabel = $state<string | null>(null)
+  let parseSeq = 0
+  function onDispatchInput(v: string) {
+    taskPrompt = v
+    const seq = ++parseSeq
+    setTimeout(() => {
+      if (seq !== parseSeq) return
+      void tasks.parse(taskPrompt).then((p) => {
+        if (seq === parseSeq) parsedLabel = p?.label ?? null
+      })
+    }, 250)
+  }
   const del = new ConfirmGate()
   // note→task flow: →任务 jumps here with the note pinned; submit uses
   // /to-task so linked_note_id survives (server takes the note's content).
@@ -32,8 +85,15 @@
   let fromNote = $state<Note | null>(null)
   // 行内编辑:editingId + 草稿
   let editingId = $state<number | null>(null)
+  let detailNote = $state<Note | null>(null)
+  let detailDay = $state<string | null>(null)
+  // K6 待办勾选:乐观划线,800ms 后删除(完成即清)
+  let doneIds = $state<Set<number>>(new Set())
+  function completeTodo(n: Note) {
+    doneIds = new Set([...doneIds, n.id])
+    setTimeout(() => void notes.remove(n.id), 800)
+  }
   let editDraft = $state('')
-  const promptValue = $derived(fromNote ? fromNote.content : taskPrompt)
 
   onMount(() => {
     // 头部计数要 notes+tasks;providers/日历按 tab 懒加载(见 $effect)。
@@ -44,7 +104,7 @@
   let providersLoaded = false
   let calendarLoaded = false
   $effect(() => {
-    if (view === 'journal' && !providersLoaded) {
+    if (layout.journalFilter === 'journal' && !providersLoaded) {
       providersLoaded = true
       void notes.loadProviders()
     }
@@ -56,27 +116,21 @@
   })
 
   function today(): string {
-    return new Date().toISOString().slice(0, 10)
+    // 本地日,不能用 toISOString(UTC)——凌晨 0-8 点会错一天(T4 修)
+    const d = new Date()
+    const p = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
   }
 
-  // 三模式调度值(cron 表达式=本地墙钟;at 的本地时间转 UTC ISO)
-  function scheduleValue(): Record<string, unknown> | null {
-    if (taskKind === 'cron') return taskCron.trim() ? { expr: taskCron.trim() } : null
-    if (taskKind === 'every') {
-      const n = Number(taskEvery)
-      return Number.isFinite(n) && n > 0 ? { seconds: n } : null
-    }
-    return taskAt ? { at: new Date(taskAt).toISOString() } : null
-  }
-
+  // T2 人话排期:整句(或 fromNote 时的时间短语)交给后端解析落库。
   async function addTask() {
-    const value = scheduleValue()
-    if (!value) return
     if (fromNote) {
       const pinned = fromNote
-      const ok = await notes.toTask(pinned.id, taskKind, value)
+      const ok = await notes.toTaskNL(pinned.id, taskPrompt.trim())
       if (ok) {
         fromNote = null
+        taskPrompt = ''
+        parsedLabel = null
         await tasks.load()
       } else if (!notes.notes.some((n) => n.id === pinned.id)) {
         notes.error = '速记已被删除,已取消关联'
@@ -85,8 +139,11 @@
       return
     }
     if (!taskPrompt.trim()) return
-    const ok = await tasks.create('', taskPrompt, taskKind, value)
-    if (ok) taskPrompt = ''
+    const ok = await tasks.createNL(taskPrompt)
+    if (ok) {
+      taskPrompt = ''
+      parsedLabel = null
+    }
   }
 
   // 已转任务标记:tasks 里 linked_note_id 指向的速记
@@ -114,14 +171,39 @@
 
   function noteToTask(n: Note) {
     fromNote = n
-    view = 'tasks'
+    view = 'timeline'
+    layout.journalFilter = 'task'
   }
 
   // One load, three derived views (kind split) — captures/journal/todos share the table.
-  const noteItems = $derived(notes.notes.filter((n) => n.kind === 'note'))
+  // T3:墙上混排 速记/想法/任务回执卡(稿:速记墙分诊徽章+墙上任务回执卡)。
+  const noteItems = $derived(
+    notes.notes.filter((n) => {
+      if (n.kind !== 'note' && n.kind !== 'idea' && n.kind !== 'task') return false
+      const f = layout.journalFilter
+      if (f === 'collect') return !!n.meta?.url
+      if (f === 'youtube' || f === 'paper' || f === 'inspiration') return n.meta?.type === f
+      return true
+    }),
+  )
   const journalItems = $derived(notes.notes.filter((n) => n.kind === 'journal' || n.kind === 'focus'))
-  // 「给自己」的任务(notch/捕获坞分流后落 notes kind:task)——任务 tab 顶部待办段。
-  const todoItems = $derived(notes.notes.filter((n) => n.kind === 'task'))
+  // 「给自己」的任务(分诊/捕获坞落 notes kind:task)——待办列。
+  // 稿:按临近排序,有时限的在上(due 升序),没时限的按新旧。
+  const todoItems = $derived(
+    [...notes.notes.filter((n) => n.kind === 'task')].sort((a, b) => {
+      const da = a.meta?.due
+      const db = b.meta?.due
+      if (da && db) return da.localeCompare(db)
+      if (da) return -1
+      if (db) return 1
+      return (b.created_at ?? '').localeCompare(a.created_at ?? '')
+    }),
+  )
+  // 24h 内(含已过期)= 橙色临近 chip
+  function dueSoon(n: Note): boolean {
+    const d = n.meta?.due
+    return !!d && new Date(d).getTime() - Date.now() < 24 * 3600e3
+  }
 
   // 速记按天分组(最新日在前;今天/昨天友好标)——2026-07-06 用户:页面要结构化。
   const notesByDate = $derived(
@@ -144,6 +226,8 @@
   }
 
   // Group journal entries by date (newest day first).
+  // T4 每天一篇:天内段落按时间升序拼一篇(与 notch journalToday 口径一致,
+  // \n\n 语义=段落续写);PageDetail 吃同一份序。
   const journalByDate = $derived(
     (() => {
       const groups = new Map<string, Note[]>()
@@ -151,7 +235,9 @@
         const d = n.journal_date ?? '未注明日期'
         ;(groups.get(d) ?? groups.set(d, []).get(d)!).push(n)
       }
-      return [...groups.entries()].sort((a, b) => b[0].localeCompare(a[0]))
+      return [...groups.entries()]
+        .map(([d, xs]) => [d, xs.sort((a, b) => (a.created_at ?? '').localeCompare(b.created_at ?? ''))] as [string, Note[]])
+        .sort((a, b) => b[0].localeCompare(a[0]))
     })(),
   )
 
@@ -161,280 +247,351 @@
 
   const pad3 = (n: number) => String(n).padStart(3, '0')
 
+  // K4 日记纸页:今日字数 + 连续天数(与 Today 同口径)
+  const jToday = $derived(journalItems.filter((n) => n.journal_date === today()))
+  const jTodayChars = $derived(jToday.reduce((a, e) => a + e.content.length, 0))
+  const jStreak = $derived.by(() => {
+    const dates = new Set(journalItems.filter((n) => n.journal_date).map((n) => n.journal_date as string))
+    let count = 0
+    const d = new Date()
+    const p2 = (x: number) => String(x).padStart(2, '0')
+    if (!dates.has(today())) d.setDate(d.getDate() - 1)
+    for (;;) {
+      const k = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`
+      if (!dates.has(k)) break
+      count += 1
+      d.setDate(d.getDate() - 1)
+    }
+    return count
+  })
+  function notesOfDay(day: string): Note[] {
+    return notes.notes.filter((n) => n.kind !== 'journal' && (n.created_at ?? '').slice(0, 10) === day)
+  }
+  const WD_ZH = ['日', '一', '二', '三', '四', '五', '六']
+  function weekdayOf(day: string): string {
+    const d = new Date(day + 'T00:00:00')
+    return Number.isNaN(d.getTime()) ? '' : `周${WD_ZH[d.getDay()]}`
+  }
+  function dayNum(day: string): string {
+    const m = day.match(/(\d{4})-(\d{2})-(\d{2})/)
+    return m ? `${Number(m[2])}月${Number(m[3])}日` : day
+  }
+
   async function add() {
     if (!draft.trim()) return
     const ok =
-      view === 'notes'
-        ? await notes.create(draft, 'note')
-        : await notes.create(draft, 'journal', today())
+      layout.journalFilter === 'journal'
+        ? await notes.create(draft, 'journal', today())
+        : await notes.create(draft, 'note')
     if (ok) draft = ''
   }
 </script>
 
 <section class="jnt" aria-label="日记 / 速记">
   <header class="head">
-    <h1>JOURNAL</h1>
-    <span class="hd">记录</span>
-    <span class="pg">{pad3(noteItems.length)} NOTES · {pad3(journalItems.length)} ENTRIES · {pad3(tasks.tasks.length)} TASKS</span>
+    <h1>记录</h1>
+    <span class="hd">速记 · 日记 · 任务 · 日历</span>
+    <span class="pg">{notes.notes.filter((n) => n.kind === 'note' || n.kind === 'idea').length} 条速记 · {journalItems.length} 篇日记 · {tasks.tasks.length} 个任务</span>
   </header>
 
-  <div class="seg" role="tablist" aria-label="速记 / 日记">
-    <button role="tab" aria-selected={view === 'notes'} class:active={view === 'notes'} onclick={() => (view = 'notes')}>速记</button>
-    <button role="tab" aria-selected={view === 'journal'} class:active={view === 'journal'} onclick={() => (view = 'journal')}>日记</button>
-    <button role="tab" aria-selected={view === 'tasks'} class:active={view === 'tasks'} onclick={() => (view = 'tasks')}>任务</button>
-    <button role="tab" aria-selected={view === 'calendar'} class:active={view === 'calendar'} onclick={() => (view = 'calendar')}>日历</button>
+  <!-- 分类为主维度(含日历=全量记录的日历视角);Canvas/Timeline 只是速记·日记内部
+       的展示方式,右侧两枚小 icon 切换(用户拍板 2026-07-08) -->
+  <div class="viewrow">
+    <div class="chips2" role="tablist" aria-label="分类">
+      <button role="tab" aria-selected={view !== 'calendar' && layout.journalFilter === 'all'} class:on={view !== 'calendar' && layout.journalFilter === 'all'} onclick={() => { view = display; layout.journalFilter = 'all' }}>全部</button>
+      <button role="tab" aria-selected={view !== 'calendar' && layout.journalFilter === 'note'} class:on={view !== 'calendar' && layout.journalFilter === 'note'} onclick={() => { view = display; layout.journalFilter = 'note' }}>速记</button>
+      <button role="tab" aria-selected={view !== 'calendar' && layout.journalFilter === 'journal'} class:on={view !== 'calendar' && layout.journalFilter === 'journal'} onclick={() => { view = display; layout.journalFilter = 'journal' }}>日记</button>
+      <button role="tab" aria-selected={view !== 'calendar' && layout.journalFilter === 'task'} class:on={view !== 'calendar' && layout.journalFilter === 'task'} onclick={() => { view = 'timeline'; layout.journalFilter = 'task' }}>任务</button>
+      <button role="tab" aria-selected={view === 'calendar'} class:on={view === 'calendar'} onclick={() => (view = 'calendar')}>日历</button>
+    </div>
+    {#if view !== 'calendar' && layout.journalFilter !== 'task'}
+      <div class="dispicons" role="group" aria-label="展示方式">
+        <button class="dic" class:on={view === 'timeline'} title="列表" aria-label="列表视图" onclick={() => { view = 'timeline'; display = 'timeline' }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="5" cy="18" r="1" fill="currentColor" stroke="none"/><path d="M9.5 6h10M9.5 12h10M9.5 18h10"/></svg>
+        </button>
+        <button class="dic" class:on={view === 'canvas'} title="画布" aria-label="画布视图" onclick={() => { view = 'canvas'; display = 'canvas' }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg>
+        </button>
+      </div>
+    {/if}
   </div>
+
+{#snippet wall(items: Note[], showTopic: boolean)}
+          <div class="wall">
+            {#each items as n (n.id)}
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <div
+                class="wcard"
+                class:plain={!n.meta?.url}
+                class:taskcard={n.kind === 'task'}
+                role="button"
+                tabindex="0"
+                onclick={() => (detailNote = n)}
+                onkeydown={(e) => e.key === 'Enter' && (detailNote = n)}
+              >
+                {#if editingId === n.id}
+                  <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+                  <div class="wpad" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
+                    <textarea class="editbox" bind:value={editDraft} aria-label="编辑内容" rows="3"></textarea>
+                    <span class="wacts show">
+                      <button class="act pri" onclick={saveEdit} disabled={!editDraft.trim()}>保存</button>
+                      <button class="act" onclick={() => (editingId = null)}>取消</button>
+                    </span>
+                  </div>
+                {:else}
+                  {#if n.meta?.url && n.meta.image}
+                    <img class="wcover" src={n.meta.image} alt="" loading="lazy" onerror={(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')} />
+                  {/if}
+                  <div class="wpad">
+                    {#if n.meta?.url}
+                      <span class="wbadge" style="background:{({ youtube: '#ff2d2d', paper: '#8b5a2b', inspiration: '#0a84ff' } as Record<string, string>)[n.meta.type ?? ''] ?? '#0a84ff'}">
+                        {({ youtube: 'YT', paper: 'AX', inspiration: 'AW' } as Record<string, string>)[n.meta.type ?? ''] ?? 'WEB'}
+                      </span>
+                      <span class="wti">{n.meta.title ?? n.meta.url}</span>
+                      {#if n.meta.summary}<p class="wsum">{n.meta.summary}</p>{/if}
+                    {:else}
+                      <span class="wbadge" style="background:var(--t1);color:var(--onink)">N</span>
+                      <!-- T3 分诊徽章:想法蓝 tag;任务=回执卡(tag+抽取 chips) -->
+                      {#if n.kind === 'idea'}
+                        <div class="tagrow"><span class="ntag idea">想法</span></div>
+                      {:else if n.kind === 'task'}
+                        <div class="tagrow">
+                          <span class="ntag task">任务</span>
+                          {#if n.meta?.when}<span class="ntag xc">{n.meta.when}</span>{/if}
+                          {#if n.meta?.where}<span class="ntag xc">@{n.meta.where}</span>{/if}
+                        </div>
+                      {/if}
+                      <span class="wtx">{n.content}</span>
+                    {/if}
+                    <div class="wfoot">
+                      {#if showTopic && n.meta?.topic && groupBy === 'topic'}
+                        <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+                        <span class="topicchip" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
+                          <i class="gspark sm" aria-hidden="true"></i>{n.meta.topic}
+                          <button class="tx-x" title="移出集合(AI 会学习)" aria-label={`移出集合 ${n.meta.topic}`} onclick={() => void unTopic(n)}>×</button>
+                        </span>
+                      {/if}
+                      {#if n.meta?.site}<span>{n.meta.site}</span>{/if}
+                      {#each n.meta?.tags ?? [] as t (t)}<span class="wtag">#{t}</span>{/each}
+                      {#if linkedNoteIds.has(n.id)}<span class="linked">已转任务</span>{/if}
+                      {#if n.kind === 'task'}
+                        <button class="gotask" onclick={(e) => { e.stopPropagation(); view = 'timeline'; layout.journalFilter = 'task' }}>已入待办 →</button>
+                      {/if}
+                      <span class="wtm">{localHHMM(n.created_at)}</span>
+                    </div>
+                    <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+                    <span class="wacts" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
+                      <button class="act" title="编辑" aria-label={`编辑 ${n.content}`} onclick={() => startEdit(n)}>编辑</button>
+                      <button class="act" title="转为今天的日记" onclick={() => notes.toJournal(n.id)}>→日记</button>
+                      <button class="act" title="存入记忆" onclick={() => notes.toMemory(n.id)}>→记忆</button>
+                      <button class="act" title="转为定时任务" onclick={() => noteToTask(n)}>→任务</button>
+                      <button
+                        class="act del"
+                        class:armed={del.pending === `note-${n.id}`}
+                        aria-label={`删除 ${n.content}`}
+                        onclick={() => del.confirm(`note-${n.id}`) && notes.remove(n.id)}
+                      >{del.pending === `note-${n.id}` ? '确认' : '×'}</button>
+                    </span>
+                  </div>
+                {/if}
+              </div>
+            {/each}
+          </div>
+{/snippet}
 
   {#if notes.error}<p class="err" role="alert">{notes.error}</p>{/if}
 
-  {#if view === 'notes' || view === 'journal'}
-    <div class="row">
-      <div class="gut"><span class="tm">{view === 'notes' ? '随手' : today().slice(5)}</span></div>
-      <form
-        class="compose"
-        onsubmit={(e) => {
-          e.preventDefault()
-          void add()
-        }}
-      >
-        <span class="car" aria-hidden="true"></span>
-        <textarea
-          placeholder={view === 'notes' ? '随手记一笔…' : '今天发生了什么?(支持 Markdown)'}
-          bind:value={draft}
-          aria-label={view === 'notes' ? '速记内容' : '日记内容'}
-          rows={view === 'notes' ? 1 : 3}
-          onkeydown={cmdEnter}
-        ></textarea>
-        <button class="act pri" type="submit" disabled={!draft.trim()}>{view === 'notes' ? '记一笔' : '写入今天'}</button>
-      </form>
-    </div>
+  {#if view === 'timeline' && layout.journalFilter !== 'task' && layout.journalFilter !== 'journal'}
+    <!-- 智能捕获坞(K7 判类内置):旧账本 compose 行退场,一个入口自动分流 -->
+    <CaptureDock />
   {/if}
 
-  {#if view === 'notes'}
-    <div class="row">
-      <div class="gut"><span class="tm">收集</span><br />{noteItems.length} 条</div>
-      <div>
-        <div class="h">速记 / SCRATCH</div>
+  {#if view === 'timeline'}
+  {#if ['all', 'note', 'collect', 'youtube', 'paper', 'inspiration'].includes(layout.journalFilter)}
+    <div class="wallwrap">
+        <div class="groupsw">
+          <button class="gsw" class:on={groupBy === 'time'} onclick={() => (groupBy = 'time')}>按时间</button>
+          <button class="gsw" class:on={groupBy === 'topic'} onclick={() => (groupBy = 'topic')}>
+            <span class="gspark" aria-hidden="true"></span>按主题 · AI
+          </button>
+        </div>
+        {#if focus.running}
+          <div class="focuslive">
+            <span class="fring" style="background:conic-gradient(var(--g1) 0deg, var(--g2) {focus.deg}deg, var(--pill) {focus.deg}deg)">
+              <span class="ftime">{focus.mmss}</span>
+            </span>
+            <span class="fmid">
+              <span class="fl">专注中</span>
+              <span class="fw">{focus.what || '未命名专注'}</span>
+            </span>
+            <button class="fstop" onclick={() => void focus.stop()}>停止并记入日记</button>
+          </div>
+        {/if}
         {#if noteItems.length === 0}
           <p class="empty">还没有速记 — 上面记一笔,或用 ⌘N 随手记。</p>
+        {:else if groupBy === 'topic'}
+          {#if suggestion}
+            <div class="aisuggest">
+              <span class="gspark" aria-hidden="true"></span>
+              <span>发现 {suggestion[1].length} 条关于 <b>{suggestion[0]}</b> 的记录 — 建一个集合?</span>
+              <button class="sgok" onclick={() => { topicAck = { ...topicAck, confirmed: [...topicAck.confirmed, suggestion![0]] }; tSave(topicAck) }}>创建集合</button>
+              <button class="sgno" onclick={() => { topicAck = { ...topicAck, dismissed: [...topicAck.dismissed, suggestion![0]] }; tSave(topicAck) }}>忽略</button>
+            </div>
+          {/if}
+          {#each byTopic.topics as [t, items] (t)}
+            <div class="topich"><span class="tdot" aria-hidden="true"></span><b>{t}</b>
+              <span class="tn">{items.length} 条 · AI 维护</span></div>
+            {@render wall(items, true)}
+          {/each}
+          {#if byTopic.loose.length > 0}
+            <div class="topich dim"><span class="tdot loose" aria-hidden="true"></span><b>未归类</b>
+              <span class="tn">{byTopic.loose.length} 条 · AI 攒够相似的会提议建集合</span></div>
+            {@render wall(byTopic.loose, false)}
+          {/if}
         {:else}
           {#each notesByDate as [d, items] (d)}
           <div class="dstamp">{dayLabel(d)}<span class="dn">{items.length} 条</span></div>
-          <ul class="list">
-            {#each items as n (n.id)}
-              <li class="note">
-                <span class="nt">{localHHMM(n.created_at)}</span>
-                {#if editingId === n.id}
-                  <textarea class="editbox" bind:value={editDraft} aria-label="编辑内容" rows="2"></textarea>
-                  <span class="acts">
-                    <button class="act pri" onclick={saveEdit} disabled={!editDraft.trim()}>保存</button>
-                    <button class="act" onclick={() => (editingId = null)}>取消</button>
-                  </span>
-                {:else}
-                <span class="body">{n.content}</span>
-                <span class="acts">
-                  {#if linkedNoteIds.has(n.id)}<span class="linked">已转任务</span>{/if}
-                  <button class="act" title="编辑" aria-label={`编辑 ${n.content}`} onclick={() => startEdit(n)}>编辑</button>
-                  <button class="act" title="转为今天的日记" onclick={() => notes.toJournal(n.id)}>→日记</button>
-                  <button class="act" title="存入记忆" onclick={() => notes.toMemory(n.id)}>→记忆</button>
-                  <button class="act" title="转为定时任务" onclick={() => noteToTask(n)}>→任务</button>
-                  <button
-                    class="act del"
-                    class:armed={del.pending === `note-${n.id}`}
-                    aria-label={`删除 ${n.content}`}
-                    onclick={() => del.confirm(`note-${n.id}`) && notes.remove(n.id)}
-                  >{del.pending === `note-${n.id}` ? '确认' : '×'}</button>
-                </span>
-                {#if n.meta?.url}
-                  <!-- AI 收藏卡:链接 parse 结果(YouTube/论文/文章/灵感) -->
-                  <div class="mcard">
-                    {#if n.meta.image}<img class="mimg" src={n.meta.image} alt="" loading="lazy" />{/if}
-                    <div class="mbody">
-                      <div class="mline1">
-                        <span class="mtype">{({ youtube: 'YOUTUBE', paper: 'PAPER', inspiration: 'INSPO' } as Record<string, string>)[n.meta.type ?? ''] ?? 'WEB'}</span>
-                        <a class="mtitle" href={n.meta.url} target="_blank" rel="noreferrer">{n.meta.title ?? n.meta.url}</a>
-                      </div>
-                      {#if n.meta.summary}<p class="msum">{n.meta.summary}</p>{/if}
-                      <div class="mfoot">
-                        {#if n.meta.site}<span>{n.meta.site}</span>{/if}
-                        {#each n.meta.tags ?? [] as t (t)}<span class="mtag">#{t}</span>{/each}
-                      </div>
-                    </div>
-                  </div>
-                {:else if n.meta && (n.meta.tags?.length || n.meta.when || n.meta.where)}
-                  <div class="mlite">
-                    {#each n.meta.tags ?? [] as t (t)}<span class="mtag">#{t}</span>{/each}
-                    {#if n.meta.when}<span>⏱ {n.meta.when}</span>{/if}
-                    {#if n.meta.where}<span>◎ {n.meta.where}</span>{/if}
-                  </div>
-                {/if}
-                {/if}
-              </li>
-            {/each}
-          </ul>
+          <!-- K1 瀑布卡墙(稿:helm-journal-kinds.html 速记态):便签/收藏卡混排 -->
+          {@render wall(items, true)}
           {/each}
         {/if}
-      </div>
     </div>
-  {:else if view === 'journal'}
-    <div class="row">
-      <div class="gut"><span class="tm">AI</span></div>
-      <div>
-        <div class="h">今日小结 / SUMMARY</div>
-        <span class="sumbtns">
-          <button class="act pri" onclick={() => notes.summarizeToday(today())} disabled={notes.summarizing}>
-            {notes.summarizing ? '生成中…' : 'AI 今日小结'}
-          </button>
-          <button class="act" onclick={() => notes.summarizeToday(today(), 7)} disabled={notes.summarizing}>周回顾</button>
+  {:else if layout.journalFilter === 'journal'}
+    <!-- K4 日记纸页(稿:helm-journal-kinds.html 日记态):窄栏/今天的页/一天一页 -->
+    <div class="paper">
+      <div class="streakbar">
+        <span class="s"><span class="big">{jTodayChars}</span><span class="u">字 · 今天</span></span>
+        <span class="s"><span class="big">{jStreak}</span><span class="u">天连续</span></span>
+        <button class="aibtn2" onclick={() => notes.summarizeToday(today())} disabled={notes.summarizing}>
+          <span class="spark2" aria-hidden="true"></span>{notes.summarizing ? '生成中…' : 'AI 今日小结'}
+        </button>
+        <button class="aibtn2" onclick={() => notes.summarizeToday(today(), 7)} disabled={notes.summarizing}>周回顾</button>
+      </div>
+      {#if notes.summary}
+        <div class="sumcard"><span class="spark2" aria-hidden="true"></span><p>{notes.summary}</p></div>
+      {/if}
+      <div class="todaypage">
+        <div class="dh"><span class="d">{dayNum(today())}</span><span class="w">{weekdayOf(today())} · 今天的页</span></div>
+        <textarea
+          placeholder="今天发生了什么?(支持 Markdown,⌘⏎ 写入)"
+          bind:value={draft}
+          onkeydown={cmdEnter}
+          aria-label="日记内容"
+        ></textarea>
+        <div class="actrow"><span class="hint2">⌘⏎ 写入今天 · Markdown</span>
+          <button class="act pri" onclick={() => void add()} disabled={!draft.trim()}>写入今天</button></div>
+      </div>
+      {#if journalByDate.length === 0}
+        <p class="empty">还没有日记 — 上面写下今天的第一条。</p>
+      {:else}
+        {#each journalByDate as [day, entries] (day)}
+          <section class="jpage">
+            <button class="dh openbtn" title="查看这一天" onclick={() => (detailDay = day)}>
+              <span class="d">{dayNum(day)}</span><span class="w">{weekdayOf(day)}</span>
+              <span class="cnt">{entries.reduce((a, e) => a + e.content.length, 0)} 字</span></button>
+            {#each entries as e (e.id)}
+              {#if editingId === e.id}
+                <textarea class="editbox" bind:value={editDraft} aria-label="编辑日记" rows="4"></textarea>
+                <span class="acts"><button class="act pri" onclick={saveEdit} disabled={!editDraft.trim()}>保存</button>
+                  <button class="act" onclick={() => (editingId = null)}>取消</button></span>
+              {:else}
+                <div class="md">{@html renderMd(e.content)}</div>
+                <span class="pacts">
+                  <button class="act" aria-label="编辑日记" onclick={() => startEdit(e)}>编辑</button>
+                  <button class="act del" class:armed={del.pending === `jr-${e.id}`} aria-label="删除日记"
+                    onclick={() => del.confirm(`jr-${e.id}`) && notes.remove(e.id)}>{del.pending === `jr-${e.id}` ? '确认' : '×'}</button>
+                </span>
+              {/if}
+            {/each}
+          </section>
+        {/each}
+      {/if}
+    </div>
+  {:else if layout.journalFilter === 'task'}
+    <!-- K6 任务操作台(稿:helm-journal-kinds.html 任务态):派发条 + 待办清单 + 定时卡 -->
+    <form
+      class="dispatch"
+      onsubmit={(e) => {
+        e.preventDefault()
+        void addTask()
+      }}
+    >
+      {#if fromNote}
+        <span class="chip">
+          自速记 #{fromNote.id}
+          <button type="button" class="act del" aria-label="取消关联速记"
+            onclick={() => { fromNote = null; taskPrompt = ''; parsedLabel = null }}>×</button>
         </span>
-        {#if notes.summary}
-          <div class="framed"><p class="summary">{notes.summary}</p></div>
-        {/if}
-      </div>
-    </div>
-    <div class="row">
-      <div class="gut"><span class="tm">条目</span><br />{journalItems.length} 条</div>
+      {/if}
+      <input
+        placeholder={fromNote
+          ? '什么时候?用人话说 —「每天早上 9 点」「明晚 8 点」…'
+          : '让 agent 做什么,时间用人话说 —「每天早上 9 点汇总未读邮件」「周五下午回顾本周」…'}
+        value={taskPrompt}
+        oninput={(e) => onDispatchInput(e.currentTarget.value)}
+        aria-label="任务指令"
+      />
+      {#if parsedLabel}
+        <span class="aiverdict"><span class="vspark" aria-hidden="true"></span>{parsedLabel}</span>
+      {/if}
+      <button class="act pri" type="submit" disabled={fromNote ? false : !taskPrompt.trim()}>交给 agent</button>
+    </form>
+    {#if tasks.error}<p class="err" role="alert">{tasks.error}</p>{/if}
+
+    <div class="taskcols">
       <div>
-        <div class="h">日记 / ENTRIES</div>
-        {#if journalByDate.length === 0}
-          <p class="empty">还没有日记 — 写下今天的第一条。</p>
+        <div class="colh"><span class="t">待办 · 给自己</span><span class="n">{todoItems.length} 条</span></div>
+        {#if todoItems.length === 0}
+          <p class="empty">没有待办 — 捕获坞/刘海里选「任务 · 给自己」记一条。</p>
         {:else}
-          <div>
-            {#each journalByDate as [day, entries] (day)}
-              <section class="day">
-                <h3>{day}</h3>
-                {#each entries as e (e.id)}
-                  <article class="entry">
-                    {#if editingId === e.id}
-                      <textarea class="editbox" bind:value={editDraft} aria-label="编辑日记" rows="4"></textarea>
-                      <span class="acts">
-                        <button class="act pri" onclick={saveEdit} disabled={!editDraft.trim()}>保存</button>
-                        <button class="act" onclick={() => (editingId = null)}>取消</button>
-                      </span>
-                    {:else}
-                    <div class="md">{@html renderMd(e.content)}</div>
-                    <button class="act" aria-label="编辑日记" onclick={() => startEdit(e)}>编辑</button>
-                    <button
-                      class="act del"
-                      class:armed={del.pending === `jr-${e.id}`}
-                      aria-label="删除日记"
-                      onclick={() => del.confirm(`jr-${e.id}`) && notes.remove(e.id)}
-                    >{del.pending === `jr-${e.id}` ? '确认' : '×'}</button>
-                    {/if}
-                  </article>
-                {/each}
-              </section>
+          <div class="todolist">
+            <!-- T3 两层任务行(稿):标题行 / 元信息 chips(临近 24h 橙);操作 hover 浮现 -->
+            {#each todoItems as n (n.id)}
+              <div class="todo" class:done={doneIds.has(n.id)}>
+                <button class="cb" aria-label={`完成 ${n.content}`} onclick={() => completeTodo(n)}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4 10-10"/></svg>
+                </button>
+                <div class="mid">
+                  <button class="tx openable2" title="查看详情" onclick={() => (detailNote = n)}>{n.content}</button>
+                  {#if n.meta?.when || n.meta?.where || n.meta?.triage}
+                    <div class="tmeta">
+                      {#if n.meta?.when}<span class="tchip" class:duesoon={dueSoon(n)}>{n.meta.when}</span>{/if}
+                      {#if n.meta?.where}<span class="tchip">@{n.meta.where}</span>{/if}
+                      {#if n.meta?.triage}<span class="tchip"><span class="gspark sm" aria-hidden="true"></span>速记分诊</span>{/if}
+                    </div>
+                  {/if}
+                </div>
+                <span class="acts">
+                  <button class="up" title="开始专注做这件事" onclick={() => { focus.start(n.content); layout.journalFilter = 'note' }}>专注</button>
+                  <button class="up" title="转为定时任务(交给 agent)" onclick={() => noteToTask(n)}>→ agent</button>
+                </span>
+              </div>
             {/each}
           </div>
         {/if}
       </div>
-    </div>
-  {:else if view === 'tasks'}
-    <div class="row">
-      <div class="gut"><span class="tm">派发</span></div>
-      <form
-        class="compose"
-        onsubmit={(e) => {
-          e.preventDefault()
-          void addTask()
-        }}
-      >
-        {#if fromNote}
-          <span class="chip">
-            自速记 #{fromNote.id}
-            <button
-              type="button"
-              class="act del"
-              aria-label="取消关联速记"
-              onclick={() => {
-                fromNote = null
-                taskPrompt = ''
-              }}>×</button
-            >
-          </span>
-        {/if}
-        <input
-          placeholder="到点让 agent 做什么(如:汇总未读邮件)…"
-          value={promptValue}
-          oninput={(e) => {
-            if (!fromNote) taskPrompt = e.currentTarget.value
-          }}
-          aria-label="任务指令"
-          readonly={fromNote !== null}
-        />
-        <select class="kind" bind:value={taskKind} aria-label="调度模式">
-          <option value="cron">cron</option>
-          <option value="every">every</option>
-          <option value="at">at</option>
-        </select>
-        {#if taskKind === 'cron'}
-          <input class="cron" placeholder="cron 表达式" bind:value={taskCron} aria-label="cron 表达式" />
-        {:else if taskKind === 'every'}
-          <input class="cron" type="number" min="1" placeholder="间隔秒" bind:value={taskEvery} aria-label="间隔秒" />
-        {:else}
-          <input class="cron at" type="datetime-local" bind:value={taskAt} aria-label="触发时间" />
-        {/if}
-        <button class="act pri" type="submit" disabled={(fromNote ? false : !taskPrompt.trim()) || !scheduleValue()}>加定时</button>
-      </form>
-    </div>
-    {#if tasks.error}<p class="err" role="alert">{tasks.error}</p>{/if}
-    <!-- 待办(给自己):notch/捕获坞「给自己」的任务落 notes kind:task,在这归账 -->
-    <div class="row">
-      <div class="gut"><span class="tm">待办</span><br />{todoItems.length} 条</div>
       <div>
-        <div class="h">待办 / MINE(给自己)</div>
-        {#if todoItems.length === 0}
-          <p class="empty">没有待办 — 捕获坞/刘海里选「任务 · 给自己」记一条。</p>
-        {:else}
-          <ul class="list">
-            {#each todoItems as n (n.id)}
-              <li class="note">
-                <span class="nt">{localHHMM(n.created_at)}</span>
-                <span class="body">{n.content}</span>
-                <span class="acts">
-                  <button class="act" title="转为定时任务(交给 agent)" onclick={() => noteToTask(n)}>→交给 agent</button>
-                  <button
-                    class="act del"
-                    class:armed={del.pending === `todo-${n.id}`}
-                    aria-label={`删除 ${n.content}`}
-                    onclick={() => del.confirm(`todo-${n.id}`) && notes.remove(n.id)}
-                  >{del.pending === `todo-${n.id}` ? '确认' : '×'}</button>
-                </span>
-              </li>
-            {/each}
-          </ul>
-        {/if}
-      </div>
-    </div>
-    <div class="row">
-      <div class="gut"><span class="tm">定时</span><br />{tasks.tasks.length} 项</div>
-      <div>
-        <div class="h">任务 / SCHEDULED · 交给 AGENT</div>
+        <div class="colh"><span class="t">定时 · 交给 agent</span>
+          <span class="n">{tasks.tasks.filter((t) => t.enabled).length} 项启用</span></div>
         {#if tasks.tasks.length === 0}
-          <p class="empty">还没有定时任务 — 加一个,到点自动触发 agent。</p>
+          <p class="empty">还没有定时任务 — 上面派发一个,到点自动触发 agent。</p>
         {:else}
-          <ul class="list">
+          <div class="sched">
             {#each tasks.tasks as t (t.id)}
-              <li class="taskli">
-                <div class="task" class:off={!t.enabled}>
-                  <input type="checkbox" class="cbx" checked={t.enabled} aria-label={`启用 ${t.name}`} onchange={() => tasks.toggle(t)} />
-                  <span class="tname">{t.name}</span>
-                  <span class="tsched">{t.schedule_kind} · 下次 {localDateTime(t.next_run)}</span>
-                  <span class="acts">
-                    <button
-                      class="act runs"
-                      class:open={tasks.runsFor === t.id}
-                      aria-label={`运行记录 ${t.name}`}
-                      aria-expanded={tasks.runsFor === t.id}
-                      onclick={() => tasks.toggleRuns(t.id)}
-                    >{t.run_count} 次{#if t.last_status}&nbsp;· {t.last_status}{/if}</button>
-                    <button
-                      class="act del"
-                      class:armed={del.pending === `task-${t.id}`}
-                      aria-label={`删除 ${t.name}`}
-                      onclick={() => del.confirm(`task-${t.id}`) && tasks.remove(t.id)}
-                    >{del.pending === `task-${t.id}` ? '确认' : '×'}</button>
-                  </span>
+              <div class="scard" class:open={tasks.runsFor === t.id}>
+                <div class="sh">
+                  <span class="nm" class:off={!t.enabled}>{t.name}</span>
+                  <button class="sw" class:on={t.enabled} role="switch" aria-checked={t.enabled}
+                    aria-label={`启用 ${t.name}`} onclick={() => tasks.toggle(t)}></button>
+                </div>
+                <div class="smeta">
+                  <!-- 人话排期 chip(T2:cron 表达式退出 UI);老任务没 nl 退回模式名 -->
+                  <span class="cronchip">{(t.schedule_value?.nl as string | undefined) ?? t.schedule_kind}</span>
+                  <span class="nextchip">{t.enabled ? `下次 ${localDateTime(t.next_run)}` : '已停用'}</span>
+                  <button class="runbtn" aria-label={`运行记录 ${t.name}`} aria-expanded={tasks.runsFor === t.id}
+                    onclick={() => tasks.toggleRuns(t.id)}>{t.run_count} 次{#if t.last_status}&nbsp;· {t.last_status}{/if} ▾</button>
+                  <button class="act del sdel" class:armed={del.pending === `task-${t.id}`} aria-label={`删除 ${t.name}`}
+                    onclick={() => del.confirm(`task-${t.id}`) && tasks.remove(t.id)}>{del.pending === `task-${t.id}` ? '确认' : '×'}</button>
                 </div>
                 {#if tasks.runsFor === t.id}
                   <div class="rundrawer">
@@ -454,17 +611,49 @@
                     {/if}
                   </div>
                 {/if}
-              </li>
+              </div>
             {/each}
-          </ul>
+          </div>
         {/if}
       </div>
     </div>
+  {/if}
+  {:else if view === 'canvas'}
+    {#if layout.journalFilter === 'journal'}
+      <JournalCanvas
+        days={journalByDate}
+        fragCount={(day) => notesOfDay(day).length}
+        onopen={(day) => (detailDay = day)}
+      />
+    {:else}
+      <CanvasView notes={notes.notes.filter((n) => n.kind !== 'journal')} />
+    {/if}
   {:else}
-    <!-- TODO(F7 日历轮): Calendar.svelte 仍是旧线框样式,该模块轮重设计 -->
+    <!-- TODO(F7 日历轮): Calendar.svelte 仍旧样式,周视图轮重设计 -->
     <div class="calwrap">
       <Calendar />
     </div>
+  {/if}
+
+  {#if detailDay}
+    {@const dayEntries = journalByDate.find(([d]) => d === detailDay)?.[1] ?? []}
+    <PageDetail
+      day={detailDay}
+      entries={dayEntries}
+      dayNotes={notesOfDay(detailDay)}
+      {renderMd}
+      onclose={() => (detailDay = null)}
+      onedit={(n) => startEdit(n)}
+    />
+  {/if}
+
+  {#if detailNote}
+    <NoteDetail
+      note={detailNote}
+      onclose={() => (detailNote = null)}
+      onedit={(n) => startEdit(n)}
+      totask={(n) => noteToTask(n)}
+    />
   {/if}
 </section>
 
@@ -475,7 +664,7 @@
     padding: 18px 24px 24px 22px; /* 左侧留白:用户反馈字贴边(07-03);07-06 再提一档 */
     font-family: var(--sans);
     color: var(--t2);
-    max-width: 860px; /* 阅读行长上限(承旧版 760 的约束) */
+    max-width: 1180px; /* 墙态放宽;纸页态(日记)组件内自限窄栏 */
   }
   .calwrap {
     padding-left: var(--gutter-w);
@@ -488,143 +677,90 @@
     margin-bottom: 6px;
   }
   .head h1 {
-    font-family: var(--mono);
-    font-size: 24px;
-    font-weight: 800;
-    letter-spacing: 1px;
+    font: 800 22px/1.2 var(--sans);
+    letter-spacing: -0.2px;
     color: var(--t1);
     margin: 0;
   }
   .head .hd {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--acc-ink);
-    font-weight: 700;
+    font: 400 13px/1 var(--sans);
+    color: var(--t4);
   }
   .head .pg {
     margin-left: auto;
-    font-family: var(--mono);
-    font-size: 10px;
+    font: 400 11px/1 var(--sans);
     color: var(--t4);
-    letter-spacing: .5px;
     font-variant-numeric: tabular-nums;
   }
   /* 分段 = mono 大写 tag + accent 底线(无胶囊无圆角) */
-  .seg {
+  .viewrow {
     display: flex;
-    gap: 18px;
-    padding-left: var(--gutter-w);
-    border-bottom: 1px solid var(--hair);
-    margin-bottom: 2px;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 2px 0 12px;
   }
-  .seg button {
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 1px;
-    color: var(--t3);
-    background: transparent;
+  .dispicons {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+  }
+  .dic {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-sm);
     border: 0;
-    border-bottom: 2px solid transparent;
-    padding: 4px 1px 6px;
+    background: transparent;
+    color: var(--t4);
     cursor: pointer;
-    transition: color .12s var(--ease);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--dur-micro) var(--ease);
   }
-  .seg button:hover {
-    color: var(--t1);
+  .dic :global(svg) {
+    width: 17px;
+    height: 17px;
   }
-  .seg button.active {
+  .dic:hover {
     color: var(--t1);
-    border-bottom-color: var(--acc);
+    background: var(--pill);
+  }
+  .dic.on {
+    color: var(--t1);
+    background: var(--pill);
+  }
+  .chips2 {
+    display: flex;
+    gap: 5px;
+  }
+  .chips2 button {
+    font: 500 11.5px/1 var(--sans);
+    color: var(--t3);
+    background: var(--pill);
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 6px 12px;
+    cursor: pointer;
+  }
+  .chips2 button.on {
+    background: var(--t1);
+    color: var(--onink);
+    font-weight: 600;
   }
   /* 账本行:左槽 mono + 发丝分隔(承 Today .rdrow) */
-  .row {
-    display: grid;
-    grid-template-columns: var(--gutter-w) 1fr;
-    border-top: 1px solid var(--hair);
-    padding: 10px 0;
-  }
-  /* 紧跟 tab 条的第一行不画顶线(避免和 .seg 底线叠成双线) */
-  .seg + .row {
-    border-top: none;
-  }
-  .gut {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--t3);
-    line-height: 1.5;
-    padding-top: 3px;
-    letter-spacing: .3px;
-  }
   /* 速记按天界标(今天/昨天/日期 + 条数) */
   .dstamp {
     display: flex;
     align-items: baseline;
     gap: 8px;
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--acc-ink);
-    letter-spacing: 0.6px;
-    margin: 12px 0 4px;
+    font: 700 13px/1 var(--sans);
+    color: var(--t1);
+    margin: 16px 0 8px;
   }
   .dstamp:first-of-type { margin-top: 2px; }
   .dstamp .dn { color: var(--t4); font-size: 9px; }
 
-  .h {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--t3);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    margin-bottom: 7px;
-  }
-  /* 输入 = 光标细丝 + 透明输入面,发丝托底 */
-  .compose {
-    display: flex;
-    align-items: flex-start;
-    gap: 9px;
-  }
-  .car {
-    width: 2px;
-    height: 14px;
-    background: var(--acc);
-    flex: none;
-    margin-top: 5px;
-    animation: blink 1s steps(1) infinite;
-  }
-  @keyframes blink {
-    50% { opacity: 0; }
-  }
-  .compose textarea,
-  .compose input {
-    flex: 1;
-    background: transparent;
-    border: 0;
-    border-bottom: 1px solid var(--hair);
-    color: var(--t1);
-    font-family: var(--sans);
-    font-size: 13px;
-    padding: 3px 0 6px;
-    resize: vertical;
-    min-width: 0;
-  }
-  .compose textarea::placeholder,
-  .compose input::placeholder {
-    color: var(--t4);
-  }
-  .compose textarea:focus,
-  .compose input:focus {
-    outline: none;
-    border-bottom-color: var(--acc-ink);
-  }
-  .compose input.cron {
-    flex: none;
-    width: 110px;
-    font-family: var(--mono);
-    font-size: 11px;
-  }
-  .compose input[readonly] {
-    color: var(--t3);
-  }
   .chip {
     font-family: var(--mono);
     font-size: 10px;
@@ -639,36 +775,34 @@
   }
   /* 动作按钮 = mono 小字,主动作 accent 描边 */
   .act {
-    font-family: var(--mono);
-    font-size: 10px;
+    font: 500 11px/1 var(--sans);
     color: var(--t4);
     background: transparent;
     border: 0;
-    padding: 2px 4px;
+    border-radius: var(--radius-pill);
+    padding: 4px 8px;
     cursor: pointer;
-    transition: color .12s var(--ease);
+    transition: all .12s var(--ease);
   }
   .act:hover {
     color: var(--t1);
+    background: var(--pill);
   }
   .act.pri {
-    color: var(--acc-ink);
-    border: 1px solid var(--acc-ink);
-    padding: 4px 10px;
+    color: #fff;
+    background: var(--grad);
+    padding: 7px 14px;
     flex: none;
+    font-weight: 600;
   }
   .act.pri:disabled {
+    background: var(--pill);
     color: var(--t4);
-    border-color: var(--line);
     cursor: default;
   }
   .act.del:hover,
   .act.del.armed {
     color: var(--red);
-  }
-  .sumbtns {
-    display: inline-flex;
-    gap: 8px;
   }
   .editbox {
     flex: 1;
@@ -694,125 +828,709 @@
     padding: 0 4px;
     flex: none;
   }
-  .compose select.kind {
-    flex: none;
+  .wallwrap {
+    margin-top: 4px;
+  }
+  /* —— AI 归类(按主题) —— */
+  .groupsw {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+  .gsw {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font: 500 11.5px/1 var(--sans);
+    color: var(--t4);
     background: transparent;
     border: 0;
-    border-bottom: 1px solid var(--hair);
+    border-radius: var(--radius-pill);
+    padding: 6px 12px;
+    cursor: pointer;
+  }
+  .gsw:hover { color: var(--t1); }
+  .gsw.on {
     color: var(--t1);
-    font-family: var(--mono);
-    font-size: 11px;
-    padding: 3px 0 5px;
+    background: var(--pill);
+    font-weight: 600;
   }
-  .compose select.kind option {
-    background: var(--panel);
-    color: var(--t1);
+  .gspark {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex: none;
+    background: conic-gradient(from 210deg, var(--g1), var(--g2), var(--g1));
   }
-  .compose input.at {
-    width: 170px;
-    color-scheme: dark light;
+  .gspark.sm {
+    width: 8px;
+    height: 8px;
   }
-  .list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-  .note,
-  .taskli {
-    border-top: 1px solid var(--hair);
-  }
-  .note:first-child,
-  .taskli:first-child {
-    border-top: none;
-  }
-  .note,
-  .task {
+  .aisuggest {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 4px 0;
-    font-size: 13px;
-    flex-wrap: wrap; /* AI 收藏卡换行占满整行 */
+    gap: 9px;
+    background: var(--card);
+    border: 1.4px dashed color-mix(in srgb, var(--g2) 45%, transparent);
+    border-radius: 14px;
+    padding: 11px 14px;
+    margin-bottom: 16px;
+    font: 400 12.5px/1.4 var(--sans);
+    color: var(--t2);
   }
-
-  /* —— AI 收藏卡(链接 parse 结果) —— */
-  .mcard {
-    width: 100%;
-    display: flex;
-    gap: 10px;
-    margin: 2px 0 4px 44px;
-    padding: 8px 10px;
-    border: 1px solid var(--hair);
-    border-left: 2px solid var(--acc-ink);
-  }
-  .mimg {
-    width: 96px;
-    height: 60px;
-    object-fit: cover;
+  .aisuggest b { color: var(--t1); }
+  .sgok {
+    margin-left: auto;
+    font: 600 11px/1 var(--sans);
+    color: #fff;
+    background: var(--grad);
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 7px 13px;
+    cursor: pointer;
     flex: none;
   }
-  .mbody { min-width: 0; }
-  .mline1 {
+  .sgno {
+    font: 500 11px/1 var(--sans);
+    color: var(--t4);
+    background: var(--pill);
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 7px 13px;
+    cursor: pointer;
+    flex: none;
+  }
+  .topich {
     display: flex;
     align-items: baseline;
     gap: 8px;
-    min-width: 0;
+    margin: 16px 2px 10px;
   }
-  .mtype {
-    font-family: var(--mono);
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    color: var(--acc-ink);
-    flex: none;
+  .topich.dim { opacity: 0.72; }
+  .tdot {
+    width: 9px;
+    height: 9px;
+    border-radius: 3px;
+    background: var(--grad);
+    align-self: center;
   }
-  .mtitle {
-    color: var(--t1);
-    font-size: 13px;
-    font-weight: 600;
-    text-decoration: none;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .mtitle:hover { text-decoration: underline; }
-  .msum {
-    margin: 4px 0 0;
-    font-size: 12px;
+  .tdot.loose { background: var(--t4); }
+  .topich b { font: 700 13.5px/1 var(--sans); color: var(--t1); }
+  .topich .tn { font: 400 10.5px/1 var(--sans); color: var(--t4); }
+  .topicchip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font: 500 9.5px/1 var(--sans);
     color: var(--t3);
-    line-height: 1.5;
+    background: var(--pill);
+    border-radius: var(--radius-pill);
+    padding: 3px 8px;
   }
-  .mfoot {
-    display: flex;
-    gap: 8px;
-    margin-top: 4px;
-    font-family: var(--mono);
-    font-size: 9.5px;
+  .topicchip .tx-x {
+    border: 0;
+    background: none;
     color: var(--t4);
-  }
-  .mtag { color: var(--cyan); }
-  .mlite {
-    width: 100%;
-    display: flex;
-    gap: 10px;
-    margin-left: 44px;
-    font-family: var(--mono);
+    cursor: pointer;
+    padding: 0 1px;
     font-size: 10px;
-    color: var(--t4);
+    visibility: hidden;
   }
-  .note .nt {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--t4);
+  .wcard:hover .topicchip .tx-x { visibility: visible; }
+  .topicchip .tx-x:hover { color: #e5484d; }
+  /* —— K8 专注活卡 —— */
+  .focuslive {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--card);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    padding: 14px 18px;
+    margin-bottom: 16px;
+  }
+  .fring {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
     flex: none;
-    min-width: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ftime {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 700 11px/1 var(--mono);
+    color: var(--t1);
     font-variant-numeric: tabular-nums;
   }
-  .note .body {
+  .fmid {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+  }
+  .fl {
+    font: 400 10.5px/1 var(--sans);
+    color: var(--t4);
+    letter-spacing: 0.4px;
+  }
+  .fw {
+    font: 600 14px/1.4 var(--sans);
+    color: var(--t1);
+  }
+  .fstop {
+    margin-left: auto;
+    font: 600 12px/1 var(--sans);
+    color: #fff;
+    background: var(--grad);
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 9px 17px;
+    cursor: pointer;
+    flex: none;
+  }
+
+  /* —— K6 任务操作台 —— */
+  .dispatch {
+    display: flex;
+    gap: 8px;
+    background: var(--card);
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow);
+    padding: 6px 6px 6px 20px;
+    align-items: center;
+    margin: 4px 0 20px;
+    flex-wrap: wrap;
+  }
+  .dispatch input {
     flex: 1;
-    word-break: break-word;
+    min-width: 200px;
+    border: 0;
+    outline: none;
+    font: 400 13.5px/1 var(--sans);
+    background: transparent;
+    color: var(--t1);
+  }
+  .dispatch input::placeholder { color: var(--t4); }
+  /* T2 实时排期徽章(稿 .aiverdict:spark+人话时间) */
+  .aiverdict {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font: 500 11.5px/1 var(--sans);
+    color: var(--t2);
+    background: var(--pill);
+    border-radius: var(--radius-pill);
+    padding: 7px 11px;
+    white-space: nowrap;
+  }
+  .vspark {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--g1), var(--g2));
+    flex: none;
+  }
+  .taskcols {
+    display: grid;
+    grid-template-columns: 1fr 1.25fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 980px) {
+    .taskcols { grid-template-columns: 1fr; }
+  }
+  .colh {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 0 4px 10px;
+  }
+  .colh .t {
+    font: 700 13.5px/1 var(--sans);
+    color: var(--t1);
+  }
+  .colh .n {
+    font: 400 11px/1 var(--sans);
+    color: var(--t4);
+  }
+  .todolist {
+    background: var(--card);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    padding: 6px 8px;
+  }
+  /* T3 两层任务行(稿):cb 顶对齐,mid=标题+chips,acts 垂直居中 hover 现 */
+  .todo {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    padding: 11px 10px;
+    border-radius: var(--radius-sm);
+  }
+  .todo:hover { background: var(--pill); }
+  .todo .cb { margin-top: 1px; }
+  .todo .mid {
+    flex: 1;
+    min-width: 0;
+  }
+  .todo .tmeta {
+    display: flex;
+    gap: 5px;
+    margin-top: 5px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .tchip {
+    font: 600 10px/1 var(--mono);
+    color: var(--t2);
+    background: var(--pill);
+    border-radius: var(--radius-pill);
+    padding: 3px 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .todo:hover .tchip { background: var(--card); }
+  .tchip.duesoon {
+    color: #c05e00;
+    background: #fff4e8; /* 稿:24h 内临近橙 */
+  }
+  :global([data-theme='dark']) .tchip.duesoon {
+    color: #ffab70;
+    background: rgba(255, 138, 61, 0.16);
+  }
+  .todo .acts {
+    display: flex;
+    gap: 5px;
+    align-self: center;
+  }
+  .cb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1.6px solid var(--t4);
+    background: transparent;
+    flex: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: transparent;
+    transition: all 0.15s var(--ease);
+  }
+  .todo.done .cb {
+    background: var(--grad);
+    border-color: transparent;
+    color: #fff;
+  }
+  .cb :global(svg) {
+    width: 11px;
+    height: 11px;
+  }
+  .todo .tx {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    font: 400 13.5px/1.45 var(--sans);
+    color: var(--t1);
+    background: none;
+    border: 0;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+  }
+  .todo.done .tx {
+    color: var(--t4);
+    text-decoration: line-through;
+  }
+  .todo .up {
+    font: 500 10.5px/1 var(--sans);
+    color: var(--t3);
+    background: var(--pill);
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 5px 10px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.12s;
+    flex: none;
+  }
+  .todo:hover .up,
+  .todo:focus-within .up { opacity: 1; }
+  .todo .up:hover { color: var(--t1); }
+  .sched {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .scard {
+    background: var(--card);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    padding: 14px 16px;
+  }
+  .sh {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .scard .nm {
+    font: 600 13.5px/1.3 var(--sans);
+    color: var(--t1);
+    flex: 1;
+    min-width: 0;
+  }
+  .scard .nm.off { color: var(--t4); }
+  .sw {
+    width: 40px;
+    height: 24px;
+    border-radius: 99px;
+    background: var(--pill);
+    border: 0;
+    position: relative;
+    cursor: pointer;
+    flex: none;
+    transition: background 0.18s var(--ease);
+  }
+  .sw::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--card);
+    box-shadow: var(--shadow);
+    transition: left 0.18s var(--ease);
+  }
+  .sw.on { background: var(--grad); }
+  .sw.on::after { left: 19px; }
+  .smeta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 9px;
+    flex-wrap: wrap;
+  }
+  .cronchip {
+    font: 600 10px/1 var(--mono);
+    color: var(--t3);
+    background: var(--pill);
+    border-radius: var(--radius-pill);
+    padding: 5px 10px;
+  }
+  .nextchip {
+    font: 400 11px/1 var(--sans);
+    color: var(--t4);
+  }
+  .runbtn {
+    margin-left: auto;
+    font: 500 10.5px/1 var(--sans);
+    color: var(--t4);
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+  }
+  .runbtn:hover { color: var(--t1); }
+  .sdel { flex: none; }
+
+  /* —— K4 日记纸页 —— */
+  .paper {
+    max-width: 640px;
+    margin: 6px auto 0;
+  }
+  .streakbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 14px;
+  }
+  .streakbar .s {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+  }
+  .streakbar .big {
+    font: 800 24px/1 var(--sans);
+    color: var(--t1);
+  }
+  .streakbar .u {
+    font: 400 11.5px/1 var(--sans);
+    color: var(--t4);
+  }
+  .aibtn2 {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--card);
+    border: 1px solid var(--hair);
+    border-radius: var(--radius-pill);
+    padding: 8px 15px;
+    font: 500 12px/1 var(--sans);
+    color: var(--t3);
+    cursor: pointer;
+  }
+  .aibtn2:first-of-type {
+    margin-left: auto;
+  }
+  .aibtn2:hover:not(:disabled) {
+    color: var(--t1);
+  }
+  .spark2 {
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    flex: none;
+    background: conic-gradient(from 210deg, var(--g1), var(--g2), var(--g1));
+  }
+  .sumcard {
+    display: flex;
+    gap: 9px;
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 13px 16px;
+    margin-bottom: 14px;
+    font: 400 13px/1.65 var(--sans);
     color: var(--t2);
   }
+  .sumcard p { margin: 0; }
+  .todaypage {
+    background: var(--card);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    padding: 22px 26px;
+    margin-bottom: 26px;
+  }
+  .todaypage .dh,
+  .jpage .dh {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .todaypage .d {
+    font: 800 19px/1 var(--sans);
+    color: var(--t1);
+  }
+  .jpage .d {
+    font: 800 15.5px/1 var(--sans);
+    color: var(--t1);
+  }
+  .todaypage .w,
+  .jpage .w {
+    font: 400 12px/1 var(--sans);
+    color: var(--t4);
+  }
+  .jpage .cnt {
+    margin-left: auto;
+    font: 400 10.5px/1 var(--sans);
+    color: var(--t4);
+  }
+  .todaypage textarea {
+    width: 100%;
+    min-height: 120px;
+    border: 0;
+    outline: none;
+    resize: vertical;
+    font: 400 14.5px/1.75 var(--sans);
+    color: var(--t1);
+    background: transparent;
+  }
+  .todaypage textarea::placeholder {
+    color: var(--t4);
+  }
+  .actrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .hint2 {
+    font: 400 11px/1 var(--sans);
+    color: var(--t4);
+  }
+  .actrow .act.pri {
+    margin-left: auto;
+  }
+  .jpage {
+    position: relative;
+    background: var(--card);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    padding: 20px 26px;
+    margin-bottom: 18px;
+  }
+  .dh.openbtn {
+    width: 100%;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
+  }
+  .dh.openbtn:hover .d {
+    color: var(--t3);
+  }
+  .jpage .md {
+    font: 400 14px/1.75 var(--sans);
+    color: var(--t2);
+  }
+  .pacts {
+    display: flex;
+    gap: 4px;
+    margin-top: 10px;
+    opacity: 0;
+    transition: opacity var(--dur-micro) var(--ease);
+  }
+  .jpage:hover .pacts {
+    opacity: 1;
+  }
+
+  /* —— K1 瀑布卡墙 —— */
+  .wall {
+    columns: 3 250px;
+    column-gap: 14px;
+    margin-bottom: 6px;
+  }
+  .wcard {
+    break-inside: avoid;
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin: 0 0 14px;
+    overflow: hidden;
+    transition: box-shadow var(--dur-micro) var(--ease);
+    position: relative;
+  }
+  .wcard:hover {
+    box-shadow: var(--shadow-lg);
+  }
+  /* T3 墙上任务回执卡(稿):橙左沿 + tag/chips + 已入待办 → */
+  .wcard.taskcard { border-left: 3px solid var(--g1); }
+  .tagrow {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+    align-items: center;
+  }
+  .ntag {
+    display: inline-block;
+    font-size: 9.5px;
+    font-weight: 700;
+    border-radius: var(--radius-pill);
+    padding: 2px 8px;
+    color: #fff;
+  }
+  .ntag.idea { background: #0a84ff; }
+  .ntag.task { background: var(--grad); }
+  .ntag.xc {
+    color: var(--t2);
+    background: var(--pill);
+    font-weight: 600;
+    font-family: var(--mono);
+  }
+  .gotask {
+    font: 600 10.5px/1 var(--sans);
+    color: var(--g1);
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+  }
+  .wcover {
+    width: 100%;
+    display: block;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    background: var(--pill);
+  }
+  .wpad {
+    padding: 12px 14px;
+  }
+  .wbadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 5px;
+    border-radius: 7px;
+    color: #fff;
+    font: 800 9.5px/1 var(--sans);
+    margin-bottom: 8px;
+  }
+  .wti,
+  .wtx {
+    display: block;
+    width: 100%;
+    background: none;
+    border: 0;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+    color: var(--t1);
+  }
+  .wti {
+    font: 600 13.5px/1.35 var(--sans);
+  }
+  .wtx {
+    font: 500 13.5px/1.6 var(--sans);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .wti:hover,
+  .wtx:hover {
+    color: var(--t3);
+  }
+  .wsum {
+    font: 400 12px/1.55 var(--sans);
+    color: var(--t3);
+    margin: 5px 0 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .wfoot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    align-items: center;
+    margin-top: 9px;
+    font: 400 10.5px/1 var(--sans);
+    color: var(--t4);
+  }
+  .wtag {
+    color: var(--cyan);
+  }
+  .wtm {
+    margin-left: auto;
+  }
+  .wacts {
+    display: flex;
+    gap: 2px;
+    margin-top: 8px;
+    opacity: 0;
+    transition: opacity var(--dur-micro) var(--ease);
+  }
+  .wcard:hover .wacts,
+  .wacts.show {
+    opacity: 1;
+  }
+
+  /* —— AI 收藏卡(链接 parse 结果) —— */
   .acts {
     display: flex;
     align-items: center;
@@ -820,26 +1538,6 @@
     flex: none;
   }
   /* 日记:日期 = accent 账本界标 */
-  .day h3 {
-    margin: 12px 0 4px;
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: .5px;
-    color: var(--acc-ink);
-    border-bottom: 1px solid var(--hair);
-    padding-bottom: 3px;
-    font-variant-numeric: tabular-nums;
-  }
-  .day:first-child h3 {
-    margin-top: 0;
-  }
-  .entry {
-    display: flex;
-    gap: 8px;
-    align-items: flex-start;
-    padding: 4px 0;
-  }
   .md {
     flex: 1;
     line-height: 1.55;
@@ -866,71 +1564,7 @@
   .md :global(a) {
     color: var(--acc-ink);
   }
-  /* AI 小结 = 框选视口(frame + accent L 角,ORAGE) */
-  .framed {
-    position: relative;
-    border: 1px solid var(--line);
-    padding: 10px 12px; /* 与 Today .framed 对齐,消漂移 */
-    margin-top: 8px;
-  }
-  .framed::before,
-  .framed::after {
-    content: '';
-    position: absolute;
-    width: 9px;
-    height: 9px;
-    border: 1.4px solid var(--acc-ink);
-  }
-  .framed::before {
-    top: -1px;
-    left: -1px;
-    border-right: none;
-    border-bottom: none;
-  }
-  .framed::after {
-    bottom: -1px;
-    right: -1px;
-    border-left: none;
-    border-top: none;
-  }
-  .summary {
-    margin: 0;
-    font-size: 13px;
-    line-height: 1.55;
-    color: var(--t2);
-  }
   /* 任务行 */
-  .cbx {
-    appearance: none;
-    width: 13px;
-    height: 13px;
-    border: 1.4px solid var(--t4);
-    background: transparent;
-    flex: none;
-    cursor: pointer;
-    margin: 0;
-  }
-  .cbx:checked {
-    border-color: var(--acc-ink);
-    background: var(--acc);
-  }
-  .task .tname {
-    color: var(--t2);
-    font-weight: 600;
-    font-size: 12.5px;
-  }
-  .task .tsched {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--t4);
-    font-variant-numeric: tabular-nums;
-  }
-  .act.runs {
-    font-variant-numeric: tabular-nums;
-  }
-  .act.runs.open {
-    color: var(--acc-ink);
-  }
   /* 运行历史抽屉:mono 子账本行 */
   .rundrawer {
     margin: 0 0 6px 23px;
@@ -960,21 +1594,12 @@
   .rdot.err {
     background: var(--red);
   }
-  .rstatus {
-    color: var(--t4);
-  }
   .rout {
     flex: 1;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: var(--t4);
-  }
-  .task .acts {
-    margin-left: auto;
-  }
-  .task.off .tname {
     color: var(--t4);
   }
   .err {

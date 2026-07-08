@@ -109,9 +109,10 @@
     justify-content: space-between;
     align-items: center;
     margin: 0 10px 8px;
-    padding: 6px 10px;
-    background: var(--tile);
-    border: 1px solid var(--line);
+    padding: 8px 12px;
+    background: var(--pill);
+    border: 0;
+    border-radius: var(--radius-pill);
     color: var(--t4);
     font-size: 12px;
     cursor: pointer;
@@ -119,7 +120,6 @@
   }
   .search:hover {
     color: var(--t2);
-    border-color: var(--acc);
   }
   .search kbd {
     font-family: var(--mono);
@@ -150,21 +150,22 @@
     min-width: 0;
     background: transparent;
     border: 0;
-    border-left: 2px solid transparent;
+    border-radius: var(--radius-sm);
     color: var(--t2);
-    font-size: 12px;
-    padding: 4px 12px;
+    font-size: 12.5px;
+    padding: 6px 12px;
+    margin: 0 8px;
     cursor: pointer;
     text-align: left;
   }
   .row:hover {
     color: var(--t1);
-    background: var(--tile);
+    background: var(--pill);
   }
   .row.active {
     color: var(--t1);
-    border-left-color: var(--acc);
-    background: var(--tile);
+    background: var(--pill);
+    font-weight: 600;
   }
   .glyph {
     font-family: var(--mono);

@@ -10,7 +10,9 @@
   功能全量(对齐 ORAGE 现行稿 8 模块,一个不少):
    1 总览 Dashboard(不对称 bento:大媒体卡+日历+agent+速记快捷条)
    2 媒体(封面+歌词滚动高亮+可点进度 seek+控制)
-   3 速记(5 kind+任务给自己/交给agent 双轨+最近记录列表含链接解析卡)
+   3 速记(5 kind+任务给自己/交给agent 双轨+最近记录列表含链接解析卡;
+     AI 分诊:记录/想法/任务三分+时间地点抽取+可纠正回执;日记=每天一篇,
+     今天卡+续写语义,2026-07-07 用户提出)
    4 日历(周条+今日事件+加事件)
    5 文件 Shelf(拖拽暂存→上传记录/关联驾驶舱/移除)
    6 智能体(会话列表+权限横幅 diff+Allow/Deny+选择题横幅)
@@ -209,6 +211,29 @@
   .askout.show{display:block}
   .askout{background:var(--cardbg,#fff)}
   .askout .who2{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--ink3);margin-bottom:4px}
+
+  /* 速记 AI 分诊回执 + 日记每天一篇(2026-07-07 用户提出) */
+  .tri{margin-top:9px;border-radius:14px;padding:10px 12px;background:var(--cardbg,#fff);box-shadow:var(--shadow)}
+  .shell.dark .tri{box-shadow:none;border:1px solid var(--hair)}
+  .tri .h{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--ink3)}
+  .tri .row{display:flex;align-items:center;gap:6px;margin-top:7px;flex-wrap:wrap}
+  .tri .tk{font-size:10px;font-weight:700;color:#fff;border-radius:999px;padding:3px 9px;
+    background:linear-gradient(90deg,var(--g1),var(--g2))}
+  .tri .tk.rec{background:var(--ink);color:var(--onink,#fff)}
+  .tri .tk.idea{background:#0a84ff}
+  .tri .tx{font-size:11.5px;color:var(--ink);font-weight:600;flex:1;min-width:0;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tri .xc{font-size:9.5px;font-family:var(--mono);color:var(--ink2);background:var(--pill);
+    border-radius:999px;padding:3px 8px}
+  .tri .fix{display:flex;gap:5px;margin-top:8px}
+  .jtoday{border-radius:14px;padding:10px 12px;margin-bottom:9px;background:var(--cardbg,#fff);box-shadow:var(--shadow)}
+  .shell.dark .jtoday{box-shadow:none;border:1px solid var(--hair)}
+  .jtoday .d{display:flex;align-items:baseline;gap:7px}
+  .jtoday .d b{font-size:12px;color:var(--ink)}
+  .jtoday .d span{font-size:9.5px;color:var(--ink3)}
+  .jtoday .d .streak{margin-left:auto;font-family:var(--mono);color:var(--ink2);background:var(--pill);border-radius:999px;padding:2px 8px}
+  .jtoday .pv{font-size:11px;color:var(--ink2);margin-top:6px;line-height:1.55;
+    max-height:110px;overflow-y:auto;white-space:pre-line}  /* 全文可滚,不截断 */
 
   /* 4 日历 */
   .weekbar{display:flex;gap:5px;margin-bottom:11px}
@@ -410,6 +435,7 @@
 const $=s=>document.querySelector(s);
 let open=true, tab='dash', kind='note', who='me', playing=true, asked=false, recentOpen=false;
 let pos=112, dur=245; // 秒
+let triage=null; // 速记 AI 分诊回执(demo)
 let focusLeft=25*60, focusRun=false, focusTotal=25*60;
 
 const PLAY='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
@@ -421,8 +447,8 @@ const LINK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-wi
 const TXT='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10"/></svg>';
 const IMG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-9 8"/></svg>';
 
-const KINDS=[['note','速记'],['journal','日记'],['task','任务'],['focus','专注'],['ask','问大脑']];
-const PH={note:'随手记一笔 — 链接会自动解析…',journal:'今天怎么样?写两句…',task:'要做什么?(时间地点 AI 来读)',focus:'这段时间专注做什么…',ask:'问 Helm 大脑一个问题…'};
+const KINDS=[['note','速记'],['journal','日记'],['focus','专注'],['ask','问大脑']];  // 任务 kind 去除(2026-07-08 用户:任务只在 Helm 给 agent 定)
+const PH={note:'随手记一笔 — 链接会自动解析…',journal:'今天怎么样?写两句…',focus:'这段时间专注做什么…',ask:'问 Helm 大脑一个问题…'};
 const LYRICS=['gravity is working against me','and gravity wants to bring me down',
  'oh I will fight it, I will fight it','oh twice as much ain\'t twice as good',
  'and can\'t sustain like one half could','it wants my soul, it wants my whole life',
@@ -485,15 +511,26 @@ function renderBody(){
   else if(tab==='capture'){
     b.innerHTML=`
       <div class="kindrow">${KINDS.map(([k,n])=>`<button class="kind${k===kind?' on':''}" data-k="${k}">${n}</button>`).join('')}</div>
-      <div class="whobar${kind==='task'?' show':''}">
-        <button class="who${who==='me'?' on':''}" data-w="me">给自己 · 待办</button>
-        <button class="who${who==='agent'?' on':''}" data-w="agent">交给 agent · 定时</button>
-      </div>
+      ${kind==='journal'?`<div class="jtoday">
+        <div class="d"><b>7月7日 · 周二</b><span>今天的日记</span><span class="streak">连续 3 天</span></div>
+        <div class="pv">早上把 notch 的 NOMI 稿收了尾,权限横幅的 Allow 终于通了。
+
+下午跟着改了媒体页宽高和首点直达,顺手把拖文件的 drop 态也定了。
+
+晚上想把速记的 AI 分诊接上——先把设计稿过了一遍。</div>
+      </div>`:''}
       ${kind==='focus'?focusHTML():`<div class="capbox">
-        <textarea id="cap" placeholder="${PH[kind]}"></textarea>
-        <div class="caprow"><span class="hint">${kind==='ask'?'⏎ 提问 · 走全局 provider':'⏎ 发送 · AI 自动整理'}</span>
-          <button class="gbtn send" id="capSend">${kind==='ask'?'提问':'发送'}</button></div>
+        <textarea id="cap" placeholder="${kind==='journal'?'续写今天 — 回车追加到今天这篇…':PH[kind]}"></textarea>
+        <div class="caprow"><span class="hint">${kind==='ask'?'⏎ 提问 · 走全局 provider':kind==='journal'?'每天一篇 · 全天随时续写':'⏎ 发送 · AI 分诊:记录/想法/任务(抽时间地点)'}</span>
+          <button class="gbtn send" id="capSend">${kind==='ask'?'提问':kind==='journal'?'续写':'发送'}</button></div>
       </div>`}
+      ${triage?`<div class="tri">
+        <div class="h"><span class="spark"></span>AI 分诊 · 已结构化入库</div>
+        <div class="row"><span class="tk ${triage.cls}">${triage.kind}</span><span class="tx">${triage.text}</span>
+          ${triage.chips.map(c=>`<span class="xc">${c}</span>`).join('')}</div>
+        <div class="fix"><button class="pbtn" onclick="triage=null;renderBody()">对 ✓</button>
+          <button class="pbtn">改成记录</button><button class="pbtn">改成想法</button></div>
+      </div>`:''}
       <div class="askout${asked?' show':''}">
         <div class="who2"><span class="spark"></span>Helm 大脑</div>
         速记里的链接会自动解析:YouTube 走 oEmbed,论文走 arXiv,网页抓 OpenGraph,AI 再补摘要和标签。
@@ -510,12 +547,20 @@ function renderBody(){
           <span class="tx">驾驶舱 e2e 三个坑——写进 backlog 复盘。</span><span class="tm">14:31</span></div>`:''}
       </div>`;
     b.querySelectorAll('.kind').forEach(k=>k.onclick=()=>{kind=k.dataset.k;asked=false;renderBody()});
-    b.querySelectorAll('.who').forEach(w=>w.onclick=()=>{who=w.dataset.w;renderBody()});
     $('#rToggle').onclick=()=>{recentOpen=!recentOpen;renderBody()};
     if(kind==='focus'){bindFocus();}
     else $('#capSend').onclick=()=>{
       const c=$('#cap'); if(!c.value.trim())return;
       if(kind==='ask'){asked=true;renderBody();}
+      else if(kind==='note'){
+        // demo 分诊:有时间词 → 任务;问号 → 想法;其余记录
+        const t=c.value.trim();
+        triage=/明|今晚|点|周[一二三四五六日]|:\d/.test(t)
+          ?{kind:'任务',cls:'',text:t,chips:['明晚 8:00','→ 已建 agent 任务']}
+          :/[??]$/.test(t)?{kind:'想法',cls:'idea',text:t,chips:[]}
+          :{kind:'记录',cls:'rec',text:t,chips:[]};
+        c.value='';renderBody();
+      }
       else{c.value='';c.placeholder='已发送 — AI 解析中…';setTimeout(()=>{c.placeholder=PH[kind]},1500);}
     };
   }

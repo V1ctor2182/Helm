@@ -13,7 +13,10 @@ from sqlalchemy.orm import Session
 
 from helm.notes.models import Note
 
-KINDS = ("note", "journal", "focus")  # focus=专注计时落库(notch),内容"专注 N 分钟 · 干什么"
+# focus=专注计时落库(notch);task=待办·给自己(分诊/捕获坞落库,前端任务区
+# 待办列直接吃这个 kind);idea=想法(T1 分诊新增)。收编 task/idea 同时修掉
+# 捕获坞「给自己的任务」422(前科:收紧 kind 炸 notch,契约只加不减)。
+KINDS = ("note", "journal", "focus", "task", "idea")
 
 
 def note_public(n: Note) -> dict:
@@ -59,6 +62,7 @@ class NoteService:
         pinned: bool = False,
         source: str = "user",
         journal_date: date_cls | None = None,
+        meta: dict | None = None,
     ) -> Note:
         note = Note(
             kind=kind,
@@ -68,6 +72,7 @@ class NoteService:
             pinned=pinned,
             source=source,
             journal_date=journal_date,
+            meta_json=json.dumps(meta, ensure_ascii=False) if meta else None,
         )
         self.session.add(note)
         self.session.flush()
@@ -83,6 +88,7 @@ class NoteService:
         tags: list[str] | None = None,
         pinned: bool | None = None,
         journal_date: date_cls | None = None,
+        meta: dict | None = None,
     ) -> Note | None:
         note = self.get(note_id)
         if note is None:
@@ -93,12 +99,17 @@ class NoteService:
             note.title = title
         if kind is not None:
             note.kind = kind
+            # 分诊纠错(T3 回执「改」):改成日记时补默认日期,不落「未注明日期」
+            if kind == "journal" and journal_date is None and note.journal_date is None:
+                note.journal_date = (note.created_at or _dt.now()).date()
         if tags is not None:
             note.tags_json = json.dumps(tags, ensure_ascii=False)
         if pinned is not None:
             note.pinned = pinned
         if journal_date is not None:
             note.journal_date = journal_date
+        if meta is not None:
+            note.meta_json = json.dumps(meta, ensure_ascii=False) if meta else None
         self.session.flush()
         return note
 

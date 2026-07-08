@@ -86,3 +86,48 @@ def test_create_note_background_enrich_wires_up(config, monkeypatch) -> None:
     got = c.get("/api/notes", params={"kind": "note"}).json()["notes"]
     meta = next(n for n in got if n["id"] == nid)["meta"]
     assert meta and meta["type"] == "youtube" and meta["title"] == "T"
+
+
+def test_all_urls_dedup_and_order() -> None:
+    from helm.notes.enrich import all_urls
+
+    t = "看 https://a.com/x 和 https://b.com/y 还有重复 https://a.com/x"
+    assert all_urls(t) == ["https://a.com/x", "https://b.com/y"]
+
+
+@pytest.mark.anyio
+async def test_multi_link_note_gets_links_array(config, monkeypatch) -> None:
+    """两个链接的速记:meta.links=2 张,顶层字段=第一个(向后兼容)。"""
+    from fastapi.testclient import TestClient
+
+    from helm.app import create_app
+    from helm.notes import enrich as enrich_mod
+
+    async def fake_fetch(url, client=None):
+        return {"url": url, "type": "article", "title": f"T:{url[-1]}", "site": "s"}
+
+    monkeypatch.setattr(enrich_mod, "fetch_link_meta", fake_fetch)
+    c = TestClient(create_app(config))
+    r = c.post("/api/notes", json={"content": "对比 https://x.com/a 和 https://y.com/b", "kind": "note"})
+    nid = r.json()["id"]
+    got = c.get("/api/notes", params={"kind": "note"}).json()["notes"]
+    meta = next(n for n in got if n["id"] == nid)["meta"]
+    assert meta["url"] == "https://x.com/a"          # 顶层=第一个
+    assert len(meta["links"]) == 2
+    assert meta["links"][1]["url"] == "https://y.com/b"
+
+
+def test_patch_meta_rewrites_topic(config) -> None:
+    """AI 归类纠错:PATCH /notes/{id} 带 meta 整份回写(移出集合)。"""
+    from fastapi.testclient import TestClient
+
+    from helm.app import create_app
+
+    c = TestClient(create_app(config))
+    nid = c.post("/api/notes", json={"content": "hello", "kind": "note"}).json()["id"]
+    r = c.patch(f"/api/notes/{nid}", json={"meta": {"type": "text", "topic": "测试集合"}})
+    assert r.status_code == 200
+    assert r.json()["meta"]["topic"] == "测试集合"
+    # 移出集合 = topic 拿掉后整份回写
+    r2 = c.patch(f"/api/notes/{nid}", json={"meta": {"type": "text"}})
+    assert "topic" not in (r2.json()["meta"] or {})

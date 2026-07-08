@@ -1,2 +1,26 @@
 - [ ] [R01][P2][question] 每日 accent 轮换 vs NOMI 固定橙紫:NOMI 稿无每日色概念,现暂保留 theme store 每日覆写(--acc)。要不要改成固定 --g1/--g2?待用户拍板。
 - [ ] [R01][P2][gap] 深色主站无设计稿(NOMI 稿仅浅色):深 token 从 notch 稿推导,待浅色全站对齐后让用户目视深色版。
+- [x] [R02][P2][gap](R12 清) 侧栏导航计数接真 store。
+- [x] [R02][P2][polish](R11 清) titlebar/statusbar 仍是 ORAGE mono 语言,待壳收尾块统一 NOMI 化(或按设计稿删)。
+- [x] [R03][P1][gap](R04 清) CaptureDock 仍是 ORAGE 皮(方角/发丝/mono chips),需 NOMI 化:圆角胶囊 kind chips+灰盒输入+渐变发送(对照稿今日板块 capbar 与 notch 稿捕获页)。
+- [x] [R05][P1][gap](R08 清;与下方 R05 行同项,补记勾) 记录页三视图重构:四 tab(速记/日记/任务/日历)→稿的 Timeline/Canvas/Calendar+侧栏分类过滤;Canvas 视图(拖拽+连线)全新未建。
+- [x] [R05][P1][gap](R09 清) Calendar.svelte(月历+agenda)仍 ORAGE 皮,且稿是周视图+时刻线。
+- [x] [R06][P2][polish](R12 清) CompareView/ProviderSettings 子面板。
+- [x] [R07][P1][gap](R10 清·chrome 层) 驾驶舱家族(CockpitView/Sidebar/DockHost/FileBrowser/PreviewPane,3187 行)未换皮——按稿 agent 卡+黑终端块语言,单独轮。
+- [ ] [R07][P2][polish] Research 历史列表/状态 badge、Settings 主题色点排精修。
+- [x] [R05][P1][gap](R08 清) 记录页三视图重构+Canvas 视图。
+- [ ] [R08][P2][question] Canvas 连线/cluster:稿有橙紫连线(思路关联),后端无关系模型——要不要建 note_links 表?待用户拍板。
+- [x] [R08][P2][gap](R13 清) 分类过滤迁全局侧栏+收藏细分。
+- [ ] [K6][P2][question] 待办完成态:现为「完成即清」(勾选删除);若要保留完成历史需 notes 加 done 列(schema 变更,待用户拍板)。
+- [x] [K7][P2][enhancement](T1 清) 判类 LLM 兜底:规则不命中/低置信时调后端轻量 classify(走全局 provider)——T1 落在 enrich 管线(confident=False 才升格)。
+- [ ] [T1+][P2][enhancement] 分诊「记住纠正」:用户改类样本落库,规则/prompt 吃个性化纠正(稿 toast 文案「分诊会记住这次纠正」预留)。
+
+## 批次 3 提案 · T 系列(AI 分诊系统+前端对齐新稿;2026-07-08 用户要求,喂给本 loop——不另开新 loop)
+- [x] [T1][P1](本轮清) 后端分诊管线:创建 note 时 AI 分诊(规则先行+LLM 兜底,并 K7)→ 返回 {kind:记录/想法/任务, time?, place?, task_id?};判任务自动落「待办·给自己」(关联 K6 done 列拍板);抽取时间/地点结构化存。→ 落地:POST triage:true;KINDS+task/idea;meta.when/where/due;回执块;无独立 task_id(kind:task 即待办)。
+- [x] [T2][P1](本轮清) 人话排期:/api/tasks 收自然语言 schedule(存原句+解析结果),派发条按稿接线(边打字出排期徽章);cron 表达式从 UI 全面退场。→ 落地:helm/tasks/nl.py(复用 T1 时间解析);POST {prompt} 整句即可(顺带修捕获坞「交给 agent」422);/api/tasks/parse 实时徽章;to-task 收 schedule_nl;原句=prompt,人话标签=schedule_value.nl。
+- [ ] [T2+][P2][bug] next_run 时区显示漂移(既有,非 T2 引入):cron 本地墙钟算出的 next_run 落 SQLite 变 naive(丢 offset),前端 localDateTime 按 UTC 解析 → 9 点任务显示 17:00。修法:后端统一存 UTC(isoformat 带 Z)或前端识别 naive=本地。
+- [ ] [Q-T2][question] 没说时间的「交给 agent」任务(如捕获坞判任务发 /api/tasks):现 422 提示补时间(按默认走)。要不要改成「没时间=立即执行一次」?待拍板。
+- [x] [T3][P1](本轮清) 前端对齐 kinds 稿本轮增量:待办两层任务行(临近 24h 橙 chip/hover 专注·→agent/完成沉底)+分诊回执 toast(chips+改类,纠正回流)+速记墙分诊徽章+墙上任务回执卡。→ 落地:捕获坞自动挡走后端分诊(triage:true)+回执 toast;墙收编 idea/task 卡;待办 due 临近排序+两层行。「完成沉底」的已完成分区依赖 K6 done 列拍板,现仍完成即清。
+- [ ] [T3+][P2][enhancement] 待办「已完成」分区(donebar+沉底)——被 K6 done 列 schema 拍板阻塞;拍板后一并做。
+- [x] [T4][P2](本轮清) 日记每天一篇:今日聚合(多段按时间拼一篇)+连续天数+字数;TODAY 卡预览/续写→;与 notch journalToday 口径一致。→ 落地:天内段落升序拼一篇(纸页/PageDetail 同序);Today 卡全文预览(clamp 5 行)+段数+续写→落日记 tab;顺带修 JournalView.today() UTC 错一天 bug。注:notch journalToday 按 createdAt 日过滤,主 app 按 journal_date——跨日补写会有口径差,记 T5 一并通知。
+- [x] [T5][P2][跨线](本轮清) 分诊契约发布后通知 notch 线接回执 UI(nomi-notch backlog 已备位);契约变更只在本 loop 做,notch 只消费(前科:task kind 收紧 422 炸了 notch)。→ 通知单已写进 docs/loops/nomi-notch/backlog.md「契约通知」节:KINDS+task/idea、triage 回执块、PATCH 改类、/api/tasks {prompt} 人话排期、/parse 徽章、journalToday 口径差建议(改吃 journal_date)。

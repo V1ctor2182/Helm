@@ -17,6 +17,20 @@ export interface NoteMeta {
   tags?: string[]
   when?: string
   where?: string
+  due?: string // T1 分诊:可解析的绝对时刻(本地 ISO),待办临近高亮用
+  triage?: { by: 'rule' | 'llm'; confident: boolean }
+  links?: { url: string; type?: string; title?: string; summary?: string; image?: string; site?: string }[]
+  topic?: string
+}
+
+/** T1 分诊回执(POST /api/notes triage:true 的响应附带)。 */
+export interface TriageReceipt {
+  kind: string
+  when: string | null
+  where: string | null
+  due: string | null
+  recurring: boolean
+  confident: boolean
 }
 
 export interface Note {
@@ -71,9 +85,34 @@ export class NotesStore {
     if (xs) this.notes = xs
   }
 
+  /** T3 自动挡:后端分诊判类+双抽取,返回落库 note+回执(toast 用)。 */
+  async createTriage(content: string): Promise<(Note & { triage: TriageReceipt }) | null> {
+    if (!content.trim()) return null
+    this.error = null
+    const out = (await this.#json('/api/notes', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ content, source: 'capture', triage: true }),
+    })) as (Note & { triage: TriageReceipt }) | null
+    if (out) await this.load()
+    else this.error = '速记保存失败'
+    return out
+  }
+
+  /** 回执「改」:分诊纠错,PATCH kind 回流。 */
+  async reclass(id: number, kind: string): Promise<boolean> {
+    const ok = await this.#json(`/api/notes/${id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ kind }),
+    })
+    if (ok) await this.load()
+    return ok !== null
+  }
+
   async create(
     content: string,
-    kind: 'note' | 'journal' | 'task' = 'note',
+    kind: 'note' | 'journal' | 'task' | 'idea' = 'note',
     journalDate: string | null = null,
   ): Promise<boolean> {
     if (!content.trim()) return false
@@ -121,6 +160,18 @@ export class NotesStore {
     return ok !== null
   }
 
+  /** T2 人话排期版 note→task:时间用人话说,后端解析;不给则试 note 原文。 */
+  async toTaskNL(id: number, nl: string): Promise<boolean> {
+    this.error = null
+    const ok = await this.#json(`/api/notes/${id}/to-task`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ schedule_nl: nl || null }),
+    })
+    if (!ok) this.error = '没听出时间——用人话说个时间,如「每天早上 9 点」「明晚 8 点」'
+    return ok !== null
+  }
+
   /** 编辑速记/日记内容(PATCH,backlog: 笔记不可编辑)。 */
   async update(id: number, content: string): Promise<boolean> {
     if (!content.trim()) return false
@@ -132,6 +183,17 @@ export class NotesStore {
     })
     if (ok) await this.load()
     else this.error = '保存失败'
+    return ok !== null
+  }
+
+  /** AI 归类纠错:整份 meta 回写(如移出集合=拿掉 topic) */
+  async updateMeta(id: number, meta: NoteMeta): Promise<boolean> {
+    const ok = await this.#json(`/api/notes/${id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ meta }),
+    })
+    if (ok) await this.load()
     return ok !== null
   }
 

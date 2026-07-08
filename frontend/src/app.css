@@ -23,7 +23,9 @@
 
   /* ---- 骨架尺寸 ---- */
   --rail-w: 58px;        /* 旧 Rail 宽（侧栏化后由 --side-w 接管，过渡期保留） */
-  --side-w: 250px;       /* NOMI 白侧栏 */
+  --side-w: 250px;       /* NOMI 白侧栏(可拖,R15) */
+  --chat-side: 240px;    /* 对话会话栏(可拖) */
+  --cockpit-side: 200px; /* 驾驶舱侧栏(可拖) */
   --ctx-w: 250px;
   --term-w: 220px;
   --titlebar-h: 32px;
@@ -169,4 +171,40 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: .001ms !important;
   }
+}
+
+/* ── 表单控件全局皮(R14):select 胶囊+自绘箭头,原生外观退场 ── */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  font: 500 12.5px/1.2 var(--sans);
+  color: var(--t1);
+  background-color: var(--pill);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%2384848e' stroke-width='1.6' stroke-linecap='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  border: 0;
+  border-radius: var(--radius-pill);
+  padding: 8px 30px 8px 14px;
+  cursor: pointer;
+  outline: none;
+}
+select option {
+  background: var(--card);
+  color: var(--t1);
+  /* 原生弹层可能不解析 CSS 变量 → 显式字体栈(修 serif 回退) */
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  font-size: 13px;
+}
+input[type='datetime-local'],
+input[type='date'],
+input[type='time'] {
+  font: 400 12.5px/1.2 var(--sans);
+  color: var(--t1);
+  background: var(--pill);
+  border: 0;
+  border-radius: var(--radius-pill);
+  padding: 8px 14px;
+  outline: none;
+  color-scheme: light dark;
 }

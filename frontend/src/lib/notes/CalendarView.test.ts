@@ -27,6 +27,9 @@ describe('Calendar agenda view', () => {
       EV({ id: 3, uid: 'u3', summary: '生日', start: '2026-07-02', all_day: true }),
     ]
     render(Calendar)
+    // 默认周视图(R09);agenda 断言先切到列表
+    const { fireEvent: fe } = await import('@testing-library/dom')
+    await fe.click(screen.getByRole('tab', { name: '列表' }))
     // local-day headers (times converted from UTC; all-day stays on its raw date)
     expect(screen.getByText('2026-07-02')).toBeInTheDocument()
     expect(screen.getByText('全天')).toBeInTheDocument()
@@ -44,8 +47,20 @@ describe('Calendar agenda view', () => {
     expect(screen.getByText('发布会')).toBeInTheDocument()
   })
 
-  it('shows the empty state without events', () => {
+  it('shows the empty state without events', async () => {
     render(Calendar)
+    const { fireEvent: fe } = await import('@testing-library/dom')
+    await fe.click(screen.getByRole('tab', { name: '列表' }))
     expect(screen.getByText(/还没有日程/)).toBeInTheDocument()
+  })
+
+  it('week view renders hour grid with events and tasks placed', async () => {
+    const now = new Date()
+    const iso = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 30).toISOString()
+    calendar.events = [EV({ id: 9, uid: 'u9', summary: '周会', start: iso })]
+    render(Calendar)
+    expect(screen.getByText('周会')).toBeInTheDocument()
+    expect(screen.getByText('10:00')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '今天' })).toBeInTheDocument()
   })
 })

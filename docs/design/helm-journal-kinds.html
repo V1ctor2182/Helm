@@ -1,0 +1,900 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Helm · 记录 · 速记/日记/任务 三态 layout 设计稿</title>
+<!--
+  HELM · 记录页三态 layout(2026-07-07,用户:速记/日记/任务的 layout UIUX 应该不一样)
+  2026-07-08 增量(用户):分诊加「想法」类;时间+地点双抽取;发送后结构化回执
+  (chips+改类);速记墙卡片带分诊徽章;日记今天页带连续天数。
+  同一 NOMI 语言,三种信息形态各配专属布局:
+  · 速记 = 碎片抓取 → 瀑布卡片墙(便签/收藏卡混排,快速扫视)
+  · 日记 = 连续叙事 → 纸页窄栏(今天的页在顶部书写,往下一天一页,阅读态)
+  · 任务 = 两列不变(我的待办 / agent 定时;2026-07-08 用户澄清):手动派发入口
+    只面向 agent;速记 AI 分诊出的任务自动落进任务区(个人事项进待办列);
+    排期不用 cron,用人话说——整句输入,AI 解析出「每天早上 9 点」排期 chip
+  全交互:tab 切换/待办勾选/任务开关/运行历史展开/日记可写。定稿后进 Svelte。
+-->
+<style>
+  :root{
+    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Helvetica Neue",sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,monospace;
+    --bg:#f6f6f7; --card:#fff; --pill:#f1f1f3;
+    --ink:#111114; --ink2:#5c5c66; --ink3:#a2a2ab;
+    --hair:#ececef; --g1:#ff8a3d; --g2:#a855f7; --grad:linear-gradient(90deg,var(--g1),var(--g2));
+    --ok:#28a745; --cyan:#0e9c8d;
+    --shadow:0 1px 2px rgba(17,17,20,.05),0 6px 18px rgba(17,17,20,.07);
+    --shadow-lg:0 2px 6px rgba(17,17,20,.06),0 16px 40px rgba(17,17,20,.12);
+    --ease:cubic-bezier(.32,.72,0,1);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%}
+  body{font-family:var(--sans);background:var(--bg);color:var(--ink);padding:28px 34px 60px}
+
+  .top{display:flex;align-items:center;gap:14px;margin-bottom:20px}
+  .top h1{font:800 22px/1.2 var(--sans);letter-spacing:-.2px;margin:0}
+  .top .sub{font:400 13px/1 var(--sans);color:var(--ink3)}
+  .ctlrow{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+  .dispicons{display:flex;gap:4px;margin-left:auto}
+  .dic{width:34px;height:34px;border-radius:10px;border:0;background:transparent;color:var(--ink3);cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .dic svg{width:17px;height:17px}
+  .dic:hover,.dic.on{color:var(--ink);background:var(--pill)}
+  .chips{display:flex;gap:5px}
+  .chip{font:500 12.5px/1 var(--sans);color:var(--ink2);background:var(--pill);border:0;border-radius:999px;padding:8px 16px;cursor:pointer}
+  .chip.on{background:var(--ink);color:#fff;font-weight:600}
+  .pane{display:none}
+  .pane.on{display:block}
+
+  /* ═══ 速记:瀑布卡片墙 ═══ */
+  .daymark{display:flex;align-items:baseline;gap:8px;font:700 13px/1 var(--sans);margin:18px 2px 12px}
+  .daymark .n{font:400 11px/1 var(--sans);color:var(--ink3)}
+  .wall{columns:3 260px;column-gap:14px}
+  .wcard{break-inside:avoid;background:var(--card);border-radius:16px;box-shadow:var(--shadow);
+    margin:0 0 14px;overflow:hidden;transition:box-shadow .15s var(--ease);cursor:pointer}
+  .wcard:hover{box-shadow:var(--shadow-lg)}
+  .wcard .cover{width:100%;display:block;aspect-ratio:16/9;object-fit:cover;background:linear-gradient(135deg,#26202c,#191a20)}
+  .wcard .pad{padding:12px 14px}
+  .badge{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 5px;
+    border-radius:7px;color:#fff;font:800 9.5px/1 var(--sans);margin-bottom:8px}
+  .b-yt{background:#ff2d2d}.b-ax{background:#8b5a2b}.b-web{background:#0a84ff}.b-n{background:#111114}
+  .wcard .ti{font:600 13.5px/1.35 var(--sans)}
+  .wcard .sum{font:400 12px/1.55 var(--sans);color:var(--ink2);margin-top:5px}
+  .wcard .note-tx{font:500 13.5px/1.6 var(--sans);color:var(--ink)}
+  .wcard .foot{display:flex;gap:7px;align-items:center;margin-top:9px;font:400 10.5px/1 var(--sans);color:var(--ink3)}
+  .wcard .tag{color:var(--cyan)}
+  .wcard .tm{margin-left:auto}
+  .wcard.plain{background:var(--card)}
+  .wcard.plain .pad{padding:14px 15px}
+
+  .ntag{display:inline-block;font-size:9.5px;font-weight:700;border-radius:999px;padding:2px 8px;margin-bottom:6px;color:#fff;background:var(--ink)}
+  .ntag.idea{background:#0a84ff}
+  .ntag.task{background:linear-gradient(90deg,var(--g1),var(--g2))}
+  .ntag.xc{color:var(--ink2);background:var(--pill);font-weight:600;font-family:var(--mono)}
+
+  /* ═══ 日记:纸页窄栏 ═══ */
+  .paper{max-width:640px;margin:0 auto}
+  .streakbar{display:flex;align-items:center;gap:16px;margin-bottom:14px}
+  .streakbar .s{display:flex;align-items:baseline;gap:5px}
+  .streakbar .big{font:800 24px/1 var(--sans)}
+  .streakbar .u{font:400 11.5px/1 var(--sans);color:var(--ink3)}
+  .streakbar .ai{margin-left:auto;display:inline-flex;align-items:center;gap:7px;background:var(--card);
+    border:1px solid var(--hair);border-radius:999px;padding:8px 15px;font:500 12px/1 var(--sans);color:var(--ink2);cursor:pointer}
+  .spark{width:13px;height:13px;border-radius:50%;background:conic-gradient(from 210deg,var(--g1),var(--g2),var(--g1))}
+  .todaypage{background:var(--card);border-radius:20px;box-shadow:var(--shadow);padding:22px 26px;margin-bottom:26px}
+  .todaypage .dh{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+  .todaypage .d{font:800 19px/1 var(--sans)}
+  .todaypage .w{font:400 12px/1 var(--sans);color:var(--ink3)}
+  .todaypage textarea{width:100%;min-height:120px;border:0;outline:none;resize:vertical;
+    font:400 14.5px/1.75 var(--sans);color:var(--ink);background:transparent}
+  .todaypage textarea::placeholder{color:var(--ink3)}
+  .todaypage .actrow{display:flex;align-items:center;gap:10px;margin-top:10px}
+  .todaypage .hint{font:400 11px/1 var(--sans);color:var(--ink3)}
+  .gbtn{margin-left:auto;font:600 12.5px/1 var(--sans);color:#fff;background:var(--grad);border:0;border-radius:999px;padding:10px 20px;cursor:pointer}
+  .page{position:relative;background:var(--card);border-radius:20px;box-shadow:var(--shadow);padding:22px 26px;margin-bottom:18px}
+  .page .dh{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+  .page .d{font:800 15.5px/1 var(--sans)}
+  .page .w{font:400 11.5px/1 var(--sans);color:var(--ink3)}
+  .page .cnt{margin-left:auto;font:400 10.5px/1 var(--sans);color:var(--ink3)}
+  .page .md{font:400 14px/1.75 var(--sans);color:var(--ink2)}
+  .page .md h3{font:700 14.5px/1.4 var(--sans);color:var(--ink);margin:.4em 0 .2em}
+  .page .md strong{color:var(--ink)}
+  .page .aisum{display:flex;gap:9px;background:var(--bg);border-radius:12px;padding:11px 13px;margin-top:12px;font:400 12.5px/1.6 var(--sans);color:var(--ink2)}
+
+  /* ═══ 任务:清单 + 定时卡 ═══ */
+  .dispatch{display:flex;gap:8px;background:var(--card);border-radius:999px;box-shadow:var(--shadow);
+    padding:6px 6px 6px 20px;align-items:center;margin-bottom:22px}
+  .dispatch input[type=text]{flex:1;border:0;outline:none;font:400 13.5px/1 var(--sans);background:transparent;color:var(--ink)}
+  .dispatch input::placeholder{color:var(--ink3)}
+  .dispatch select{appearance:none;-webkit-appearance:none;font:500 12px/1 var(--sans);color:var(--ink);
+    background:var(--pill) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M1 1l4 4 4-4' fill='none' stroke='%2384848e' stroke-width='1.6' stroke-linecap='round'/></svg>") no-repeat right 11px center;
+    border:0;border-radius:999px;padding:9px 28px 9px 13px;cursor:pointer}
+  .taskcols{display:grid;grid-template-columns:1fr 1.25fr;gap:20px;align-items:start}
+  @media (max-width:900px){.taskcols{grid-template-columns:1fr}}
+  .colh{display:flex;align-items:baseline;gap:8px;margin:0 4px 10px}
+  .colh .t{font:700 13.5px/1 var(--sans)}
+  .colh .n{font:400 11px/1 var(--sans);color:var(--ink3)}
+  .todolist{background:var(--card);border-radius:18px;box-shadow:var(--shadow);padding:6px 8px}
+  .todo{display:flex;align-items:center;gap:11px;padding:11px 10px;border-radius:12px}
+  .todo:hover{background:var(--pill)}
+  .cb{width:20px;height:20px;border-radius:50%;border:1.6px solid var(--ink3);flex:none;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;color:transparent;transition:all .15s var(--ease)}
+  .todo.done .cb{background:var(--grad);border-color:transparent;color:#fff}
+  .cb svg{width:11px;height:11px}
+  .todo .tx{flex:1;font:400 13.5px/1.45 var(--sans);color:var(--ink)}
+  .todo.done .tx{color:var(--ink3);text-decoration:line-through}
+  .todo .up{font:500 10.5px/1 var(--sans);color:var(--ink3);background:var(--card);border:1px solid var(--hair);border-radius:999px;
+    padding:5px 10px;cursor:pointer;opacity:0;transition:opacity .12s;white-space:nowrap}
+  .todo:hover .up{opacity:1}
+  .todo .up:hover{color:var(--ink)}
+  /* 任务行两层:标题 / 元信息 chips(2026-07-08 用户:待办 UIUX 要更「任务」) */
+  .todo{align-items:flex-start}
+  .todo .cb{margin-top:1px}
+  .todo .mid{flex:1;min-width:0}
+  .todo .tmeta{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap;align-items:center}
+  .tchip{font:600 10px/1 var(--mono);color:var(--ink2);background:var(--pill);border-radius:999px;padding:3px 8px;display:inline-flex;align-items:center;gap:4px}
+  .tchip.due{color:#c05e00;background:#fff4e8}   /* 24h 内临近 */
+  .todo .acts{display:flex;gap:5px;align-self:center}
+  .donebar{font:600 10px/1 var(--sans);color:var(--ink3);letter-spacing:.4px;margin:8px 10px 4px}
+  .sched{display:flex;flex-direction:column;gap:12px}
+  .scard{background:var(--card);border-radius:18px;box-shadow:var(--shadow);padding:14px 16px}
+  .scard .h{display:flex;align-items:center;gap:10px}
+  .scard .nm{font:600 13.5px/1.3 var(--sans);flex:1;min-width:0}
+  .sw{width:40px;height:24px;border-radius:99px;background:var(--pill);border:0;position:relative;cursor:pointer;flex:none;transition:background .18s var(--ease)}
+  .sw::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;
+    box-shadow:var(--shadow);transition:left .18s var(--ease)}
+  .sw.on{background:var(--grad)}
+  .sw.on::after{left:19px}
+  .scard .meta{display:flex;gap:8px;align-items:center;margin-top:9px;flex-wrap:wrap}
+  .cronchip{font:600 10px/1 var(--mono);color:var(--ink2);background:var(--pill);border-radius:999px;padding:5px 10px}
+  .nextchip{font:400 11px/1 var(--sans);color:var(--ink3)}
+  .runbtn{margin-left:auto;font:500 10.5px/1 var(--sans);color:var(--ink3);background:transparent;border:0;cursor:pointer}
+  .runbtn:hover{color:var(--ink)}
+  .rundrawer{display:none;margin-top:10px;border-top:1px solid var(--hair);padding-top:8px}
+  .scard.open .rundrawer{display:block}
+  .runrow{display:flex;align-items:center;gap:9px;font:400 11.5px/1.6 var(--sans);color:var(--ink2);padding:4px 2px}
+  .rdot{width:7px;height:7px;border-radius:50%;flex:none}
+  .rdot.ok{background:var(--ok)}.rdot.err{background:#e5484d}
+  .runrow .out{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink3)}
+
+  /* 智能捕获条 + AI 判定 */
+  .smartcap{display:flex;gap:8px;background:var(--card);border-radius:999px;box-shadow:var(--shadow);
+    padding:6px 6px 6px 20px;align-items:center;margin-bottom:6px}
+  .smartcap input{flex:1;border:0;outline:none;font:400 14px/1 var(--sans);background:transparent;color:var(--ink)}
+  .smartcap input::placeholder{color:var(--ink3)}
+  .aiverdict{display:inline-flex;align-items:center;gap:6px;font:600 11.5px/1 var(--sans);color:var(--ink2);
+    background:var(--pill);border-radius:999px;padding:7px 13px;cursor:pointer;white-space:nowrap;
+    animation:pop .18s var(--ease)}
+  @keyframes pop{from{transform:scale(.85);opacity:0}}
+  .aiverdict .spark{width:11px;height:11px}
+  .scHint{font:400 11px/1 var(--sans);color:var(--ink3);margin:0 4px 20px;padding-left:16px}
+  .vcaret{font-size:8px;color:var(--ink3);margin-left:2px}
+  .whomini{display:inline-flex;gap:4px;animation:pop .18s var(--ease)}
+  .wm{font:500 11px/1 var(--sans);color:var(--ink2);background:#fff;border:1px solid var(--hair);border-radius:999px;padding:6px 12px;cursor:pointer}
+  .wm.on{border-color:transparent;background:var(--grad);color:#fff;font-weight:600}
+  .focusbtn{width:36px;height:36px;border-radius:50%;border:0;background:var(--pill);color:var(--ink2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none}
+  .focusbtn svg{width:17px;height:17px}
+  .focusbtn:hover{color:var(--ink)}
+
+  /* 专注进行中卡 */
+  .focuslive{display:flex;align-items:center;gap:16px;background:var(--card);border-radius:18px;
+    box-shadow:var(--shadow);padding:14px 18px;margin-bottom:16px}
+  .fring{width:56px;height:56px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
+    background:conic-gradient(var(--g1) 0deg,var(--g2) var(--deg,40deg),var(--pill) var(--deg,40deg))}
+  .fring .ft{width:44px;height:44px;border-radius:50%;background:var(--card);display:flex;align-items:center;
+    justify-content:center;font:700 11px/1 var(--mono);font-variant-numeric:tabular-nums}
+  .fmid .fl{font:400 10.5px/1 var(--sans);color:var(--ink3);letter-spacing:.4px}
+  .fmid .fw{font:600 14px/1.4 var(--sans);margin-top:3px}
+  .fstop{margin-left:auto;font:600 12px/1 var(--sans);color:#fff;background:var(--grad);border:0;
+    border-radius:999px;padding:9px 17px;cursor:pointer}
+
+  /* 详情弹层(速记/收藏/日记页共用骨架) */
+  .scrim{position:fixed;inset:0;background:rgba(17,17,20,.32);display:none;align-items:center;
+    justify-content:center;z-index:90;padding:30px}
+  .scrim.on{display:flex}
+  .sheet{width:min(600px,92vw);max-height:86vh;overflow-y:auto;background:var(--card);border-radius:22px;
+    box-shadow:var(--shadow-lg);animation:up .22s var(--ease)}
+  @keyframes up{from{transform:translateY(14px);opacity:0}}
+  .sheet .shd{display:flex;align-items:center;gap:10px;padding:16px 20px 10px}
+  .sheet .kbadge{font:600 11px/1 var(--sans);color:var(--ink2);background:var(--pill);border-radius:999px;padding:6px 12px}
+  .sheet .when{font:400 11px/1 var(--sans);color:var(--ink3)}
+  .sheet .x{margin-left:auto;width:28px;height:28px;border-radius:50%;border:0;background:var(--pill);
+    color:var(--ink3);font-size:15px;cursor:pointer}
+  .sheet .shero{width:100%;max-height:250px;object-fit:cover;display:block}
+  .sheet .sbody{padding:14px 20px 8px}
+  .sheet .sti{font:700 18px/1.35 var(--sans);margin:0 0 8px}
+  .sheet .scontent{font:400 14px/1.7 var(--sans);color:var(--ink2);white-space:pre-wrap}
+  .sheet .aibox{display:flex;gap:9px;background:var(--bg);border-radius:12px;padding:12px 14px;margin-top:12px;
+    font:400 12.5px/1.65 var(--sans);color:var(--ink2)}
+  .sheet .aibox .lab{font-weight:700;color:var(--ink)}
+  .sheet .srow{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;font:400 11px/1 var(--sans);color:var(--ink3);align-items:center}
+  .sheet .sacts{display:flex;gap:8px;padding:14px 20px 18px}
+  .sheet .sacts button,.sheet .sacts a{font:500 12px/1 var(--sans);color:var(--ink2);background:var(--pill);
+    border:0;border-radius:999px;padding:9px 16px;cursor:pointer;text-decoration:none}
+  .sheet .sacts .pri{color:#fff;background:var(--grad);font-weight:600}
+  .sheet .focusblock{display:flex;align-items:center;gap:10px;background:var(--bg);border-radius:12px;
+    border-left:3px solid var(--g2);padding:10px 13px;margin-top:12px;font:400 12.5px/1.5 var(--sans);color:var(--ink2)}
+  .sheet .dayline{display:flex;gap:9px;font:400 12px/1.7 var(--sans);color:var(--ink3);padding:3px 0}
+  .sheet .dayline .t{font-family:var(--mono);font-size:10.5px;padding-top:3px}
+
+  .inlink{color:var(--g2);border-bottom:1px solid color-mix(in srgb,var(--g2) 40%,transparent);cursor:pointer}
+  .attachmini{display:flex;align-items:center;gap:5px;margin-top:9px}
+  .attachmini .an{font:400 10.5px/1 var(--sans);color:var(--ink3)}
+  /* 详情:原文主角 + 附件卡 + AI 注脚 */
+  .sheet .prose{font:400 17px/1.85 var(--sans);color:var(--ink);white-space:pre-wrap;word-break:break-word}
+  .sheet .prose .inlink{font-size:inherit}
+  .sheet .attachh{font:600 11px/1 var(--sans);color:var(--ink3);letter-spacing:.4px;margin:18px 0 8px}
+  .sheet .attach{display:flex;gap:11px;align-items:flex-start;background:var(--bg);border-radius:14px;
+    padding:11px 13px;margin-bottom:8px;cursor:pointer;transition:background .12s}
+  .sheet .attach:hover{background:var(--pill)}
+  .sheet .attach .ab{flex:none;margin:2px 0 0}
+  .sheet .attach .at{font:600 13px/1.4 var(--sans);color:var(--ink)}
+  .sheet .attach .as{font:400 11.5px/1.5 var(--sans);color:var(--ink3);margin-top:2px;
+    display:-webkit-box;-webkit-line-clamp:1;line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+  .sheet .attach .asrc{font:400 10px/1 var(--sans);color:var(--ink3);margin-top:4px}
+  .sheet .attach .go{margin-left:auto;flex:none;font:500 10.5px/1 var(--sans);color:var(--ink3);
+    background:var(--card);border:0;border-radius:999px;padding:6px 11px;cursor:pointer}
+  .sheet .tagrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;font:400 11.5px/1 var(--sans);align-items:center}
+  .sheet .tagrow .tg{color:var(--cyan)}
+  .sheet .tagrow .clue{color:var(--ink2);background:var(--pill);border-radius:999px;padding:5px 11px}
+  /* AI 注脚:角落极弱,hover 展开 */
+  .sheet .ainote{display:flex;align-items:center;gap:6px;margin-top:16px;font:400 10.5px/1 var(--sans);color:var(--ink3)}
+  .sheet .ainote .spark{width:10px;height:10px}
+  .sheet .ainote .full{display:none}
+  .sheet .ainote:hover .full{display:inline}
+  /* AI 归类(按主题分组) */
+  .groupsw{display:flex;gap:4px;margin-bottom:12px}
+  .gsw{display:inline-flex;align-items:center;gap:6px;font:500 11.5px/1 var(--sans);color:var(--ink3);
+    background:transparent;border:0;border-radius:999px;padding:6px 12px;cursor:pointer}
+  .gsw:hover{color:var(--ink)}
+  .gsw.on{color:var(--ink);background:var(--pill);font-weight:600}
+  .aisuggest{display:flex;align-items:center;gap:9px;background:var(--card);border:1.4px dashed color-mix(in srgb,var(--g2) 45%,transparent);
+    border-radius:14px;padding:11px 14px;margin-bottom:16px;font:400 12.5px/1 var(--sans);color:var(--ink2)}
+  .aisuggest b{color:var(--ink)}
+  .sgok{margin-left:auto;font:600 11px/1 var(--sans);color:#fff;background:var(--grad);border:0;border-radius:999px;padding:7px 13px;cursor:pointer}
+  .sgno{font:500 11px/1 var(--sans);color:var(--ink3);background:var(--pill);border:0;border-radius:999px;padding:7px 13px;cursor:pointer}
+  .topich{display:flex;align-items:baseline;gap:8px;margin:16px 2px 10px}
+  .topich.dim{opacity:.72}
+  .tdot{width:9px;height:9px;border-radius:3px;background:var(--grad);align-self:center}
+  .topich b{font:700 13.5px/1 var(--sans)}
+  .topich .tn{font:400 10.5px/1 var(--sans);color:var(--ink3)}
+  .topicchip{display:inline-flex;align-items:center;gap:4px;font:500 9.5px/1 var(--sans);color:var(--ink2);
+    background:var(--pill);border-radius:999px;padding:3px 8px}
+  .topicchip .tx-x{font-style:normal;text-decoration:none;color:var(--ink3);cursor:pointer;padding:0 1px;visibility:hidden}
+  .wcard:hover .topicchip .tx-x{visibility:visible}
+  .topicchip .tx-x:hover{color:#e5484d}
+  /* Canvas 画布(速记/日记) */
+  .cvs{position:relative;min-height:480px;background:var(--bg);border-radius:20px;overflow:hidden}
+  .cvs .wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .cnode{position:absolute;cursor:grab;user-select:none}
+  .cnode:active{cursor:grabbing;z-index:30}
+  .cluster2{position:absolute;z-index:5}
+  .pillg2{background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff;font:600 12px/1 var(--sans);padding:7px 16px;border-radius:999px;box-shadow:var(--shadow)}
+  .cvhint{position:absolute;left:18px;bottom:14px;font:400 11px/1 var(--sans);color:var(--ink3)}
+  .jmini{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:14px 16px}
+  .jmini.dim{opacity:.75}
+  .jmh{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}
+  .jmh b{font:800 14px/1 var(--sans)}
+  .jmh span{font:400 10.5px/1 var(--sans);color:var(--ink3)}
+  .jmini p{font:400 12px/1.6 var(--sans);color:var(--ink2);margin:0;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .jmini p b{color:var(--ink)}
+  .jmf{display:flex;gap:6px;margin-top:8px}
+  .fchip{font:500 10px/1 var(--sans);color:var(--g2);background:var(--pill);border-radius:999px;padding:4px 9px}
+  /* Calendar 视图 */
+  .calbar{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .nbtn{width:30px;height:30px;border-radius:50%;background:var(--pill);border:0;color:var(--ink2);cursor:pointer}
+  .calrng{font:700 13px/1 var(--sans)}
+  .todaybtn{font:500 11px/1 var(--sans);color:var(--ink2);background:var(--pill);border:0;border-radius:999px;padding:6px 12px;cursor:pointer}
+  .caltip{margin-left:auto;font:400 11px/1 var(--sans);color:var(--ink3)}
+  .calgrid{display:grid;grid-template-columns:48px repeat(7,1fr)}
+  .cald{text-align:center;padding:6px 0 10px}
+  .cald span{display:block;font:400 11px/1.4 var(--sans);color:var(--ink3)}
+  .cald b{font:400 14px/1.4 var(--sans);color:var(--ink2)}
+  .cald.on span,.cald.on b{color:var(--ink);font-weight:700}
+  .calh{font:400 10.5px/1 var(--sans);color:var(--ink3);text-align:right;padding:4px 8px 0 0;height:52px}
+  .calc{height:52px;border-left:1px dashed #e6e6ea;position:relative}
+  .calc.nowc::after{content:'';position:absolute;left:0;right:-700%;top:26px;border-top:1.5px solid var(--g1);z-index:1}
+  .calcard{position:absolute;left:4px;right:4px;top:2px;z-index:2;background:var(--card);border-radius:10px;
+    box-shadow:var(--shadow);padding:5px 8px;font:600 11px/1.4 var(--sans);color:var(--ink);
+    border-left:3px solid var(--g2);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer}
+  .calcard i{display:block;font:400 9.5px/1.3 var(--sans);color:var(--ink3);font-style:normal}
+  .calcard.k-task{border-left-color:var(--ok)}
+  .calcard.k-note{border-left-color:#0a84ff}
+  .calcard.k-jr{border-left-color:#c9a227}
+  /* toast */
+  .toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:var(--ink);color:#fff;
+    font:500 12.5px/1 var(--sans);border-radius:999px;padding:11px 20px;box-shadow:var(--shadow-lg);
+    opacity:0;pointer-events:none;transition:opacity .25s;z-index:99}
+  .toast.on{opacity:1}
+</style>
+</head>
+<body>
+  <div class="top">
+    <h1>记录</h1><span class="sub">视图 × 分类:两个维度,一行说清</span>
+  </div>
+  <!-- 顶部两组控制:左=视图(怎么看),右=分类(看什么)。旧账本 gutter/SCRATCH 标签/独立记一笔行全部退场 -->
+  <!-- 定稿(2026-07-08 用户拍板):分类是主维度(日历=全量记录的日历视角);
+       Canvas/Timeline 只是速记·日记内部的展示方式,右侧两枚小 icon 切换 -->
+  <div class="ctlrow">
+    <div class="chips">
+      <button class="chip on" data-p="notes">速记</button>
+      <button class="chip" data-p="journal">日记</button>
+      <button class="chip" data-p="tasks">任务</button>
+      <button class="chip" data-p="cal2">日历</button>
+    </div>
+    <div class="dispicons">
+      <button class="dic on" title="列表"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="5" cy="18" r="1" fill="currentColor" stroke="none"/><path d="M9.5 6h10M9.5 12h10M9.5 18h10"/></svg></button>
+      <button class="dic" title="画布"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg></button>
+    </div>
+  </div>
+
+  <!-- 智能捕获条:一个入口,AI 自动判类(速记/日记/任务/收藏),不用手选 kind -->
+  <!-- 捕获坞去重定稿(2026-07-08):无 kind chips 行——AI 判定徽章(可点轮换)承担分流;
+       判为任务时「给自己/交给agent」双轨浮现;专注收成秒表 SVG 图标;问大脑由疑问句判定。 -->
+  <div class="smartcap">
+    <input id="scin" type="text" placeholder="随手丢进来 — AI 自动分流:速记 / 日记 / 任务 / 收藏 / 问大脑…">
+    <span class="aiverdict" id="aiv" hidden><span class="spark"></span><span id="aivt">AI · 速记</span><span class="vcaret">▾</span></span>
+    <button class="focusbtn" id="fbtn" title="开始专注(以输入内容为题)" onclick="scFocus()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="13" r="7.2"/><path d="M12 9.5V13l2.4 1.6M10 2.5h4M12 2.5v3"/></svg>
+    </button>
+    <button class="gbtn" style="margin-left:0" onclick="scSend()">发送</button>
+  </div>
+  <div class="scHint">一个入口,AI 分流 — 判定徽章可点改;「明早 9 点…」→ agent 任务 · 链接 → 收藏 · 疑问句 → 问大脑 · 秒表钮 = 用这句话开始专注</div>
+
+  <!-- ═══ 速记:瀑布卡片墙(碎片扫视) ═══ -->
+  <div class="pane on" id="p-notes">
+    <!-- AI 归类(2026-07-08 用户:随便记,AI 帮归类):
+         记录零负担;enrich 之后 AI 静默把速记归进「集合」(比 #tag 高一级的主题)。
+         呈现三件套:①墙可切「按主题」分组 ②卡上主题胶囊(hover 可移出=纠错)
+         ③集合自动涌现(AI 建议卡,一键采纳/忽略) -->
+    <div class="groupsw">
+      <button class="gsw on" data-g="time">按时间</button>
+      <button class="gsw" data-g="topic"><span class="spark" style="width:10px;height:10px"></span>按主题 · AI</button>
+    </div>
+    <!-- 专注进行中:活的计时卡(专注是速记的一种状态,结束自动记入今日日记) -->
+    <div class="focuslive" id="focusCard">
+      <span class="fring" id="fring"><span class="ft" id="ftime">00:00</span></span>
+      <div class="fmid">
+        <div class="fl">专注中</div>
+        <div class="fw">把 NOMI 三态稿进 Svelte</div>
+      </div>
+      <button class="fstop" onclick="stopFocus()">停止并记入日记</button>
+    </div>
+    <!-- ── 按主题(AI 集合)态 ── -->
+    <div class="topicview" id="topicview" hidden>
+      <!-- AI 涌现:发现相似记录,建议建集合(一键采纳) -->
+      <div class="aisuggest">
+        <span class="spark"></span>
+        <span class="sgtx">发现 3 条关于 <b>SwiftUI 布局</b> 的记录 — 建一个集合?</span>
+        <button class="sgok">创建集合</button><button class="sgno">忽略</button>
+      </div>
+      <div class="topich"><span class="tdot"></span><b>Transformer 学习</b><span class="tn">4 条 · AI 维护</span></div>
+      <div class="wall">
+        <div class="wcard"><div class="pad"><span class="badge b-ax">AX</span>
+          <div class="ti">Attention Is All You Need</div>
+          <div class="sum">提出 Transformer:完全基于注意力机制——现代大模型的地基。</div>
+          <div class="foot"><span class="topicchip"><i class="spark" style="width:8px;height:8px"></i>Transformer 学习<u class="tx-x" title="移出集合(AI 会学习)">×</u></span><span class="tm">11:58</span></div></div></div>
+        <div class="wcard plain"><div class="pad"><span class="badge b-n">N</span>
+          <div class="note-tx">多头注意力和 SwiftUI 的 proposal/response 有点像——都是协商。</div>
+          <div class="foot"><span class="topicchip"><i class="spark" style="width:8px;height:8px"></i>Transformer 学习<u class="tx-x">×</u></span><span class="tm">20:15</span></div></div></div>
+      </div>
+      <div class="topich"><span class="tdot" style="background:linear-gradient(135deg,#34d6c0,#0a84ff)"></span><b>Helm 设计灵感</b><span class="tn">3 条 · AI 维护</span></div>
+      <div class="wall">
+        <div class="wcard"><div class="pad"><span class="badge b-web">AW</span>
+          <div class="ti">Awwwards — 年度作品集合集</div>
+          <div class="foot"><span class="topicchip"><i class="spark" style="width:8px;height:8px"></i>Helm 设计灵感<u class="tx-x">×</u></span><span class="tm">16:51</span></div></div></div>
+        <div class="wcard plain"><div class="pad"><span class="badge b-n">N</span>
+          <span class="ntag idea">想法</span>
+          <div class="note-tx">给 notch 加「速记 → AI 整理」入场动效,像仪表暖机。</div>
+          <div class="foot"><span class="topicchip"><i class="spark" style="width:8px;height:8px"></i>Helm 设计灵感<u class="tx-x">×</u></span><span class="tm">21:44</span></div></div></div>
+      </div>
+      <div class="topich dim"><span class="tdot" style="background:var(--ink3)"></span><b>未归类</b><span class="tn">2 条 · AI 攒够相似的会提议建集合</span></div>
+      <div class="wall">
+        <div class="wcard plain"><div class="pad"><span class="badge b-n">N</span>
+          <div class="note-tx">Canvas 连线要不要 note_links 表?明早问一下。</div>
+          <div class="foot"><span class="tm">01:12</span></div></div></div>
+      </div>
+    </div>
+
+    <div id="timeview">
+    <div class="daymark">今天 · 07-07<span class="n">4 条</span></div>
+    <div class="wall">
+      <!-- 分诊出的任务:墙上留结构化回执卡,链到任务分区(2026-07-08 用户) -->
+      <div class="wcard plain" onclick="openDetail(this)" style="border-left:3px solid var(--g1)"><div class="pad">
+        <span class="badge b-n">N</span>
+        <div><span class="ntag task">任务</span> <span class="ntag xc">明晚 20:00</span> <span class="ntag xc">@家</span></div>
+        <div class="note-tx">帮荣荣姐做龙虾</div>
+        <div class="foot"><span style="color:var(--g1);cursor:pointer">已建任务 →</span><span class="tm">20:02</span></div>
+      </div></div>
+      <div class="wcard plain" onclick="openDetail(this)"><div class="pad">
+        <span class="badge b-n">N</span>
+        <div class="note-tx">驾驶舱 e2e 三个坑:中间件吞后台任务 / 事务时序 / 僵尸进程——写进 backlog 复盘。</div>
+        <div class="foot"><span class="tag">#复盘</span><span class="tm">14:31</span></div>
+      </div></div>
+      <div class="wcard" onclick="openDetail(this)">
+        <div class="cover" style="background:linear-gradient(135deg,#3a2f18,#1c1c22);display:flex;align-items:center;justify-content:center">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1.6"><polygon points="9,7 9,17 17,12" fill="rgba(255,255,255,.4)" stroke="none"/></svg>
+        </div>
+        <div class="pad">
+          <span class="badge b-yt">YT</span>
+          <div class="ti">PSY - GANGNAM STYLE(강남스타일) M/V</div>
+          <div class="sum">史上最具标志性的病毒式传播 MV,魔性舞蹈+现象级全球流行文化影响力。</div>
+          <div class="foot"><span>officialpsy</span><span class="tag">#音乐</span><span class="tm">10:08</span></div>
+        </div>
+      </div>
+      <div class="wcard" onclick="openDetail(this)"><div class="pad">
+        <span class="badge b-ax">AX</span>
+        <div class="ti">Attention Is All You Need</div>
+        <div class="sum">提出 Transformer:完全基于注意力机制,弃用循环与卷积——现代大模型的地基。多头注意力让模型同时关注不同位置的关系,训练并行度大幅提升。</div>
+        <div class="foot"><span>arXiv</span><span class="tag">#transformer</span><span class="tag">#必读</span><span class="tm">11:58</span></div>
+      </div></div>
+      <div class="wcard plain" onclick="openDetail(this)"><div class="pad">
+        <span class="badge b-n">N</span>
+        <div class="note-tx">给 notch 加「速记 → AI 整理」入场动效,像仪表暖机。</div>
+        <div class="foot"><span class="tm">21:44</span></div>
+      </div></div>
+      <div class="wcard" onclick="openDetail(this)">
+        <div class="cover" style="background:linear-gradient(135deg,#eef0f4,#dfe3ea);display:flex;align-items:center;justify-content:center;gap:8px">
+          <span style="width:42px;height:52px;border-radius:9px;background:#34d6c0"></span>
+          <span style="width:36px;height:42px;border-radius:9px;background:#ffb03d"></span>
+          <span style="width:42px;height:56px;border-radius:9px;background:#7c9cff"></span>
+        </div>
+        <div class="pad">
+          <span class="badge b-web">AW</span>
+          <div class="ti">Awwwards — 年度作品集合集</div>
+          <div class="sum">交互/视觉标杆站点合集,收藏做 Helm 视觉参考。</div>
+          <div class="foot"><span>awwwards.com</span><span class="tag">#灵感</span><span class="tm">16:51</span></div>
+        </div>
+      </div>
+      <div class="wcard plain rich" onclick="openRichDetail()"><div class="pad">
+        <span class="badge b-n">N</span>
+        <div class="note-tx">看了 <span class="inlink">arxiv.org/abs/1706.03762</span> 讲注意力的,配 <span class="inlink">youtu.be/swiftui-layout</span> 一起消化,周三前搞完。</div>
+        <div class="attachmini"><span class="badge b-ax" style="margin:0">AX</span><span class="badge b-yt" style="margin:0">YT</span><span class="an">提到 2 个内容</span></div>
+        <div class="foot"><span class="tag">#transformer</span><span class="tm">22:40</span></div>
+      </div></div>
+      <div class="wcard plain" onclick="openDetail(this)"><div class="pad">
+        <span class="badge b-n">N</span>
+        <div class="note-tx">Canvas 连线要不要 note_links 表?明早问一下。</div>
+        <div class="foot"><span class="tag">#待定</span><span class="tm">01:12</span></div>
+      </div></div>
+    </div>
+    <div class="daymark">昨天 · 07-06<span class="n">2 条</span></div>
+    <div class="wall">
+      <div class="wcard" onclick="openDetail(this)"><div class="pad">
+        <span class="badge b-yt">YT</span>
+        <div class="ti">SwiftUI Layout 深讲</div>
+        <div class="sum">proposal/response 模型,frame 与 fixedSize 的真实语义。</div>
+        <div class="foot"><span>Sean Allen</span><span class="tm">19:12</span></div>
+      </div></div>
+      <div class="wcard plain" onclick="openDetail(this)"><div class="pad">
+        <span class="badge b-n">N</span>
+        <div class="note-tx">周三前把 NOMI 稿逐块进 Svelte。</div>
+        <div class="foot"><span class="tm">23:02</span></div>
+      </div></div>
+    </div>
+    </div>
+  </div>
+
+  <!-- ═══ 日记:纸页窄栏(书写+阅读) ═══ -->
+  <div class="pane" id="p-journal">
+    <div class="paper">
+      <div class="streakbar">
+        <span class="s"><span class="big">128</span><span class="u">字 · 今天</span></span>
+        <span class="s"><span class="big">6</span><span class="u">天连续</span></span>
+        <button class="ai"><span class="spark"></span>AI 今日小结</button>
+      </div>
+      <div class="todaypage">
+        <div class="dh"><span class="d">7月7日</span><span class="w">周二 · 今天的页</span>
+          <span class="ntag xc" style="margin-left:auto">连续 3 天</span></div>
+        <textarea placeholder="今天发生了什么?(支持 Markdown,⌘⏎ 写入)">夜里 loop 把整站换成了 NOMI 皮,早上打开像换了个 app。</textarea>
+        <div class="actrow"><span class="hint">⌘⏎ 写入今天 · Markdown</span><button class="gbtn">写入今天</button></div>
+      </div>
+      <div class="page" onclick="openPage(this)">
+        <div class="dh"><span class="d">7月6日</span><span class="w">周一</span><span class="cnt">214 字</span></div>
+        <div class="md"><h3>速记管线打通</h3>把链接→卡片的 AI 管线接通了:oEmbed / arXiv / OpenGraph 三路抓取,LLM 再补摘要标签。顺手抓出<strong>三个后台任务深坑</strong>——中间件吞任务、事务时序、僵尸进程,全记进 backlog。</div>
+        <div class="aisum"><span class="spark"></span>小结:管线从 0 到 1;根因分析比修复本身更值钱,三个坑都是"看不见的执行环境"问题。</div>
+      </div>
+      <div class="page" onclick="openPage(this)">
+        <div class="dh"><span class="d">7月5日</span><span class="w">周日</span><span class="cnt">86 字</span></div>
+        <div class="md">notch 媒体页六连修,最后波形融进背景那一下终于对味了。晚上把设计稿三视图定稿。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 任务:清单 + 定时卡(操作台) ═══ -->
+  <div class="pane" id="p-tasks">
+    <!-- 人话排期(2026-07-08 用户:不要 cron):一句话连时间一起说,AI 解析出排期徽章 -->
+    <div class="dispatch">
+      <input type="text" id="dispIn" placeholder="让 agent 做什么,时间用人话说 — 「每天早上 9 点汇总未读邮件」「周五下午回顾本周」…"
+        oninput="dispParse(this.value)">
+      <span class="aiverdict" id="dispV" hidden><span class="spark"></span><span id="dispVt">每天 09:00</span></span>
+      <button class="gbtn" style="margin-left:0" onclick="dispSend()">交给 agent</button>
+    </div>
+    <div class="taskcols">
+      <div>
+        <div class="colh"><span class="t">待办 · 给自己</span><span class="n">4 条 · 1 已完成</span></div>
+        <div class="todolist">
+          <!-- 按临近排序:有时限的在上(24h 内=橙 chip);完成的沉底 -->
+          <div class="todo"><button class="cb" aria-label="完成"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4 10-10"/></svg></button>
+            <div class="mid"><span class="tx">明早 9 点前 review notch PR</span>
+              <div class="tmeta"><span class="tchip due">明早 09:00</span></div></div>
+            <div class="acts"><button class="up" onclick="event.stopPropagation();startFocusOn(this)">专注</button><button class="up">→ agent</button></div></div>
+          <div class="todo"><button class="cb" aria-label="完成"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4 10-10"/></svg></button>
+            <div class="mid"><span class="tx">帮荣荣姐做龙虾</span>
+              <div class="tmeta"><span class="tchip due">明晚 20:00</span><span class="tchip">@家</span><span class="tchip"><span class="spark" style="width:8px;height:8px"></span>速记分诊</span></div></div>
+            <div class="acts"><button class="up" onclick="event.stopPropagation();startFocusOn(this)">专注</button><button class="up">→ agent</button></div></div>
+          <div class="todo"><button class="cb" aria-label="完成"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4 10-10"/></svg></button>
+            <div class="mid"><span class="tx">回复 arXiv 论文作者邮件</span></div>
+            <div class="acts"><button class="up" onclick="event.stopPropagation();startFocusOn(this)">专注</button><button class="up">→ agent</button></div></div>
+          <div class="donebar">已完成 · 1</div>
+          <div class="todo done"><button class="cb" aria-label="完成"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4 10-10"/></svg></button>
+            <div class="mid"><span class="tx">把 nomi-reference 截图整理进仓库</span></div></div>
+        </div>
+      </div>
+      <div>
+        <div class="colh"><span class="t">定时 · 交给 agent</span><span class="n">2 项启用</span></div>
+        <div class="sched">
+          <div class="scard">
+            <div class="h"><span class="nm">汇总未读邮件</span><button class="sw on" aria-label="启用"></button></div>
+            <div class="meta"><span class="cronchip">每天早上 9 点</span><span class="nextchip">下次 明天 09:00</span>
+              <button class="runbtn">12 次 · ok ▾</button></div>
+            <div class="rundrawer">
+              <div class="runrow"><span class="rdot ok"></span>07-07 09:00<span class="out">12 封未读 → 3 条要点,已写进简报</span></div>
+              <div class="runrow"><span class="rdot ok"></span>07-06 09:00<span class="out">8 封未读 → 2 条要点</span></div>
+              <div class="runrow"><span class="rdot err"></span>07-05 09:00<span class="out">provider 超时,已重试成功</span></div>
+            </div>
+          </div>
+          <div class="scard">
+            <div class="h"><span class="nm">跑 swift test 夜巡</span><button class="sw on" aria-label="启用"></button></div>
+            <div class="meta"><span class="cronchip">每 6 小时</span><span class="nextchip">下次 18:00</span>
+              <button class="runbtn">47 次 · ok ▾</button></div>
+            <div class="rundrawer">
+              <div class="runrow"><span class="rdot ok"></span>12:00<span class="out">47/47 通过 · 3 分 12 秒</span></div>
+            </div>
+          </div>
+          <div class="scard">
+            <div class="h"><span class="nm" style="color:var(--ink3)">周报草稿生成</span><button class="sw" aria-label="启用"></button></div>
+            <div class="meta"><span class="cronchip">每周五 17:00</span><span class="nextchip">已停用</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 速记 · Canvas:自由画布(卡片可拖,橙紫连线=思路关联,cluster 胶囊) ═══ -->
+  <div class="pane" id="p-notes-canvas">
+    <div class="cvs" id="cvs1">
+      <svg class="wires"><defs><linearGradient id="wg2" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#ff8a3d"/><stop offset="1" stop-color="#a855f7"/></linearGradient></defs>
+        <path d="M 330,150 C 420,150 420,240 510,240" fill="none" stroke="url(#wg2)" stroke-width="2.5" opacity=".9"/>
+        <circle cx="330" cy="150" r="5" fill="#ff8a3d"/><circle cx="510" cy="240" r="5" fill="#a855f7"/>
+        <path d="M 640,140 C 730,140 730,90 820,90" fill="none" stroke="url(#wg2)" stroke-width="2.5" opacity=".9"/>
+        <circle cx="640" cy="140" r="5" fill="#ff8a3d"/><circle cx="820" cy="90" r="5" fill="#a855f7"/>
+      </svg>
+      <span class="cluster2" style="left:96px;top:44px"><span class="pillg2">Transformer 思路串</span></span>
+      <div class="cnode" style="left:80px;top:90px;width:250px">
+        <div class="wcard" style="margin:0"><div class="pad"><span class="badge b-ax">AX</span>
+          <div class="ti">Attention Is All You Need</div>
+          <div class="sum">提出 Transformer:完全基于注意力机制——现代大模型的地基。</div>
+          <div class="foot"><span>arXiv</span><span class="tag">#必读</span></div></div></div>
+      </div>
+      <div class="cnode" style="left:510px;top:190px;width:250px">
+        <div class="wcard" style="margin:0">
+          <div class="cover" style="background:linear-gradient(135deg,#3a2f18,#1c1c22);display:flex;align-items:center;justify-content:center;aspect-ratio:16/8">
+            <svg width="30" height="30" viewBox="0 0 24 24"><polygon points="9,7 9,17 17,12" fill="rgba(255,255,255,.4)"/></svg></div>
+          <div class="pad"><span class="badge b-yt">YT</span><div class="ti">SwiftUI Layout 深讲</div></div></div>
+      </div>
+      <div class="cnode" style="left:820px;top:40px;width:240px">
+        <div class="wcard plain" style="margin:0"><div class="pad"><span class="badge b-n">N</span>
+          <div class="note-tx">周三前把 NOMI 稿逐块进 Svelte。</div>
+          <div class="foot"><span class="tag">#待定</span></div></div></div>
+      </div>
+      <div class="cnode" style="left:400px;top:20px;width:240px">
+        <div class="wcard plain" style="margin:0"><div class="pad"><span class="badge b-n">N</span>
+          <div class="note-tx">多头注意力和 SwiftUI 的 proposal/response 有点像——都是协商。</div></div></div>
+      </div>
+      <div class="cvhint">速记 · 画布:卡片自由拖放 · 连线=思路关联 · 位置自动记住</div>
+    </div>
+  </div>
+
+  <!-- ═══ 日记 · Canvas:回顾画布(纸页缩略卡+专注块,把日子摆成一张图) ═══ -->
+  <div class="pane" id="p-journal-canvas">
+    <div class="cvs" id="cvs2">
+      <svg class="wires">
+        <path d="M 300,120 C 390,120 390,220 480,220" fill="none" stroke="url(#wg2)" stroke-width="2.5" opacity=".9"/>
+        <circle cx="300" cy="120" r="5" fill="#ff8a3d"/><circle cx="480" cy="220" r="5" fill="#a855f7"/>
+      </svg>
+      <span class="cluster2" style="left:90px;top:24px"><span class="pillg2">本周 · NOMI 重塑</span></span>
+      <div class="cnode" style="left:70px;top:70px;width:270px">
+        <div class="jmini">
+          <div class="jmh"><b>7月7日</b><span>周二 · 128 字</span></div>
+          <p>夜里 loop 把整站换成了 NOMI 皮,早上打开像换了个 app。</p>
+          <div class="jmf"><span class="fchip">专注 83 分钟</span><span class="fchip" style="color:var(--cyan)">3 条碎片</span></div>
+        </div>
+      </div>
+      <div class="cnode" style="left:480px;top:170px;width:270px">
+        <div class="jmini">
+          <div class="jmh"><b>7月6日</b><span>周一 · 214 字</span></div>
+          <p><b>速记管线打通</b> — oEmbed/arXiv/OG 三路抓取,LLM 补摘要标签…</p>
+          <div class="jmf"><span class="fchip">专注 2 段</span></div>
+        </div>
+      </div>
+      <div class="cnode" style="left:820px;top:90px;width:250px">
+        <div class="jmini dim">
+          <div class="jmh"><b>7月5日</b><span>周日 · 86 字</span></div>
+          <p>notch 媒体页六连修,波形融进背景终于对味。</p>
+        </div>
+      </div>
+      <div class="cvhint">日记 · 画布:把日子摆成一张图 — 页卡可拖 · 连线=一段时间的叙事线 · 页卡点开=全页回放</div>
+    </div>
+  </div>
+
+  <!-- ═══ Calendar 视图:周历(视图维度;分类 chips 同样过滤落格内容) ═══ -->
+  <div class="pane" id="p-cal">
+    <div class="calbar">
+      <button class="nbtn">‹</button><span class="calrng">07-07 — 07-13</span><button class="nbtn">›</button>
+      <button class="todaybtn">今天</button>
+      <span class="caltip">分类 chips 同样作用:选「任务」只看任务落格,选「日记」看有日记的天</span>
+    </div>
+    <div class="calgrid">
+      <div></div>
+      <div class="cald on"><span>周二</span><b>07</b></div><div class="cald"><span>周三</span><b>08</b></div>
+      <div class="cald"><span>周四</span><b>09</b></div><div class="cald"><span>周五</span><b>10</b></div>
+      <div class="cald"><span>周六</span><b>11</b></div><div class="cald"><span>周日</span><b>12</b></div><div class="cald"><span>周一</span><b>13</b></div>
+      <div class="calh">09:00</div><div class="calc"><div class="calcard k-task"><i>09:00</i>汇总未读邮件</div></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div>
+      <div class="calh">10:00</div><div class="calc"><div class="calcard k-ev"><i>10:00</i>站会</div></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div>
+      <div class="calh">14:00</div><div class="calc nowc"><div class="calcard k-note"><i>14:31</i>驾驶舱复盘(速记)</div></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div>
+      <div class="calh">18:00</div><div class="calc"><div class="calcard k-task"><i>18:00</i>swift test 夜巡</div></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div>
+      <div class="calh">21:00</div><div class="calc"><div class="calcard k-jr"><i>21:00</i>日记 · 写了 128 字</div></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div><div class="calc"></div>
+    </div>
+  </div>
+
+<script>
+  // 视图切换(Timeline 显示三态分类;Canvas/Calendar 各自 pane)
+  let curCat='notes', curDisp='list';
+  function showPane(){
+    document.querySelectorAll('.pane').forEach(x=>x.classList.remove('on'));
+    let id;
+    if(curCat==='cal2')id='p-cal';
+    else if(curCat==='tasks')id='p-tasks';
+    else id='p-'+curCat+(curDisp==='canvas'?'-canvas':'');
+    document.getElementById(id)?.classList.add('on');
+    document.querySelector('.dispicons').style.visibility=(curCat==='notes'||curCat==='journal')?'visible':'hidden';
+  }
+  document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
+    document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+    c.classList.add('on'); curCat=c.dataset.p; showPane();
+  });
+  document.querySelectorAll('.dic').forEach((d,i)=>d.onclick=()=>{
+    document.querySelectorAll('.dic').forEach(x=>x.classList.remove('on'));d.classList.add('on');
+    curDisp=i===0?'list':'canvas'; showPane();
+  });
+  // 按时间/按主题 分组切换
+  document.querySelectorAll('.gsw').forEach(g=>g.onclick=()=>{
+    document.querySelectorAll('.gsw').forEach(x=>x.classList.remove('on'));g.classList.add('on');
+    const topic=g.dataset.g==='topic';
+    document.getElementById('topicview').hidden=!topic;
+    document.getElementById('timeview').hidden=topic;
+  });
+  document.querySelector('.sgok')?.addEventListener('click',e=>{
+    e.target.closest('.aisuggest').innerHTML='<span class="spark"></span><span class="sgtx">已创建集合 <b>SwiftUI 布局</b> — 3 条已归入,之后的相关记录会自动进来</span>';
+    toast('集合已创建,AI 持续维护');
+  });
+  document.querySelector('.sgno')?.addEventListener('click',e=>{e.target.closest('.aisuggest').remove()});
+  document.querySelectorAll('.tx-x').forEach(x=>x.onclick=ev=>{
+    ev.stopPropagation();
+    const card=ev.target.closest('.wcard');
+    ev.target.closest('.topicchip').remove();
+    toast('已移出集合 — AI 会记住这次纠错');
+  });
+  // 画布拖拽(两块画布通用)
+  document.querySelectorAll('.cnode').forEach(node=>{
+    node.addEventListener('pointerdown',e=>{
+      const r=node.getBoundingClientRect(), pr=node.parentElement.getBoundingClientRect();
+      const ox=e.clientX-r.left, oy=e.clientY-r.top;
+      node.setPointerCapture(e.pointerId);
+      const mv=ev=>{node.style.left=Math.max(0,ev.clientX-pr.left-ox)+'px';node.style.top=Math.max(0,ev.clientY-pr.top-oy)+'px'};
+      const up=()=>{node.removeEventListener('pointermove',mv);node.removeEventListener('pointerup',up)};
+      node.addEventListener('pointermove',mv);node.addEventListener('pointerup',up);
+    });
+  });
+  document.querySelectorAll('.cb').forEach(b=>b.onclick=()=>b.closest('.todo').classList.toggle('done'));
+  document.querySelectorAll('.sw').forEach(b=>b.onclick=()=>b.classList.toggle('on'));
+  document.querySelectorAll('.runbtn').forEach(b=>b.onclick=()=>b.closest('.scard').classList.toggle('open'));
+</script>
+
+<!-- 详情弹层 -->
+<div class="scrim" id="scrim" onclick="this.classList.remove('on')">
+  <div class="sheet" id="sheet" onclick="event.stopPropagation()"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── 智能捕获:AI 实时判类(demo 规则模拟真实管线) ── */
+const scin=document.getElementById('scin'), aiv=document.getElementById('aiv'), aivt=document.getElementById('aivt');
+const VERDICTS=['速记','想法','日记','任务','收藏'];
+let vIdx=0, vAuto=true;
+function classify(t){
+  if(!t.trim())return null;
+  if(/https?:\/\//.test(t))return {k:'收藏',hint:/arxiv/.test(t)?'论文':/youtu/.test(t)?'视频':'网页'};
+  if(/明早|明天|今晚|点前|每天|每周|提醒|记得|deadline|之前完成/.test(t)){
+    const time=/明早|9 ?点/.test(t)?'明早 09:00':/今晚|晚上/.test(t)?'今晚 20:00':'待安排';
+    const pl=(t.match(/在([^\s,。]{1,6})/)||[])[1];
+    return {k:'任务',hint:time+(pl?' · @'+pl:'')};
+  }
+  if(/也许|或许|说不定|要不要|想到|点子|如果.*就|可以试试/.test(t))return {k:'想法',hint:'沉淀为点子'};
+  if(/今天|终于|感觉|开心|累|复盘了|想了想/.test(t)&&t.length>14)return {k:'日记',hint:'写入今天'};
+  return {k:'速记',hint:null};
+}
+scin.addEventListener('input',()=>{
+  const v=classify(scin.value);
+  if(!v){aiv.hidden=true;whomini.hidden=true;return}
+  vIdx=VERDICTS.indexOf(v.k); vAuto=true;
+  aivt.textContent='AI · '+v.k+(v.hint?' · '+v.hint:'');
+  aiv.hidden=false;
+});
+function scFocus(){
+  const t=scin.value.trim()||'未命名专注';
+  document.querySelector('.fmid .fw').textContent=t;
+  fsec=0;frun=true;
+  document.getElementById('focusCard').style.display='flex';
+  document.querySelector('[data-p=notes]').click();
+  scin.value='';aiv.hidden=true;
+  toast('开始专注:'+t);
+}
+aiv.onclick=()=>{ // 判定可点击轮换(AI 判错时一键改)
+  vIdx=(vIdx+1)%VERDICTS.length; vAuto=false;
+  aivt.textContent='手动 · '+VERDICTS[vIdx];
+};
+function scSend(){
+  if(!scin.value.trim())return;
+  // 结构化回执:类型 chip + 抽取 chips + 改类(2026-07-08 用户)
+  const v=classify(scin.value)||{k:VERDICTS[vIdx],hint:null};
+  const k=vAuto?v.k:VERDICTS[vIdx];
+  const cls=k==='想法'?'idea':k==='任务'?'task':'';
+  const extra=k==='任务'?(v.hint?` <span class="ntag xc" style="margin:0">${v.hint}</span><span class="ntag xc" style="margin:0">→ 已建任务</span>`:'')
+             :(v.hint?` <span class="ntag xc" style="margin:0">${v.hint}</span>`:'');
+  toast(`<span class="ntag ${cls}" style="margin:0">${k}</span> 已结构化入库${extra}
+    <span class="ntag xc" style="margin:0;cursor:pointer" onclick="toast('已改类 — 分诊会记住这次纠正')">改</span>`, true);
+  scin.value=''; aiv.hidden=true;
+}
+scin.addEventListener('keydown',e=>{if(e.key==='Enter')scSend()});
+
+/* ── 人话排期解析(demo):整句 → 排期徽章 ── */
+function dispParse(t){
+  const v=document.getElementById('dispV'), vt=document.getElementById('dispVt');
+  if(!t.trim()){v.hidden=true;return}
+  vt.textContent=/每天|每早/.test(t)?'每天 09:00':/每周五|周五/.test(t)?'每周五 15:00'
+    :/每 ?(\d+) ?小时/.test(t)?'每 '+t.match(/每 ?(\d+) ?小时/)[1]+' 小时'
+    :/明/.test(t)?'明天 09:00 · 一次':'解析中…';
+  v.hidden=false;
+}
+function dispSend(){
+  const i=document.getElementById('dispIn'); if(!i.value.trim())return;
+  toast('已交给 agent · '+document.getElementById('dispVt').textContent);
+  i.value='';document.getElementById('dispV').hidden=true;
+}
+
+/* ── 专注:活计时 + 停止记入日记 ── */
+let fsec=1520, frun=true;
+const ftime=document.getElementById('ftime'), fring=document.getElementById('fring');
+setInterval(()=>{
+  if(!frun)return; fsec++;
+  ftime.textContent=String(Math.floor(fsec/60)).padStart(2,'0')+':'+String(fsec%60).padStart(2,'0');
+  fring.style.setProperty('--deg',(fsec%3600)/3600*360+'deg');
+},1000);
+function stopFocus(){
+  frun=false;
+  const mins=Math.round(fsec/60);
+  document.getElementById('focusCard').style.display='none';
+  toast('专注 '+mins+' 分钟已记入今日日记');
+  // 日记「今天的页」插入专注块
+  const tp=document.querySelector('.todaypage textarea');
+  tp.value+='\n\n专注 '+mins+' 分钟 · 把 NOMI 三态稿进 Svelte';
+}
+function startFocusOn(btn){
+  const tx=btn.closest('.todo').querySelector('.tx').textContent;
+  document.querySelector('.fmid .fw').textContent=tx;
+  fsec=0; frun=true;
+  document.getElementById('focusCard').style.display='flex';
+  document.querySelector('[data-p=notes]').click();
+  toast('开始专注:'+tx);
+}
+
+/* ── 速记/收藏卡详情:原文主角,AI 注脚 ── */
+function openDetail(card){
+  const isLink=!!card.querySelector('.ti');
+  const badge=card.querySelector('.badge')?.textContent??'N';
+  const kindZh=badge==='YT'?'视频':badge==='AX'?'论文':badge==='AW'?'灵感':'速记';
+  const ti=card.querySelector('.ti')?.textContent??'';
+  const tx=card.querySelector('.note-tx')?.textContent??'';
+  const sum=card.querySelector('.sum')?.textContent??'';
+  const tm=card.querySelector('.tm')?.textContent??'';
+  const tags=[...card.querySelectorAll('.tag')].map(t=>t.textContent);
+  const cover=card.querySelector('.cover');
+  const sheet=document.getElementById('sheet');
+  sheet.innerHTML=`
+    <div class="shd"><span class="kbadge">${kindZh}</span><span class="when">今天 ${tm}</span>
+      <button class="x" onclick="scrim.classList.remove('on')">×</button></div>
+    ${cover?`<div class="shero" style="height:220px;${cover.getAttribute('style')??''}"></div>`:''}
+    <div class="sbody">
+      ${isLink
+        ?`<h2 class="sti">${ti}</h2>${sum?`<p class="scontent" style="font-size:13.5px">${sum}</p>`:''}`
+        :`<p class="prose">${tx}</p>`}
+      <div class="tagrow">${tags.map(t=>`<span class="tg">${t}</span>`).join('')}</div>
+      <div class="ainote"><span class="spark"></span>AI · 自动归类为${kindZh}
+        <span class="full">&nbsp;· 检测到 ${tags.length} 个标签,未发现时间/地点线索</span></div>
+    </div>
+    <div class="sacts">
+      ${isLink?'<a class="pri" href="#">打开原链接</a>':''}
+      <button>编辑</button><button>→日记</button><button>→任务</button><button onclick="scrim.classList.remove('on')">关闭</button>
+    </div>`;
+  scrim.classList.add('on');
+}
+
+/* 混合速记:一段话夹多个链接 → 原文大字+内联高亮,链接沉淀为「提到的内容」附件卡 */
+function openRichDetail(){
+  const sheet=document.getElementById('sheet');
+  sheet.innerHTML=`
+    <div class="shd"><span class="kbadge">速记</span><span class="when">今天 22:40</span>
+      <button class="x" onclick="scrim.classList.remove('on')">×</button></div>
+    <div class="sbody">
+      <p class="prose">看了 <span class="inlink">arxiv.org/abs/1706.03762</span> 讲注意力的,配 <span class="inlink">youtu.be/swiftui-layout</span> 一起消化,周三前搞完。</p>
+      <div class="attachh">提到的内容 · 2</div>
+      <div class="attach"><span class="badge b-ax ab">AX</span>
+        <span style="min-width:0"><div class="at">Attention Is All You Need</div>
+        <div class="as">The dominant sequence transduction models are based on complex recurrent…</div>
+        <div class="asrc">arXiv · 已解析</div></span>
+        <button class="go">打开</button></div>
+      <div class="attach"><span class="badge b-yt ab">YT</span>
+        <span style="min-width:0"><div class="at">SwiftUI Layout 深讲</div>
+        <div class="as">proposal/response 模型,frame 与 fixedSize 的真实语义。</div>
+        <div class="asrc">Sean Allen · YouTube</div></span>
+        <button class="go">打开</button></div>
+      <div class="tagrow"><span class="tg">#transformer</span><span class="tg">#必读</span>
+        <span class="clue">周三前 · AI 读出的时间线索</span></div>
+      <div class="ainote"><span class="spark"></span>AI · 自动归类为速记
+        <span class="full">&nbsp;· 解析出 2 个链接(论文/视频),1 个时间线索;可一键转任务</span></div>
+    </div>
+    <div class="sacts">
+      <button class="pri">→任务 · 周三前</button>
+      <button>编辑</button><button>→日记</button><button onclick="scrim.classList.remove('on')">关闭</button>
+    </div>`;
+  scrim.classList.add('on');
+}
+
+/* ── 日记页详情:全页阅读态 + 当日碎片时间线 ── */
+function openPage(page){
+  const d=page.querySelector('.d').textContent, w=page.querySelector('.w').textContent;
+  const md=page.querySelector('.md').innerHTML;
+  const ai=page.querySelector('.aisum')?.innerHTML??'';
+  const sheet=document.getElementById('sheet');
+  sheet.innerHTML=`
+    <div class="shd"><span class="kbadge">日记</span><span class="when">${d} · ${w}</span>
+      <button class="x" onclick="scrim.classList.remove('on')">×</button></div>
+    <div class="sbody">
+      <h2 class="sti">${d}</h2>
+      <div class="scontent" style="color:var(--ink2)">${md}</div>
+      ${ai?`<div class="aibox">${ai}</div>`:''}
+      <div class="focusblock"><span class="spark"></span>这天专注 2 段共 83 分钟 · NOMI 稿进 Svelte / notch 媒体页</div>
+      <div class="aibox" style="flex-direction:column;gap:6px">
+        <span class="lab">这天的碎片(速记时间线)</span>
+        <div class="dayline"><span class="t">10:08</span><span>收藏了 GANGNAM STYLE M/V(视频)</span></div>
+        <div class="dayline"><span class="t">11:58</span><span>收藏了 Attention Is All You Need(论文)</span></div>
+        <div class="dayline"><span class="t">14:31</span><span>速记:驾驶舱 e2e 三个坑复盘</span></div>
+      </div>
+    </div>
+    <div class="sacts"><button>编辑这页</button><button>AI 重新小结</button><button onclick="scrim.classList.remove('on')">关闭</button></div>`;
+  scrim.classList.add('on');
+}
+
+function toast(msg, html){
+  const t=document.getElementById('toast');
+  if(html)t.innerHTML=msg; else t.textContent=msg;
+  t.classList.add('on');
+  setTimeout(()=>t.classList.remove('on'),2400);
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')scrim.classList.remove('on')});
+</script>
+</body>
+</html>
