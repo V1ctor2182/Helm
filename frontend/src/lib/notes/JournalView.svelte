@@ -64,7 +64,9 @@
       layout.journalIntent = null
     }
   })
-  let draft = $state('')
+  // 今天一张卡直接写/改(2026-07-09 用户反馈:不要两张卡)
+  let todayText = $state('')
+  let todayDirty = $state(false)
   let taskPrompt = $state('')
   // T2 人话排期:边打字出排期徽章(后端 /api/tasks/parse,与提交同一解析器);
   // cron/every/at 三模式表单退场,时间在句子里。
@@ -165,10 +167,10 @@
   // 已转任务标记:tasks 里 linked_note_id 指向的速记
   const linkedNoteIds = $derived(new Set(tasks.tasks.map((t) => t.linked_note_id).filter((x): x is number => x != null)))
 
-  function cmdEnter(e: KeyboardEvent) {
+  function todayKey(e: KeyboardEvent) {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       e.preventDefault()
-      void add()
+      void saveToday()
     }
   }
 
@@ -255,6 +257,8 @@
         .sort((a, b) => b[0].localeCompare(a[0]))
     })(),
   )
+  // 今天由顶部「今天的页」单卡直接编辑,下方只列过去的天(不重复今天)。
+  const pastByDate = $derived(journalByDate.filter(([d]) => d !== today()))
 
   function renderMd(src: string): string {
     return DOMPurify.sanitize(marked.parse(src ?? '', { async: false }) as string)
@@ -296,19 +300,22 @@
     return m ? `${Number(m[2])}月${Number(m[3])}日` : day
   }
 
-  async function add() {
-    if (!draft.trim()) return
-    if (layout.journalFilter !== 'journal') {
-      if (await notes.create(draft, 'note')) draft = ''
-      return
-    }
-    // 日记每天一篇:今天已有日记 → 续写进那一条(\n\n 段落);否则新建。
+  // 今天的整篇内容(单卡直接编辑的对象);服务器变了且无未保存编辑时回填,
+  // 不覆盖正在打的字。保存 = 整篇替换 → consolidate 成单条(自动收编历史碎片)。
+  const todayContent = $derived(jTodayJournals.map((e) => e.content).join('\n\n'))
+  $effect(() => {
+    const c = todayContent
+    if (!todayDirty) todayText = c
+  })
+  async function saveToday() {
+    if (!todayDirty) return
+    const md = todayText.trim()
+    if (!md) { todayDirty = false; return }
     const mine = jTodayJournals
     if (mine.length > 0) {
-      const merged = mine.map((e) => e.content).join('\n\n') + '\n\n' + draft.trim()
-      if (await notes.consolidateJournal(mine.map((e) => e.id), merged)) draft = ''
-    } else if (await notes.create(draft, 'journal', today())) {
-      draft = ''
+      if (await notes.consolidateJournal(mine.map((e) => e.id), md)) todayDirty = false
+    } else if (await notes.create(md, 'journal', today())) {
+      todayDirty = false
     }
   }
 
@@ -523,21 +530,23 @@
       {#if notes.summary}
         <div class="sumcard"><span class="spark2" aria-hidden="true"></span><p>{notes.summary}</p></div>
       {/if}
+      <!-- 今天一张卡,直接写/改(2026-07-09 用户反馈:不要空写入框+已写卡两张) -->
       <div class="todaypage">
-        <div class="dh"><span class="d">{dayNum(today())}</span><span class="w">{weekdayOf(today())} · 今天的页</span></div>
+        <div class="dh"><span class="d">{dayNum(today())}</span><span class="w">{weekdayOf(today())} · 今天</span>
+          {#if todayText.trim()}<span class="cnt">{todayText.length} 字</span>{/if}</div>
         <textarea
-          placeholder="今天发生了什么?(支持 Markdown,⌘⏎ 写入)"
-          bind:value={draft}
-          onkeydown={cmdEnter}
-          aria-label="日记内容"
+          placeholder="今天发生了什么?直接写(支持 Markdown);点开别处或 ⌘⏎ 自动保存"
+          bind:value={todayText}
+          oninput={() => (todayDirty = true)}
+          onkeydown={todayKey}
+          onblur={() => void saveToday()}
+          aria-label="今天的日记"
         ></textarea>
-        <div class="actrow"><span class="hint2">⌘⏎ 写入今天 · Markdown</span>
-          <button class="act pri" onclick={() => void add()} disabled={!draft.trim()}>写入今天</button></div>
+        <div class="actrow"><span class="hint2">{todayDirty ? '未保存 · ⌘⏎ 或点开别处即存' : '已保存 · 直接改这里'} · Markdown</span>
+          <button class="act pri" onclick={() => void saveToday()} disabled={!todayDirty || !todayText.trim()}>保存今天</button></div>
       </div>
-      {#if journalByDate.length === 0}
-        <p class="empty">还没有日记 — 上面写下今天的第一条。</p>
-      {:else}
-        {#each journalByDate as [day, entries] (day)}
+      {#if pastByDate.length > 0}
+        {#each pastByDate as [day, entries] (day)}
           <!-- T4 每天一篇:当天所有条目合成一大篇(\n\n 段落),不再一条条散着 -->
           <section class="jpage">
             <button class="dh openbtn" title="查看这一天" onclick={() => (detailDay = day)}>

@@ -205,3 +205,8 @@
 - 5 条精修:①agent=terminal(右侧真 cc 终端当引擎)②loop=cc 的 /loop(左批次块标 cc /loop)③外层 FleetDesk 卡片点进=本界面(两层)④左边=完整文档库(spec/批次/AI-SYSTEM/LOOP-GUIDE/CONVENTIONS/DESIGN/backlog/reports/设计稿)⑤顶栏项目切换器(helm/买方/notch/odyssey pill,不退回舰队)。
 - 布局:顶栏项目切换器+分支+自动驾驶+仪表;左=文档库(搜索+当前块+cc loop 批次+所有文档);中=规格 Markdown 主场(契约表/验收清单 spec↔loop 联动/prompt/callout,预览⇄编辑+格式工具栏);右竖分=cc 终端(loop 常驻)+审阅改动(diff 采纳/退回/问为什么/让我改就地黑底编辑);底 HUD=tests/localhost/改动/验收+暂停 loop/提交/开 PR。
 - 稿:docs/design/helm-cockpit-spec.html(NOMI 皮)。FleetDesk 俯瞰、点进=本界面。探索候选,点头后进 Svelte。
+## 反馈修复 · 2026-07-09 · 日记今天一张卡直接写/改 [用户反馈]
+- 根因: 记录页日记态今天出现两张卡——空的「今天的页」写入框 + journalByDate 把今天也渲染成一张 .jpage(已写内容)。
+- 修: 今天=单卡,textarea 直接绑今天整篇(todayText),$effect 从服务器回填(不覆盖正在打的字),失焦/⌘⏎ 保存=整篇替换 consolidate 成单条;journalByDate→pastByDate 排除今天(下方只列过去的天)。draft/cmdEnter/add 重构为 todayText/todayKey/saveToday。
+- 门: 前端 build ✓ check 0/0 ✓ test 235 全绿(T4 测试改写=直接编辑预填+整篇替换,+空态新建);pytest 257 全绿。
+- 实测: 今天 1 张卡、已写内容预填可改、下方仅过去天;shots/fb-today-onecard.png。

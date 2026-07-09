@@ -225,7 +225,7 @@ it('T4 每天一篇:天内段落按时间升序渲染(拼一篇)', async () => {
   expect(morning.compareDocumentPosition(afternoon) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 })
 
-it('T4 每天一篇:今天已有日记时,写入=续写进同一条(consolidate,非新建)', async () => {
+it('T4 每天一篇:今天一张卡直接编辑,卡里预填已有内容,保存=整篇替换(consolidate)', async () => {
   const today = (() => {
     const d = new Date(); const p = (n: number) => String(n).padStart(2, '0')
     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
@@ -243,12 +243,33 @@ it('T4 每天一篇:今天已有日记时,写入=续写进同一条(consolidate,
   const create = vi.spyOn(notes, 'create').mockResolvedValue(true)
   render(JournalView)
   await fireEvent.click(screen.getByRole('tab', { name: '日记' }))
-  const box = await screen.findByLabelText('日记内容')
-  await fireEvent.input(box, { target: { value: '下午又想到一点' } })
-  await fireEvent.click(screen.getByRole('button', { name: '写入今天' }))
-  // 续写:合并进 id=5 那条,不新建
+  // 单卡:今天已有内容直接预填在框里(不是空写入框 + 另一张已写卡);等异步 load+回填
+  const box = await screen.findByDisplayValue('早上定了稿') as HTMLTextAreaElement
+  expect(box.getAttribute('aria-label')).toBe('今天的日记')
+  await fireEvent.input(box, { target: { value: '早上定了稿\n\n下午又想到一点' } })
+  await fireEvent.click(screen.getByRole('button', { name: '保存今天' }))
+  // 整篇替换 → 合并进 id=5,不新建
   expect(consolidate).toHaveBeenCalledWith([5], '早上定了稿\n\n下午又想到一点')
   expect(create).not.toHaveBeenCalled()
+})
+
+it('T4:今天没写过时卡是空的,保存=新建今天一条', async () => {
+  vi.stubGlobal('fetch', vi.fn((url: string, init?: RequestInit) =>
+    Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(
+        (init?.method ?? 'GET') !== 'GET' ? {}
+        : String(url).includes('/api/notes') ? { notes: [] } : { notes: [], tasks: [], links: [], events: [] }),
+    }),
+  ))
+  const create = vi.spyOn(notes, 'create').mockResolvedValue(true)
+  render(JournalView)
+  await fireEvent.click(screen.getByRole('tab', { name: '日记' }))
+  const box = await screen.findByLabelText('今天的日记') as HTMLTextAreaElement
+  expect(box.value).toBe('')
+  await fireEvent.input(box, { target: { value: '今天第一条' } })
+  await fireEvent.click(screen.getByRole('button', { name: '保存今天' }))
+  expect(create).toHaveBeenCalledWith('今天第一条', 'journal', expect.any(String))
 })
 
 it('反馈修复:「全部」chip 退场,详情页有删除(两击确认)', async () => {
