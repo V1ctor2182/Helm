@@ -64,9 +64,6 @@
       layout.journalIntent = null
     }
   })
-  // 今天一张卡直接写/改(2026-07-09 用户反馈:不要两张卡)
-  let todayText = $state('')
-  let todayDirty = $state(false)
   let taskPrompt = $state('')
   // T2 人话排期:边打字出排期徽章(后端 /api/tasks/parse,与提交同一解析器);
   // cron/every/at 三模式表单退场,时间在句子里。
@@ -167,12 +164,6 @@
   // 已转任务标记:tasks 里 linked_note_id 指向的速记
   const linkedNoteIds = $derived(new Set(tasks.tasks.map((t) => t.linked_note_id).filter((x): x is number => x != null)))
 
-  function todayKey(e: KeyboardEvent) {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-      e.preventDefault()
-      void saveToday()
-    }
-  }
 
   function startEdit(n: Note) {
     editingNote = n
@@ -300,26 +291,11 @@
     return m ? `${Number(m[2])}月${Number(m[3])}日` : day
   }
 
-  // 今天的整篇内容(单卡直接编辑的对象);服务器变了且无未保存编辑时回填,
-  // 不覆盖正在打的字。保存 = 整篇替换 → consolidate 成单条(自动收编历史碎片)。
+  // 今天整篇内容(只读展示 + 字数);写/改走「续写」富文本弹窗。
   const todayContent = $derived(jTodayJournals.map((e) => e.content).join('\n\n'))
-  $effect(() => {
-    const c = todayContent
-    if (!todayDirty) todayText = c
-  })
-  async function saveToday() {
-    if (!todayDirty) return
-    const md = todayText.trim()
-    if (!md) { todayDirty = false; return }
-    const mine = jTodayJournals
-    if (mine.length > 0) {
-      if (await notes.consolidateJournal(mine.map((e) => e.id), md)) todayDirty = false
-    } else if (await notes.create(md, 'journal', today())) {
-      todayDirty = false
-    }
-  }
 
-  // 编辑「一天一页」:合并当天日记文进弹层;保存时合并回单条(消解历史碎片)。
+  // 编辑「一天一页」:合并当天日记文进富文本弹层(加粗/斜体/高亮);
+  // 保存时合并回单条(消解历史碎片)。today=空也能开(保存=新建今天)。
   let editingDay = $state<{ ids: number[]; seed: Note } | null>(null)
   function editDay(entries: Note[]) {
     const js = entries.filter((e) => e.kind === 'journal')
@@ -327,10 +303,24 @@
     if (!base) return
     editingDay = { ids: js.map((e) => e.id), seed: { ...base, content: js.map((e) => e.content).join('\n\n') } }
   }
+  // 今天「续写」:有内容→带整篇进弹窗;没有→空弹窗,保存新建今天一条。
+  function openToday() {
+    const js = jTodayJournals
+    if (js.length > 0) { editDay(js); return }
+    editingDay = {
+      ids: [],
+      seed: { id: -1, kind: 'journal', title: null, content: '', tags: [], meta: null,
+        pinned: false, source: 'user', journal_date: today(), created_at: null, updated_at: null },
+    }
+  }
   async function saveDay(md: string) {
     if (!editingDay) return
     const ids = editingDay.ids
-    const ok = ids.length > 0 ? await notes.consolidateJournal(ids, md) : await notes.update(editingDay.seed.id, md)
+    const ok = ids.length > 0
+      ? await notes.consolidateJournal(ids, md)
+      : editingDay.seed.id > 0
+        ? await notes.update(editingDay.seed.id, md)
+        : await notes.create(md, 'journal', editingDay.seed.journal_date ?? today())
     if (ok) editingDay = null
   }
   async function deleteDay(entries: Note[]) {
@@ -530,20 +520,18 @@
       {#if notes.summary}
         <div class="sumcard"><span class="spark2" aria-hidden="true"></span><p>{notes.summary}</p></div>
       {/if}
-      <!-- 今天一张卡,直接写/改(2026-07-09 用户反馈:不要空写入框+已写卡两张) -->
+      <!-- 今天一张卡:只读展示 + 「续写」开富文本弹窗(加粗/斜体/高亮)。
+           2026-07-09 用户反馈:续写按钮弹窗编辑,去掉底部追加输入条。 -->
       <div class="todaypage">
-        <div class="dh"><span class="d">{dayNum(today())}</span><span class="w">{weekdayOf(today())} · 今天</span>
-          {#if todayText.trim()}<span class="cnt">{todayText.length} 字</span>{/if}</div>
-        <textarea
-          placeholder="今天发生了什么?直接写(支持 Markdown);点开别处或 ⌘⏎ 自动保存"
-          bind:value={todayText}
-          oninput={() => (todayDirty = true)}
-          onkeydown={todayKey}
-          onblur={() => void saveToday()}
-          aria-label="今天的日记"
-        ></textarea>
-        <div class="actrow"><span class="hint2">{todayDirty ? '未保存 · ⌘⏎ 或点开别处即存' : '已保存 · 直接改这里'} · Markdown</span>
-          <button class="act pri" onclick={() => void saveToday()} disabled={!todayDirty || !todayText.trim()}>保存今天</button></div>
+        <div class="dh"><span class="d">{dayNum(today())}</span><span class="w">{weekdayOf(today())} · 今天的日记</span>
+          {#if todayContent}<span class="cnt">{todayContent.length} 字</span>{/if}</div>
+        {#if todayContent}
+          <div class="md">{@html renderMd(todayContent)}</div>
+        {:else}
+          <p class="todayempty">今天还没写 — 点「续写」写下第一段。</p>
+        {/if}
+        <div class="actrow"><span class="hint2">点续写在弹窗里写/改 · 支持加粗 · 斜体 · 高亮</span>
+          <button class="act pri" onclick={openToday}>续写</button></div>
       </div>
       {#if pastByDate.length > 0}
         {#each pastByDate as [day, entries] (day)}
@@ -1397,23 +1385,21 @@
     font: 400 12px/1 var(--sans);
     color: var(--t4);
   }
-  .jpage .cnt {
+  .jpage .cnt,
+  .todaypage .cnt {
     margin-left: auto;
     font: 400 10.5px/1 var(--sans);
     color: var(--t4);
   }
-  .todaypage textarea {
-    width: 100%;
-    min-height: 120px;
-    border: 0;
-    outline: none;
-    resize: vertical;
-    font: 400 14.5px/1.75 var(--sans);
-    color: var(--t1);
-    background: transparent;
+  .todaypage .md {
+    font: 400 14.5px/1.85 var(--sans);
+    color: var(--t2);
+    min-height: 32px;
   }
-  .todaypage textarea::placeholder {
+  .todayempty {
+    font: 400 13px/1.6 var(--sans);
     color: var(--t4);
+    margin: 4px 0 2px;
   }
   .actrow {
     display: flex;

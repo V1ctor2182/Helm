@@ -210,3 +210,8 @@
 - 修: 今天=单卡,textarea 直接绑今天整篇(todayText),$effect 从服务器回填(不覆盖正在打的字),失焦/⌘⏎ 保存=整篇替换 consolidate 成单条;journalByDate→pastByDate 排除今天(下方只列过去的天)。draft/cmdEnter/add 重构为 todayText/todayKey/saveToday。
 - 门: 前端 build ✓ check 0/0 ✓ test 235 全绿(T4 测试改写=直接编辑预填+整篇替换,+空态新建);pytest 257 全绿。
 - 实测: 今天 1 张卡、已写内容预填可改、下方仅过去天;shots/fb-today-onecard.png。
+## 反馈修复 2 · 2026-07-10 · 日记今天卡=续写按钮开富文本弹窗 [用户反馈]
+- 用户:今天卡上加「续写」按钮→弹出富文本弹窗(加粗/斜体/高亮)直接写/改;去掉底部追加输入条。
+- 改: 今天卡从可编辑 textarea → 只读展示(renderMd,含 mark/粗斜渲染)+「续写」按钮 → 复用 NoteEditSheet(B/I/高亮);openToday 有内容带整篇进、空则空弹窗;saveDay 扩展:ids>0 consolidate / seed.id>0 update / 否则 create 新建今天。移除 todayText/todayDirty/saveToday/todayKey。
+- 门: 前端 build ✓ check 0/0 ✓ test 235 全绿(T4 两测改写成续写弹窗流:预填整篇替换 / 空态新建);pytest 257 全绿。
+- 实测: 今天卡只读+续写钮;点开富文本弹窗预填今天整篇(有内容)或空(新今天),B/I/高亮在;无底部输入条;下方仅过去天。shots/fb-xuxie-modal.png。

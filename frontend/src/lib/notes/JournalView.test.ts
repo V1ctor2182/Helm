@@ -225,7 +225,7 @@ it('T4 每天一篇:天内段落按时间升序渲染(拼一篇)', async () => {
   expect(morning.compareDocumentPosition(afternoon) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 })
 
-it('T4 每天一篇:今天一张卡直接编辑,卡里预填已有内容,保存=整篇替换(consolidate)', async () => {
+it('T4 每天一篇:今天卡只读展示,点续写开富文本弹窗(预填整篇),保存=整篇替换', async () => {
   const today = (() => {
     const d = new Date(); const p = (n: number) => String(n).padStart(2, '0')
     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
@@ -243,17 +243,22 @@ it('T4 每天一篇:今天一张卡直接编辑,卡里预填已有内容,保存=
   const create = vi.spyOn(notes, 'create').mockResolvedValue(true)
   render(JournalView)
   await fireEvent.click(screen.getByRole('tab', { name: '日记' }))
-  // 单卡:今天已有内容直接预填在框里(不是空写入框 + 另一张已写卡);等异步 load+回填
-  const box = await screen.findByDisplayValue('早上定了稿') as HTMLTextAreaElement
-  expect(box.getAttribute('aria-label')).toBe('今天的日记')
-  await fireEvent.input(box, { target: { value: '早上定了稿\n\n下午又想到一点' } })
-  await fireEvent.click(screen.getByRole('button', { name: '保存今天' }))
+  // 今天卡只读展示已有内容(不是 textarea,也没有底部续写输入条)
+  await screen.findByText('早上定了稿')
+  expect(screen.queryByLabelText('今天的日记')).toBeNull()
+  // 点续写 → 富文本弹窗(加粗/斜体/高亮),预填今天整篇
+  await fireEvent.click(screen.getByRole('button', { name: '续写' }))
+  const editor = (await screen.findByRole('textbox', { name: '内容' })) as HTMLElement
+  expect(editor.textContent).toContain('早上定了稿')
+  editor.innerHTML = '早上定了稿<br><br>下午又想到一点'
+  await fireEvent.input(editor)
+  await fireEvent.click(screen.getByRole('button', { name: '保存' }))
   // 整篇替换 → 合并进 id=5,不新建
   expect(consolidate).toHaveBeenCalledWith([5], '早上定了稿\n\n下午又想到一点')
   expect(create).not.toHaveBeenCalled()
 })
 
-it('T4:今天没写过时卡是空的,保存=新建今天一条', async () => {
+it('T4:今天没写过时卡是空态,点续写开空弹窗,保存=新建今天一条', async () => {
   vi.stubGlobal('fetch', vi.fn((url: string, init?: RequestInit) =>
     Promise.resolve({
       ok: true,
@@ -265,10 +270,12 @@ it('T4:今天没写过时卡是空的,保存=新建今天一条', async () => {
   const create = vi.spyOn(notes, 'create').mockResolvedValue(true)
   render(JournalView)
   await fireEvent.click(screen.getByRole('tab', { name: '日记' }))
-  const box = await screen.findByLabelText('今天的日记') as HTMLTextAreaElement
-  expect(box.value).toBe('')
-  await fireEvent.input(box, { target: { value: '今天第一条' } })
-  await fireEvent.click(screen.getByRole('button', { name: '保存今天' }))
+  expect(await screen.findByText(/今天还没写/)).toBeInTheDocument()
+  await fireEvent.click(screen.getByRole('button', { name: '续写' }))
+  const editor = (await screen.findByRole('textbox', { name: '内容' })) as HTMLElement
+  editor.innerHTML = '今天第一条'
+  await fireEvent.input(editor)
+  await fireEvent.click(screen.getByRole('button', { name: '保存' }))
   expect(create).toHaveBeenCalledWith('今天第一条', 'journal', expect.any(String))
 })
 
