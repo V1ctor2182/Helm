@@ -342,7 +342,9 @@ public final class NotchModel {
             if captureKind == .focus {
                 240
             } else if captureKind == .journal {
-                journalEditing ? 316 : (captureShowRecent ? 270 : 206)
+                // 续写编辑=容下 kinds 胶囊行+编辑卡(工具栏+编辑区+保存行)+dock,
+                // 别让保存/取消被底部 dock 切(2026-07-10 用户)。
+                journalEditing ? 348 : (captureShowRecent ? 270 : 206)
             } else if captureKind == .ask, askAnswer != nil {
                 340 + captureInputExtraHeight
             } else {
