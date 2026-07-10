@@ -392,8 +392,11 @@ final class NotchModuleTests: XCTestCase {
         model.calMonthView = false
         XCTAssertEqual(model.viewHeight(), 260)
         model.module = .capture
-        model.captureKind = .journal  // 今天卡+续写,预算更高
-        XCTAssertEqual(model.viewHeight(), 300)
+        model.captureKind = .journal  // 今天卡+续写按钮(无输入行,预算收)
+        XCTAssertEqual(model.viewHeight(), 206)
+        model.openJournalEditor()     // 续写弹层编辑:给编辑器足够高
+        XCTAssertEqual(model.viewHeight(), 316)
+        model.cancelJournalEditor()
         model.captureKind = .note
         XCTAssertEqual(model.viewHeight(), 232)
     }

@@ -336,15 +336,18 @@ public final class NotchModel {
         // 多行输入时加 captureInputExtraHeight(App 实测),面板随输入框长。
         // NOMI 胶囊/输入盒都比 ORAGE 高一档,预算整体上调(2026-07-07 用户:被 clip)。
         case .capture:
-            // 任务 kind 已随稿去除(2026-07-08 用户:任务只在 Helm,速记 AI 分诊建);
-            // 日记 = 今天卡(全文可滚)+续写,预算更高。
-            captureKind == .focus
-                ? 240
-                : (captureKind == .ask && askAnswer != nil
-                    ? 340 + captureInputExtraHeight
-                    : (captureShowRecent
-                        ? min(360, (captureKind == .journal ? 300 : 232) + 64)
-                        : (captureKind == .journal ? 300 : 232)) + captureInputExtraHeight)
+            // 任务 kind 已随稿去除(2026-07-08 用户:任务只在 Helm,速记 AI 分诊建)。
+            // 日记去掉底部输入行(2026-07-10 用户:续写按钮开弹层),预算收——
+            // 不编辑=今天卡+最近(206);续写弹层编辑=给编辑器足够高(316)。
+            if captureKind == .focus {
+                240
+            } else if captureKind == .journal {
+                journalEditing ? 316 : (captureShowRecent ? 270 : 206)
+            } else if captureKind == .ask, askAnswer != nil {
+                340 + captureInputExtraHeight
+            } else {
+                (captureShowRecent ? min(360, 232 + 64) : 232) + captureInputExtraHeight
+            }
         }
     }
 

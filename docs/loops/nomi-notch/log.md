@@ -147,3 +147,4 @@
 - View:今天卡加渐变「续写」胶囊按钮;journal 态用 journalEditor 弹层(B/I/H 工具栏 + NSTextView 选区包裹 **/*/<mark> + 保存/取消)替代底部输入行;JournalEditor.swift(JournalFormatter 选区包裹 + JournalTextEditor NSViewRepresentable);NSColor(RGB) 桥。存储仍是 md 兼容标记,与主 app/enrich 一致。
 - 门:swift build ✓ · swift test 83 全绿(+3:openEditor 预填/consolidate 改首删余/空态新建)。
 - 待:重建 .app 重启(承重墙),用户真机验收。
+- 高度收:去掉日记输入行后面板底空一大截(用户反馈)→ journal 预算按新布局收:不编辑=206(卡+最近)/续写编辑=316;test 断言更新。swift build/test 83 全绿。
