@@ -12,6 +12,8 @@ struct NotchView: View {
     @Bindable var model: NotchModel
     @FocusState private var captureFocused: Bool
     @State private var dragOver = false
+    // 日记续写富文本编辑器的选区格式化器(B/I/H)
+    @State private var journalFormatter = JournalFormatter()
     // NOMI 总览速记胶囊(quickcap)
     @State private var quickText = ""
     @FocusState private var quickCapFocused: Bool
@@ -1372,9 +1374,17 @@ struct NotchView: View {
         .padding(.top, 6)
         if model.captureKind == .focus {
             focusBody.padding(.top, 2)
+        } else if model.captureKind == .journal {
+            // 日记 = 每天一篇:今天卡 + 续写按钮开富文本弹层(2026-07-10 用户:
+            // 去掉底部追加输入条,续写在弹层里写/改,支持加粗/斜体/高亮)。
+            if model.journalEditing {
+                journalEditor.padding(.top, 8)
+            } else {
+                journalTodayCard.padding(.top, 8)
+                recentsSection.padding(.top, 6)
+            }
+            Spacer(minLength: 0)
         } else {
-            // 日记 = 每天一篇:今天卡(全文可滚)在输入上方,输入即续写。
-            if model.captureKind == .journal { journalTodayCard.padding(.top, 8) }
             // capin — full-width input on its own row (HTML .capin).
             TextField("", text: $model.captureText, prompt: Text(placeholder).foregroundStyle(Color(model.nomi.ink3)), axis: .vertical)
                 .textFieldStyle(.plain).font(.system(size: 13)).foregroundStyle(Color(model.nomi.ink))
@@ -1532,6 +1542,17 @@ struct NotchView: View {
                         .padding(.horizontal, 8).padding(.vertical, 2)
                         .background(Capsule().fill(Color(pal.pill)))
                 }
+                // 续写:开富文本弹层(加粗/斜体/高亮)
+                Button { model.openJournalEditor() } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "square.and.pencil").font(.system(size: 9))
+                        Text("续写").font(.system(size: 10, weight: .semibold))
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10).padding(.vertical, 5)
+                    .background(Capsule().fill(Nomi.gradientH))
+                }
+                .buttonStyle(.plain)
             }
             if let t = model.journalToday {
                 ScrollView(.vertical, showsIndicators: false) {
@@ -1557,6 +1578,59 @@ struct NotchView: View {
         f.locale = Locale(identifier: "zh_CN")
         f.dateFormat = "M月d日 · EEE"
         return f.string(from: Date())
+    }
+
+    /// 续写富文本编辑器(面板内弹层):B/I/H 工具栏 + 编辑区 + 保存/取消。
+    /// 保存 = 整篇替换 consolidate(model.saveJournalEditor)。
+    @ViewBuilder private var journalEditor: some View {
+        let pal = model.nomi
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 7) {
+                Text(journalDateLabel).font(.system(size: 12, weight: .bold)).foregroundStyle(Color(pal.ink))
+                Text("续写").font(.system(size: 9.5)).foregroundStyle(Color(pal.ink3))
+                Spacer()
+                fmtBtn("B", weight: .bold) { journalFormatter.wrap("**", "**") }
+                fmtBtn("I", italic: true) { journalFormatter.wrap("*", "*") }
+                fmtBtn("H", highlight: true) { journalFormatter.wrap("<mark>", "</mark>") }
+            }
+            JournalTextEditor(text: $model.journalEditText, formatter: journalFormatter, pal: pal)
+                .frame(height: 136)
+                .padding(.top, 8)
+            HStack(spacing: 8) {
+                Text("选中文字点 B / I / H").font(.system(size: 10)).foregroundStyle(Color(pal.ink3))
+                Spacer()
+                Button { model.cancelJournalEditor() } label: {
+                    Text("取消").font(.system(size: 11, weight: .semibold)).foregroundStyle(Color(pal.ink2))
+                        .padding(.horizontal, 12).padding(.vertical, 7)
+                        .background(Capsule().fill(Color(pal.pill)))
+                }
+                .buttonStyle(.plain)
+                Button { Task { await model.saveJournalEditor() } } label: {
+                    Text("保存").font(.system(size: 11, weight: .semibold)).foregroundStyle(.white)
+                        .padding(.horizontal, 14).padding(.vertical, 7)
+                        .background(Capsule().fill(Nomi.gradientH))
+                }
+                .buttonStyle(.plain)
+                .disabled(model.journalEditText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+            .padding(.top, 10)
+        }
+        .padding(EdgeInsets(top: 10, leading: 12, bottom: 10, trailing: 12))
+        .wcard(pal, dark: model.nomiDark)
+    }
+
+    /// B / I / H 格式钮(H = 高亮,黄底)。
+    private func fmtBtn(_ title: String, weight: Font.Weight = .semibold, italic: Bool = false,
+                        highlight: Bool = false, _ action: @escaping () -> Void) -> some View {
+        let pal = model.nomi
+        return Button(action: action) {
+            Text(title).font(.system(size: 11, weight: weight)).italic(italic)
+                .foregroundStyle(highlight ? Color(RGB(hex: "7a5b00")) : Color(pal.ink2))
+                .frame(width: 24, height: 22)
+                .background(RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(highlight ? Color(RGB(hex: "fff3bf")) : Color(pal.pill)))
+        }
+        .buttonStyle(.plain)
     }
 
     /// 拖入文件的附件 chip (HTML .attchip). Upload happens on send — TODO.

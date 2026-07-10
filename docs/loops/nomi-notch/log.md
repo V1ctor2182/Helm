@@ -139,3 +139,11 @@
 - 吸收 T5 契约:journalToday 改吃 GET /api/notes?kind=journal&journal_date=(凌晨补写归属与主 app 一致);合并 origin/feat/nomi-kinds(冲突仅 backlog 契约通知,保留)。
 - 新增 light-collapsed 快照位;全测试绿;已重打包重启(worktree 承重路径)。
 - 待接:分诊回执 UI(triage:true + PATCH 改类,契约已上线)——下一个反馈间隙做。
+
+## 2026-07-10 · 日记今天卡=续写按钮开富文本弹层(加粗/斜体/高亮)[用户反馈·对齐主 app]
+- 用户:notch 今天卡加「续写」按钮→面板内富文本弹层直接写/改,支持 B/I/高亮;去掉底部「续写今天—回车追加」输入条。
+- 后端客户端:HelmBackend 补 updateNote(PATCH)/deleteNote(DELETE)+ 默认空实现(fake 兜底)。
+- Model:journalTodayIds(consolidate 用)/journalEditing/journalEditText;openJournalEditor 预填今天整篇;saveJournalEditor=整篇替换 consolidate(改第一条+删其余;无则新建);loadJournalToday 带出 ids。
+- View:今天卡加渐变「续写」胶囊按钮;journal 态用 journalEditor 弹层(B/I/H 工具栏 + NSTextView 选区包裹 **/*/<mark> + 保存/取消)替代底部输入行;JournalEditor.swift(JournalFormatter 选区包裹 + JournalTextEditor NSViewRepresentable);NSColor(RGB) 桥。存储仍是 md 兼容标记,与主 app/enrich 一致。
+- 门:swift build ✓ · swift test 83 全绿(+3:openEditor 预填/consolidate 改首删余/空态新建)。
+- 待:重建 .app 重启(承重墙),用户真机验收。

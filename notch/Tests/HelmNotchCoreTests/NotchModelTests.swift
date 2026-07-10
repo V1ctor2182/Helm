@@ -44,6 +44,17 @@ final class FakeBackend: HelmBackend, @unchecked Sendable {
         notes.append((content, kind, journalDate))
     }
 
+    private(set) var updated: [(id: Int, content: String)] = []
+    private(set) var deleted: [Int] = []
+    func updateNote(id: Int, content: String) async throws {
+        if shouldFailCapture { throw HelmError.badStatus(500) }
+        updated.append((id, content))
+    }
+    func deleteNote(id: Int) async throws {
+        if shouldFailCapture { throw HelmError.badStatus(500) }
+        deleted.append(id)
+    }
+
     func createTask(prompt: String) async throws {
         if shouldFailCapture { throw HelmError.badStatus(500) }
         tasks.append(prompt)
@@ -93,6 +104,54 @@ final class NotchModelTests: XCTestCase {
         XCTAssertEqual(model.connection, .unknown)
         XCTAssertFalse(model.expanded)
         XCTAssertEqual(model.captureStatus, .idle)
+    }
+
+    // MARK: 日记续写(2026-07-10 用户:今天卡续写按钮开富文本弹层,整篇替换)
+
+    @MainActor
+    func testOpenJournalEditorSeedsTodayText() async {
+        let fake = FakeBackend()
+        fake.journals = [RecentNote(id: 5, content: "早上定了稿", kind: "journal", createdAt: "")]
+        let model = NotchModel(backend: fake)
+        await model.loadJournalToday()
+        model.openJournalEditor()
+        XCTAssertTrue(model.journalEditing)
+        XCTAssertEqual(model.journalEditText, "早上定了稿")   // 预填今天整篇
+        XCTAssertEqual(model.journalTodayIds, [5])
+    }
+
+    @MainActor
+    func testSaveEditorConsolidatesIntoFirstAndDeletesRest() async {
+        let fake = FakeBackend()
+        fake.journals = [
+            RecentNote(id: 5, content: "早上", kind: "journal", createdAt: ""),
+            RecentNote(id: 6, content: "下午", kind: "journal", createdAt: ""),
+        ]
+        let model = NotchModel(backend: fake)
+        await model.loadJournalToday()
+        model.openJournalEditor()
+        model.journalEditText = "早上\n\n下午\n\n加粗**重点**"
+        await model.saveJournalEditor()
+        // 整篇替换 → 改第一条,删其余,不新建
+        XCTAssertEqual(fake.updated.map(\.id), [5])
+        XCTAssertEqual(fake.updated.first?.content, "早上\n\n下午\n\n加粗**重点**")
+        XCTAssertEqual(fake.deleted, [6])
+        XCTAssertTrue(fake.notes.isEmpty)
+        XCTAssertFalse(model.journalEditing)
+    }
+
+    @MainActor
+    func testSaveEditorCreatesWhenNoTodayEntry() async {
+        let fake = FakeBackend()   // 今天没写过
+        let model = NotchModel(backend: fake)
+        await model.loadJournalToday()
+        model.openJournalEditor()
+        XCTAssertEqual(model.journalEditText, "")
+        model.journalEditText = "今天第一段"
+        await model.saveJournalEditor()
+        XCTAssertEqual(fake.notes.map(\.content), ["今天第一段"])
+        XCTAssertEqual(fake.notes.first?.kind, "journal")
+        XCTAssertTrue(fake.updated.isEmpty)
     }
 }
 

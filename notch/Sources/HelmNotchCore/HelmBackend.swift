@@ -20,6 +20,10 @@ public protocol HelmBackend: Sendable {
     func recentNotes(kind: String, limit: Int) async throws -> [RecentNote]
     /// 某天的日记原文列表(kind=journal&journal_date=YYYY-MM-DD;T5 契约)。
     func journalNotes(date: String) async throws -> [RecentNote]
+    /// 改一条 note 的正文(PATCH /api/notes/{id})——日记续写整篇替换用。
+    func updateNote(id: Int, content: String) async throws
+    /// 删一条 note(DELETE /api/notes/{id})——续写 consolidate 时清历史碎片。
+    func deleteNote(id: Int) async throws
 }
 
 /// 「最近」条一行(速记/日记摘要)。
@@ -43,6 +47,8 @@ public extension HelmBackend {
     func ask(_ q: String) async throws -> String { throw URLError(.unsupportedURL) }
     func recentNotes(kind: String, limit: Int) async throws -> [RecentNote] { [] }
     func journalNotes(date: String) async throws -> [RecentNote] { [] }
+    func updateNote(id: Int, content: String) async throws {}
+    func deleteNote(id: Int) async throws {}
 }
 
 /// Talks to the local Helm FastAPI backend over HTTP (default loopback:8769).
@@ -157,6 +163,27 @@ public struct HelmClient: HelmBackend {
         return try JSONDecoder().decode(Reply.self, from: data).notes.map {
             RecentNote(id: $0.id, content: $0.content, kind: $0.kind,
                        createdAt: $0.created_at ?? "")
+        }
+    }
+
+    public func updateNote(id: Int, content: String) async throws {
+        struct Body: Encodable { let content: String }
+        var request = URLRequest(url: baseURL.appendingPathComponent("api/notes/\(id)"))
+        request.httpMethod = "PATCH"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(Body(content: content))
+        let (_, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw HelmError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
+        }
+    }
+
+    public func deleteNote(id: Int) async throws {
+        var request = URLRequest(url: baseURL.appendingPathComponent("api/notes/\(id)"))
+        request.httpMethod = "DELETE"
+        let (_, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw HelmError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
         }
     }
 

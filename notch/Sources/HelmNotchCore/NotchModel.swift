@@ -224,12 +224,46 @@ public final class NotchModel {
 
     /// 日记「今天卡」正文:今天的 journal 全文(多段按时间拼接;无则 nil)。
     public private(set) var journalToday: String?
+    /// 今天日记底层的 note id(续写保存时 consolidate:改第一条,删其余)。
+    public private(set) var journalTodayIds: [Int] = []
+    /// 续写编辑态:开着弹层(面板内)+ 正在编辑的整篇文本。
+    public var journalEditing = false
+    public var journalEditText = ""
 
     public func loadJournalToday(now: Date = Date()) async {
         // T5 契约:按 journal_date 查(凌晨补写昨天不再错归今天;口径与主 app 一致)。
         let notes = (try? await backend.journalNotes(date: Self.dayString(now))) ?? []
+        journalTodayIds = notes.map(\.id)
         let joined = notes.map(\.content).joined(separator: "\n\n")
         journalToday = joined.isEmpty ? nil : joined
+    }
+
+    /// 续写:把今天整篇带进富文本编辑器(2026-07-10 用户:今天卡加续写按钮开弹层)。
+    public func openJournalEditor() {
+        journalEditText = journalToday ?? ""
+        journalEditing = true
+    }
+    public func cancelJournalEditor() { journalEditing = false }
+    /// 保存续写 = 整篇替换 → consolidate 成单条(改第一条 + 删其余;无则新建今天)。
+    public func saveJournalEditor(now: Date = Date()) async {
+        let text = journalEditText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let ids = journalTodayIds
+        do {
+            if ids.isEmpty {
+                if !text.isEmpty {
+                    try await backend.createNote(content: text, kind: "journal", journalDate: Self.dayString(now))
+                }
+            } else if text.isEmpty {
+                for id in ids { try await backend.deleteNote(id: id) }
+            } else {
+                try await backend.updateNote(id: ids[0], content: text)
+                for id in ids.dropFirst() { try await backend.deleteNote(id: id) }
+            }
+            journalEditing = false
+            await loadJournalToday(now: now)
+        } catch {
+            // 失败:保留编辑器,不吞用户内容
+        }
     }
 
     static func dayString(_ d: Date) -> String {
